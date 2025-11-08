@@ -65,7 +65,7 @@ export default function LoginPage() {
 
       {/* Form side */}
       <div className="flex flex-col justify-center items-center w-full md:w-1/2 px-6 py-12 bg-white dark:bg-gray-900">
-        <h1 className="text-3xl font-bold text-blue-600 mb-2">Vaibhav Group</h1>
+        <h1 className="text-3xl font-bold text-blue-600 mb-2">Enro Matics</h1>
         <p className="mb-6 text-sm text-gray-500 dark:text-gray-300">Already subscribed? Login here</p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
