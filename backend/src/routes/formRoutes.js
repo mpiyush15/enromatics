@@ -1,5 +1,5 @@
 import express from "express";
-import Formschema from "../models/subscriber.js";
+import Formschema from "../models/Subscriber.js";
 
 const router = express.Router();
 
