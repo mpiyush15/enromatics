@@ -19,6 +19,29 @@ interface MarksRecord {
   remarks: string;
 }
 
+interface Test {
+  _id: string;
+  name: string;
+  subject: string;
+  course: string;
+  batch?: string;
+  date: string;
+  testDate: string;
+  totalMarks: number;
+  passingMarks: number;
+}
+
+interface AttendanceApiRecord {
+  studentId: { _id: string } | string;
+  present: boolean;
+}
+
+interface MarksApiRecord {
+  studentId: { _id: string } | string;
+  marksObtained: number;
+  remarks?: string;
+}
+
 export default function MarksEntryPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -27,23 +50,11 @@ export default function MarksEntryPage() {
   const searchParams = useSearchParams();
   const testId = searchParams.get("testId");
 
-  const [test, setTest] = useState<any>(null);
+  const [test, setTest] = useState<Test | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [marks, setMarks] = useState<Map<string, MarksRecord>>(new Map());
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
-  const [presentStudents, setPresentStudents] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!testId) {
-      setLoading(false);
-      setStatus("❌ No test selected. Please select a test from Test Schedules.");
-      return;
-    }
-    if (user && testId) {
-      fetchTestAndStudents();
-    }
-  }, [user, testId]);
 
   const fetchTestAndStudents = async () => {
     try {
@@ -65,10 +76,12 @@ export default function MarksEntryPage() {
         if (attendanceRes.ok && attendanceData.attendance) {
           const presentStudentIds = new Set<string>(
             attendanceData.attendance
-              .filter((record: any) => record.present)
-              .map((record: any) => (record.studentId._id || record.studentId) as string)
+              .filter((record: AttendanceApiRecord) => record.present)
+              .map((record: AttendanceApiRecord) => {
+                const studentId = typeof record.studentId === 'string' ? record.studentId : record.studentId._id;
+                return studentId;
+              })
           );
-          setPresentStudents(presentStudentIds);
 
           // Only fetch students who were present
           if (presentStudentIds.size > 0) {
@@ -92,9 +105,10 @@ export default function MarksEntryPage() {
               const marksData = await marksRes.json();
               if (marksRes.ok) {
                 const marksMap = new Map();
-                marksData.marks.forEach((record: any) => {
-                  marksMap.set(record.studentId._id || record.studentId, {
-                    studentId: record.studentId._id || record.studentId,
+                marksData.marks.forEach((record: MarksApiRecord) => {
+                  const studentId = typeof record.studentId === 'string' ? record.studentId : record.studentId._id;
+                  marksMap.set(studentId, {
+                    studentId,
                     marksObtained: record.marksObtained,
                     remarks: record.remarks || "",
                   });
@@ -116,6 +130,17 @@ export default function MarksEntryPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!testId) {
+      setLoading(false);
+      setStatus("❌ No test selected. Please select a test from Test Schedules.");
+      return;
+    }
+    if (user && testId) {
+      fetchTestAndStudents();
+    }
+  }, [user, testId, fetchTestAndStudents]);
 
   const updateMarks = (studentId: string, marksObtained: number) => {
     const newMarks = new Map(marks);
@@ -187,8 +212,9 @@ export default function MarksEntryPage() {
       setTimeout(() => {
         router.push(`/dashboard/client/${tenantId}/academics/schedules`);
       }, 1500);
-    } catch (error: any) {
-      setStatus("❌ " + error.message);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save marks";
+      setStatus("❌ " + errorMessage);
     }
   };
 
