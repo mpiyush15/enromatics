@@ -1,34 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-import clientPromise from "@/lib/db";
+import { NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session || !session.user.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+// Deprecated: frontend-side Facebook connect handler has been removed.
+// Use backend endpoints instead: GET /api/facebook/connect and GET /api/facebook/callback
+// Backend will handle the OAuth flow and persist tokens securely.
 
-  const { accessToken, facebookUserId } = await req.json();
-
-  const client = await clientPromise;
-  const db = client.db("forteStudioz");
-
-  // Update user with Facebook Business connection
-  await db.collection("users").updateOne(
-    { tenantId: session.user.tenantId },
-    {
-      $set: {
-        "facebookBusiness.connected": true,
-        "facebookBusiness.facebookUserId": facebookUserId,
-        "facebookBusiness.accessToken": accessToken, // TODO: Encrypt this
-        "facebookBusiness.tokenExpiry": new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-        "facebookBusiness.permissions": session.facebookPermissions || [],
-        "facebookBusiness.connectedAt": new Date(),
-      }
-    }
-  );
-
-  return NextResponse.json({ success: true });
+export async function POST() {
+  return NextResponse.json({ message: "Deprecated. Use backend /api/facebook/connect" }, { status: 410 });
 }

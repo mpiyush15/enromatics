@@ -1,47 +1,95 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-import clientPromise from "@/lib/db";
-import { redirect } from "next/navigation";
+"use client";
 
-import AdminOverview from "@/components/roles/admin/HomeDashbaord";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import TrialNote from "@/components/roles/user/TrialNote";
-import SubscriberHome from "@/components/roles/subscriber/HomeDashboard";
-export default async function HomeDashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
 
-  const client = await clientPromise;
-  const db = client.db("forteStudioz");
+export default function HomeDashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const user = await db.collection("users").findOne({
-    email: session.user.email,
-  });
+  // ✅ Fetch user details using backend API (Express)
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        console.log("🔵 Fetching user details from API...");
+        const res = await fetch("http://localhost:5050/api/auth/me", {
+          method: "GET",
+          credentials: "include", // ✅ Send httpOnly cookie with request
+          headers: { "Content-Type": "application/json" },
+        });
 
-  if (!user) {
-    return <div className="text-red-600">User not found.</div>;
-  }
+        console.log("📍 Auth API response status:", res.status);
 
-  const role = user.role;
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error("❌ Auth API error:", errorData);
+          throw new Error(errorData.message || "Unauthorized");
+        }
+
+        const data = await res.json();
+        console.log("🟢 User details fetched:", { name: data.name, role: data.role });
+        setUser(data);
+      } catch (err: any) {
+        console.error("❌ Auth check failed:", err.message);
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [router]);
+
+  if (loading) return <div className="p-10 text-center">Loading Dashboard...</div>;
+  if (!user) return null;
+
+  // ✅ Extract role and plan
+  const role = user.role || "user";
   const plan = user.plan || "free";
-  const planExpiry = user.planExpiry ? new Date(user.planExpiry).toLocaleDateString() : "N/A";
+  const planExpiry = user.planExpiry
+    ? new Date(user.planExpiry).toLocaleDateString()
+    : "N/A";
 
-  // 👇 Render role-specific dashboard content
-  if (role === "admin") {
-    return <AdminOverview />;
-  }
+  // ✅ Role-based rendering
+  return (
+    <div className="space-y-6 p-10">
+      <h1 className="text-3xl font-bold text-blue-600">
+        👋 Welcome, {user.name || "User"}
+      </h1>
+      <p className="text-gray-600 dark:text-gray-300">
+        You are logged in as <b>{role}</b>
+      </p>
 
-  if (role === "subscriber") {
-    return <SubscriberHome username={user.username} plan={plan} planExpiry={planExpiry} />;
-  }
+      {role === "SuperAdmin" ? (
+        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded">
+          <h2 className="text-xl font-semibold text-blue-500 mb-2">Admin Overview</h2>
+          <p>Manage tenants, monitor activity, and control global settings.</p>
+        </div>
+      ) : role === "tenantAdmin" ? (
+        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded">
+          <h2 className="text-xl font-semibold text-blue-500 mb-2">
+            Tenant Dashboard
+          </h2>
+          <p>
+            Manage your staff, students, and ads campaign performance here.
+          </p>
+        </div>
+      ) : (
+        <div>
+          <h2 className="text-xl font-semibold">Trial Access</h2>
+          <TrialNote />
+        </div>
+      )}
 
-  if (role === "user") {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">👋 Welcome to Forte Studioz</h1>
-        <TrialNote />
+      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-4">
+        <p><strong>Plan:</strong> {plan}</p>
+        <p><strong>Expiry:</strong> {planExpiry}</p>
       </div>
-    );
-  }
 
-  return <div>❌ Unauthorized</div>;
+      
+    </div>
+  );
 }

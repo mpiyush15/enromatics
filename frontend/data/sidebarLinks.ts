@@ -2,31 +2,31 @@ export const sidebarLinks = [
   {
     href: "/dashboard/home",
     label: "🏠 Home",
-    roles: ["admin", "user", "subscriber"],
+    roles: ["SuperAdmin","admin", "user", "subscriber"],
   },
   {
     href: "/dashboard/lead",
     label: "📋 Leads",
-    roles: ["admin"],
+    roles: ["SuperAdmin","admin"],
   },
   {
-    href: "/dashboard/users",
-    label: "👤 Users",
-    roles: ["admin"],
+    href: "/dashboard/tenants",
+    label: "👤 Tenants",
+    roles: ["SuperAdmin","admin"],
   },
   {
-    href: "/dashboard/subscriptions",
-    label: "💳 Subscriptions",
-    roles: ["admin"],
+    href: "/dashboard/institute-overview",
+    label: "💳 Institute Overview",
+    roles: ["tenantAdmin"],
   },
   {
-    label: "📦 My Subscription",
+    label: "📦 Subscription",
     href: "#",
-    roles: ["user", "subscriber"],
+    roles: ["user", "subscriber", "tenantAdmin"],
     children: [
       {
-        label: "🔁 Renew",
-        href: "/dashboard/subscription/renew",
+        label: "🔁 My Subscription",
+        href: "/dashboard/my-subscription",
       },
       {
         label: "❌ Cancel Subscription",
@@ -41,7 +41,7 @@ export const sidebarLinks = [
   {
     label: "📱 Social Media",
     href: "#",
-    roles: ["subscriber", "admin" , "user"],
+    roles: ["subscriber", "admin" , "user", "tenantAdmin", "SuperAdmin"],
     children: [
       {
         label: "📝 Posts",
@@ -64,7 +64,7 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["subscriber", "admin"],
+    roles: ["subscriber", "admin", "tenantAdmin"],
     children: [
       {
         label: "📨 Campaigns",
@@ -88,5 +88,32 @@ export const sidebarLinks = [
     href: "/dashboard/profile",
     label: "🧑‍💻 Profile",
     roles: ["admin", "user", "subscriber"],
+  },
+  {
+    label: "📚 Academics",
+    href: "#",
+    roles: ["tenantAdmin", "teacher", "staff", "student"],
+    children: [
+      {
+        label: "📅 Test Schedules",
+        href: "/dashboard/academics/schedules",
+      },
+      {
+        label: "✅ Test Attendance",
+        href: "/dashboard/academics/attendance",
+      },
+      {
+        label: "📝 Marks Entry",
+        href: "/dashboard/academics/marks",
+      },
+      {
+        label: "📊 Test Reports",
+        href: "/dashboard/academics/reports",
+      },
+      {
+        label: "📖 My Tests",
+        href: "/dashboard/academics/my-tests",
+      },
+    ],
   },
 ];

@@ -1,11 +1,22 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+export default function LogoutButton() {
+  const handleLogout = () => {
+    // 🔥 Clear everything related to JWT/session
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("tenantId");
 
-export default function Logout_Button() {
+    // Optional: if using cookie-based JWT later, call logout API here
+    // await fetch("http://localhost:5050/api/auth/logout", { method: "POST", credentials: "include" });
+
+    // Redirect to login
+    window.location.href = "/login"; // full reload to reset React state
+  };
+
   return (
     <button
-      onClick={() => signOut({ callbackUrl: "/" })} //
+      onClick={handleLogout}
       className="w-full px-4 py-2 mt-6 bg-red-600 rounded hover:bg-red-700 transition"
     >
       🚪 Logout

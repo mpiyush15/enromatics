@@ -1,18 +1,32 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../lib/authOptions";
-import { redirect } from "next/navigation";
+"use client";
+import useAuth from "@/hooks/useAuth";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen text-gray-500">
+        Checking session...
+      </div>
+    );
+  }
+
+  if (!loading && !user) {
+    return null;
+  }
 
   return (
-    <ClientDashboard userName={session.user?.username || "User"}>
+    <ClientDashboard 
+      userName={user?.email || "User"}
+      userRole={user?.role}
+      isAdmin={user?.role === "SuperAdmin"}
+    >
       {children}
     </ClientDashboard>
   );

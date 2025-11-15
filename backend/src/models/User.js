@@ -1,0 +1,71 @@
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+
+// User schema definition
+const userSchema = new mongoose.Schema(
+  {
+    // User attributes
+    name: { type: String, required: true },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
+    },
+
+    password: { type: String, required: true, minlength: 6 },
+
+    tenantId: { type: String, required: true, index: true },
+
+    role: {
+      type: String,
+      enum: ["SuperAdmin", "Admin", "tenantAdmin", "employee", "student", "adsManager"],
+      default: "tenantAdmin", // every new signup = tenant admin by default
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "inactive", "suspended"],
+      default: "active",
+    },
+  },
+  { timestamps: true }
+);
+
+// Indexes for performance
+userSchema.index({ email: 1 });
+
+// Password hashing middleware
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Password verification method
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Remove password from API responses
+userSchema.methods.toJSON = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  return userObject;
+};
+
+// Virtual relationship to Tenant (future proof)
+userSchema.virtual("tenant", {
+  ref: "Tenant",
+  localField: "tenantId",
+  foreignField: "tenantId",
+  justOne: true,
+});
+
+// User model creation
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+// Exporting user model
+export default User;

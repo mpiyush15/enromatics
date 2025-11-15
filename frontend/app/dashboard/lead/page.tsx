@@ -1,20 +1,57 @@
-import clientPromise from "@/lib/db";
-import { ObjectId } from "mongodb";
+"use client";
+import { useEffect, useState } from "react";
 
-type Lead = {
-  _id: ObjectId;
+interface Lead {
+  _id: string;
   name: string;
   email: string;
   phone: string;
   institute: string;
   plan: string;
-  createdAt: Date;
-};
+  createdAt: string;
+}
 
-export default async function AdminLeadsPage() {
-  const client = await clientPromise;
-  const db = client.db("forteStudioz");
-  const leads = await db.collection<Lead>("lead").find().sort({ createdAt: -1 }).toArray();
+export default function AdminLeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        console.log("🔵 Fetching leads from API...");
+        const res = await fetch("http://localhost:5050/api/leads", {
+          method: "GET",
+          credentials: "include", // ✅ Send httpOnly cookie with request
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log("📍 Leads API response status:", res.status);
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error("❌ Leads API error:", errorData);
+          throw new Error("Failed to fetch leads");
+        }
+
+        const data = await res.json();
+        console.log("🟢 Leads fetched successfully:", data.length, "leads");
+        setLeads(data);
+      } catch (err: any) {
+        console.error("❌ Error fetching leads:", err.message);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
+
+  if (loading) return <p>Loading leads...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="p-6">
@@ -32,13 +69,18 @@ export default async function AdminLeadsPage() {
         </thead>
         <tbody>
           {leads.map((lead) => (
-            <tr key={lead._id.toString()} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+            <tr
+              key={lead._id}
+              className="hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
               <td className="p-2 border">{lead.name}</td>
               <td className="p-2 border">{lead.email}</td>
               <td className="p-2 border">{lead.phone}</td>
               <td className="p-2 border">{lead.institute}</td>
               <td className="p-2 border">{lead.plan}</td>
-              <td className="p-2 border">{new Date(lead.createdAt).toLocaleString()}</td>
+              <td className="p-2 border">
+                {new Date(lead.createdAt).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>
