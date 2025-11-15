@@ -3,11 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+interface MessageContent {
+  text?: string;
+  templateName?: string;
+}
+
 interface Message {
   _id: string;
   recipientName?: string;
   recipientPhone: string;
-  content: any;
+  content: MessageContent;
   status: string;
   campaign: string;
   sentAt?: string;
@@ -27,7 +32,6 @@ interface Stats {
 }
 
 export default function WhatsappReportsPage() {
-  const { tenantId } = useParams();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -35,11 +39,6 @@ export default function WhatsappReportsPage() {
   const [campaignFilter, setCampaignFilter] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  useEffect(() => {
-    fetchMessages();
-    fetchStats();
-  }, [statusFilter, campaignFilter, page]);
 
   const fetchMessages = async () => {
     setLoading(true);
@@ -82,8 +81,13 @@ export default function WhatsappReportsPage() {
     }
   };
 
+  useEffect(() => {
+    fetchMessages();
+    fetchStats();
+  }, [statusFilter, campaignFilter, page, fetchMessages, fetchStats]);
+
   const getStatusBadge = (status: string) => {
-    const styles: any = {
+    const styles: Record<string, string> = {
       sent: "bg-blue-100 text-blue-800",
       delivered: "bg-green-100 text-green-800",
       read: "bg-purple-100 text-purple-800",
@@ -94,7 +98,7 @@ export default function WhatsappReportsPage() {
   };
 
   const getStatusIcon = (status: string) => {
-    const icons: any = {
+    const icons: Record<string, string> = {
       sent: "📤",
       delivered: "✅",
       read: "👁️",

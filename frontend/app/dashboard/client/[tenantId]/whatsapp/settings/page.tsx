@@ -48,7 +48,7 @@ export default function WhatsappSettingsPage() {
           businessName: data.config.businessName || "",
         });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Fetch config error:", err);
     } finally {
       setLoading(false);
@@ -75,8 +75,9 @@ export default function WhatsappSettingsPage() {
       setStatus("✅ Configuration saved successfully!");
       setConfigured(true);
       setTimeout(() => setStatus(""), 3000);
-    } catch (err: any) {
-      setStatus(`❌ Error: ${err.message}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      setStatus(`❌ Error: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -117,8 +118,9 @@ export default function WhatsappSettingsPage() {
 
       setStatus("✅ Connection successful! Test message sent to " + testPhone);
       setTimeout(() => setStatus(""), 5000);
-    } catch (err: any) {
-      setStatus(`❌ Connection failed: ${err.message}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Connection failed";
+      setStatus(`❌ Connection failed: ${errorMessage}`);
     } finally {
       setTesting(false);
     }
