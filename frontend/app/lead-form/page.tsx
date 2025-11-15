@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function LeadFormPage() {
   const [form, setForm] = useState({
@@ -23,7 +24,7 @@ export default function LeadFormPage() {
     setStatus("Submitting...");
 
     try {
-      const res = await fetch("/api/lead", {
+      const res = await fetch(`${API_BASE_URL}/api/leads/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

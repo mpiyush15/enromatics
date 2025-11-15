@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-// import { Plan } from "@Plan"; // Adjust the import path as necessary or remove if unused
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 type Props = {
   planName: string;
@@ -27,7 +27,7 @@ export default function SubscriptionForm({ planName, price }: Props) {
     e.preventDefault();
     setStatus("Processing...");
 
-    const res = await fetch("/api/subscribe/register", {
+    const res = await fetch(`${API_BASE_URL}/api/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, plan: planName, price }),
