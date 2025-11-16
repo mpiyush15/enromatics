@@ -220,10 +220,12 @@ export const getSession = async (req, res) => {
  * Logout user (clear cookie)
  */
 export const logoutUser = (req, res) => {
+  // ✅ Must match EXACT settings used when setting the cookie
   res.clearCookie("jwt", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Match login settings
+    sameSite: "none", // Match login settings  
+    path: "/", // Important: must match the path
   });
   res.status(200).json({ message: "Logged out successfully" });
 };

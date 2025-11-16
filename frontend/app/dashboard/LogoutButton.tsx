@@ -11,6 +11,7 @@ export default function LogoutButton() {
       
       // Clear all client-side storage
       localStorage.clear();
+      sessionStorage.clear(); // Also clear session storage
       cache.clear();
 
       // Redirect to login with full page reload
@@ -18,6 +19,9 @@ export default function LogoutButton() {
     } catch (error) {
       console.error("Logout error:", error);
       // Force redirect even if API call fails
+      localStorage.clear();
+      sessionStorage.clear();
+      cache.clear();
       window.location.href = "/login";
     }
   };
