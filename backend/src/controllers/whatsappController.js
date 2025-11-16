@@ -4,11 +4,21 @@ import WhatsAppMessage from '../models/WhatsAppMessage.js';
 import WhatsAppContact from '../models/WhatsAppContact.js';
 import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
 
+// Helper function to get tenantId (supports SuperAdmin accessing any tenant)
+const getTenantId = (req, source = 'query') => {
+  if (req.user.role === 'SuperAdmin') {
+    const paramTenantId = source === 'body' ? req.body.tenantId : req.query.tenantId;
+    return paramTenantId || req.user.tenantId;
+  }
+  return req.user.tenantId;
+};
+
+
 // Save or update WhatsApp configuration
 export const saveConfig = async (req, res) => {
   try {
     const { phoneNumberId, accessToken, wabaId, businessName } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!phoneNumberId || !wabaId) {
       return res.status(400).json({ 
@@ -84,7 +94,7 @@ export const saveConfig = async (req, res) => {
 // Get WhatsApp configuration
 export const getConfig = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     
     const config = await WhatsAppConfig.findOne({ tenantId });
     
@@ -114,11 +124,39 @@ export const getConfig = async (req, res) => {
   }
 };
 
+// Remove WhatsApp configuration
+export const removeConfig = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    
+    const config = await WhatsAppConfig.findOne({ tenantId });
+    
+    if (!config) {
+      return res.status(404).json({ 
+        message: 'No WhatsApp configuration found' 
+      });
+    }
+
+    // Delete the configuration
+    await WhatsAppConfig.deleteOne({ tenantId });
+    
+    console.log(`✅ WhatsApp config removed for tenant: ${tenantId}`);
+
+    res.json({
+      success: true,
+      message: 'WhatsApp configuration removed successfully'
+    });
+  } catch (error) {
+    console.error('Remove config error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Test WhatsApp connection
 export const testConnection = async (req, res) => {
   try {
     const { phoneNumberId, accessToken, testPhone } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!phoneNumberId || !accessToken || !testPhone) {
       return res.status(400).json({ 
@@ -156,7 +194,7 @@ export const testConnection = async (req, res) => {
 export const sendMessage = async (req, res) => {
   try {
     const { recipientPhone, message, contactId, campaign } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!recipientPhone || !message) {
       return res.status(400).json({ 
@@ -198,7 +236,7 @@ export const sendMessage = async (req, res) => {
 export const sendTemplate = async (req, res) => {
   try {
     const { recipientPhone, templateName, params, campaign } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!recipientPhone || !templateName) {
       return res.status(400).json({ 
@@ -236,7 +274,7 @@ export const sendTemplate = async (req, res) => {
 // Get message history
 export const getMessages = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     const { page = 1, limit = 20, status, campaign, startDate, endDate } = req.query;
 
     const query = { tenantId };
@@ -277,7 +315,7 @@ export const getMessages = async (req, res) => {
 // Get contacts
 export const getContacts = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     const { type, search } = req.query;
 
     const query = { tenantId };
@@ -309,7 +347,7 @@ export const getContacts = async (req, res) => {
 // Sync student contacts
 export const syncContacts = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     
     const result = await whatsappService.syncStudentContacts(tenantId);
 
@@ -327,7 +365,7 @@ export const syncContacts = async (req, res) => {
 // Get statistics
 export const getStats = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     const { startDate, endDate } = req.query;
 
     const stats = await whatsappService.getStats(tenantId, { startDate, endDate });
@@ -403,10 +441,10 @@ export const handleWebhook = async (req, res) => {
 // Get templates
 export const getTemplates = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     const { status, useCase } = req.query;
 
-    const query = { tenantId };
+    const query = { tenantId, deleted: { $ne: true } }; // Exclude deleted templates
     if (status) query.status = status;
     if (useCase) query.useCase = useCase;
 
@@ -425,7 +463,7 @@ export const getTemplates = async (req, res) => {
 // Fetch templates from Meta API and sync to database
 export const syncTemplatesFromMeta = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     
     // Get WhatsApp config
     const config = await WhatsAppConfig.findOne({ tenantId });
@@ -455,9 +493,14 @@ export const syncTemplatesFromMeta = async (req, res) => {
     const metaTemplates = response.data.data || [];
     console.log(`✅ Fetched ${metaTemplates.length} templates from Meta`);
 
+    // Get all existing templates for this tenant to mark deleted ones
+    const existingTemplates = await WhatsAppTemplate.find({ tenantId, deleted: { $ne: true } });
+    const metaTemplateIds = new Set(metaTemplates.map(t => t.id));
+
     // Sync to database
     let synced = 0;
     let updated = 0;
+    let deleted = 0;
 
     for (const metaTemplate of metaTemplates) {
       try {
@@ -475,7 +518,8 @@ export const syncTemplatesFromMeta = async (req, res) => {
           // Extract variables from body text ({{1}}, {{2}}, etc.)
           variables: extractVariablesFromTemplate(metaTemplate.components?.find(c => c.type === 'BODY')?.text || ''),
           rejectedReason: metaTemplate.rejected_reason,
-          lastSyncedAt: new Date()
+          lastSyncedAt: new Date(),
+          deleted: false // Ensure it's marked as not deleted
         };
 
         // Upsert template
@@ -500,13 +544,26 @@ export const syncTemplatesFromMeta = async (req, res) => {
       }
     }
 
+    // Mark templates as deleted if they no longer exist in Meta
+    for (const existingTemplate of existingTemplates) {
+      if (existingTemplate.metaTemplateId && !metaTemplateIds.has(existingTemplate.metaTemplateId)) {
+        await WhatsAppTemplate.updateOne(
+          { _id: existingTemplate._id },
+          { $set: { deleted: true, lastSyncedAt: new Date() } }
+        );
+        deleted++;
+        console.log(`🗑️ Marked template as deleted: ${existingTemplate.name}`);
+      }
+    }
+
     res.json({
       success: true,
-      message: `Synced ${synced} new templates, updated ${updated} existing templates`,
+      message: `Synced ${synced} new, updated ${updated}, deleted ${deleted} templates`,
       stats: {
         total: metaTemplates.length,
         synced,
         updated,
+        deleted,
         approved: metaTemplates.filter(t => t.status === 'APPROVED').length,
         pending: metaTemplates.filter(t => t.status === 'PENDING').length,
         rejected: metaTemplates.filter(t => t.status === 'REJECTED').length
@@ -534,7 +591,7 @@ function extractVariablesFromTemplate(text) {
 export const createTemplate = async (req, res) => {
   try {
     const { name, category, content, variables, useCase } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     const template = new WhatsAppTemplate({
       tenantId,
@@ -559,11 +616,129 @@ export const createTemplate = async (req, res) => {
   }
 };
 
+// Submit template to Meta for approval
+export const submitTemplateToMeta = async (req, res) => {
+  try {
+    const { name, category, language, bodyText, headerText, footerText, buttons } = req.body;
+    const tenantId = getTenantId(req, 'body');
+
+    // Validate required fields
+    if (!name || !category || !bodyText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template name, category, and body text are required'
+      });
+    }
+
+    // Get WhatsApp config
+    const config = await WhatsAppConfig.findOne({ tenantId });
+    if (!config) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'WhatsApp not configured. Please configure WhatsApp first.' 
+      });
+    }
+
+    console.log('📤 Submitting template to Meta:', name);
+
+    // Build template components
+    const components = [];
+
+    // Add header if provided
+    if (headerText) {
+      components.push({
+        type: 'HEADER',
+        format: 'TEXT',
+        text: headerText
+      });
+    }
+
+    // Add body (required)
+    components.push({
+      type: 'BODY',
+      text: bodyText
+    });
+
+    // Add footer if provided
+    if (footerText) {
+      components.push({
+        type: 'FOOTER',
+        text: footerText
+      });
+    }
+
+    // Add buttons if provided
+    if (buttons && buttons.length > 0) {
+      components.push({
+        type: 'BUTTONS',
+        buttons: buttons.map(btn => ({
+          type: btn.type || 'QUICK_REPLY',
+          text: btn.text
+        }))
+      });
+    }
+
+    // Submit to Meta API
+    const axios = (await import('axios')).default;
+    const response = await axios.post(
+      `https://graph.facebook.com/v21.0/${config.wabaId}/message_templates`,
+      {
+        name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'), // Meta requires lowercase and underscores
+        language: language || 'en',
+        category: category,
+        components: components
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('✅ Template submitted to Meta:', response.data);
+
+    // Save template to database
+    const template = new WhatsAppTemplate({
+      tenantId,
+      name: name.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+      language: language || 'en',
+      category,
+      content: bodyText,
+      variables: extractVariablesFromTemplate(bodyText),
+      components,
+      status: 'pending',
+      metaTemplateId: response.data.id
+    });
+
+    await template.save();
+
+    res.json({
+      success: true,
+      message: 'Template submitted to Meta for approval! Review typically takes 24-48 hours.',
+      template: {
+        id: template._id,
+        name: template.name,
+        status: template.status,
+        metaTemplateId: response.data.id
+      }
+    });
+
+  } catch (error) {
+    console.error('Submit template error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false,
+      message: error.response?.data?.error?.message || error.message,
+      details: error.response?.data?.error?.error_user_msg || 'Failed to submit template to Meta'
+    });
+  }
+};
+
 // Create manual contact
 export const createContact = async (req, res) => {
   try {
     const { name, phone, type, studentId, email } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!name || !phone) {
       return res.status(400).json({ 
@@ -623,7 +798,7 @@ export const createContact = async (req, res) => {
 export const importContacts = async (req, res) => {
   try {
     const { contacts } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req, 'body');
 
     if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
       return res.status(400).json({ 
@@ -714,7 +889,7 @@ export const importContacts = async (req, res) => {
 export const deleteContact = async (req, res) => {
   try {
     const { id } = req.params;
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
 
     const contact = await WhatsAppContact.findOneAndDelete({ 
       _id: id, 
@@ -740,7 +915,7 @@ export const deleteContact = async (req, res) => {
 // Debug endpoint to test Meta API directly
 export const debugMetaAPI = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     const config = await WhatsAppConfig.findOne({ tenantId });
     
     if (!config) {
@@ -794,7 +969,7 @@ export const debugMetaAPI = async (req, res) => {
 // Debug endpoint to check database messages
 export const debugMessages = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = getTenantId(req);
     
     const [config, messageCount, messages] = await Promise.all([
       WhatsAppConfig.findOne({ tenantId }),
@@ -836,6 +1011,7 @@ export const debugMessages = async (req, res) => {
 export default {
   saveConfig,
   getConfig,
+  removeConfig,
   testConnection,
   sendMessage,
   sendTemplate,
@@ -847,6 +1023,7 @@ export default {
   handleWebhook,
   getTemplates,
   syncTemplatesFromMeta,
+  submitTemplateToMeta,
   createTemplate,
   createContact,
   importContacts,

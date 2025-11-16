@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
+import useAuth from "@/hooks/useAuth";
 
 interface ConfigForm {
   phoneNumberId: string;
@@ -14,6 +15,7 @@ interface ConfigForm {
 export default function WhatsappSettingsPage() {
   const { tenantId } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);

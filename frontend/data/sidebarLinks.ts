@@ -64,7 +64,7 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["subscriber", "admin", "tenantAdmin"],
+    roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
     children: [
       {
         label: "📨 Campaigns",

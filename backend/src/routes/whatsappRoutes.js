@@ -7,6 +7,7 @@ const router = express.Router();
 // Configuration routes
 router.post('/config', protect, whatsappController.saveConfig);
 router.get('/config', protect, whatsappController.getConfig);
+router.delete('/config', protect, whatsappController.removeConfig);
 router.post('/test-connection', protect, whatsappController.testConnection);
 
 // Messaging routes
@@ -28,6 +29,7 @@ router.get('/stats', protect, whatsappController.getStats);
 router.get('/templates', protect, whatsappController.getTemplates);
 router.post('/templates', protect, whatsappController.createTemplate);
 router.post('/templates/sync', protect, whatsappController.syncTemplatesFromMeta);
+router.post('/templates/submit', protect, whatsappController.submitTemplateToMeta);
 
 // Webhook routes (no auth required - verified by token)
 router.get('/webhook', whatsappController.verifyWebhook);

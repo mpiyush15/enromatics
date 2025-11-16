@@ -45,14 +45,14 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "accountant", "staff"],
+    roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant", "staff"],
     tenantSpecific: true,
     children: [
-      { label: "📊 Dashboard", href: "/dashboard/whatsapp", roles: ["tenantAdmin", "teacher", "accountant", "staff"] },
-      { label: "📨 Campaigns", href: "/dashboard/whatsapp/campaigns", roles: ["tenantAdmin", "teacher", "accountant", "staff"] },
-      { label: "👥 Contacts", href: "/dashboard/whatsapp/contacts", roles: ["tenantAdmin", "teacher", "staff"] },
-      { label: "📈 Reports", href: "/dashboard/whatsapp/reports", roles: ["tenantAdmin", "teacher", "accountant", "staff"] },
-      { label: "⚙️ Settings", href: "/dashboard/whatsapp/settings", roles: ["tenantAdmin"] },
+      { label: "📊 Dashboard", href: "/dashboard/whatsapp", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant", "staff"] },
+      { label: "📨 Campaigns", href: "/dashboard/whatsapp/campaigns", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant", "staff"] },
+      { label: "👥 Contacts", href: "/dashboard/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "teacher", "staff"] },
+      { label: "📈 Reports", href: "/dashboard/whatsapp/reports", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant", "staff"] },
+      { label: "⚙️ Settings", href: "/dashboard/whatsapp/settings", roles: ["SuperAdmin", "tenantAdmin"] },
     ],
   },
   {

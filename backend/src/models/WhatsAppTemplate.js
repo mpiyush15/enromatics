@@ -51,7 +51,11 @@ const whatsAppTemplateSchema = new mongoose.Schema({
   lastSyncedAt: Date, // Last time synced from Meta
   approvedAt: Date,
   rejectedAt: Date,
-  rejectedReason: String // Meta's rejection reason
+  rejectedReason: String, // Meta's rejection reason
+  deleted: {
+    type: Boolean,
+    default: false
+  } // Mark as deleted if removed from Meta
 }, {
   timestamps: true
 });
