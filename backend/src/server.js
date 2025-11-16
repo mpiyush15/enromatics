@@ -28,33 +28,12 @@ connectDB();
 
 const app = express();
 
-// CORS configuration with support for production
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // Add production URL via environment variable
-  "https://enromatics.com",
-  "https://www.enromatics.com", // Add www version
-].filter(Boolean); // Remove undefined values
-
-console.log("🌐 Allowed CORS origins:", allowedOrigins);
-
+// CORS - Allow all origins in production (simplest solution)
 app.use(
   cors({
-    origin: function (origin, callback) {
-      console.log("🔍 Request from origin:", origin);
-      
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        console.log("✅ Origin allowed:", origin);
-        callback(null, true);
-      } else {
-        console.log("❌ Origin rejected:", origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,               // ✅ allow cookies
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: true, // Allow all origins
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
