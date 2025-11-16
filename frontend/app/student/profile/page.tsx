@@ -35,7 +35,7 @@ export default function StudentProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("http://localhost:5050/api/student-auth/me", { credentials: "include" });
+      const res = await fetch("`${API_BASE_URL}/api/student-auth/me`", { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Not authenticated");
       setStudent(data);
@@ -65,7 +65,7 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch("http://localhost:5050/api/student-auth/update-profile", {
+      const res = await fetch("`${API_BASE_URL}/api/student-auth/update-profile`", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

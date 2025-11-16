@@ -43,7 +43,7 @@ export default function RefundsPage() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch("http://localhost:5050/api/students?limit=1000", {
+      const res = await fetch("`${API_BASE_URL}/api/students?limit=1000`", {
         credentials: "include"
       });
       const data = await res.json();
@@ -63,7 +63,7 @@ export default function RefundsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5050/api/accounts/refunds", {
+      const res = await fetch("`${API_BASE_URL}/api/accounts/refunds`", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

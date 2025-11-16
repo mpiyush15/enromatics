@@ -22,7 +22,7 @@ export default function TestReportsPage() {
 
   const fetchReports = async () => {
     try {
-      let url = "http://localhost:5050/api/academics/reports";
+      let url = "`${API_BASE_URL}/api/academics/reports`";
       const params = new URLSearchParams();
       if (filterCourse) params.append("course", filterCourse);
       if (filterBatch) params.append("batch", filterBatch);

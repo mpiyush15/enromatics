@@ -80,7 +80,7 @@ export default function StudentAttendancePage() {
   useEffect(() => {
     const fetchStudent = async () => {
       try {
-        const res = await fetch("http://localhost:5050/api/student-auth/me", {
+        const res = await fetch("`${API_BASE_URL}/api/student-auth/me`", {
           credentials: "include",
         });
         const data = await res.json();

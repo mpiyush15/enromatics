@@ -8,7 +8,7 @@ export default function LogoutButton() {
     localStorage.removeItem("tenantId");
 
     // Optional: if using cookie-based JWT later, call logout API here
-    // await fetch("http://localhost:5050/api/auth/logout", { method: "POST", credentials: "include" });
+    // await fetch("`${API_BASE_URL}/api/auth/logout`", { method: "POST", credentials: "include" });
 
     // Redirect to login
     window.location.href = "/login"; // full reload to reset React state

@@ -35,7 +35,7 @@ export default function StudentTestSchedulePage() {
   const fetchData = async () => {
     try {
       // Get student info
-      const studentRes = await fetch("http://localhost:5050/api/student-auth/me", {
+      const studentRes = await fetch("`${API_BASE_URL}/api/student-auth/me`", {
         credentials: "include",
       });
       const studentData = await studentRes.json();

@@ -72,7 +72,7 @@ export default function ExpensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5050/api/accounts/expenses", {
+      const res = await fetch("`${API_BASE_URL}/api/accounts/expenses`", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
