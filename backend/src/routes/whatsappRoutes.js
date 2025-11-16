@@ -27,6 +27,7 @@ router.get('/stats', protect, whatsappController.getStats);
 // Templates
 router.get('/templates', protect, whatsappController.getTemplates);
 router.post('/templates', protect, whatsappController.createTemplate);
+router.post('/templates/sync', protect, whatsappController.syncTemplatesFromMeta);
 
 // Webhook routes (no auth required - verified by token)
 router.get('/webhook', whatsappController.verifyWebhook);

@@ -10,18 +10,54 @@ export const saveConfig = async (req, res) => {
     const { phoneNumberId, accessToken, wabaId, businessName } = req.body;
     const tenantId = req.user.tenantId;
 
-    if (!phoneNumberId || !accessToken || !wabaId) {
+    if (!phoneNumberId || !wabaId) {
       return res.status(400).json({ 
-        message: 'Phone Number ID, Access Token, and WABA ID are required' 
+        message: 'Phone Number ID and WABA ID are required' 
       });
     }
 
-    // Upsert configuration
+    // Check if config exists
+    const existingConfig = await WhatsAppConfig.findOne({ tenantId });
+
+    // If updating and no accessToken provided, keep the old one
+    if (existingConfig && (!accessToken || accessToken.trim() === '')) {
+      // Update without changing accessToken
+      const config = await WhatsAppConfig.findOneAndUpdate(
+        { tenantId },
+        {
+          phoneNumberId,
+          wabaId,
+          businessName,
+          isActive: true
+        },
+        { new: true }
+      );
+
+      return res.json({
+        success: true,
+        message: 'WhatsApp configuration updated successfully (token unchanged)',
+        config: {
+          phoneNumberId: config.phoneNumberId,
+          wabaId: config.wabaId,
+          businessName: config.businessName,
+          isActive: config.isActive
+        }
+      });
+    }
+
+    // For new config or when token is provided, validate token
+    if (!accessToken || accessToken.trim() === '') {
+      return res.status(400).json({ 
+        message: 'Access Token is required for new configuration' 
+      });
+    }
+
+    // Upsert configuration with token
     const config = await WhatsAppConfig.findOneAndUpdate(
       { tenantId },
       {
         phoneNumberId,
-        accessToken,
+        accessToken: accessToken.trim(),
         wabaId,
         businessName,
         isActive: true
@@ -386,6 +422,114 @@ export const getTemplates = async (req, res) => {
   }
 };
 
+// Fetch templates from Meta API and sync to database
+export const syncTemplatesFromMeta = async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId;
+    
+    // Get WhatsApp config
+    const config = await WhatsAppConfig.findOne({ tenantId });
+    if (!config) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'WhatsApp not configured. Please configure WhatsApp first.' 
+      });
+    }
+
+    console.log('🔄 Fetching templates from Meta for WABA:', config.wabaId);
+
+    // Fetch templates from Meta API
+    const axios = (await import('axios')).default;
+    const response = await axios.get(
+      `https://graph.facebook.com/v21.0/${config.wabaId}/message_templates`,
+      {
+        headers: {
+          'Authorization': `Bearer ${config.accessToken}`
+        },
+        params: {
+          limit: 100 // Fetch up to 100 templates
+        }
+      }
+    );
+
+    const metaTemplates = response.data.data || [];
+    console.log(`✅ Fetched ${metaTemplates.length} templates from Meta`);
+
+    // Sync to database
+    let synced = 0;
+    let updated = 0;
+
+    for (const metaTemplate of metaTemplates) {
+      try {
+        // Extract template details
+        const templateData = {
+          tenantId,
+          name: metaTemplate.name,
+          language: metaTemplate.language || 'en',
+          category: metaTemplate.category || 'UTILITY',
+          status: metaTemplate.status?.toLowerCase() || 'pending',
+          metaTemplateId: metaTemplate.id,
+          components: metaTemplate.components || [],
+          // Extract body text from components
+          content: metaTemplate.components?.find(c => c.type === 'BODY')?.text || '',
+          // Extract variables from body text ({{1}}, {{2}}, etc.)
+          variables: extractVariablesFromTemplate(metaTemplate.components?.find(c => c.type === 'BODY')?.text || ''),
+          rejectedReason: metaTemplate.rejected_reason,
+          lastSyncedAt: new Date()
+        };
+
+        // Upsert template
+        const existing = await WhatsAppTemplate.findOne({ 
+          tenantId, 
+          name: metaTemplate.name,
+          language: metaTemplate.language 
+        });
+
+        if (existing) {
+          await WhatsAppTemplate.updateOne(
+            { _id: existing._id },
+            { $set: templateData }
+          );
+          updated++;
+        } else {
+          await WhatsAppTemplate.create(templateData);
+          synced++;
+        }
+      } catch (err) {
+        console.error(`Error syncing template ${metaTemplate.name}:`, err.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Synced ${synced} new templates, updated ${updated} existing templates`,
+      stats: {
+        total: metaTemplates.length,
+        synced,
+        updated,
+        approved: metaTemplates.filter(t => t.status === 'APPROVED').length,
+        pending: metaTemplates.filter(t => t.status === 'PENDING').length,
+        rejected: metaTemplates.filter(t => t.status === 'REJECTED').length
+      }
+    });
+
+  } catch (error) {
+    console.error('Sync templates error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false,
+      message: error.response?.data?.error?.message || error.message 
+    });
+  }
+};
+
+// Helper function to extract variables from template text
+function extractVariablesFromTemplate(text) {
+  if (!text) return [];
+  const matches = text.match(/\{\{(\d+)\}\}/g);
+  if (!matches) return [];
+  return matches.map(m => m.replace(/\{\{|\}\}/g, ''));
+}
+
 // Create template
 export const createTemplate = async (req, res) => {
   try {
@@ -702,6 +846,7 @@ export default {
   verifyWebhook,
   handleWebhook,
   getTemplates,
+  syncTemplatesFromMeta,
   createTemplate,
   createContact,
   importContacts,

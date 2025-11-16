@@ -29,6 +29,14 @@ class WhatsAppService {
       // Clean phone number (remove + and spaces)
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
       
+      console.log('📱 Preparing to send WhatsApp message:');
+      console.log('  Tenant ID:', tenantId);
+      console.log('  Original Phone:', recipientPhone);
+      console.log('  Cleaned Phone:', cleanPhone);
+      console.log('  Message:', messageText);
+      console.log('  Config Phone Number ID:', config.phoneNumberId);
+      console.log('  Config WABA ID:', config.wabaId);
+      
       // Create message record
       message = new WhatsAppMessage({
         tenantId,
@@ -42,6 +50,8 @@ class WhatsAppService {
       });
 
       // Send via WhatsApp Cloud API
+      console.log('🚀 Sending to Meta API:', `${GRAPH_API_URL}/${config.phoneNumberId}/messages`);
+      
       const response = await axios.post(
         `${GRAPH_API_URL}/${config.phoneNumberId}/messages`,
         {
@@ -58,6 +68,8 @@ class WhatsAppService {
           }
         }
       );
+
+      console.log('✅ Meta API Response:', JSON.stringify(response.data, null, 2));
 
       // Update message with WhatsApp message ID
       message.waMessageId = response.data.messages[0].id;
@@ -98,7 +110,12 @@ class WhatsAppService {
       };
 
     } catch (error) {
-      console.error('WhatsApp send error:', error.response?.data || error.message);
+      console.error('❌ WhatsApp send error:');
+      console.error('Error details:', error.response?.data || error.message);
+      console.error('Config used:', {
+        phoneNumberId: (await this.getTenantConfig(tenantId).catch(() => null))?.phoneNumberId,
+        recipientPhone: recipientPhone
+      });
       
       // Save failed message
       if (message) {

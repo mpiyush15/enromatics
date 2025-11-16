@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Contact {
   _id: string;
@@ -257,7 +258,7 @@ export default function WhatsappCampaignsPage() {
 
     for (const phone of selectedContacts) {
       try {
-        const res = await fetch(`http://localhost:5050/api/whatsapp/send`, {
+        const res = await fetch(`${API_BASE_URL}/api/whatsapp/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

@@ -23,17 +23,21 @@ const whatsAppTemplateSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  variables: [{
-    name: String,
-    placeholder: String,
-    example: String
-  }],
+  variables: {
+    type: [String], // Array of variable placeholders like ["1", "2", "3"]
+    default: []
+  },
+  components: {
+    type: Array, // Store full Meta template components
+    default: []
+  },
   status: {
     type: String,
     enum: ['draft', 'pending', 'approved', 'rejected'],
     default: 'draft'
   },
-  waTemplateId: String,
+  metaTemplateId: String, // Meta's template ID
+  waTemplateId: String, // Legacy field
   useCase: {
     type: String,
     enum: ['welcome', 'fee_reminder', 'attendance_alert', 'test_notification', 'general', 'other'],
@@ -44,9 +48,10 @@ const whatsAppTemplateSchema = new mongoose.Schema({
     default: 0
   },
   lastUsedAt: Date,
+  lastSyncedAt: Date, // Last time synced from Meta
   approvedAt: Date,
   rejectedAt: Date,
-  rejectionReason: String
+  rejectedReason: String // Meta's rejection reason
 }, {
   timestamps: true
 });

@@ -27,6 +27,8 @@ export default function WhatsappSettingsPage() {
   });
 
   const [testPhone, setTestPhone] = useState("");
+  const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [templateSyncStatus, setTemplateSyncStatus] = useState("");
 
   useEffect(() => {
     fetchConfig();
@@ -123,6 +125,32 @@ export default function WhatsappSettingsPage() {
       setStatus(`❌ Connection failed: ${errorMessage}`);
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleSyncTemplates = async () => {
+    setSyncingTemplates(true);
+    setTemplateSyncStatus("Fetching templates from Meta...");
+
+    try {
+      const res = await fetch(`http://localhost:5050/api/whatsapp/templates/sync`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message);
+
+      setTemplateSyncStatus(
+        `✅ ${data.message}\n📊 Approved: ${data.stats.approved}, Pending: ${data.stats.pending}, Rejected: ${data.stats.rejected}`
+      );
+      setTimeout(() => setTemplateSyncStatus(""), 8000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Sync failed";
+      setTemplateSyncStatus(`❌ Sync failed: ${errorMessage}`);
+    } finally {
+      setSyncingTemplates(false);
     }
   };
 
@@ -245,11 +273,11 @@ export default function WhatsappSettingsPage() {
 
             <div>
               <label className="block text-sm font-semibold mb-2">
-                Access Token *
+                Access Token {configured ? "" : "*"}
               </label>
               <textarea
-                required
-                placeholder="Paste your WhatsApp Access Token here..."
+                required={!configured}
+                placeholder={configured ? "Leave empty to keep existing token, or paste new token to update" : "Paste your WhatsApp Access Token here..."}
                 value={form.accessToken}
                 onChange={(e) =>
                   setForm({ ...form, accessToken: e.target.value })
@@ -258,7 +286,10 @@ export default function WhatsappSettingsPage() {
                 className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-1">
-                ⚠️ Keep this secure! Never share your access token.
+                {configured 
+                  ? "⚠️ Token is encrypted in database. Leave empty to keep current token, or paste a new one to update it."
+                  : "Get this from Meta Business → WhatsApp → API Setup"
+                }
               </p>
             </div>
 
@@ -309,6 +340,53 @@ export default function WhatsappSettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Sync Templates from Meta */}
+        {configured && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
+              <h2 className="text-xl font-bold">📋 Message Templates</h2>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>⚠️ Important:</strong> WhatsApp requires pre-approved message templates to send messages. 
+                  Click below to fetch your approved templates from Meta.
+                </p>
+              </div>
+
+              <button
+                onClick={handleSyncTemplates}
+                disabled={syncingTemplates}
+                className="w-full px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {syncingTemplates ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    Syncing Templates from Meta...
+                  </>
+                ) : (
+                  <>
+                    🔄 Fetch Templates from Meta
+                  </>
+                )}
+              </button>
+
+              {templateSyncStatus && (
+                <div
+                  className={`p-4 rounded-xl font-semibold whitespace-pre-line ${
+                    templateSyncStatus.includes("✅")
+                      ? "bg-green-100 text-green-800 border-2 border-green-200"
+                      : "bg-red-100 text-red-800 border-2 border-red-200"
+                  }`}
+                >
+                  {templateSyncStatus}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Status Message */}
         {status && (
