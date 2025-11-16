@@ -19,7 +19,7 @@ export default function AdminLeadsPage() {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        console.log("🔵 Fetching leads from API...");
+        
         const res = await fetch(`${API_BASE_URL}/api/leads`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
@@ -37,7 +37,7 @@ export default function AdminLeadsPage() {
         }
 
         const data = await res.json();
-        console.log("🟢 Leads fetched successfully:", data.length, "leads");
+        
         setLeads(data);
       } catch (err: any) {
         console.error("❌ Error fetching leads:", err.message);

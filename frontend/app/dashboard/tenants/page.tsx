@@ -25,7 +25,7 @@ export default function AdminTenantsPage() {
   useEffect(() => {
     const fetchTenants = async () => {
       try {
-        console.log("🔵 Fetching all tenants from API...");
+        
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
@@ -43,7 +43,7 @@ export default function AdminTenantsPage() {
         }
 
         const data = await res.json();
-        console.log("🟢 Tenants fetched successfully:", data.length, "tenants");
+        
         setTenants(data);
       } catch (err: any) {
         console.error("❌ Tenant Fetch Error:", err.message);

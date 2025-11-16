@@ -11,30 +11,23 @@ export default function HomeDashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch user details using backend API (Express)
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        console.log("🔵 Fetching user details from API...");
         const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           method: "GET",
-          credentials: "include", // ✅ Send httpOnly cookie with request
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
         });
 
-        console.log("📍 Auth API response status:", res.status);
-
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          console.error("❌ Auth API error:", errorData);
           throw new Error(errorData.message || "Unauthorized");
         }
 
         const data = await res.json();
-        console.log("🟢 User details fetched:", { name: data.name, role: data.role });
         setUser(data);
       } catch (err: any) {
-        console.error("❌ Auth check failed:", err.message);
         router.push("/login");
       } finally {
         setLoading(false);
