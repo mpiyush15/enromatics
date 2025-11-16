@@ -32,6 +32,8 @@ const app = express();
 const allowedOrigins = [
   
   process.env.FRONTEND_URL, // Add production URL via environment variable
+  "https://enromatics.com",
+  
 ].filter(Boolean); // Remove undefined values
 
 app.use(
