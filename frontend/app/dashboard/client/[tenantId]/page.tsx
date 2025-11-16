@@ -13,7 +13,7 @@ export default function TenantDashboard() {
     const fetchTenantInfo = async () => {
       try {
         console.log("🔵 Fetching tenant info for tenantId:", tenantId);
-        const res = await fetch(`http://localhost:5050/api/tenants/${tenantId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/tenants/${tenantId}`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {

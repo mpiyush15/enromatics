@@ -55,7 +55,7 @@ export default function TenantProfilePage() {
 
   const fetchTenantProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/tenants/${tenantId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/tenants/${tenantId}`, {
         credentials: "include",
       });
       
@@ -113,7 +113,7 @@ export default function TenantProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`http://localhost:5050/api/tenants/${tenantId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/tenants/${tenantId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

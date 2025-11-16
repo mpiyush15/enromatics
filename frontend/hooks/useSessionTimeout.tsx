@@ -26,7 +26,7 @@ export const useSessionTimeout = ({
   const logout = useCallback(async () => {
     try {
       // Call logout API
-      await fetch("http://localhost:5050/api/auth/logout", {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
