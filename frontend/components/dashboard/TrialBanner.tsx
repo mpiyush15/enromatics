@@ -48,99 +48,88 @@ export default function TrialBanner({ trialEndDate, plan = "trial", subscription
   // Trial expired banner
   if (isExpired) {
     return (
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-red-50 dark:bg-red-900/10 border-b border-red-200 dark:border-red-800/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <svg className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <div>
-                <p className="font-medium">Your trial has ended</p>
-                <p className="text-sm text-red-100">Upgrade now to continue using all features</p>
-              </div>
+              <p className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-200 truncate">
+                Trial ended • <span className="hidden sm:inline">Upgrade to continue</span>
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/plans"
-                className="px-6 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors shadow-lg"
-              >
-                Upgrade Now
-              </Link>
-            </div>
+            <Link
+              href="/plans"
+              className="px-3 py-1 text-xs font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors whitespace-nowrap"
+            >
+              Upgrade
+            </Link>
           </div>
         </div>
       </div>
     );
   }
 
-  // Active trial banner
+  // Active trial banner with light colors
   const urgency = daysRemaining <= 3 ? "urgent" : daysRemaining <= 7 ? "warning" : "normal";
-  const bgColor = {
-    urgent: "from-orange-600 to-red-600",
-    warning: "from-yellow-600 to-orange-600",
-    normal: "from-blue-600 to-indigo-600"
+  const styles = {
+    urgent: {
+      bg: "bg-orange-50 dark:bg-orange-900/10",
+      border: "border-orange-200 dark:border-orange-800/30",
+      text: "text-orange-800 dark:text-orange-200",
+      icon: "text-orange-600 dark:text-orange-400",
+      button: "bg-orange-600 hover:bg-orange-700 text-white"
+    },
+    warning: {
+      bg: "bg-yellow-50 dark:bg-yellow-900/10",
+      border: "border-yellow-200 dark:border-yellow-800/30",
+      text: "text-yellow-800 dark:text-yellow-200",
+      icon: "text-yellow-600 dark:text-yellow-400",
+      button: "bg-yellow-600 hover:bg-yellow-700 text-white"
+    },
+    normal: {
+      bg: "bg-blue-50 dark:bg-blue-900/10",
+      border: "border-blue-200 dark:border-blue-800/30",
+      text: "text-blue-800 dark:text-blue-200",
+      icon: "text-blue-600 dark:text-blue-400",
+      button: "bg-blue-600 hover:bg-blue-700 text-white"
+    }
   }[urgency];
 
   return (
-    <div className={`sticky top-0 z-50 bg-gradient-to-r ${bgColor} text-white shadow-lg`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm">
+    <div className={`${styles.bg} border-b ${styles.border}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <svg className={`w-4 h-4 flex-shrink-0 ${styles.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {urgency === "urgent" ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               )}
-            </div>
-            <div>
-              <p className="font-medium text-sm sm:text-base">
-                {urgency === "urgent" 
-                  ? "⚠️ Trial ending soon!" 
-                  : urgency === "warning"
-                  ? "⏰ Trial expires in a week"
-                  : "🎉 Free trial active"}
-              </p>
-              <p className="text-xs sm:text-sm opacity-90">
-                {daysRemaining > 0 ? (
-                  <>
-                    <span className="font-semibold">{daysRemaining}</span> day{daysRemaining !== 1 ? 's' : ''} {hoursRemaining > 0 && (
-                      <>, <span className="font-semibold">{hoursRemaining}</span> hour{hoursRemaining !== 1 ? 's' : ''}</>
-                    )} remaining
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold">{hoursRemaining}</span> hour{hoursRemaining !== 1 ? 's' : ''} remaining
-                  </>
-                )}
-              </p>
-            </div>
+            </svg>
+            <p className={`text-xs sm:text-sm font-medium ${styles.text} truncate`}>
+              {urgency === "urgent" 
+                ? `⚠️ ${daysRemaining}d ${hoursRemaining}h left` 
+                : urgency === "warning"
+                ? `⏰ ${daysRemaining} days left`
+                : `🎉 Trial: ${daysRemaining} days left`}
+            </p>
           </div>
-          
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Link
               href="/plans"
-              className="px-4 sm:px-6 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg text-sm font-medium transition-colors border border-white/20"
+              className={`px-3 py-1 text-xs font-medium ${styles.button} rounded-md transition-colors whitespace-nowrap`}
             >
-              View Plans
-            </Link>
-            <Link
-              href="/plans"
-              className="px-4 sm:px-6 py-2 bg-white text-blue-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-lg"
-            >
-              Upgrade Now
+              Upgrade
             </Link>
             <button
               onClick={() => setDismissed(true)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className={`p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors ${styles.text}`}
               aria-label="Dismiss"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
