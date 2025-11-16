@@ -97,11 +97,11 @@ export const loginUser = async (req, res) => {
 
     const token = generateToken(user._id, user.role, user.tenantId);
 
-    // ✅ Set cookie after successful login
+    // ✅ Set cookie after successful login (cross-domain compatible)
     res.cookie("jwt", token, {
       httpOnly: true, // ✅ Cannot be accessed by JavaScript
-      secure: false, // Set to true in production with HTTPS
-      sameSite: "lax", // Allow same-site requests
+      secure: true, // ✅ Required for cross-domain HTTPS
+      sameSite: "none", // ✅ Allow cross-domain requests
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: "/", // Available on all routes
     });
