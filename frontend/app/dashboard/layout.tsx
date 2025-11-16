@@ -23,16 +23,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Trial Banner - Fixed at top, doesn't affect layout */}
+    <>
+      {/* Trial Banner - Shows at top of dashboard */}
       {user?.trialEndDate && (
-        <div className="fixed top-0 left-0 right-0 z-50">
-          <TrialBanner 
-            trialEndDate={user.trialEndDate}
-            plan={user.plan}
-            subscriptionStatus={user.subscriptionStatus}
-          />
-        </div>
+        <TrialBanner 
+          trialEndDate={user.trialEndDate}
+          plan={user.plan}
+          subscriptionStatus={user.subscriptionStatus}
+        />
       )}
       
       <ClientDashboard 
@@ -40,11 +38,8 @@ export default function DashboardLayout({
         userRole={user?.role}
         isAdmin={user?.role === "SuperAdmin"}
       >
-        {/* Add padding-top to account for fixed banner */}
-        <div className={user?.trialEndDate && user?.subscriptionStatus === "trial" ? "pt-10" : ""}>
-          {children}
-        </div>
+        {children}
       </ClientDashboard>
-    </div>
+    </>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import useAuth from "@/hooks/useAuth";
 
 interface Plan {
   name: string;
@@ -15,7 +14,6 @@ interface Plan {
 }
 
 export default function PlansPage() {
-  const { user } = useAuth();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
   const plans: Plan[] = [
@@ -96,31 +94,6 @@ export default function PlansPage() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        {/* Back/Login Button */}
-        <div className="mb-8">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Dashboard
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-              Sign In
-            </Link>
-          )}
-        </div>
-
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl sm:text-5xl font-light text-gray-900 dark:text-white mb-4 tracking-tight">
@@ -233,20 +206,14 @@ export default function PlansPage() {
 
               {/* CTA Button */}
               <Link
-                href={
-                  plan.name === "Enterprise" 
-                    ? "/contact" 
-                    : user 
-                      ? "/dashboard" // If logged in, go to dashboard (payment will be added later)
-                      : "/register" // If not logged in, go to register
-                }
+                href={plan.name === "Enterprise" ? "/contact" : "/register"}
                 className={`block w-full text-center py-3 px-4 rounded-xl font-medium transition-all ${
                   plan.popular
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
                     : "border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
-                {user && plan.name !== "Enterprise" ? "Select Plan" : plan.cta}
+                {plan.cta}
               </Link>
             </div>
           ))}
@@ -307,10 +274,10 @@ export default function PlansPage() {
               Join hundreds of institutions already using Enromatics to manage their operations efficiently.
             </p>
             <Link
-              href={user ? "/dashboard" : "/register"}
+              href="/register"
               className="inline-flex items-center px-8 py-4 bg-white text-blue-600 rounded-xl font-medium hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl"
             >
-              {user ? "Go to Dashboard" : "Start Your Free Trial"}
+              Start Your Free Trial
               <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
