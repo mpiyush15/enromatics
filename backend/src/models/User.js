@@ -29,6 +29,39 @@ const userSchema = new mongoose.Schema(
       enum: ["active", "inactive", "suspended"],
       default: "active",
     },
+
+    // Subscription/Trial fields
+    plan: {
+      type: String,
+      enum: ["trial", "free", "starter", "professional", "enterprise"],
+      default: "trial",
+    },
+
+    trialStartDate: {
+      type: Date,
+      default: Date.now,
+    },
+
+    trialEndDate: {
+      type: Date,
+      default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+    },
+
+    subscriptionStatus: {
+      type: String,
+      enum: ["trial", "active", "expired", "cancelled"],
+      default: "trial",
+    },
+
+    subscriptionEndDate: {
+      type: Date,
+    },
+
+    paymentDetails: {
+      lastPaymentDate: Date,
+      lastPaymentAmount: Number,
+      paymentMethod: String,
+    },
   },
   { timestamps: true }
 );

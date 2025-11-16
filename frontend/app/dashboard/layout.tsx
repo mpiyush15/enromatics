@@ -1,6 +1,7 @@
 "use client";
 import useAuth from "@/hooks/useAuth";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import TrialBanner from "@/components/dashboard/TrialBanner";
 
 export default function DashboardLayout({
   children,
@@ -22,12 +23,23 @@ export default function DashboardLayout({
   }
 
   return (
-    <ClientDashboard 
-      userName={user?.email || "User"}
-      userRole={user?.role}
-      isAdmin={user?.role === "SuperAdmin"}
-    >
-      {children}
-    </ClientDashboard>
+    <>
+      {/* Trial Banner - Shows at top of dashboard */}
+      {user?.trialEndDate && (
+        <TrialBanner 
+          trialEndDate={user.trialEndDate}
+          plan={user.plan}
+          subscriptionStatus={user.subscriptionStatus}
+        />
+      )}
+      
+      <ClientDashboard 
+        userName={user?.email || "User"}
+        userRole={user?.role}
+        isAdmin={user?.role === "SuperAdmin"}
+      >
+        {children}
+      </ClientDashboard>
+    </>
   );
 }
