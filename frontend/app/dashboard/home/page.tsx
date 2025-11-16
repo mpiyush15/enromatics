@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 import TrialNote from "@/components/roles/user/TrialNote";
 
@@ -15,7 +16,7 @@ export default function HomeDashboardPage() {
     const fetchUser = async () => {
       try {
         console.log("🔵 Fetching user details from API...");
-        const res = await fetch("`${API_BASE_URL}/api/auth/me`", {
+        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: { "Content-Type": "application/json" },

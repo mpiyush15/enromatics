@@ -59,7 +59,7 @@ export default function FeeReceiptsPage() {
 
     try {
       setLoading(true);
-      const res = await fetch("`${API_BASE_URL}/api/accounts/receipts/create`", {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/receipts/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

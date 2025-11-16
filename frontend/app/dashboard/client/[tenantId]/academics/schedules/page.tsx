@@ -56,7 +56,7 @@ export default function TestSchedulesPage() {
 
   const fetchTests = async () => {
     try {
-      let url = "`${API_BASE_URL}/api/academics/tests`";
+      let url = `${API_BASE_URL}/api/academics/tests`;
       const params = new URLSearchParams();
       if (filterCourse) params.append("course", filterCourse);
       if (filterStatus) params.append("status", filterStatus);
@@ -83,7 +83,7 @@ export default function TestSchedulesPage() {
       
       const url = editingTest
         ? `${API_BASE_URL}/api/academics/tests/${editingTest._id}`
-        : "`${API_BASE_URL}/api/academics/tests`";
+        : `${API_BASE_URL}/api/academics/tests`;
       
       const res = await fetch(url, {
         method: editingTest ? "PUT" : "POST",

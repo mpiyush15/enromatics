@@ -13,7 +13,7 @@ export default function StudentDashboardPage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("`${API_BASE_URL}/api/student-auth/me`", { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Not authenticated");
       setStudent(data);

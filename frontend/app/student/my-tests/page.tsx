@@ -34,7 +34,7 @@ export default function StudentMyTestsPage() {
   const fetchStudentTests = async () => {
     try {
       // Get current student info
-      const studentRes = await fetch("`${API_BASE_URL}/api/student-auth/me`", {
+      const studentRes = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
         credentials: "include",
       });
       const studentData = await studentRes.json();

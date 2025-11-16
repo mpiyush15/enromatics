@@ -123,7 +123,7 @@ export default function AttendancePage() {
         remarks: s.attendance?.remarks || "",
       }));
 
-      const res = await fetch("`${API_BASE_URL}/api/attendance/mark`", {
+      const res = await fetch(`${API_BASE_URL}/api/attendance/mark`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

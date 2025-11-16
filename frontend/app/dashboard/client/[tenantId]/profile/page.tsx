@@ -146,7 +146,7 @@ export default function TenantProfilePage() {
     e.preventDefault();
     setStatus("Adding staff...");
     try {
-      const res = await fetch("`${API_BASE_URL}/api/auth/register`", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

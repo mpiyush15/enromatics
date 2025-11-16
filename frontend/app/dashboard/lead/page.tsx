@@ -20,7 +20,7 @@ export default function AdminLeadsPage() {
     const fetchLeads = async () => {
       try {
         console.log("🔵 Fetching leads from API...");
-        const res = await fetch("`${API_BASE_URL}/api/leads`", {
+        const res = await fetch(`${API_BASE_URL}/api/leads`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {

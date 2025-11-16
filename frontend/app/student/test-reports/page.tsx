@@ -32,7 +32,7 @@ export default function StudentTestReportsPage() {
 
   const fetchStudentData = async () => {
     try {
-      const studentRes = await fetch("`${API_BASE_URL}/api/student-auth/me`", {
+      const studentRes = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
         credentials: "include",
       });
       const studentData = await studentRes.json();

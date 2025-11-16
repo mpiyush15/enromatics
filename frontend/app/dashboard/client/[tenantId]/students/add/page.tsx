@@ -31,7 +31,7 @@ export default function AddStudentPage() {
     setStatus("Adding student...");
 
     try {
-      const res = await fetch("`${API_BASE_URL}/api/students`", {
+      const res = await fetch(`${API_BASE_URL}/api/students`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
