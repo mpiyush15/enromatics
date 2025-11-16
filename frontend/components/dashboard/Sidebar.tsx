@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import useOptionalAuth from "@/hooks/useOptionalAuth";
 import Logout_Button from "@/app/dashboard/LogoutButton";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
       try {
         console.log("🔄 Fetching sidebar for user:", { role: user.role, tenantId: user.tenantId });
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/ui/sidebar`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/ui/sidebar`, {
           method: "GET",
           credentials: "include", // ✅ Sends httpOnly cookie automatically
         });

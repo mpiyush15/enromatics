@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface AttendanceRecord {
   _id: string;
@@ -54,7 +55,7 @@ export default function StudentAttendancePage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:5050/api/student-auth/attendance?month=${month}&year=${year}`,
+        `${API_BASE_URL}/api/student-auth/attendance?month=${month}&year=${year}`,
         { credentials: "include" }
       );
       const data = await res.json();

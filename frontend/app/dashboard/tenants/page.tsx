@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 type Tenant = {
   _id: string;
@@ -25,7 +26,7 @@ export default function AdminTenantsPage() {
     const fetchTenants = async () => {
       try {
         console.log("🔵 Fetching all tenants from API...");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/tenants`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {

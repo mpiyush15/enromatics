@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentsPage() {
   const { tenantId } = useParams();
@@ -27,7 +28,7 @@ export default function StudentsPage() {
         if (rollFilter) params.set("rollNumber", rollFilter);
         if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
 
-        const res = await fetch(`http://localhost:5050/api/students?${params.toString()}`, {
+        const res = await fetch(`${API_BASE_URL}/api/students?${params.toString()}`, {
           method: "GET",
           credentials: "include",
         });

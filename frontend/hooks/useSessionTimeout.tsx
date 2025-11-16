@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface UseSessionTimeoutProps {
   timeout?: number; // in milliseconds
@@ -26,7 +27,7 @@ export const useSessionTimeout = ({
   const logout = useCallback(async () => {
     try {
       // Call logout API
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050'}/api/auth/logout`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
       });

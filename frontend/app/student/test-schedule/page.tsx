@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentTestSchedulePage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function StudentTestSchedulePage() {
 
       // Fetch all tests for student's course and batch using student-specific endpoint
       const testsRes = await fetch(
-        `http://localhost:5050/api/academics/student/tests`,
+        `${API_BASE_URL}/api/academics/student/tests`,
         { credentials: "include" }
       );
       const testsData = await testsRes.json();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface MessageContent {
   text?: string;
@@ -51,7 +52,7 @@ export default function WhatsappReportsPage() {
       if (campaignFilter) params.append("campaign", campaignFilter);
 
       const res = await fetch(
-        `http://localhost:5050/api/whatsapp/messages?${params}`,
+        `${API_BASE_URL}/api/whatsapp/messages?${params}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -69,7 +70,7 @@ export default function WhatsappReportsPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/stats`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
         credentials: "include",
       });
       const data = await res.json();

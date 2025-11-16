@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function ExpensesPage() {
   const { tenantId } = useParams();
@@ -49,7 +50,7 @@ export default function ExpensesPage() {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.status) params.append("status", filters.status);
 
-      const res = await fetch(`http://localhost:5050/api/accounts/expenses?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/expenses?${params.toString()}`, {
         credentials: "include"
       });
 

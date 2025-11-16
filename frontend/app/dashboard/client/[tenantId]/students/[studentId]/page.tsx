@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export default function StudentProfilePage() {
 
   const fetchStudent = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/students/${studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
         method: "GET",
         credentials: "include",
       });
@@ -62,7 +63,7 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`http://localhost:5050/api/students/${studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -85,7 +86,7 @@ export default function StudentProfilePage() {
     if (!ok) return;
     setStatus("Resetting password...");
     try {
-      const res = await fetch(`http://localhost:5050/api/students/${studentId}/reset-password`, {
+      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}/reset-password`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -105,7 +106,7 @@ export default function StudentProfilePage() {
     if (!paymentAmount) return setStatus("❌ Enter amount");
     setStatus("Adding payment...");
     try {
-      const res = await fetch(`http://localhost:5050/api/payments`, {
+      const res = await fetch(`${API_BASE_URL}/api/payments`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -127,7 +128,7 @@ export default function StudentProfilePage() {
     const ok = confirm("Are you sure you want to delete this payment receipt?");
     if (!ok) return;
     try {
-      const res = await fetch(`http://localhost:5050/api/payments/${paymentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
         method: "DELETE",
         credentials: "include",
       });

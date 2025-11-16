@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentMyTestsPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function StudentMyTestsPage() {
 
       // Fetch test marks for this student
       const testsRes = await fetch(
-        `http://localhost:5050/api/academics/students/${studentData.student._id}/tests`,
+        `${API_BASE_URL}/api/academics/students/${studentData.student._id}/tests`,
         { credentials: "include" }
       );
       const testsData = await testsRes.json();

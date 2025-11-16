@@ -50,7 +50,7 @@ export default function WhatsAppDashboardPage() {
 
   const checkConfig = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -70,7 +70,7 @@ export default function WhatsAppDashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/stats`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -86,7 +86,7 @@ export default function WhatsAppDashboardPage() {
   const fetchRecentMessages = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5050/api/whatsapp/messages?limit=5`,
+        `${API_BASE_URL}/api/whatsapp/messages?limit=5`,
         { credentials: "include" }
       );
       const data = await res.json();

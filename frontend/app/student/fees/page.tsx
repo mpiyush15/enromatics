@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentFeesPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function StudentFeesPage() {
       setStudent(data);
       
       // Fetch payments for this student
-      const paymentsRes = await fetch(`http://localhost:5050/api/student-auth/payments`, { 
+      const paymentsRes = await fetch(`${API_BASE_URL}/api/student-auth/payments`, { 
         credentials: "include" 
       });
       const paymentsData = await paymentsRes.json();
@@ -210,7 +211,7 @@ export default function StudentFeesPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             {payment.receiptNumber ? (
                               <a
-                                href={`http://localhost:5050/api/payments/${payment._id}/receipt/download`}
+                                href={`${API_BASE_URL}/api/payments/${payment._id}/receipt/download`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm"

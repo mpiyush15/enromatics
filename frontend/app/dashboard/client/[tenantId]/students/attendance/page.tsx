@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { DatePicker } from "@/components/ui/date-picker";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Student {
   _id: string;
@@ -45,7 +46,7 @@ export default function AttendancePage() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`http://localhost:5050/api/students?tenantId=${tenantId}&limit=1000`, {
+        const res = await fetch(`${API_BASE_URL}/api/students?tenantId=${tenantId}&limit=1000`, {
           credentials: "include",
         });
         const data = await res.json();
@@ -70,7 +71,7 @@ export default function AttendancePage() {
       if (batch) params.append("batch", batch);
       if (course) params.append("course", course);
 
-      const res = await fetch(`http://localhost:5050/api/attendance/date?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/attendance/date?${params.toString()}`, {
         credentials: "include",
       });
       const data = await res.json();

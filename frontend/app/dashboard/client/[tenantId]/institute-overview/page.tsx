@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import StatCard from "@/components/dashboard/StatCard";
 import { FaUsers, FaMoneyBillWave } from "react-icons/fa";
 import useAuth from "@/hooks/useAuth";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function InstituteOverviewPage() {
   const { user } = useAuth();
@@ -18,7 +19,7 @@ export default function InstituteOverviewPage() {
 
       try {
         console.log("Making API request to fetch overview stats (cookies)...");
-        const res = await fetch(`http://localhost:5050/api/dashboard/overview`, {
+        const res = await fetch(`${API_BASE_URL}/api/dashboard/overview`, {
           credentials: "include", // send cookie set by backend
         });
 

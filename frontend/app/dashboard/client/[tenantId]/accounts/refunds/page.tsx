@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function RefundsPage() {
   const { tenantId } = useParams();
@@ -25,7 +26,7 @@ export default function RefundsPage() {
       const params = new URLSearchParams();
       if (statusFilter) params.append("status", statusFilter);
 
-      const res = await fetch(`http://localhost:5050/api/accounts/refunds?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/refunds?${params.toString()}`, {
         credentials: "include"
       });
 
@@ -100,7 +101,7 @@ export default function RefundsPage() {
         ? prompt("Enter transaction ID (optional):") 
         : undefined;
 
-      const res = await fetch(`http://localhost:5050/api/accounts/refunds/${refundId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/refunds/${refundId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

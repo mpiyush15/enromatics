@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Student {
   _id: string;
@@ -59,7 +60,7 @@ export default function MarksEntryPage() {
   const fetchTestAndStudents = async () => {
     try {
       // Fetch test details
-      const testRes = await fetch(`http://localhost:5050/api/academics/tests/${testId}`, {
+      const testRes = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}`, {
         credentials: "include",
       });
       const testData = await testRes.json();
@@ -68,7 +69,7 @@ export default function MarksEntryPage() {
 
         // Fetch attendance first to get present students
         const attendanceRes = await fetch(
-          `http://localhost:5050/api/academics/tests/${testId}/attendance`,
+          `${API_BASE_URL}/api/academics/tests/${testId}/attendance`,
           { credentials: "include" }
         );
         const attendanceData = await attendanceRes.json();
@@ -86,7 +87,7 @@ export default function MarksEntryPage() {
           // Only fetch students who were present
           if (presentStudentIds.size > 0) {
             const studentsRes = await fetch(
-              `http://localhost:5050/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
+              `${API_BASE_URL}/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
               { credentials: "include" }
             );
             const studentsData = await studentsRes.json();
@@ -99,7 +100,7 @@ export default function MarksEntryPage() {
 
               // Fetch existing marks
               const marksRes = await fetch(
-                `http://localhost:5050/api/academics/tests/${testId}/marks`,
+                `${API_BASE_URL}/api/academics/tests/${testId}/marks`,
                 { credentials: "include" }
               );
               const marksData = await marksRes.json();
@@ -198,7 +199,7 @@ export default function MarksEntryPage() {
         };
       });
 
-      const res = await fetch(`http://localhost:5050/api/academics/tests/${testId}/marks`, {
+      const res = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}/marks`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

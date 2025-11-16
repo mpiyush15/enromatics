@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Test {
   _id: string;
@@ -81,7 +82,7 @@ export default function TestSchedulesPage() {
       console.log("Submitting test form:", form);
       
       const url = editingTest
-        ? `http://localhost:5050/api/academics/tests/${editingTest._id}`
+        ? `${API_BASE_URL}/api/academics/tests/${editingTest._id}`
         : "http://localhost:5050/api/academics/tests";
       
       const res = await fetch(url, {
@@ -112,7 +113,7 @@ export default function TestSchedulesPage() {
     if (!confirm("Delete this test? All attendance and marks data will be removed.")) return;
     
     try {
-      const res = await fetch(`http://localhost:5050/api/academics/tests/${testId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}`, {
         method: "DELETE",
         credentials: "include",
       });

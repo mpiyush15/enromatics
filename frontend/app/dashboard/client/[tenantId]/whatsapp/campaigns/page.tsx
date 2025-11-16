@@ -63,7 +63,7 @@ export default function WhatsappCampaignsPage() {
 
   const checkConfig = async () => {
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/config`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -76,7 +76,7 @@ export default function WhatsappCampaignsPage() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/contacts`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/contacts`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -108,7 +108,7 @@ export default function WhatsappCampaignsPage() {
     setStatus("Syncing contacts from students database...");
     try {
       const res = await fetch(
-        `http://localhost:5050/api/whatsapp/sync-contacts`,
+        `${API_BASE_URL}/api/whatsapp/sync-contacts`,
         {
           method: "POST",
           credentials: "include",
@@ -132,7 +132,7 @@ export default function WhatsappCampaignsPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5050/api/whatsapp/contacts`, {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -159,7 +159,7 @@ export default function WhatsappCampaignsPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:5050/api/whatsapp/contacts/${id}`,
+        `${API_BASE_URL}/api/whatsapp/contacts/${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -218,7 +218,7 @@ export default function WhatsappCampaignsPage() {
 
       // Send to backend
       const res = await fetch(
-        `http://localhost:5050/api/whatsapp/contacts/import`,
+        `${API_BASE_URL}/api/whatsapp/contacts/import`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

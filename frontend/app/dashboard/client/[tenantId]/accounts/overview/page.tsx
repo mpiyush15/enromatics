@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function AccountsOverviewPage() {
   const { tenantId } = useParams();
@@ -22,7 +23,7 @@ export default function AccountsOverviewPage() {
       if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
       if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
 
-      const res = await fetch(`http://localhost:5050/api/accounts/overview?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/overview?${params.toString()}`, {
         credentials: "include"
       });
 

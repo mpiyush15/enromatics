@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { authService } from "@/lib/authService";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function FacebookBusinessSettings() {
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function FacebookBusinessSettings() {
     setLoading(true);
     try {
       // Redirect to backend route that starts Facebook OAuth
-      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5050'}/api/facebook/connect`;
+      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL || `${API_BASE_URL}`}/api/facebook/connect`;
     } catch (err: any) {
       console.error("Failed to start Facebook connect:", err);
       setError(err.message || "Failed to start connect");
