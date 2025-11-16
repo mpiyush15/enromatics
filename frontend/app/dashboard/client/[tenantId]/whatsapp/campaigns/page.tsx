@@ -12,6 +12,17 @@ interface Contact {
   metadata?: any;
 }
 
+interface Template {
+  _id: string;
+  name: string;
+  language: string;
+  category: string;
+  status: string;
+  content: string;
+  variables: string[];
+  components: any[];
+}
+
 export default function WhatsappCampaignsPage() {
   const { tenantId } = useParams();
   const [loading, setLoading] = useState(false);
@@ -23,6 +34,12 @@ export default function WhatsappCampaignsPage() {
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Template-related state
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [templateVariables, setTemplateVariables] = useState<{[key: string]: string}>({});
+  const [messageType, setMessageType] = useState<"text" | "template">("text");
 
   // Manual contact form
   const [showAddContact, setShowAddContact] = useState(false);
@@ -41,6 +58,7 @@ export default function WhatsappCampaignsPage() {
   useEffect(() => {
     checkConfig();
     fetchContacts();
+    fetchTemplates();
   }, []);
 
   const checkConfig = async () => {
@@ -69,6 +87,20 @@ export default function WhatsappCampaignsPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates?status=approved`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTemplates(data.templates);
+      }
+    } catch (err) {
+      console.error("Error fetching templates:", err);
     }
   };
 
@@ -245,9 +277,23 @@ export default function WhatsappCampaignsPage() {
       return;
     }
 
-    if (!message.trim()) {
+    if (messageType === "text" && !message.trim()) {
       setStatus("❌ Please enter a message");
       return;
+    }
+
+    if (messageType === "template" && !selectedTemplate) {
+      setStatus("❌ Please select a template");
+      return;
+    }
+
+    // Validate template variables
+    if (messageType === "template" && selectedTemplate) {
+      const missingVars = selectedTemplate.variables.filter(v => !templateVariables[v]?.trim());
+      if (missingVars.length > 0) {
+        setStatus(`❌ Please fill all template variables: ${missingVars.join(', ')}`);
+        return;
+      }
     }
 
     setSending(true);
@@ -258,16 +304,35 @@ export default function WhatsappCampaignsPage() {
 
     for (const phone of selectedContacts) {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/whatsapp/send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            recipientPhone: phone,
-            message,
-            campaign: "bulk_campaign",
-          }),
-        });
+        let res;
+        
+        if (messageType === "text") {
+          // Send text message
+          res = await fetch(`${API_BASE_URL}/api/whatsapp/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              recipientPhone: phone,
+              message,
+              campaign: "bulk_campaign",
+            }),
+          });
+        } else {
+          // Send template message
+          const params = selectedTemplate!.variables.map(v => templateVariables[v]);
+          res = await fetch(`${API_BASE_URL}/api/whatsapp/send-template`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              recipientPhone: phone,
+              templateName: selectedTemplate!.name,
+              params,
+              campaign: "bulk_campaign",
+            }),
+          });
+        }
 
         if (res.ok) {
           success++;
@@ -285,6 +350,8 @@ export default function WhatsappCampaignsPage() {
     );
     setMessage("");
     setSelectedContacts([]);
+    setSelectedTemplate(null);
+    setTemplateVariables({});
     setTimeout(() => setStatus(""), 5000);
   };
 
@@ -453,29 +520,147 @@ export default function WhatsappCampaignsPage() {
               </div>
 
               <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
-                    rows={8}
-                    maxLength={1000}
-                    className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-                  />
-                  <div className="text-xs text-gray-500 mt-1">
-                    {message.length}/1000 characters
-                  </div>
+                {/* Message Type Toggle */}
+                <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <button
+                    onClick={() => setMessageType("text")}
+                    className={`flex-1 px-4 py-2 rounded-md font-semibold transition ${
+                      messageType === "text"
+                        ? "bg-white dark:bg-gray-600 shadow"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    📝 Text
+                  </button>
+                  <button
+                    onClick={() => setMessageType("template")}
+                    className={`flex-1 px-4 py-2 rounded-md font-semibold transition ${
+                      messageType === "template"
+                        ? "bg-white dark:bg-gray-600 shadow"
+                        : "hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    📋 Template
+                  </button>
                 </div>
+
+                {messageType === "text" ? (
+                  // Text Message Input
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">
+                        Message
+                      </label>
+                      <textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Type your message here..."
+                        rows={8}
+                        maxLength={1000}
+                        className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {message.length}/1000 characters
+                      </div>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3 text-xs">
+                      <strong>⚠️ Note:</strong> Free-form text messages may not work without Meta approval. Use templates for reliable delivery.
+                    </div>
+                  </>
+                ) : (
+                  // Template Selection
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">
+                        Select Template
+                      </label>
+                      {templates.length === 0 ? (
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+                          <div className="text-4xl mb-2">📋</div>
+                          <p className="text-sm text-gray-600 mb-3">
+                            No templates found. Fetch templates from Meta first.
+                          </p>
+                          <a
+                            href={`/dashboard/client/${tenantId}/whatsapp/settings`}
+                            className="text-blue-600 hover:underline text-sm font-semibold"
+                          >
+                            Go to Settings →
+                          </a>
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedTemplate?._id || ""}
+                          onChange={(e) => {
+                            const template = templates.find(t => t._id === e.target.value);
+                            setSelectedTemplate(template || null);
+                            setTemplateVariables({});
+                          }}
+                          className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
+                        >
+                          <option value="">-- Choose a template --</option>
+                          {templates.map((template) => (
+                            <option key={template._id} value={template._id}>
+                              {template.name} ({template.status})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {selectedTemplate && (
+                      <>
+                        {/* Template Preview */}
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 border-2">
+                          <div className="text-xs font-semibold text-gray-500 mb-2">
+                            PREVIEW:
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">
+                            {selectedTemplate.content}
+                          </div>
+                          <div className="mt-2 text-xs text-gray-500">
+                            Category: {selectedTemplate.category} | Language: {selectedTemplate.language}
+                          </div>
+                        </div>
+
+                        {/* Variable Inputs */}
+                        {selectedTemplate.variables.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="text-sm font-semibold">
+                              Fill Template Variables:
+                            </div>
+                            {selectedTemplate.variables.map((variable, idx) => (
+                              <div key={variable}>
+                                <label className="block text-xs font-semibold mb-1 text-gray-600">
+                                  Variable {variable} (e.g., {variable === "1" ? "Student Name" : variable === "2" ? "Amount/Date" : "Value"})
+                                </label>
+                                <input
+                                  type="text"
+                                  value={templateVariables[variable] || ""}
+                                  onChange={(e) =>
+                                    setTemplateVariables({
+                                      ...templateVariables,
+                                      [variable]: e.target.value,
+                                    })
+                                  }
+                                  placeholder={`Enter value for {{${variable}}}`}
+                                  className="w-full px-3 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 text-sm"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
 
                 <button
                   onClick={handleSendBulk}
                   disabled={
                     sending ||
                     selectedContacts.length === 0 ||
-                    !message.trim()
+                    (messageType === "text" && !message.trim()) ||
+                    (messageType === "template" && !selectedTemplate)
                   }
                   className="w-full px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -489,10 +674,10 @@ export default function WhatsappCampaignsPage() {
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4 text-sm">
                   <p className="font-semibold mb-2">💡 Quick Tips:</p>
                   <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                    <li>• Keep messages under 1000 characters</li>
-                    <li>• Personalize with student names</li>
-                    <li>• Avoid spam words</li>
-                    <li>• Send during business hours</li>
+                    <li>• Use approved templates for guaranteed delivery</li>
+                    <li>• Fill all template variables correctly</li>
+                    <li>• Test with your own number first</li>
+                    <li>• Send during business hours (9 AM - 9 PM)</li>
                   </ul>
                 </div>
               </div>
