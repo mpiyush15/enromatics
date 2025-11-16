@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/authService";
 
@@ -7,58 +7,46 @@ export default function useAuth() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const isMounted = useRef(true);
+  const hasChecked = useRef(false);
 
   useEffect(() => {
-    let isMounted = true; // Prevent state updates if component unmounts
+    // Prevent multiple auth checks
+    if (hasChecked.current) return;
+    hasChecked.current = true;
 
     const checkAuth = async () => {
-      console.log("🔵 Checking authentication...");
-      
       try {
         const currentUser = await authService.getCurrentUser();
-        console.log("📦 getCurrentUser result:", currentUser);
         
-        if (!isMounted) return;
+        if (!isMounted.current) return;
 
         if (currentUser) {
-          console.log("🟢 User authenticated:", currentUser.email, "| Role:", currentUser.role);
           setUser(currentUser);
-          setLoading(false);
         } else {
-          console.log("🔴 Not authenticated - will redirect to /login");
           setUser(null);
-          setLoading(false);
-          // Give a small delay before redirect to ensure state is updated
-          setTimeout(() => {
-            if (isMounted) {
-              router.push("/login");
-            }
-          }, 100);
+          router.push("/login");
         }
       } catch (error) {
         console.error("❌ Auth check error:", error);
-        if (isMounted) {
+        if (isMounted.current) {
           setUser(null);
+          router.push("/login");
+        }
+      } finally {
+        if (isMounted.current) {
           setLoading(false);
-          setTimeout(() => {
-            if (isMounted) {
-              router.push("/login");
-            }
-          }, 100);
         }
       }
-
-        
-      
     };
 
     checkAuth();
 
     // Cleanup function
     return () => {
-      isMounted = false;
+      isMounted.current = false;
     };
-  }, [router]);
+  }, []); // Empty dependency array - only run once
 
   return { user, loading };
 }

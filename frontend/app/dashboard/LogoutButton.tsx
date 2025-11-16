@@ -1,17 +1,25 @@
 "use client";
 
+import { authService } from "@/lib/authService";
+import { cache } from "@/lib/cache";
+
 export default function LogoutButton() {
-  const handleLogout = () => {
-    // 🔥 Clear everything related to JWT/session
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("tenantId");
+  const handleLogout = async () => {
+    try {
+      // Call logout API to clear cookie
+      await authService.logout();
+      
+      // Clear all client-side storage
+      localStorage.clear();
+      cache.clear();
 
-    // Optional: if using cookie-based JWT later, call logout API here
-    // await fetch(`${API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
-
-    // Redirect to login
-    window.location.href = "/login"; // full reload to reset React state
+      // Redirect to login with full page reload
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect even if API call fails
+      window.location.href = "/login";
+    }
   };
 
   return (

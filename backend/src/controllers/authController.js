@@ -154,6 +154,67 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
+/**
+ * Get session with additional context (user + quick stats)
+ * This reduces multiple API calls on dashboard load
+ */
+export const getSession = async (req, res) => {
+  try {
+    const token = req.cookies.jwt;
+    if (!token) {
+      return res.status(401).json({ message: "Not logged in" });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Build response with user and relevant stats based on role
+    const response = {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        plan: user.plan,
+        planExpiry: user.planExpiry,
+      },
+      stats: null,
+    };
+
+    // Add role-specific quick stats
+    if (user.role === 'SuperAdmin') {
+      // For SuperAdmin: tenant count
+      const Tenant = (await import('../models/Tenant.js')).default;
+      const tenantCount = await Tenant.countDocuments();
+      response.stats = { tenantCount };
+    } else if (user.role === 'tenantAdmin' && user.tenantId) {
+      // For TenantAdmin: student count, today's attendance
+      const Student = (await import('../models/Student.js')).default;
+      const Attendance = (await import('../models/Attendance.js')).default;
+      
+      const [studentCount, todayAttendance] = await Promise.all([
+        Student.countDocuments({ tenantId: user.tenantId }),
+        Attendance.countDocuments({
+          tenantId: user.tenantId,
+          date: { $gte: new Date().setHours(0, 0, 0, 0) }
+        })
+      ]);
+      
+      response.stats = { studentCount, todayAttendance };
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("❌ Session fetch failed:", error.message);
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
 
 /**
  * Logout user (clear cookie)

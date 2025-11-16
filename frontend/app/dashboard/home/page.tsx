@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
-
+import { cache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import TrialNote from "@/components/roles/user/TrialNote";
 
 export default function HomeDashboardPage() {
@@ -14,6 +15,14 @@ export default function HomeDashboardPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        // Check cache first
+        const cachedUser = cache.get(CACHE_KEYS.AUTH_USER);
+        if (cachedUser) {
+          setUser(cachedUser);
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
           method: "GET",
           credentials: "include",
@@ -21,13 +30,16 @@ export default function HomeDashboardPage() {
         });
 
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.message || "Unauthorized");
+          throw new Error("Unauthorized");
         }
 
         const data = await res.json();
         setUser(data);
+        
+        // Cache the user data
+        cache.set(CACHE_KEYS.AUTH_USER, data, CACHE_TTL.MEDIUM);
       } catch (err: any) {
+        cache.remove(CACHE_KEYS.AUTH_USER);
         router.push("/login");
       } finally {
         setLoading(false);
@@ -37,7 +49,7 @@ export default function HomeDashboardPage() {
     fetchUser();
   }, [router]);
 
-  if (loading) return <div className="p-10 text-center">Loading Dashboard...</div>;
+  if (loading) return <DashboardSkeleton />;
   if (!user) return null;
 
   // ✅ Extract role and plan

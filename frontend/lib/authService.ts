@@ -2,14 +2,16 @@
 // All authentication is managed by backend JWT cookies
 
 import { API_BASE_URL } from './apiConfig';
+import { cache, CACHE_KEYS, CACHE_TTL } from './cache';
 
 const API_BASE = `${API_BASE_URL}/api/auth`;
+
+// Prevent multiple simultaneous auth checks
+let authCheckPromise: Promise<any> | null = null;
 
 export const authService = {
   // Login user
   async login(email: string, password: string) {
-    console.log("🔵 Logging in with backend...", { email });
-    
     try {
       const res = await fetch(`${API_BASE}/login`, {
         method: "POST",
@@ -18,19 +20,15 @@ export const authService = {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log("📍 Login response status:", res.status);
       const data = await res.json();
 
       if (!res.ok) {
-        console.log("❌ Login failed:", data.message);
         throw new Error(data.message || "Login failed");
       }
 
-      console.log("🟢 Login successful:", {
-        email: data.user.email,
-        role: data.user.role,
-        tenantId: data.user.tenantId,
-      });
+      // Cache user data after successful login
+      cache.set(CACHE_KEYS.AUTH_USER, data.user, CACHE_TTL.MEDIUM);
+      
       return data;
     } catch (error: any) {
       console.error("❌ Login error:", error.message);
@@ -38,53 +36,68 @@ export const authService = {
     }
   },
 
-  // Get current user from backend
-  async getCurrentUser() {
-    console.log("🔵 Fetching current user from /api/auth/me...");
-    
-    try {
-      const res = await fetch(`${API_BASE}/me`, {
-        method: "GET",
-        credentials: "include", // ✅ Send cookies
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("📍 /api/auth/me response status:", res.status);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        console.log("🔴 Auth failed:", res.status, errorData?.message);
-        return null;
+  // Get current user from backend with caching
+  async getCurrentUser(skipCache = false) {
+    // Return cached user if available and not skipping cache
+    if (!skipCache) {
+      const cachedUser = cache.get(CACHE_KEYS.AUTH_USER);
+      if (cachedUser) {
+        return cachedUser;
       }
-
-      const user = await res.json();
-      console.log("🟢 Current user fetched:", {
-        email: user.email,
-        role: user.role,
-        _id: user._id,
-      });
-      return user;
-    } catch (error) {
-      console.error("❌ Error fetching user:", error);
-      return null;
     }
+
+    // If there's already an auth check in progress, return that promise
+    if (authCheckPromise) {
+      return authCheckPromise;
+    }
+    
+    // Create new auth check promise
+    authCheckPromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/me`, {
+          method: "GET",
+          credentials: "include", // ✅ Send cookies
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          cache.remove(CACHE_KEYS.AUTH_USER);
+          return null;
+        }
+
+        const user = await res.json();
+        
+        // Cache the user data
+        cache.set(CACHE_KEYS.AUTH_USER, user, CACHE_TTL.MEDIUM);
+        
+        return user;
+      } catch (error) {
+        console.error("❌ Error fetching user:", error);
+        cache.remove(CACHE_KEYS.AUTH_USER);
+        return null;
+      } finally {
+        // Clear the promise after completion
+        authCheckPromise = null;
+      }
+    })();
+
+    return authCheckPromise;
   },
 
   // Logout user
   async logout() {
-    console.log("🔵 Logging out...");
-    
     try {
       const res = await fetch(`${API_BASE}/logout`, {
         method: "POST",
         credentials: "include", // ✅ Send cookies
       });
 
-      if (res.ok) {
-        console.log("🟢 Logged out successfully");
-      }
+      // Clear all auth-related cache
+      cache.clearPattern('auth:');
+      cache.clearPattern('dashboard:');
+      
       return res.ok;
     } catch (error) {
       console.error("❌ Logout error:", error);
@@ -94,8 +107,6 @@ export const authService = {
 
   // Register new user
   async register(name: string, email: string, password: string) {
-    console.log("🔵 Registering new user...");
-    
     try {
       const res = await fetch(`${API_BASE}/register`, {
         method: "POST",
@@ -109,7 +120,6 @@ export const authService = {
         throw new Error(data.message || "Registration failed");
       }
 
-      console.log("🟢 Registration successful");
       return data;
     } catch (error: any) {
       console.error("❌ Registration error:", error.message);
@@ -119,14 +129,12 @@ export const authService = {
 
   // Verify session is still valid
   async verifySession() {
-    console.log("🔵 Verifying session...");
-    
     const user = await this.getCurrentUser();
-    if (!user) {
-      console.log("🔴 Session invalid or expired");
-      return false;
-    }
-    console.log("🟢 Session valid");
-    return true;
+    return !!user;
+  },
+
+  // Refresh auth cache
+  refreshCache() {
+    return this.getCurrentUser(true);
   },
 };

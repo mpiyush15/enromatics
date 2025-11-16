@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, loginUser, getCurrentUser, logoutUser } from "../controllers/authController.js";
+import { registerUser, loginUser, getCurrentUser, getSession, logoutUser } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 
@@ -16,6 +16,9 @@ router.post("/logout", logoutUser);
 
 // ✅ Get current logged-in user (uses cookie)
 router.get("/me", getCurrentUser);
+
+// ✅ Get session with stats (optimized - one call instead of multiple)
+router.get("/session", getSession);
 
 // 🔹 Get all users (debug only — optional)
 router.get("/all", async (req, res) => {
