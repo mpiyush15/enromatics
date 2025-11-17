@@ -60,61 +60,94 @@ export default function AdminTenantsPage() {
   if (error) return <p className="p-6 text-red-600">Error: {error}</p>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">🏢 All Tenants</h1>
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">🏢 All Tenants</h1>
 
-      <table className="w-full border border-gray-600 rounded text-sm md:text-base">
-        <thead className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white text-left">
-          <tr>
-            <th className="p-2">Name</th>
-            <th className="p-2">Email</th>
-            <th className="p-2">Tenant ID</th>
-            <th className="p-2">Plan</th>
-            <th className="p-2">Status</th>
-            <th className="p-2">Subscription</th>
-            <th className="p-2">Actions</th>
-          </tr>
-        </thead>
+      {/* Mobile-friendly scrollable table wrapper */}
+      <div className="overflow-x-auto -mx-4 md:mx-0 shadow-md rounded-lg">
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Tenant ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Plan
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Subscription
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
 
-        <tbody>
-          {tenants.map((tenant) => (
-            <tr
-              key={tenant.tenantId}
-              className="border-t border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td className="p-2">{tenant.name}</td>
-              <td className="p-2">{tenant.email}</td>
-              <td className="p-2">{tenant.tenantId}</td>
-              <td className="p-2 font-medium text-blue-600">
-                {tenant.plan || "free"}
-              </td>
-              <td className="p-2">
-                {tenant.active ? "✅ Active" : "❌ Inactive"}
-              </td>
-              <td className="p-2">
-                {tenant.subscription
-                  ? `${new Date(
-                      tenant.subscription.startDate
-                    ).toLocaleDateString()} → ${new Date(
-                      tenant.subscription.endDate
-                    ).toLocaleDateString()}`
-                  : "—"}
-              </td>
-              <td className="p-2">
-                <a
-                  href={`/dashboard/tenants/${tenant.tenantId}`}
-                  className="text-blue-600 underline hover:text-blue-800"
-                >
-                  Manage
-                </a>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {tenants.map((tenant) => (
+                  <tr
+                    key={tenant.tenantId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {tenant.name}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {tenant.email}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-600 dark:text-gray-400">
+                      {tenant.tenantId}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        {tenant.plan || "free"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {tenant.active ? (
+                        <span className="text-green-600 dark:text-green-400">✅ Active</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400">❌ Inactive</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
+                      {tenant.subscription
+                        ? `${new Date(
+                            tenant.subscription.startDate
+                          ).toLocaleDateString()} → ${new Date(
+                            tenant.subscription.endDate
+                          ).toLocaleDateString()}`
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <a
+                        href={`/dashboard/tenants/${tenant.tenantId}`}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline"
+                      >
+                        Manage
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       {tenants.length === 0 && (
-        <p className="text-gray-500 mt-4">No tenants found.</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-4 text-center">No tenants found.</p>
       )}
     </div>
   );

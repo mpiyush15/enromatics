@@ -51,41 +51,77 @@ export default function AdminLeadsPage() {
     fetchLeads();
   }, []);
 
-  if (loading) return <p>Loading leads...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) return <p className="text-gray-500 p-6">Loading leads...</p>;
+  if (error) return <p className="text-red-500 p-6">Error: {error}</p>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">📋 Leads Submitted</h1>
-      <table className="w-full text-left border border-gray-300">
-        <thead className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white text-left">
-          <tr>
-            <th className="p-2 border">Name</th>
-            <th className="p-2 border">Email</th>
-            <th className="p-2 border">Phone</th>
-            <th className="p-2 border">Institute</th>
-            <th className="p-2 border">Plan</th>
-            <th className="p-2 border">Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leads.map((lead) => (
-            <tr
-              key={lead._id}
-              className="hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <td className="p-2 border">{lead.name}</td>
-              <td className="p-2 border">{lead.email}</td>
-              <td className="p-2 border">{lead.phone}</td>
-              <td className="p-2 border">{lead.institute}</td>
-              <td className="p-2 border">{lead.plan}</td>
-              <td className="p-2 border">
-                {new Date(lead.createdAt).toLocaleString()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">📋 Leads Submitted</h1>
+      
+      {/* Mobile-friendly scrollable table wrapper */}
+      <div className="overflow-x-auto -mx-4 md:mx-0 shadow-md rounded-lg">
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Phone
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Institute
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Plan
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {leads.map((lead) => (
+                  <tr
+                    key={lead._id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      {lead.name}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {lead.email}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {lead.phone}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {lead.institute}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        {lead.plan}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400">
+                      {new Date(lead.createdAt).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {leads.length === 0 && (
+        <p className="text-gray-500 dark:text-gray-400 mt-4 text-center">No leads found.</p>
+      )}
     </div>
   );
 }

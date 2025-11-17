@@ -174,7 +174,8 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
         </ul>
       </div>
 
-      <div className="p-4 mt-auto border-t border-gray-700">
+      {/* Logout Button - Fixed at bottom */}
+      <div className="p-4 mt-auto border-t border-gray-700 bg-gray-900">
         <Logout_Button />
       </div>
     </aside>
