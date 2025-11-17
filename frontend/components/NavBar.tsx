@@ -83,6 +83,10 @@ export default function Navbar() {
           {/* LOGO */}
           <Link
             href="/"
+            onClick={() => {
+              setIsMenuOpen(false);
+              setIsServicesOpen(false);
+            }}
             className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight"
           >
             Enro Matics
@@ -164,27 +168,34 @@ export default function Navbar() {
       {/* MOBILE MENU */}
       {isMenuOpen && (
         <div className="md:hidden px-4 py-3 space-y-2 bg-white dark:bg-gray-900 border-t dark:border-gray-800 text-gray-800 dark:text-white">
-          <Link href="/" className="block" onClick={handleLinkClick}>Home</Link>
-          <Link href="/about" className="block" onClick={handleLinkClick}>About Us</Link>
-          <button onClick={() => setIsServicesOpen(!isServicesOpen)} className="block w-full text-left">
-            Services ▾
-          </button>
-          {isServicesOpen && (
-            <div className="ml-4 space-y-1">
-              <Link href="/services/student-management" className="block" onClick={handleLinkClick}>Student Management</Link>
-              <Link href="/services/scholarship-exams" className="block" onClick={handleLinkClick}>Scholarship Exams</Link>
-              <Link href="/services/video-editing" className="block" onClick={handleLinkClick}>Video Editing</Link>
-              <Link href="/services/facebook-marketing" className="block" onClick={handleLinkClick}>Facebook Marketing</Link>
-              <Link href="/services/instagram-marketing" className="block" onClick={handleLinkClick}>Instagram Marketing</Link>
-            </div>
-          )}
-          <Link href="/plans" className="block" onClick={handleLinkClick}>Pricing</Link>
-          <Link href="/contact" className="block" onClick={handleLinkClick}>Contact</Link>
+          <Link href="/" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
+          <Link href="/about" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>About Us</Link>
+          
+          <div>
+            <button 
+              onClick={() => setIsServicesOpen(!isServicesOpen)} 
+              className="block w-full text-left py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+            >
+              Services ▾
+            </button>
+            {isServicesOpen && (
+              <div className="ml-4 space-y-1 mt-2">
+                <Link href="/services/student-management" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Student Management</Link>
+                <Link href="/services/scholarship-exams" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Scholarship Exams</Link>
+                <Link href="/services/video-editing" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Video Editing</Link>
+                <Link href="/services/facebook-marketing" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Facebook Marketing</Link>
+                <Link href="/services/instagram-marketing" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Instagram Marketing</Link>
+              </div>
+            )}
+          </div>
+          
+          <Link href="/plans" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Pricing</Link>
+          <Link href="/contact" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Contact</Link>
 
           {!user && (
             <>
-              <Link href="/login" className="block" onClick={handleLinkClick}>Login</Link>
-              <Link href="/register" className="block" onClick={handleLinkClick}>Sign Up</Link>
+              <Link href="/login" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Login</Link>
+              <Link href="/register" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Sign Up</Link>
             </>
           )}
 

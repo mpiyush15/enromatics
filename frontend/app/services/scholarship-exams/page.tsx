@@ -6,9 +6,9 @@ export default function ScholarshipExamsPage() {
   const router = useRouter();
 
   const examBoards = [
-    { name: "NEET", icon: "🏥", color: "from-green-400 to-emerald-500" },
-    { name: "JEE", icon: "⚙️", color: "from-blue-400 to-cyan-500" },
-    { name: "MHT-CET", icon: "🎓", color: "from-purple-400 to-pink-500" },
+    { name: "NEET", icon: "🏥", color: "from-blue-400 to-indigo-500" },
+    { name: "JEE", icon: "⚙️", color: "from-blue-500 to-indigo-600" },
+    { name: "MHT-CET", icon: "🎓", color: "from-indigo-500 to-blue-600" },
   ];
 
   const features = [
@@ -108,20 +108,6 @@ export default function ScholarshipExamsPage() {
       <section className="relative overflow-hidden pt-8 pb-16 md:pt-12 md:pb-24">
         <div className="absolute inset-0 bg-grid-slate-900/[0.02] dark:bg-grid-slate-100/[0.01] bg-[size:60px_60px]"></div>
         
-        {/* Floating Educational Elements */}
-        <div className="absolute top-20 left-10 opacity-20">
-          <div className="text-6xl">📚</div>
-        </div>
-        <div className="absolute top-40 right-20 opacity-20">
-          <div className="text-6xl">🎯</div>
-        </div>
-        <div className="absolute bottom-20 left-20 opacity-20">
-          <div className="text-6xl">🏆</div>
-        </div>
-        <div className="absolute bottom-32 right-10 opacity-20">
-          <div className="text-6xl">💡</div>
-        </div>
-        
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Breadcrumb */}
@@ -129,7 +115,7 @@ export default function ScholarshipExamsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-8"
+            className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-12"
           >
             <button onClick={() => router.push("/")} className="hover:text-blue-600 dark:hover:text-blue-400 transition">
               Home
@@ -142,20 +128,17 @@ export default function ScholarshipExamsPage() {
             <span className="text-slate-700 dark:text-slate-300 font-medium">Scholarship Exams</span>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            
-            {/* Left Content */}
-            <div className="text-center lg:text-left">
+          <div className="text-center max-w-5xl mx-auto">
               
               {/* Badge */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 border border-amber-200 dark:border-amber-800 rounded-full text-sm font-medium text-amber-700 dark:text-amber-300 mb-6"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full text-sm font-light text-blue-600 dark:text-blue-300 mb-8"
               >
-                <span className="text-xl">🎓</span>
-                <span>Merit-Based Scholarship Platform</span>
+                <span className="text-lg">🎓</span>
+                <span>Scholarship Entrance Exams</span>
               </motion.div>
 
               {/* Headline */}
@@ -163,18 +146,12 @@ export default function ScholarshipExamsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.1 }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight"
+                className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-8 leading-tight"
               >
-                <span className="text-slate-800 dark:text-slate-200 font-light">
-                  Discover & Reward
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                  Brilliant Minds
-                </span>
-                <br />
-                <span className="text-slate-700 dark:text-slate-300 text-3xl sm:text-4xl font-light">
-                  with Scholarship Exams
+                <span className="bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-800 dark:from-slate-200 dark:via-blue-300 dark:to-indigo-200 bg-clip-text text-transparent font-light">
+                  Discover Brilliant Students
+                  <br />
+                  Through Scholarship Entrance Exams
                 </span>
               </motion.h1>
 
@@ -183,78 +160,24 @@ export default function ScholarshipExamsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
-                className="text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed font-light"
+                className="text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-3xl mx-auto font-light leading-relaxed"
               >
-                Conduct online scholarship entrance tests for <strong className="text-slate-800 dark:text-slate-200 font-semibold">NEET, JEE & MHT-CET</strong> aspirants. Identify talented students, award merit-based scholarships, and build your institute's reputation for nurturing excellence.
+                Conduct online & offline scholarship tests for NEET, JEE & MHT-CET aspirants. 
+                <span className="text-slate-700 dark:text-slate-300"> Automate exams, rank students, and award scholarships effortlessly.</span>
               </motion.p>
-
-              {/* Trust Indicators */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.25 }}
-                className="flex flex-wrap justify-center lg:justify-start gap-6 mb-8 text-sm text-slate-600 dark:text-slate-400"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>50,000+ Students</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>₹2 Cr+ Scholarships</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>200+ Institutes</span>
-                </div>
-              </motion.div>
-
-              {/* Exam Badges */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.3 }}
-                className="flex flex-wrap justify-center lg:justify-start gap-4 mb-10"
-              >
-                {examBoards.map((exam, index) => (
-                  <motion.div
-                    key={exam.name}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
-                    whileHover={{ scale: 1.05, y: -3 }}
-                    className={`px-6 py-3 bg-gradient-to-r ${exam.color} text-white rounded-2xl font-semibold shadow-lg flex items-center gap-2`}
-                  >
-                    <span className="text-2xl">{exam.icon}</span>
-                    <span>{exam.name}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
 
               {/* CTA Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.6 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center mb-10"
               >
                 <motion.button
                   onClick={() => router.push("/subscribe")}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 transition-all duration-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300"
                 >
                   <span className="flex items-center justify-center gap-2">
                     Start Free Trial
@@ -266,9 +189,9 @@ export default function ScholarshipExamsPage() {
 
                 <motion.button
                   onClick={() => router.push("/login")}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-8 py-4 bg-white dark:bg-gray-900 border-2 border-slate-200 dark:border-gray-700 text-slate-700 dark:text-white rounded-2xl font-semibold hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-300"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-10 py-4 bg-white dark:bg-gray-900 border-2 border-slate-200 dark:border-gray-700 text-slate-700 dark:text-white rounded-2xl font-semibold hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-300"
                 >
                   Watch Demo
                 </motion.button>
@@ -277,88 +200,11 @@ export default function ScholarshipExamsPage() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.7, delay: 0.7 }}
-                className="mt-6 text-sm text-slate-500 dark:text-slate-400 font-light text-center lg:text-left"
+                transition={{ duration: 0.7, delay: 0.4 }}
+                className="text-sm text-slate-500 dark:text-slate-400 font-light"
               >
                 ✨ No credit card required • 14-day free trial • Setup in 5 minutes
               </motion.p>
-            </div>
-
-            {/* Right Visual - Scholarship Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="relative hidden lg:block"
-            >
-              <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-slate-200 dark:border-gray-800 p-8 overflow-hidden">
-                
-                {/* Scholarship Certificate Preview */}
-                <div className="space-y-6">
-                  
-                  {/* Header */}
-                  <div className="text-center pb-6 border-b-2 border-dashed border-slate-200 dark:border-gray-800">
-                    <div className="text-5xl mb-3">🏆</div>
-                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                      Scholarship Award
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Merit-Based Excellence Program
-                    </p>
-                  </div>
-
-                  {/* Student Info */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-3xl">
-                        👨‍🎓
-                      </div>
-                      <div>
-                        <div className="font-bold text-lg text-slate-900 dark:text-white">Priya Sharma</div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">NEET Aspirant 2025</div>
-                      </div>
-                    </div>
-
-                    {/* Performance Metrics */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-xl p-4 border border-green-200 dark:border-green-800">
-                        <div className="text-2xl mb-1">🎯</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Rank</div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">#3</div>
-                        <div className="text-xs text-green-600 dark:text-green-400">Top 1%</div>
-                      </div>
-                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-                        <div className="text-2xl mb-1">📊</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Score</div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">645</div>
-                        <div className="text-xs text-blue-600 dark:text-blue-400">/ 720</div>
-                      </div>
-                    </div>
-
-                    {/* Scholarship Amount */}
-                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 rounded-2xl p-6 border-2 border-amber-200 dark:border-amber-800 text-center">
-                      <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">Scholarship Amount</div>
-                      <div className="text-4xl font-bold text-transparent bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text mb-1">
-                        ₹50,000
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">Merit-Based Award</div>
-                    </div>
-
-                    {/* Achievement Badge */}
-                    <div className="flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
-                      <span className="text-xl">⭐</span>
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Excellence Award Winner
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Glow Effect */}
-                <div className="absolute -inset-4 bg-gradient-to-r from-amber-500/20 via-blue-500/20 to-purple-500/20 rounded-3xl blur-2xl -z-10"></div>
-              </div>
-            </motion.div>
-
           </div>
         </div>
       </section>
@@ -376,7 +222,7 @@ export default function ScholarshipExamsPage() {
                 viewport={{ once: true }}
                 className="text-center"
               >
-                <div className="text-3xl sm:text-4xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text mb-2">
+                <div className="text-3xl sm:text-4xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text mb-2">
                   {stat.value}
                 </div>
                 <div className="text-sm sm:text-base text-slate-600 dark:text-slate-400 font-light">
