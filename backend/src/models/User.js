@@ -62,6 +62,17 @@ const userSchema = new mongoose.Schema(
       lastPaymentAmount: Number,
       paymentMethod: String,
     },
+
+    // Session management for concurrent login prevention
+    activeSessionId: {
+      type: String,
+      default: null,
+    },
+
+    lastLoginAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );

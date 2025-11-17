@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-800">
+    <main className="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-gray-900 dark:to-gray-950 text-slate-800 dark:text-slate-200">
       {/* Navbar */}
       
 
@@ -13,11 +13,11 @@ export default function Home() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-4xl md:text-5xl font-bold mb-4"
+          className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white"
         >
           All-in-One Platform for Coaching Institutes
         </motion.h2>
-        <p className="text-lg text-slate-600 max-w-2xl">
+        <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
           Manage admissions, staff, students, fees, and marketing — all in one powerful
           dashboard. Automate your growth with Meta & WhatsApp integration.
         </p>
@@ -30,7 +30,7 @@ export default function Home() {
           </a>
           <a
             href="#features"
-            className="border border-slate-300 px-6 py-3 rounded-lg font-medium hover:border-blue-600 hover:text-blue-600 transition"
+            className="border border-slate-300 dark:border-slate-700 px-6 py-3 rounded-lg font-medium hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 transition"
           >
             Explore Features
           </a>
@@ -38,8 +38,8 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 px-6 bg-white">
-        <h3 className="text-3xl font-bold text-center mb-12">Everything You Need to Grow</h3>
+      <section id="features" className="py-24 px-6 bg-white dark:bg-gray-900">
+        <h3 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Everything You Need to Grow</h3>
         <div className="grid md:grid-cols-3 gap-10 max-w-6xl mx-auto">
           {[
             {
@@ -58,23 +58,23 @@ export default function Home() {
             <motion.div
               key={i}
               whileHover={{ y: -5 }}
-              className="p-6 rounded-2xl shadow-sm border bg-slate-50 hover:shadow-md transition"
+              className="p-6 rounded-2xl shadow-sm border bg-slate-50 dark:bg-gray-800 dark:border-gray-700 hover:shadow-md transition"
             >
-              <h4 className="text-xl font-semibold mb-3 text-blue-700">{f.title}</h4>
-              <p className="text-slate-600">{f.desc}</p>
+              <h4 className="text-xl font-semibold mb-3 text-blue-700 dark:text-blue-400">{f.title}</h4>
+              <p className="text-slate-600 dark:text-slate-400">{f.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* Product Showcase */}
-      <section className="py-20 px-6 bg-gradient-to-r from-blue-50 to-blue-100 text-center">
-        <h3 className="text-3xl font-bold mb-6">Smart Dashboard for Smarter Institutes</h3>
-        <p className="text-slate-600 max-w-2xl mx-auto mb-10">
+      <section className="py-20 px-6 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-indigo-950 text-center">
+        <h3 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">Smart Dashboard for Smarter Institutes</h3>
+        <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10">
           Visualize student performance, leads, payments, and campaigns — all at a glance.
         </p>
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 border">
-          <div className="h-64 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="h-64 bg-slate-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-500">
             [Dashboard Preview Image]
           </div>
         </div>
@@ -86,7 +86,7 @@ export default function Home() {
       {/* Footer */}
       <footer
         id="contact"
-        className="bg-slate-900 text-slate-200 py-12 text-center px-6 mt-10"
+        className="bg-slate-900 dark:bg-black text-slate-200 py-12 text-center px-6 mt-10"
       >
         <h4 className="text-xl font-semibold mb-3">Enro Matics</h4>
         <p className="max-w-xl mx-auto text-slate-400 mb-4">

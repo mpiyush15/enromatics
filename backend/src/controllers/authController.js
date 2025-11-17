@@ -95,7 +95,20 @@ export const loginUser = async (req, res) => {
     const tenant = await Tenant.findOne({ tenantId: user.tenantId });
     const plan = tenant ? tenant.plan : "free";
 
-    const token = generateToken(user._id, user.role, user.tenantId);
+    // ✅ Generate unique session ID for concurrent login prevention
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    
+    // ✅ Update user's active session (invalidates previous sessions)
+    user.activeSessionId = sessionId;
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    // ✅ Include sessionId in JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role, tenantId: user.tenantId, sessionId },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     // ✅ Set cookie after successful login (cross-domain compatible)
     res.cookie("jwt", token, {
@@ -144,6 +157,14 @@ export const getCurrentUser = async (req, res) => {
     if (!user) {
       console.log("🔴 No user found for decoded ID:", decoded.id);
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // ✅ Check if session is still valid (concurrent login prevention)
+    if (decoded.sessionId && user.activeSessionId !== decoded.sessionId) {
+      console.log("🔴 Session invalidated - User logged in from another device");
+      return res.status(401).json({ 
+        message: "Session expired. You have been logged in from another device." 
+      });
     }
 
     
@@ -219,7 +240,20 @@ export const getSession = async (req, res) => {
 /**
  * Logout user (clear cookie)
  */
-export const logoutUser = (req, res) => {
+export const logoutUser = async (req, res) => {
+  try {
+    // ✅ Clear active session from database
+    const token = req.cookies.jwt;
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      await User.findByIdAndUpdate(decoded.id, {
+        activeSessionId: null,
+      });
+    }
+  } catch (error) {
+    console.error("Error clearing session:", error.message);
+  }
+
   // ✅ Must match EXACT settings used when setting the cookie
   res.clearCookie("jwt", {
     httpOnly: true,
