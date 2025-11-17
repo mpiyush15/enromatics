@@ -12,7 +12,6 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const servicesRef = useRef<HTMLLIElement>(null);
-  const mobileServicesRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   /* ✅ Handle theme + mount */
@@ -172,42 +171,60 @@ export default function Navbar() {
           <Link href="/" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
           <Link href="/about" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>About Us</Link>
           
-          <div ref={mobileServicesRef}>
+          <div>
             <button 
-              onClick={() => setIsServicesOpen(!isServicesOpen)} 
+              onClick={(e) => {
+                e.preventDefault();
+                setIsServicesOpen(!isServicesOpen);
+              }} 
               className="block w-full text-left py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
             >
               Services ▾
             </button>
             {isServicesOpen && (
-              <div className="ml-4 space-y-1 mt-2" onClick={(e) => e.stopPropagation()}>
+              <div className="ml-4 space-y-1 mt-2">
                 <Link 
                   href="/services/student-management" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   Student Management
                 </Link>
                 <Link 
                   href="/services/scholarship-exams" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   Scholarship Exams
                 </Link>
                 <Link 
                   href="/services/video-editing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   Video Editing
                 </Link>
                 <Link 
                   href="/services/facebook-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   Facebook Marketing
                 </Link>
                 <Link 
                   href="/services/instagram-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   Instagram Marketing
                 </Link>
