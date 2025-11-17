@@ -173,10 +173,7 @@ export default function Navbar() {
           
           <div>
             <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsServicesOpen(!isServicesOpen);
-              }} 
+              onClick={() => setIsServicesOpen(!isServicesOpen)} 
               className="block w-full text-left py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
             >
               Services ▾
@@ -185,36 +182,31 @@ export default function Navbar() {
               <div className="ml-4 space-y-1 mt-2">
                 <Link 
                   href="/services/student-management" 
-                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" 
-                  onClick={handleLinkClick}
+                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                 >
                   Student Management
                 </Link>
                 <Link 
                   href="/services/scholarship-exams" 
-                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" 
-                  onClick={handleLinkClick}
+                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                 >
                   Scholarship Exams
                 </Link>
                 <Link 
                   href="/services/video-editing" 
-                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" 
-                  onClick={handleLinkClick}
+                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                 >
                   Video Editing
                 </Link>
                 <Link 
                   href="/services/facebook-marketing" 
-                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" 
-                  onClick={handleLinkClick}
+                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                 >
                   Facebook Marketing
                 </Link>
                 <Link 
                   href="/services/instagram-marketing" 
-                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" 
-                  onClick={handleLinkClick}
+                  className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                 >
                   Instagram Marketing
                 </Link>
