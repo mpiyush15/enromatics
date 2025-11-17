@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import useOptionalAuth from "@/hooks/useOptionalAuth";
 
 export default function Navbar() {
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const servicesRef = useRef<HTMLLIElement>(null);
+  const pathname = usePathname();
 
   /* ✅ Handle theme + mount */
   useEffect(() => {
@@ -22,6 +24,12 @@ export default function Navbar() {
       setIsDark(true);
     }
   }, []);
+
+  /* ✅ Close dropdowns when route changes */
+  useEffect(() => {
+    setIsServicesOpen(false);
+    setIsMenuOpen(false);
+  }, [pathname]);
 
   /* ✅ Close Services dropdown on outside click */
   useEffect(() => {
@@ -36,6 +44,18 @@ export default function Navbar() {
     }
   }, [isServicesOpen]);
 
+  /* ✅ Close mobile menu on ESC key */
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+        setIsServicesOpen(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, []);
+
   /* ✅ Theme toggle */
   const toggleTheme = () => {
     const html = document.documentElement;
@@ -48,6 +68,12 @@ export default function Navbar() {
       localStorage.setItem("theme", "dark");
       setIsDark(true);
     }
+  };
+
+  /* ✅ Close mobile menu when clicking a link */
+  const handleLinkClick = () => {
+    setIsMenuOpen(false);
+    setIsServicesOpen(false);
   };
 
   return (
@@ -76,16 +102,19 @@ export default function Navbar() {
               {isServicesOpen && (
                 <ul className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-md rounded-md z-50 w-48 text-sm">
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/student-management">Student Management</Link>
+                    <Link href="/services/student-management" onClick={() => setIsServicesOpen(false)}>Student Management</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/video-editing">Video Editing</Link>
+                    <Link href="/services/scholarship-exams" onClick={() => setIsServicesOpen(false)}>Scholarship Exams</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/facebook-marketing">Facebook Marketing</Link>
+                    <Link href="/services/video-editing" onClick={() => setIsServicesOpen(false)}>Video Editing</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/instagram-marketing">Instagram Marketing</Link>
+                    <Link href="/services/facebook-marketing" onClick={() => setIsServicesOpen(false)}>Facebook Marketing</Link>
+                  </li>
+                  <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <Link href="/services/instagram-marketing" onClick={() => setIsServicesOpen(false)}>Instagram Marketing</Link>
                   </li>
                 </ul>
               )}
@@ -135,26 +164,27 @@ export default function Navbar() {
       {/* MOBILE MENU */}
       {isMenuOpen && (
         <div className="md:hidden px-4 py-3 space-y-2 bg-white dark:bg-gray-900 border-t dark:border-gray-800 text-gray-800 dark:text-white">
-          <Link href="/" className="block">Home</Link>
-          <Link href="/about" className="block">About Us</Link>
-          <button onClick={() => setIsServicesOpen(!isServicesOpen)} className="block">
+          <Link href="/" className="block" onClick={handleLinkClick}>Home</Link>
+          <Link href="/about" className="block" onClick={handleLinkClick}>About Us</Link>
+          <button onClick={() => setIsServicesOpen(!isServicesOpen)} className="block w-full text-left">
             Services ▾
           </button>
           {isServicesOpen && (
             <div className="ml-4 space-y-1">
-              <Link href="/services/student-management" className="block">Student Management</Link>
-              <Link href="/services/video-editing" className="block">Video Editing</Link>
-              <Link href="/services/facebook-marketing" className="block">Facebook Marketing</Link>
-              <Link href="/services/instagram-marketing" className="block">Instagram Marketing</Link>
+              <Link href="/services/student-management" className="block" onClick={handleLinkClick}>Student Management</Link>
+              <Link href="/services/scholarship-exams" className="block" onClick={handleLinkClick}>Scholarship Exams</Link>
+              <Link href="/services/video-editing" className="block" onClick={handleLinkClick}>Video Editing</Link>
+              <Link href="/services/facebook-marketing" className="block" onClick={handleLinkClick}>Facebook Marketing</Link>
+              <Link href="/services/instagram-marketing" className="block" onClick={handleLinkClick}>Instagram Marketing</Link>
             </div>
           )}
-          <Link href="/plans" className="block">Pricing</Link>
-          <Link href="/contact" className="block">Contact</Link>
+          <Link href="/plans" className="block" onClick={handleLinkClick}>Pricing</Link>
+          <Link href="/contact" className="block" onClick={handleLinkClick}>Contact</Link>
 
           {!user && (
             <>
-              <Link href="/login" className="block">Login</Link>
-              <Link href="/register" className="block">Sign Up</Link>
+              <Link href="/login" className="block" onClick={handleLinkClick}>Login</Link>
+              <Link href="/register" className="block" onClick={handleLinkClick}>Sign Up</Link>
             </>
           )}
 
