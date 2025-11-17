@@ -76,6 +76,9 @@ export default function Navbar() {
               {isServicesOpen && (
                 <ul className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-md rounded-md z-50 w-48 text-sm">
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <Link href="/services/student-management">Student Management</Link>
+                  </li>
+                  <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Link href="/services/video-editing">Video Editing</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -139,6 +142,7 @@ export default function Navbar() {
           </button>
           {isServicesOpen && (
             <div className="ml-4 space-y-1">
+              <Link href="/services/student-management" className="block">Student Management</Link>
               <Link href="/services/video-editing" className="block">Video Editing</Link>
               <Link href="/services/facebook-marketing" className="block">Facebook Marketing</Link>
               <Link href="/services/instagram-marketing" className="block">Instagram Marketing</Link>
