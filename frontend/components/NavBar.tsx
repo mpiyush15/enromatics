@@ -12,6 +12,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const servicesRef = useRef<HTMLLIElement>(null);
+  const mobileServicesRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
   /* ✅ Handle theme + mount */
@@ -171,7 +172,7 @@ export default function Navbar() {
           <Link href="/" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
           <Link href="/about" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>About Us</Link>
           
-          <div>
+          <div ref={mobileServicesRef}>
             <button 
               onClick={() => setIsServicesOpen(!isServicesOpen)} 
               className="block w-full text-left py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
@@ -179,7 +180,7 @@ export default function Navbar() {
               Services ▾
             </button>
             {isServicesOpen && (
-              <div className="ml-4 space-y-1 mt-2">
+              <div className="ml-4 space-y-1 mt-2" onClick={(e) => e.stopPropagation()}>
                 <Link 
                   href="/services/student-management" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
