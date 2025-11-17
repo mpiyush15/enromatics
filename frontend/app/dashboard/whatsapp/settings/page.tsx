@@ -201,27 +201,26 @@ export default function WhatsappSettingsPage() {
 
   return (
     <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 rounded-3xl shadow-2xl p-8 text-white">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-6xl">💬</div>
+        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 rounded-xl md:rounded-3xl shadow-2xl p-4 md:p-8 text-white">
+          <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+            <div className="text-4xl md:text-6xl">💬</div>
             <div>
-              <h1 className="text-4xl font-bold">WhatsApp Business Setup</h1>
-              <p className="text-green-100 mt-2">
-                Connect your WhatsApp Business Account to send messages to
-                students & parents
+              <h1 className="text-2xl md:text-4xl font-bold">WhatsApp Business Setup</h1>
+              <p className="text-green-100 text-sm md:text-base mt-1 md:mt-2">
+                Connect your WhatsApp Business Account
               </p>
             </div>
           </div>
         </div>
 
         {/* Instructions Card */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl md:rounded-2xl p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-bold text-blue-900 dark:text-blue-100 mb-2 md:mb-3">
             📖 How to Get Your Credentials
           </h3>
-          <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+          <ol className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-blue-800 dark:text-blue-200">
             <li>
               <strong>1. Go to Meta Business Suite:</strong>{" "}
               <a
@@ -238,7 +237,7 @@ export default function WhatsappSettingsPage() {
             </li>
             <li>
               <strong>3. Copy your credentials:</strong>
-              <ul className="ml-6 mt-1 space-y-1">
+              <ul className="ml-4 md:ml-6 mt-1 space-y-1">
                 <li>• WABA ID: Your WhatsApp Business Account ID</li>
                 <li>• Phone Number ID: From phone numbers section</li>
                 <li>
@@ -248,23 +247,22 @@ export default function WhatsappSettingsPage() {
               </ul>
             </li>
             <li>
-              <strong>4. Test:</strong> Use your own WhatsApp number to test the
-              connection
+              <strong>4. Test:</strong> Use your own WhatsApp number to test
             </li>
           </ol>
         </div>
 
         {/* Configuration Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-            <h2 className="text-xl font-bold">
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 md:px-6 py-3 md:py-4 border-b">
+            <h2 className="text-lg md:text-xl font-bold">
               {configured ? "Update" : "Configure"} WhatsApp Credentials
             </h2>
           </div>
 
-          <form onSubmit={handleSave} className="p-8 space-y-6">
+          <form onSubmit={handleSave} className="p-4 md:p-8 space-y-4 md:space-y-6">
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-xs md:text-sm font-semibold mb-2">
                 Business Name (Optional)
               </label>
               <input
@@ -274,12 +272,12 @@ export default function WhatsappSettingsPage() {
                 onChange={(e) =>
                   setForm({ ...form, businessName: e.target.value })
                 }
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700"
+                className="w-full px-3 py-2 md:px-4 md:py-3 border-2 rounded-lg md:rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 text-sm md:text-base"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-xs md:text-sm font-semibold mb-2">
                 WhatsApp Business Account ID (WABA ID) *
               </label>
               <input
@@ -288,12 +286,12 @@ export default function WhatsappSettingsPage() {
                 placeholder="e.g., 123456789012345"
                 value={form.wabaId}
                 onChange={(e) => setForm({ ...form, wabaId: e.target.value })}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono"
+                className="w-full px-3 py-2 md:px-4 md:py-3 border-2 rounded-lg md:rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-sm md:text-base"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-xs md:text-sm font-semibold mb-2">
                 Phone Number ID *
               </label>
               <input
@@ -304,12 +302,12 @@ export default function WhatsappSettingsPage() {
                 onChange={(e) =>
                   setForm({ ...form, phoneNumberId: e.target.value })
                 }
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono"
+                className="w-full px-3 py-2 md:px-4 md:py-3 border-2 rounded-lg md:rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-sm md:text-base"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-xs md:text-sm font-semibold mb-2">
                 Access Token {configured ? "" : "*"}
               </label>
               <textarea
@@ -320,11 +318,11 @@ export default function WhatsappSettingsPage() {
                   setForm({ ...form, accessToken: e.target.value })
                 }
                 rows={3}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-sm"
+                className="w-full px-3 py-2 md:px-4 md:py-3 border-2 rounded-lg md:rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-xs md:text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {configured 
-                  ? "⚠️ Token is encrypted in database. Leave empty to keep current token, or paste a new one to update it."
+                  ? "⚠️ Token is encrypted. Leave empty to keep current, or paste new to update."
                   : "Get this from Meta Business → WhatsApp → API Setup"
                 }
               </p>
@@ -333,18 +331,18 @@ export default function WhatsappSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold text-lg disabled:opacity-50"
+              className="w-full px-4 py-3 md:px-6 md:py-4 bg-green-600 text-white rounded-lg md:rounded-xl hover:bg-green-700 font-bold text-base md:text-lg disabled:opacity-50"
             >
               {saving ? "Saving..." : configured ? "Update Configuration" : "Save Configuration"}
             </button>
 
             {/* Remove Configuration Button */}
             {configured && (
-              <div className="pt-4 border-t">
+              <div className="pt-3 md:pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setShowRemoveConfirm(true)}
-                  className="w-full px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold disabled:opacity-50"
+                  className="w-full px-4 py-2.5 md:px-6 md:py-3 bg-red-600 text-white rounded-lg md:rounded-xl hover:bg-red-700 font-semibold disabled:opacity-50 text-sm md:text-base"
                 >
                   🗑️ Remove WhatsApp Configuration
                 </button>
@@ -354,19 +352,18 @@ export default function WhatsappSettingsPage() {
         </div>
 
         {/* Test Connection */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-            <h2 className="text-xl font-bold">🧪 Test Connection</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 md:px-6 py-3 md:py-4 border-b">
+            <h2 className="text-lg md:text-xl font-bold">🧪 Test Connection</h2>
           </div>
 
-          <div className="p-8 space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Send a test message to verify your WhatsApp setup is working
-              correctly.
+          <div className="p-4 md:p-8 space-y-3 md:space-y-4">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              Send a test message to verify your WhatsApp setup
             </p>
 
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-xs md:text-sm font-semibold mb-2">
                 Test Phone Number (with country code)
               </label>
               <input
@@ -374,17 +371,17 @@ export default function WhatsappSettingsPage() {
                 placeholder="e.g., 919876543210 (without + sign)"
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 font-mono"
+                className="w-full px-3 py-2 md:px-4 md:py-3 border-2 rounded-lg md:rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 font-mono text-sm md:text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: Country code + phone number (no spaces or symbols)
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Format: Country code + phone number (no spaces/symbols)
               </p>
             </div>
 
             <button
               onClick={handleTestConnection}
               disabled={testing || !testPhone}
-              className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold disabled:opacity-50"
+              className="w-full px-4 py-3 md:px-6 md:py-4 bg-blue-600 text-white rounded-lg md:rounded-xl hover:bg-blue-700 font-bold disabled:opacity-50 text-sm md:text-base"
             >
               {testing ? "Sending Test Message..." : "Send Test Message"}
             </button>
@@ -393,15 +390,15 @@ export default function WhatsappSettingsPage() {
 
         {/* Sync Templates from Meta */}
         {configured && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-              <h2 className="text-xl font-bold">📋 Message Templates</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-700 px-4 md:px-6 py-3 md:py-4 border-b">
+              <h2 className="text-lg md:text-xl font-bold">📋 Message Templates</h2>
             </div>
 
-            <div className="p-8 space-y-6">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>⚠️ Important:</strong> WhatsApp requires pre-approved message templates to send messages. 
+            <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg md:rounded-xl p-3 md:p-4">
+                <p className="text-xs md:text-sm text-blue-900 dark:text-blue-100">
+                  <strong>⚠️ Important:</strong> WhatsApp requires pre-approved message templates. 
                   Click below to fetch your approved templates from Meta.
                 </p>
               </div>
@@ -409,12 +406,12 @@ export default function WhatsappSettingsPage() {
               <button
                 onClick={handleSyncTemplates}
                 disabled={syncingTemplates}
-                className="w-full px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 md:px-6 md:py-4 bg-purple-600 text-white rounded-lg md:rounded-xl hover:bg-purple-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {syncingTemplates ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Syncing Templates from Meta...
+                    <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-2 border-white border-t-transparent"></div>
+                    Syncing Templates...
                   </>
                 ) : (
                   <>
@@ -425,7 +422,7 @@ export default function WhatsappSettingsPage() {
 
               {templateSyncStatus && (
                 <div
-                  className={`p-4 rounded-xl font-semibold whitespace-pre-line ${
+                  className={`p-3 md:p-4 rounded-lg md:rounded-xl font-semibold whitespace-pre-line text-xs md:text-sm ${
                     templateSyncStatus.includes("✅")
                       ? "bg-green-100 text-green-800 border-2 border-green-200"
                       : "bg-red-100 text-red-800 border-2 border-red-200"

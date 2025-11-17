@@ -197,28 +197,28 @@ export default function WhatsAppDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         
         {/* Header with Quick Actions */}
-        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-2xl shadow-xl p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-4xl shadow-lg">
+        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-xl md:rounded-2xl shadow-xl p-4 md:p-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-lg md:rounded-xl flex items-center justify-center text-3xl md:text-4xl shadow-lg">
                 💬
               </div>
               <div className="text-white">
-                <h1 className="text-3xl font-bold">WhatsApp Business</h1>
-                <p className="text-green-100">Manage your WhatsApp campaigns & templates</p>
+                <h1 className="text-xl md:text-3xl font-bold">WhatsApp Business</h1>
+                <p className="text-sm md:text-base text-green-100">Manage campaigns & templates</p>
               </div>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
               <button
                 onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/campaigns`)}
-                className="px-6 py-3 bg-white text-green-600 rounded-xl hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2"
+                className="px-4 py-2 md:px-6 md:py-3 bg-white text-green-600 rounded-lg md:rounded-xl hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2 text-sm md:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
                 Campaigns
@@ -226,9 +226,9 @@ export default function WhatsAppDashboardPage() {
               
               <button
                 onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/contacts`)}
-                className="px-6 py-3 bg-white/20 text-white rounded-xl hover:bg-white/30 font-semibold backdrop-blur-sm flex items-center gap-2"
+                className="px-4 py-2 md:px-6 md:py-3 bg-white/20 text-white rounded-lg md:rounded-xl hover:bg-white/30 font-semibold backdrop-blur-sm flex items-center gap-2 text-sm md:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 Contacts
@@ -236,9 +236,9 @@ export default function WhatsAppDashboardPage() {
               
               <button
                 onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/reports`)}
-                className="px-6 py-3 bg-white/20 text-white rounded-xl hover:bg-white/30 font-semibold backdrop-blur-sm flex items-center gap-2"
+                className="px-4 py-2 md:px-6 md:py-3 bg-white/20 text-white rounded-lg md:rounded-xl hover:bg-white/30 font-semibold backdrop-blur-sm flex items-center gap-2 text-sm md:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Reports
@@ -249,69 +249,69 @@ export default function WhatsAppDashboardPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-blue-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm font-medium">Total Messages</span>
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Total</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-green-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm font-medium">Sent</span>
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-green-500">
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Sent</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{stats.sent}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.sent}</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-purple-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm font-medium">Delivered</span>
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-purple-500">
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Delivered</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" transform="translate(3,0)" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{stats.delivered}</p>
-              <p className="text-xs text-gray-500 mt-1">{stats.deliveryRate} rate</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.delivered}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stats.deliveryRate} rate</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-teal-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm font-medium">Read</span>
-                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-teal-500">
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Read</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{stats.read}</p>
-              <p className="text-xs text-gray-500 mt-1">{stats.readRate} rate</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.read}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stats.readRate} rate</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-5 border-l-4 border-red-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm font-medium">Failed</span>
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-red-500">
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Failed</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{stats.failed}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.failed}</p>
             </div>
           </div>
         )}
@@ -330,101 +330,101 @@ export default function WhatsAppDashboardPage() {
         )}
 
         {/* Templates Section */}
-        <div className="bg-white rounded-2xl shadow-lg">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl shadow-lg">
+          <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Message Templates</h2>
-                <p className="text-gray-600 text-sm mt-1">
-                  Manage and create WhatsApp message templates for campaigns
+                <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">Message Templates</h2>
+                <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-1">
+                  Manage WhatsApp message templates
                 </p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
                 <button
                   onClick={handleSyncTemplates}
                   disabled={syncing}
-                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 md:px-5 md:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center gap-2 text-sm"
                 >
-                  <svg className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 md:w-5 md:h-5 ${syncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  {syncing ? "Syncing..." : "Sync from Meta"}
+                  {syncing ? "Syncing..." : "Sync"}
                 </button>
                 
                 <button
                   onClick={() => setShowCreateTemplate(true)}
-                  className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold flex items-center gap-2"
+                  className="px-4 py-2 md:px-5 md:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold flex items-center gap-2 text-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Create Template
+                  Create
                 </button>
               </div>
             </div>
           </div>
 
           {/* Templates Grid */}
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {templates.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📝</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Templates Found</h3>
-                <p className="text-gray-600 mb-6">Create or sync templates to start sending messages</p>
-                <div className="flex gap-3 justify-center">
+              <div className="text-center py-8 md:py-12">
+                <div className="text-4xl md:text-6xl mb-3 md:mb-4">📝</div>
+                <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-2">No Templates Found</h3>
+                <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-4 md:mb-6">Create or sync templates to start</p>
+                <div className="flex flex-wrap gap-2 md:gap-3 justify-center">
                   <button
                     onClick={handleSyncTemplates}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    className="px-4 py-2 md:px-6 md:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold text-sm md:text-base"
                   >
                     Sync from Meta
                   </button>
                   <button
                     onClick={() => setShowCreateTemplate(true)}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                    className="px-4 py-2 md:px-6 md:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm md:text-base"
                   >
                     Create New Template
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {templates.map((template) => (
                   <div
                     key={template._id}
-                    className="border-2 border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-green-300 transition-all cursor-pointer group"
+                    className="border-2 border-gray-200 dark:border-gray-700 rounded-lg md:rounded-xl p-4 md:p-5 hover:shadow-lg hover:border-green-300 dark:hover:border-green-700 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-lg text-gray-900 group-hover:text-green-600">
+                    <div className="flex items-start justify-between mb-2 md:mb-3">
+                      <h3 className="font-bold text-base md:text-lg text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
                         {template.name}
                       </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      <span className={`px-2 py-1 md:px-3 rounded-full text-xs font-bold whitespace-nowrap ${
                         template.status === "approved"
-                          ? "bg-green-100 text-green-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                           : template.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                       }`}>
                         {template.status.toUpperCase()}
                       </span>
                     </div>
                     
-                    <div className="flex gap-2 mb-3">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-medium">
+                    <div className="flex gap-1 md:gap-2 mb-2 md:mb-3">
+                      <span className="px-2 py-0.5 md:py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs rounded font-medium">
                         {template.category}
                       </span>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded font-medium">
+                      <span className="px-2 py-0.5 md:py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs rounded font-medium">
                         {template.language.toUpperCase()}
                       </span>
                     </div>
                     
-                    <p className="text-gray-600 text-sm line-clamp-3 mb-3">
+                    <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm line-clamp-3 mb-2 md:mb-3">
                       {template.content}
                     </p>
                     
                     {template.variables && template.variables.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
+                      <div className="flex flex-wrap gap-1">
                         {template.variables.map((v, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-mono">
+                          <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-xs rounded font-mono">
                             {`{{${v}}}`}
                           </span>
                         ))}
