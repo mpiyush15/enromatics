@@ -170,15 +170,14 @@ export const getCurrentUser = async (req, res) => {
     // Fetch tenant info if user has tenantId
     let tenant = null;
     if (user.tenantId) {
-      tenant = await Tenant.findOne({ tenantId: user.tenantId }).select("name instituteName tenantId");
+      tenant = await Tenant.findOne({ tenantId: user.tenantId }).select("name tenantId");
     }
 
     // Return user with tenant info
     const userWithTenant = {
       ...user.toObject(),
       tenant: tenant ? {
-        name: tenant.name,
-        instituteName: tenant.instituteName,
+        name: tenant.name, // This is the institute name
         tenantId: tenant.tenantId
       } : null
     };
