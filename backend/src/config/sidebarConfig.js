@@ -60,6 +60,12 @@ export const sidebarLinks = [
     label: "🧑‍💻 Profile",
     roles: ["Admin", "employee", "student", "adsManager", "tenantAdmin"],
   },
+  {
+    href: "/dashboard/settings/staff-management",
+    label: "👥 Staff Management",
+    roles: ["tenantAdmin"],
+    tenantSpecific: true,
+  },
 
   {
   label: "🎓 Students",
