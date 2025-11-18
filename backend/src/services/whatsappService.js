@@ -323,11 +323,27 @@ class WhatsAppService {
    */
   async handleStatusUpdate(waMessageId, status, timestamp, errorInfo = {}) {
     try {
+      console.log('🔄 ========== HANDLING STATUS UPDATE ==========');
+      console.log('Message ID:', waMessageId);
+      console.log('New Status:', status);
+      console.log('Timestamp:', timestamp, '→', new Date(timestamp * 1000).toISOString());
+      console.log('Error Info:', errorInfo);
+      
       const message = await WhatsAppMessage.findOne({ waMessageId });
+      
       if (!message) {
-        console.log(`Message not found for waMessageId: ${waMessageId}`);
+        console.log(`❌ Message not found in database for waMessageId: ${waMessageId}`);
+        console.log('This might be a message sent outside this system');
+        console.log('=========================================\n');
         return;
       }
+
+      console.log('✅ Message found in database:');
+      console.log('  - Database ID:', message._id);
+      console.log('  - Tenant ID:', message.tenantId);
+      console.log('  - Recipient:', message.recipientPhone);
+      console.log('  - Current Status:', message.status);
+      console.log('  - Previous Status Updates:', message.statusUpdates.length);
 
       const statusUpdate = {
         status,
@@ -337,6 +353,9 @@ class WhatsAppService {
       if (errorInfo.code) {
         statusUpdate.errorCode = errorInfo.code;
         statusUpdate.errorMessage = errorInfo.message;
+        console.log('⚠️ Error in status update:');
+        console.log('  - Code:', errorInfo.code);
+        console.log('  - Message:', errorInfo.message);
       }
 
       message.status = status;
@@ -344,12 +363,14 @@ class WhatsAppService {
 
       if (status === 'delivered') {
         message.deliveredAt = statusUpdate.timestamp;
+        console.log('✅ Message DELIVERED at:', statusUpdate.timestamp);
         await WhatsAppConfig.updateOne(
           { tenantId: message.tenantId },
           { $inc: { 'messageCount.delivered': 1 } }
         );
       } else if (status === 'read') {
         message.readAt = statusUpdate.timestamp;
+        console.log('👁️ Message READ at:', statusUpdate.timestamp);
         await WhatsAppConfig.updateOne(
           { tenantId: message.tenantId },
           { $inc: { 'messageCount.read': 1 } }
@@ -358,15 +379,26 @@ class WhatsAppService {
         message.failedAt = statusUpdate.timestamp;
         message.errorCode = errorInfo.code;
         message.errorMessage = errorInfo.message;
+        console.log('❌ Message FAILED:');
+        console.log('  - Error Code:', errorInfo.code);
+        console.log('  - Error Message:', errorInfo.message);
         await WhatsAppConfig.updateOne(
           { tenantId: message.tenantId },
           { $inc: { 'messageCount.failed': 1 } }
         );
+      } else {
+        console.log('ℹ️ Other status:', status);
       }
 
       await message.save();
+      console.log('💾 Status update saved to database');
+      console.log('  - Total status updates now:', message.statusUpdates.length);
+      console.log('=========================================\n');
     } catch (error) {
-      console.error('Handle status update error:', error);
+      console.error('❌ ========== STATUS UPDATE ERROR ==========');
+      console.error('Error handling status update:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('==========================================\n');
     }
   }
 

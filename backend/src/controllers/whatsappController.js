@@ -388,11 +388,22 @@ export const verifyWebhook = (req, res) => {
 
   const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'pixels_webhook_secret_2025';
 
+  console.log('🔐 ========== WEBHOOK VERIFICATION ==========');
+  console.log('Mode:', mode);
+  console.log('Received Token:', token);
+  console.log('Expected Token:', VERIFY_TOKEN);
+  console.log('Challenge:', challenge);
+  console.log('Match:', token === VERIFY_TOKEN ? '✅ YES' : '❌ NO');
+
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('Webhook verified');
+    console.log('✅ Webhook verified successfully!');
+    console.log('Responding with challenge:', challenge);
+    console.log('==========================================\n');
     res.status(200).send(challenge);
   } else {
-    console.log('Webhook verification failed');
+    console.log('❌ Webhook verification FAILED!');
+    console.log('Responding with 403 Forbidden');
+    console.log('==========================================\n');
     res.sendStatus(403);
   }
 };
@@ -402,39 +413,76 @@ export const handleWebhook = async (req, res) => {
   try {
     const body = req.body;
 
+    console.log('📥 ========== WEBHOOK RECEIVED ==========');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Full Body:', JSON.stringify(body, null, 2));
+
     // Acknowledge receipt immediately
     res.sendStatus(200);
 
     // Process webhook data
     if (body.object === 'whatsapp_business_account') {
+      console.log('✅ Valid WhatsApp webhook object');
+      
       for (const entry of body.entry) {
+        console.log('📦 Processing entry:', entry.id);
+        
         for (const change of entry.changes) {
+          console.log('🔄 Change field:', change.field);
+          
           if (change.field === 'messages') {
             const value = change.value;
+            console.log('📨 Messages value:', JSON.stringify(value, null, 2));
             
             // Handle status updates
             if (value.statuses) {
+              console.log(`🔔 ${value.statuses.length} status update(s) received`);
+              
               for (const statusUpdate of value.statuses) {
+                console.log('📊 Status Update Details:');
+                console.log('  - Message ID:', statusUpdate.id);
+                console.log('  - Status:', statusUpdate.status);
+                console.log('  - Timestamp:', statusUpdate.timestamp);
+                console.log('  - Recipient:', statusUpdate.recipient_id);
+                
+                if (statusUpdate.errors) {
+                  console.log('  ❌ Errors:', JSON.stringify(statusUpdate.errors, null, 2));
+                }
+                
                 await whatsappService.handleStatusUpdate(
                   statusUpdate.id,
                   statusUpdate.status,
                   statusUpdate.timestamp,
                   statusUpdate.errors?.[0] || {}
                 );
+                
+                console.log(`✅ Status updated in database: ${statusUpdate.status}`);
               }
+            } else {
+              console.log('⚠️ No status updates in this webhook');
             }
 
             // Handle incoming messages
             if (value.messages) {
-              console.log('Incoming messages:', value.messages);
+              console.log('📬 Incoming messages:', value.messages.length);
+              console.log('Messages:', JSON.stringify(value.messages, null, 2));
               // TODO: Handle incoming messages if needed
             }
+          } else {
+            console.log('ℹ️ Ignoring field:', change.field);
           }
         }
       }
+    } else {
+      console.log('⚠️ Unknown webhook object type:', body.object);
     }
+    
+    console.log('========== WEBHOOK PROCESSING COMPLETE ==========\n');
   } catch (error) {
-    console.error('Webhook handler error:', error);
+    console.error('❌ ========== WEBHOOK ERROR ==========');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('========================================\n');
   }
 };
 
