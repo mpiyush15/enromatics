@@ -211,10 +211,18 @@ export default function StaffManagementPage() {
       return;
     }
 
+    console.log("=== PASSWORD SUBMIT ===");
+    console.log("Employee:", selectedEmployee.name, selectedEmployee._id);
+    console.log("Has login access:", selectedEmployee.hasLoginAccess);
+    console.log("Password length:", password.length);
+
     try {
       const endpoint = selectedEmployee.hasLoginAccess
         ? `${API_BASE_URL}/api/employees/${selectedEmployee._id}/reset-password`
         : `${API_BASE_URL}/api/employees/${selectedEmployee._id}/create-login`;
+
+      console.log("Endpoint:", endpoint);
+      console.log("Payload:", selectedEmployee.hasLoginAccess ? { newPassword: "***" } : { password: "***" });
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -223,7 +231,9 @@ export default function StaffManagementPage() {
         body: JSON.stringify(selectedEmployee.hasLoginAccess ? { newPassword: password } : { password }),
       });
 
+      console.log("Response status:", res.status);
       const data = await res.json();
+      console.log("Response data:", data);
 
       if (data.success) {
         setMessage(`✅ ${data.message}`);
@@ -235,7 +245,7 @@ export default function StaffManagementPage() {
         setMessage("❌ " + (data.message || "Operation failed"));
       }
     } catch (error) {
-      console.error("Error managing password:", error);
+      console.error("❌ Error managing password:", error);
       setMessage("❌ Server error");
     }
   };

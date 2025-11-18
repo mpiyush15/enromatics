@@ -19,6 +19,9 @@ const router = express.Router();
 router.use(protect);
 router.use(authorizeRoles("tenantAdmin"));
 
+// Generate random password (must be before /:id routes)
+router.get("/generate-password", generatePassword);
+
 // Get all employees for the tenant
 router.get("/", getEmployees);
 
@@ -42,8 +45,5 @@ router.post("/:id/create-login", createEmployeeLogin);
 
 // Reset employee password
 router.post("/:id/reset-password", resetEmployeePassword);
-
-// Generate random password
-router.get("/generate-password", generatePassword);
 
 export default router;

@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["SuperAdmin", "Admin", "tenantAdmin", "employee", "student", "adsManager"],
+      enum: ["SuperAdmin", "Admin", "tenantAdmin", "employee", "student", "adsManager", "teacher", "staff", "manager", "counsellor"],
       default: "tenantAdmin", // every new signup = tenant admin by default
     },
 

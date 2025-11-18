@@ -173,15 +173,22 @@ export const updatePermissions = async (req, res) => {
 // Create login credentials for employee
 export const createEmployeeLogin = async (req, res) => {
   try {
+    console.log("=== CREATE LOGIN REQUEST ===");
     const { id } = req.params;
     const { tenantId } = req.user;
     const { password } = req.body;
 
+    console.log("Employee ID:", id);
+    console.log("Tenant ID:", tenantId);
+    console.log("Password length:", password?.length);
+
     if (!password || password.length < 6) {
+      console.log("❌ Password validation failed");
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
     const employee = await Employee.findOne({ _id: id, tenantId });
+    console.log("Employee found:", employee ? employee.email : "NOT FOUND");
 
     if (!employee) {
       return res.status(404).json({ message: "Employee not found" });
@@ -189,6 +196,8 @@ export const createEmployeeLogin = async (req, res) => {
 
     // Check if user account already exists
     const existingUser = await User.findOne({ email: employee.email, tenantId });
+    console.log("Existing user check:", existingUser ? "ALREADY EXISTS" : "NONE");
+    
     if (existingUser) {
       return res.status(400).json({ message: "Login credentials already exist for this employee" });
     }
@@ -199,6 +208,8 @@ export const createEmployeeLogin = async (req, res) => {
     else if (employee.role === "staff") userRole = "staff";
     else if (employee.role === "manager") userRole = "manager";
     else if (employee.role === "counsellor") userRole = "counsellor";
+
+    console.log("Creating user with role:", userRole);
 
     // Create User account
     const user = new User({
@@ -213,6 +224,7 @@ export const createEmployeeLogin = async (req, res) => {
     });
 
     await user.save();
+    console.log("✅ User created successfully:", user._id);
 
     res.json({ 
       success: true, 
@@ -220,8 +232,9 @@ export const createEmployeeLogin = async (req, res) => {
       userId: user._id,
     });
   } catch (error) {
-    console.error("Error creating employee login:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Error creating employee login:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ message: "Server error: " + error.message });
   }
 };
 
