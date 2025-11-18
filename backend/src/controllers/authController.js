@@ -167,8 +167,23 @@ export const getCurrentUser = async (req, res) => {
       });
     }
 
+    // Fetch tenant info if user has tenantId
+    let tenant = null;
+    if (user.tenantId) {
+      tenant = await Tenant.findOne({ tenantId: user.tenantId }).select("name instituteName tenantId");
+    }
+
+    // Return user with tenant info
+    const userWithTenant = {
+      ...user.toObject(),
+      tenant: tenant ? {
+        name: tenant.name,
+        instituteName: tenant.instituteName,
+        tenantId: tenant.tenantId
+      } : null
+    };
     
-    res.status(200).json(user);
+    res.status(200).json(userWithTenant);
   } catch (error) {
     console.error("❌ Auth check failed:", error.message);
     res.status(401).json({ message: "Invalid or expired token" });

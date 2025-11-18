@@ -34,7 +34,7 @@ export default function DashboardLayout({
       )}
       
       <ClientDashboard 
-        userName={user?.email || "User"}
+        userName={user?.tenant?.instituteName || user?.tenant?.name || user?.name || user?.email || "User"}
         userRole={user?.role}
         isAdmin={user?.role === "SuperAdmin"}
       >
