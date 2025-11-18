@@ -1,8 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Employee {
   _id: string;
@@ -22,7 +22,6 @@ interface Employee {
 }
 
 export default function StaffManagementPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -46,26 +45,14 @@ export default function StaffManagementPage() {
     },
   });
 
-  // Redirect if not tenantAdmin
   useEffect(() => {
-    if (status === "authenticated" && (session?.user as any)?.role !== "tenantAdmin") {
-      router.push(`/dashboard/client/${params.tenantId}`);
-    }
-  }, [status, session, router, params.tenantId]);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchEmployees();
-    }
-  }, [status]);
+    fetchEmployees();
+  }, []);
 
   const fetchEmployees = async () => {
     try {
-      const token = (session?.user as any)?.token;
-      const res = await fetch("/api/user/employees", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${API_BASE_URL}/api/employees`, {
+        credentials: "include",
       });
       const data = await res.json();
       if (data.success) {
@@ -100,18 +87,17 @@ export default function StaffManagementPage() {
     setMessage("Saving...");
 
     try {
-      const token = (session?.user as any)?.token;
       const url = editingEmployee
-        ? `/api/user/employees/${editingEmployee._id}`
-        : "/api/user/employees";
+        ? `${API_BASE_URL}/api/employees/${editingEmployee._id}`
+        : `${API_BASE_URL}/api/employees`;
       const method = editingEmployee ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify(form),
       });
 
@@ -154,12 +140,9 @@ export default function StaffManagementPage() {
     if (!confirm("Are you sure you want to delete this employee?")) return;
 
     try {
-      const token = (session?.user as any)?.token;
-      const res = await fetch(`/api/user/employees/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/employees/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -195,10 +178,7 @@ export default function StaffManagementPage() {
     setMessage("");
   };
 
-  if (status === "loading" || loading) return <p>Loading...</p>;
-  if (!session || (session?.user as any)?.role !== "tenantAdmin") {
-    return <p className="text-red-600">Access denied. Only tenant admins can manage staff.</p>;
-  }
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
