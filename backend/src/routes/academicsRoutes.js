@@ -16,6 +16,7 @@ import {
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { protectStudent } from "../middleware/protectStudent.js";
+import { requirePermission } from "../middleware/permissionMiddleware.js";
 
 const router = express.Router();
 
@@ -24,6 +25,7 @@ router.post(
   "/tests",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessTests"),
   createTest
 );
 
@@ -35,6 +37,7 @@ router.put(
   "/tests/:id",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessTests"),
   updateTest
 );
 
@@ -50,6 +53,7 @@ router.post(
   "/tests/:id/attendance",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessTests"),
   markAttendance
 );
 
@@ -60,6 +64,7 @@ router.post(
   "/tests/:id/marks",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessTests"),
   enterMarks
 );
 

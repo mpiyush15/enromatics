@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -74,6 +75,9 @@ export default function ProfilePage() {
   if (status === "loading" || loading) return <p>Loading profile...</p>;
   if (!session) return <p className="text-red-600">You are not logged in.</p>;
 
+  // Check if user is tenantAdmin
+  const isTenantAdmin = (session?.user as any)?.role === "tenantAdmin";
+
   return (
     <div className="max-w-xl mx-auto p-6 bg-white dark:bg-gray-900 rounded shadow space-y-6">
       <h1 className="text-2xl font-bold">👤 My Profile</h1>
@@ -123,6 +127,22 @@ export default function ProfilePage() {
       </div>
 
       {statusMessage && <p className="text-sm text-gray-500">{statusMessage}</p>}
+
+      {/* Staff Management Section - Only for tenantAdmin */}
+      {isTenantAdmin && (
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-3">👥 Staff Management</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Manage your employees and their permissions for accessing different sections.
+          </p>
+          <Link
+            href="/dashboard/settings/staff-management"
+            className="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+          >
+            Manage Staff
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

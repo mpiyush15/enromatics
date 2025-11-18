@@ -3,30 +3,33 @@ import { addStudent, getStudents, getStudentById, updateStudent } from "../contr
 import { resetStudentPassword } from "../controllers/studentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { requirePermission } from "../middleware/permissionMiddleware.js";
 
 const router = express.Router();
 
 /**
  * @route POST /api/students
  * @desc Add a new student (tenant only)
- * @access Private
+ * @access Private - Requires canAccessStudents permission
  */
 router.post(
   "/",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
   addStudent
 );
 
 /**
  * @route GET /api/students
  * @desc Fetch all students for current tenant
- * @access Private
+ * @access Private - Requires canAccessStudents permission
  */
 router.get(
   "/",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
   getStudents
 );
 
@@ -35,6 +38,7 @@ router.get(
   "/:id",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
   getStudentById
 );
 
@@ -43,6 +47,7 @@ router.put(
   "/:id",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
   updateStudent
 );
 
@@ -51,6 +56,7 @@ router.put(
   "/:id/reset-password",
   protect,
   authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
   resetStudentPassword
 );
 

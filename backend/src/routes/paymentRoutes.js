@@ -3,11 +3,13 @@ import { addPayment, deletePayment, getReceipt } from "../controllers/paymentCon
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { protectStudent } from "../middleware/protectStudent.js";
+import { requirePermission } from "../middleware/permissionMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), addPayment);
-router.delete("/:id", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), deletePayment);
+// Employees can create fees if they have canCreateFees permission
+router.post("/", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), requirePermission("canCreateFees"), addPayment);
+router.delete("/:id", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), requirePermission("canCreateFees"), deletePayment);
 // allow student to download their own receipt too
 // Admin route to download any receipt
 router.get("/:id/receipt", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), getReceipt);
