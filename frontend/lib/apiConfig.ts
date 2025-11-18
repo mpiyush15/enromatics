@@ -4,7 +4,7 @@
  */
 
 // Get API URL from environment variable, fallback to localhost for development
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
 
 /**
  * Helper function to construct full API endpoint URLs

@@ -173,68 +173,89 @@ export const updatePermissions = async (req, res) => {
 // Create login credentials for employee
 export const createEmployeeLogin = async (req, res) => {
   try {
-    console.log("=== CREATE LOGIN REQUEST ===");
+    console.log("\n=== CREATE LOGIN REQUEST ===");
+    console.log("Request body:", req.body);
+    console.log("Request params:", req.params);
+    
     const { id } = req.params;
-    const { tenantId } = req.user;
+    const { tenantId, role: userRole } = req.user;
     const { password } = req.body;
 
     console.log("Employee ID:", id);
     console.log("Tenant ID:", tenantId);
-    console.log("Password length:", password?.length);
+    console.log("Admin role:", userRole);
+    console.log("Password received:", password ? "YES (length: " + password.length + ")" : "NO");
 
     if (!password || password.length < 6) {
       console.log("❌ Password validation failed");
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Password must be at least 6 characters" 
+      });
     }
 
+    console.log("Looking for employee...");
     const employee = await Employee.findOne({ _id: id, tenantId });
-    console.log("Employee found:", employee ? employee.email : "NOT FOUND");
+    console.log("Employee found:", employee ? `YES - ${employee.email}` : "NOT FOUND");
 
     if (!employee) {
-      return res.status(404).json({ message: "Employee not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Employee not found" 
+      });
     }
 
     // Check if user account already exists
+    console.log("Checking for existing user with email:", employee.email);
     const existingUser = await User.findOne({ email: employee.email, tenantId });
-    console.log("Existing user check:", existingUser ? "ALREADY EXISTS" : "NONE");
+    console.log("Existing user:", existingUser ? `FOUND - ${existingUser._id}` : "NONE");
     
     if (existingUser) {
-      return res.status(400).json({ message: "Login credentials already exist for this employee" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Login credentials already exist for this employee. Use Reset Password instead." 
+      });
     }
 
     // Determine user role based on employee role
-    let userRole = "employee";
-    if (employee.role === "teacher") userRole = "teacher";
-    else if (employee.role === "staff") userRole = "staff";
-    else if (employee.role === "manager") userRole = "manager";
-    else if (employee.role === "counsellor") userRole = "counsellor";
+    let newUserRole = "employee";
+    if (employee.role === "teacher") newUserRole = "teacher";
+    else if (employee.role === "staff") newUserRole = "staff";
+    else if (employee.role === "manager") newUserRole = "manager";
+    else if (employee.role === "counsellor") newUserRole = "counsellor";
 
-    console.log("Creating user with role:", userRole);
+    console.log("Creating user account with role:", newUserRole);
 
     // Create User account
     const user = new User({
       name: employee.name,
       email: employee.email,
-      password,
-      tenantId,
-      role: userRole,
+      password: password,
+      tenantId: tenantId,
+      role: newUserRole,
       status: "active",
       plan: "free",
       subscriptionStatus: "active",
     });
 
+    console.log("Saving user to database...");
     await user.save();
-    console.log("✅ User created successfully:", user._id);
+    console.log("✅ User created successfully with ID:", user._id);
 
     res.json({ 
       success: true, 
-      message: "Login credentials created successfully",
+      message: `Login credentials created successfully for ${employee.name}`,
       userId: user._id,
     });
   } catch (error) {
-    console.error("❌ Error creating employee login:", error);
-    console.error("Error stack:", error.stack);
-    res.status(500).json({ message: "Server error: " + error.message });
+    console.error("❌ Error creating employee login:", error.message);
+    console.error("Error name:", error.name);
+    console.error("Full error:", error);
+    
+    res.status(500).json({ 
+      success: false,
+      message: "Server error: " + error.message 
+    });
   }
 };
 

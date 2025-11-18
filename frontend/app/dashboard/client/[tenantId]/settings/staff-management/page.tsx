@@ -211,31 +211,37 @@ export default function StaffManagementPage() {
       return;
     }
 
-    console.log("=== PASSWORD SUBMIT ===");
+    console.log("\n=== PASSWORD SUBMIT ===");
     console.log("Employee:", selectedEmployee.name, selectedEmployee._id);
     console.log("Has login access:", selectedEmployee.hasLoginAccess);
     console.log("Password length:", password.length);
+
+    setMessage("⏳ Processing...");
 
     try {
       const endpoint = selectedEmployee.hasLoginAccess
         ? `${API_BASE_URL}/api/employees/${selectedEmployee._id}/reset-password`
         : `${API_BASE_URL}/api/employees/${selectedEmployee._id}/create-login`;
 
+      const payload = selectedEmployee.hasLoginAccess 
+        ? { newPassword: password } 
+        : { password: password };
+
       console.log("Endpoint:", endpoint);
-      console.log("Payload:", selectedEmployee.hasLoginAccess ? { newPassword: "***" } : { password: "***" });
+      console.log("Payload keys:", Object.keys(payload));
 
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(selectedEmployee.hasLoginAccess ? { newPassword: password } : { password }),
+        body: JSON.stringify(payload),
       });
 
       console.log("Response status:", res.status);
       const data = await res.json();
       console.log("Response data:", data);
 
-      if (data.success) {
+      if (res.ok && data.success) {
         setMessage(`✅ ${data.message}`);
         setShowPasswordModal(false);
         fetchEmployees();
@@ -243,10 +249,11 @@ export default function StaffManagementPage() {
         setSelectedEmployee(null);
       } else {
         setMessage("❌ " + (data.message || "Operation failed"));
+        console.error("Operation failed:", data);
       }
     } catch (error) {
       console.error("❌ Error managing password:", error);
-      setMessage("❌ Server error");
+      setMessage("❌ Server error: " + (error as Error).message);
     }
   };
 
