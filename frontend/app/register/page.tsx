@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
+    instituteName: "",
     email: "",
     password: "",
   });
@@ -43,6 +44,12 @@ export default function RegisterPage() {
       newErrors.name = "Name is required";
     } else if (form.name.trim().length < 2) {
       newErrors.name = "Name must be at least 2 characters";
+    }
+
+    if (!form.instituteName.trim()) {
+      newErrors.instituteName = "Institute name is required";
+    } else if (form.instituteName.trim().length < 2) {
+      newErrors.instituteName = "Institute name must be at least 2 characters";
     }
 
     if (!form.email.trim()) {
@@ -155,7 +162,7 @@ export default function RegisterPage() {
             {/* Name Input */}
             <div>
               <label htmlFor="name" className="block text-sm font-light text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
+                Your Full Name
               </label>
               <input
                 id="name"
@@ -173,6 +180,30 @@ export default function RegisterPage() {
               />
               {errors.name && (
                 <p className="mt-1.5 text-xs font-light text-red-600 dark:text-red-400">{errors.name}</p>
+              )}
+            </div>
+
+            {/* Institute Name Input */}
+            <div>
+              <label htmlFor="instituteName" className="block text-sm font-light text-gray-700 dark:text-gray-300 mb-2">
+                Institute Name
+              </label>
+              <input
+                id="instituteName"
+                name="instituteName"
+                type="text"
+                value={form.instituteName}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 rounded-xl border ${
+                  errors.instituteName 
+                    ? 'border-red-300 dark:border-red-700 focus:ring-red-500' 
+                    : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                } bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all font-light text-base`}
+                placeholder="ABC Coaching Institute"
+                disabled={loading}
+              />
+              {errors.instituteName && (
+                <p className="mt-1.5 text-xs font-light text-red-600 dark:text-red-400">{errors.instituteName}</p>
               )}
             </div>
 

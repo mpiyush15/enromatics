@@ -16,11 +16,19 @@ const tenantSchema = new mongoose.Schema(
       index: true,
     },
 
-    // Display name of the coaching institute / organization
+    // Owner/Tenant person name (e.g., "John Smith")
     name: {
       type: String,
       required: true,
       trim: true,
+    },
+
+    // Institute/Organization name (e.g., "ABC Coaching Institute")
+    instituteName: {
+      type: String,
+      required: false,
+      trim: true,
+      default: null,
     },
 
     // Owner (tenantAdmin) email address

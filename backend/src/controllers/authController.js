@@ -11,7 +11,7 @@ const generateToken = (id, role, tenantId) =>
  */
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, tenantId, role } = req.body;
+    const { name, email, password, tenantId, role, instituteName } = req.body;
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: "User already exists" });
@@ -50,7 +50,8 @@ export const registerUser = async (req, res) => {
 
     const tenant = await Tenant.create({
       tenantId: newTenantId,
-      name: `${name}'s Institute`,
+      name: name, // Person's name
+      instituteName: instituteName || null, // Institute name
       email,
       plan: "free",
       subscription: { status: "active", startDate: new Date() },
@@ -170,14 +171,15 @@ export const getCurrentUser = async (req, res) => {
     // Fetch tenant info if user has tenantId
     let tenant = null;
     if (user.tenantId) {
-      tenant = await Tenant.findOne({ tenantId: user.tenantId }).select("name tenantId");
+      tenant = await Tenant.findOne({ tenantId: user.tenantId }).select("name instituteName tenantId");
     }
 
     // Return user with tenant info
     const userWithTenant = {
       ...user.toObject(),
       tenant: tenant ? {
-        name: tenant.name, // This is the institute name
+        name: tenant.name, // Person's name
+        instituteName: tenant.instituteName, // Institute name
         tenantId: tenant.tenantId
       } : null
     };
