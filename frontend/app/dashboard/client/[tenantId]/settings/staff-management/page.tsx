@@ -13,6 +13,8 @@ interface Employee {
   salary: number;
   joiningDate: string;
   status: string;
+  hasLoginAccess?: boolean;
+  userId?: string;
   permissions: {
     canAccessStudents: boolean;
     canAccessTests: boolean;
@@ -27,6 +29,9 @@ export default function StaffManagementPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [password, setPassword] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [message, setMessage] = useState("");
 
@@ -178,6 +183,63 @@ export default function StaffManagementPage() {
     setMessage("");
   };
 
+  const handleGeneratePassword = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/employees/generate-password`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPassword(data.password);
+      }
+    } catch (error) {
+      console.error("Error generating password:", error);
+    }
+  };
+
+  const handleCreateLogin = async (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setPassword("");
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!selectedEmployee) return;
+    
+    if (!password || password.length < 6) {
+      setMessage("❌ Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      const endpoint = selectedEmployee.hasLoginAccess
+        ? `${API_BASE_URL}/api/employees/${selectedEmployee._id}/reset-password`
+        : `${API_BASE_URL}/api/employees/${selectedEmployee._id}/create-login`;
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(selectedEmployee.hasLoginAccess ? { newPassword: password } : { password }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage(`✅ ${data.message}`);
+        setShowPasswordModal(false);
+        fetchEmployees();
+        setPassword("");
+        setSelectedEmployee(null);
+      } else {
+        setMessage("❌ " + (data.message || "Operation failed"));
+      }
+    } catch (error) {
+      console.error("Error managing password:", error);
+      setMessage("❌ Server error");
+    }
+  };
+
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -209,6 +271,7 @@ export default function StaffManagementPage() {
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Email</th>
               <th className="px-4 py-3 text-left">Role</th>
+              <th className="px-4 py-3 text-left">Login Access</th>
               <th className="px-4 py-3 text-left">Permissions</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">Actions</th>
@@ -223,6 +286,17 @@ export default function StaffManagementPage() {
                   <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
                     {emp.role}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  {emp.hasLoginAccess ? (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                      ✓ Active
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
+                      ✗ No Access
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex gap-2 flex-wrap">
@@ -266,6 +340,12 @@ export default function StaffManagementPage() {
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => handleCreateLogin(emp)}
+                      className="text-green-600 hover:text-green-800 text-sm"
+                    >
+                      {emp.hasLoginAccess ? "Reset Password" : "Create Login"}
                     </button>
                     <button
                       onClick={() => handleDelete(emp._id)}
@@ -449,6 +529,67 @@ export default function StaffManagementPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Modal */}
+      {showPasswordModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold mb-4">
+              {selectedEmployee.hasLoginAccess ? "Reset Password" : "Create Login Credentials"}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {selectedEmployee.hasLoginAccess 
+                ? `Reset password for ${selectedEmployee.name}`
+                : `Create login credentials for ${selectedEmployee.name}`
+              }
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm mb-2">Password (min 6 characters)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="flex-1 p-2 border rounded dark:bg-gray-800"
+                />
+                <button
+                  onClick={handleGeneratePassword}
+                  className="bg-gray-200 dark:bg-gray-700 px-3 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+                  title="Generate random password"
+                >
+                  🎲 Generate
+                </button>
+              </div>
+              {password && (
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Make sure to copy this password and share it securely with the employee
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={handlePasswordSubmit}
+                className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700"
+              >
+                {selectedEmployee.hasLoginAccess ? "Reset Password" : "Create Login"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPassword("");
+                  setSelectedEmployee(null);
+                }}
+                className="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

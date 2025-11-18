@@ -1,4 +1,5 @@
 import Employee from "../models/Employee.js";
+import User from "../models/User.js";
 
 // Get all employees for a tenant
 export const getEmployees = async (req, res) => {
@@ -10,7 +11,20 @@ export const getEmployees = async (req, res) => {
     }
 
     const employees = await Employee.find({ tenantId }).sort({ createdAt: -1 });
-    res.json({ success: true, employees });
+    
+    // Also fetch User accounts for each employee to show if they have login credentials
+    const employeesWithAuth = await Promise.all(
+      employees.map(async (emp) => {
+        const user = await User.findOne({ email: emp.email, tenantId });
+        return {
+          ...emp.toObject(),
+          hasLoginAccess: !!user,
+          userId: user?._id,
+        };
+      })
+    );
+    
+    res.json({ success: true, employees: employeesWithAuth });
   } catch (error) {
     console.error("Error fetching employees:", error);
     res.status(500).json({ message: "Server error" });
@@ -154,4 +168,110 @@ export const updatePermissions = async (req, res) => {
     console.error("Error updating permissions:", error);
     res.status(500).json({ message: "Server error" });
   }
+};
+
+// Create login credentials for employee
+export const createEmployeeLogin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.user;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const employee = await Employee.findOne({ _id: id, tenantId });
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Check if user account already exists
+    const existingUser = await User.findOne({ email: employee.email, tenantId });
+    if (existingUser) {
+      return res.status(400).json({ message: "Login credentials already exist for this employee" });
+    }
+
+    // Determine user role based on employee role
+    let userRole = "employee";
+    if (employee.role === "teacher") userRole = "teacher";
+    else if (employee.role === "staff") userRole = "staff";
+    else if (employee.role === "manager") userRole = "manager";
+    else if (employee.role === "counsellor") userRole = "counsellor";
+
+    // Create User account
+    const user = new User({
+      name: employee.name,
+      email: employee.email,
+      password,
+      tenantId,
+      role: userRole,
+      status: "active",
+      plan: "free",
+      subscriptionStatus: "active",
+    });
+
+    await user.save();
+
+    res.json({ 
+      success: true, 
+      message: "Login credentials created successfully",
+      userId: user._id,
+    });
+  } catch (error) {
+    console.error("Error creating employee login:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Reset employee password
+export const resetEmployeePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.user;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const employee = await Employee.findOne({ _id: id, tenantId });
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Find user account
+    const user = await User.findOne({ email: employee.email, tenantId });
+
+    if (!user) {
+      return res.status(404).json({ 
+        message: "No login account found. Please create login credentials first." 
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ 
+      success: true, 
+      message: "Password reset successfully",
+    });
+  } catch (error) {
+    console.error("Error resetting employee password:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Generate random password
+export const generatePassword = (req, res) => {
+  const length = 10;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  res.json({ success: true, password });
 };
