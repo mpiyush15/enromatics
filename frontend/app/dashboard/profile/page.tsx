@@ -127,22 +127,6 @@ export default function ProfilePage() {
       </div>
 
       {statusMessage && <p className="text-sm text-gray-500">{statusMessage}</p>}
-
-      {/* Staff Management Section - Only for tenantAdmin */}
-      {isTenantAdmin && (
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold mb-3">👥 Staff Management</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Manage your employees and their permissions for accessing different sections.
-          </p>
-          <Link
-            href="/dashboard/settings/staff-management"
-            className="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
-          >
-            Manage Staff
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
