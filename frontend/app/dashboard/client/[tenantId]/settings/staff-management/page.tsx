@@ -183,18 +183,14 @@ export default function StaffManagementPage() {
     setMessage("");
   };
 
-  const handleGeneratePassword = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/employees/generate-password`, {
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPassword(data.password);
-      }
-    } catch (error) {
-      console.error("Error generating password:", error);
+  const handleGeneratePassword = () => {
+    // Generate password on client side to avoid routing issues
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    setPassword(password);
   };
 
   const handleCreateLogin = async (employee: Employee) => {
