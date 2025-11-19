@@ -113,11 +113,11 @@ export const loginUser = async (req, res) => {
 
     // ✅ Set cookie after successful login (cross-domain compatible)
     res.cookie("jwt", token, {
-      httpOnly: true, // ✅ Cannot be accessed by JavaScript
-      secure: true, // ✅ Required for cross-domain HTTPS
-      sameSite: "none", // ✅ Allow cross-domain requests
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      path: "/", // Available on all routes
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true only in production
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     res.status(200).json({

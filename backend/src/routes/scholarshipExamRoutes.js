@@ -1,4 +1,10 @@
-import express from "express";
+res.cookie("jwt", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production", // true only in production
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+  path: "/",
+});import express from "express";
 import {
   createExam,
   getAllExams,
