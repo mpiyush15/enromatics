@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       headers: {
         Cookie: cookie ? `${cookie.name}=${cookie.value}` : "",
       },
+      credentials: "include",
     });
 
     const data = await response.json();
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
         Cookie: cookie ? `${cookie.name}=${cookie.value}` : "",
       },
       body: JSON.stringify(body),
+      credentials: "include",
     });
 
     const data = await response.json();
