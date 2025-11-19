@@ -1,0 +1,6 @@
+rollNumber,status,remarks
+BA001,present,On time
+BA002,absent,Sick leave
+BA003,late,Arrived 15 minutes late
+BA004,present,
+BA005,excused,Medical appointment
