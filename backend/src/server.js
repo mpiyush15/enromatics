@@ -32,10 +32,10 @@ connectDB();
 
 const app = express();
 
-// CORS - Allow all origins in production (simplest solution)
+// CORS - Allow only production frontend domain
 app.use(
   cors({
-    origin: true, // Allow all origins
+    origin: ["https://enromatics.com"], // Add your frontend domain here
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
