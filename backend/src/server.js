@@ -32,10 +32,15 @@ connectDB();
 
 const app = express();
 
-// CORS - Allow only production frontend domain
+// CORS - Allow both development and production domains
 app.use(
   cors({
-    origin: ["https://enromatics.com"], // Add your frontend domain here
+    origin: [
+      "https://enromatics.com", 
+      "http://localhost:3000", 
+      "http://127.0.0.1:3000",
+      "http://localhost:3001"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],

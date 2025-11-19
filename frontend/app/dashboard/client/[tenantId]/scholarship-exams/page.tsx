@@ -64,17 +64,30 @@ export default function ScholarshipExamsPage() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
+      console.log("🔍 Fetching exams from:", `${API_URL}/api/scholarship-exams`);
+      const response = await fetch(`${API_URL}/api/scholarship-exams`, {
+        method: "GET",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
-      if (!response.ok) throw new Error("Failed to fetch exams");
+      console.log("📡 Response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        console.error("❌ API Error:", errorData);
+        throw new Error(errorData.message || "Failed to fetch exams");
+      }
 
       const data = await response.json();
+      console.log("✅ Exams fetched:", data.exams?.length || 0);
       setExams(data.exams || []);
     } catch (error) {
-      console.error("Error fetching exams:", error);
-      alert("Failed to load exams");
+      console.error("❌ Error fetching exams:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      alert(`Failed to load exams: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -133,15 +146,22 @@ export default function ScholarshipExamsPage() {
       const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
         method: "DELETE",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
-      if (!response.ok) throw new Error("Failed to delete exam");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || "Failed to delete exam");
+      }
 
       alert("Exam deleted successfully");
       fetchExams();
     } catch (error) {
-      console.error("Error deleting exam:", error);
-      alert("Failed to delete exam");
+      console.error("❌ Error deleting exam:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      alert(`Failed to delete exam: ${errorMessage}`);
     }
   };
 

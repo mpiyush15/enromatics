@@ -90,8 +90,10 @@ export default function RegistrationsPage() {
     try {
       setLoading(true);
 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      
       // Fetch exam details
-      const examResponse = await fetch(`/api/scholarship-exams/${examId}`, {
+      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
         credentials: "include",
       });
       if (examResponse.ok) {
@@ -100,7 +102,7 @@ export default function RegistrationsPage() {
       }
 
       // Fetch registrations
-      const regResponse = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
+      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
       if (regResponse.ok) {
@@ -188,7 +190,8 @@ export default function RegistrationsPage() {
     if (!confirm(`Convert ${studentName} to full student admission?`)) return;
 
     try {
-      const response = await fetch(`/api/scholarship-exams/registration/${registrationId}/convert`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

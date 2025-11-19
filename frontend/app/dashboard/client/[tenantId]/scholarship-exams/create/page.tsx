@@ -147,7 +147,8 @@ export default function CreateExamPage() {
         status: "draft",
       };
 
-      const response = await fetch("/api/scholarship-exams", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const response = await fetch(`${API_URL}/api/scholarship-exams`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
