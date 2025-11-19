@@ -146,7 +146,8 @@ export default function CreateExamPage() {
             options: field.options || [],
           })),
         },
-        status: "draft",
+        status: "active",
+        isPublic: true,
       };
 
       console.log("🚀 Creating exam with data:", examData);
