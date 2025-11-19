@@ -52,10 +52,23 @@ export const sidebarLinks = [
     tenantSpecific: true,
     children: [
       { label: "📊 Overview", href: "/dashboard/accounts/overview", roles: ["tenantAdmin", "accountant"] },
-      { label: "�� Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
+      { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
       { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantAdmin", "accountant"] },
       { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantAdmin", "accountant"] },
       { label: "📈 Reports", href: "/dashboard/accounts/reports", roles: ["tenantAdmin", "accountant"] },
+    ]
+  },
+
+  {
+    label: "🎓 Scholarship Exams",
+    href: "#",
+    roles: ["tenantAdmin", "counsellor"],
+    tenantSpecific: true,
+    children: [
+      { label: "📋 All Exams", href: "/dashboard/scholarship-exams", roles: ["tenantAdmin", "counsellor"] },
+      { label: "➕ Create Exam", href: "/dashboard/scholarship-exams/create", roles: ["tenantAdmin"] },
+      { label: "👥 Registrations", href: "/dashboard/scholarship-exams/registrations", roles: ["tenantAdmin", "counsellor"] },
+      { label: "📊 Results", href: "/dashboard/scholarship-exams/results", roles: ["tenantAdmin", "counsellor"] },
     ]
   },
 
