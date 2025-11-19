@@ -30,6 +30,11 @@ const studentSchema = new mongoose.Schema({
   batch: {
     type: String,
   },
+  batchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Batch",
+    default: null,
+  },
   joinDate: {
     type: Date,
     default: Date.now,
