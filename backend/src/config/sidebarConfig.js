@@ -106,7 +106,8 @@ export const sidebarLinks = [
     roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin"],
     children: [
       { label: "👤 Profile", href: "/dashboard/profile" },
-      { label: "📦 My Subscription", href: "/dashboard/my-subscription" },
+      { label: "� Staff Management", href: "/dashboard/settings/staff", roles: ["tenantAdmin", "Admin"] },
+      { label: "�📦 My Subscription", href: "/dashboard/my-subscription" },
       { label: "📄 View Plan", href: "/dashboard/subscription/view" },
       { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel" },
     ],
