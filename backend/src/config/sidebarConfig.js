@@ -93,7 +93,8 @@ export const sidebarLinks = [
   roles: ["tenantAdmin", "teacher", "staff", "student"],
   tenantSpecific: true,
   children: [
-    { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "teacher", "staff"] },
+    { label: "� Batches", href: "/dashboard/academics/batches", roles: ["tenantAdmin"] },
+    { label: "�📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "teacher", "staff"] },
     { label: "✅ Test Attendance", href: "/dashboard/academics/attendance", roles: ["tenantAdmin", "teacher", "staff"] },
     { label: "📝 Marks Entry", href: "/dashboard/academics/marks", roles: ["tenantAdmin", "teacher", "staff"] },
     { label: "📊 Test Reports", href: "/dashboard/academics/reports", roles: ["tenantAdmin", "teacher", "staff", "student"] },

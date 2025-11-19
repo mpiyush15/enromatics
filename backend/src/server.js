@@ -20,6 +20,7 @@ import accountsRoutes from './routes/accountsRoutes.js';
 import academicsRoutes from './routes/academicsRoutes.js';
 import whatsappRoutes from './routes/whatsappRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import batchRoutes from './routes/batchRoutes.js';
 
 
 
@@ -59,6 +60,7 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/academics', academicsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/batches', batchRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
 app.use("/api/auth", authRoutes);
