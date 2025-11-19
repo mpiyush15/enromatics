@@ -99,17 +99,31 @@ export default function ExamRegistrationPage() {
     try {
       setLoading(true);
       console.log("🔍 Fetching exam data for code:", examCode);
+      console.log("🔗 API URL:", `${API_URL}/api/scholarship-exams/public/${examCode}`);
       
       const response = await fetch(`${API_URL}/api/scholarship-exams/public/${examCode}`, {
         method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response ok:", response.ok);
+
       if (!response.ok) {
-        throw new Error("Exam not found");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ API Error:", errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log("✅ Exam data fetched:", data);
+      
+      if (!data.exam) {
+        throw new Error("No exam data returned from API");
+      }
+      
       setExam(data.exam);
       
       // Set first available exam date as default
@@ -118,8 +132,24 @@ export default function ExamRegistrationPage() {
       }
     } catch (error) {
       console.error("❌ Error fetching exam data:", error);
-      alert("Exam not found or registration is closed");
-      router.push("/");
+      
+      // More specific error messages
+      let errorMessage = "Unable to load exam details. ";
+      if (error instanceof Error) {
+        if (error.message.includes("404")) {
+          errorMessage += "This exam code doesn't exist or is not available for public registration.";
+        } else if (error.message.includes("500")) {
+          errorMessage += "Server error. Please try again later.";
+        } else if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+          errorMessage += "Please check your internet connection and try again.";
+        } else {
+          errorMessage += error.message;
+        }
+      }
+      
+      alert(errorMessage);
+      // Don't redirect immediately, let user decide
+      // router.push("/");
     } finally {
       setLoading(false);
     }
@@ -246,15 +276,59 @@ export default function ExamRegistrationPage() {
     );
   }
 
-  if (!exam) {
+  if (!loading && !exam) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Exam Not Found</h1>
-          <p className="text-gray-600">The exam you're looking for doesn't exist or has been removed.</p>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Exam Not Found</h1>
+            <p className="text-gray-600 mb-4">
+              The exam with code <span className="font-mono font-bold text-red-600">{examCode}</span> doesn't exist or is not available for public registration.
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
+              <p className="text-sm text-yellow-800">
+                <strong>Possible reasons:</strong>
+              </p>
+              <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                <li>• Exam code is incorrect</li>
+                <li>• Exam has been removed or disabled</li>
+                <li>• Registration is not yet open</li>
+                <li>• Server connection issue</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => router.push("/results")}
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Award size={20} />
+              Check Results Portal
+            </button>
+            <button
+              onClick={() => router.push("/login")}
+              className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <User size={20} />
+              Student Login
+            </button>
+          </div>
         </div>
       </div>
     );
+  }
+
+  // Return early if exam is not loaded
+  if (!exam) {
+    return null;
   }
 
   if (registrationComplete) {
