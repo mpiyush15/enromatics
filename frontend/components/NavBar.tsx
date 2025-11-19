@@ -186,45 +186,35 @@ export default function Navbar() {
                 <Link 
                   href="/services/student-management" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleLinkClick}
                 >
                   Student Management
                 </Link>
                 <Link 
                   href="/services/scholarship-exams" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleLinkClick}
                 >
                   Scholarship Exams
                 </Link>
                 <Link 
                   href="/services/video-editing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleLinkClick}
                 >
                   Video Editing
                 </Link>
                 <Link 
                   href="/services/facebook-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleLinkClick}
                 >
                   Facebook Marketing
                 </Link>
                 <Link 
                   href="/services/instagram-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleLinkClick}
                 >
                   Instagram Marketing
                 </Link>
