@@ -1,101 +1,128 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Search, Award, TrendingUp, CheckCircle, XCircle, Clock, User, Mail, Phone, GraduationCap, Star, Users } from "lucide-react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  Download,
+  Award,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  TrendingUp,
+  FileText,
+  Home,
+  GraduationCap,
+} from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
 
 interface ResultData {
-  registrationNumber: string;
-  studentName: string;
-  email: string;
-  phone: string;
-  examName: string;
-  examCode: string;
-  examDate: string;
-  marksObtained: number;
-  totalMarks: number;
-  percentage: number;
-  rank: number;
-  result: "pass" | "fail" | "absent" | "pending";
-  rewardEligible: boolean;
-  rewardDetails?: {
-    type: string;
-    value: number;
-    description: string;
+  registration: {
+    _id: string;
+    registrationNumber: string;
+    studentName: string;
+    email: string;
+    phone: string;
+    currentClass: string;
+    school: string;
+    hasAttended: boolean;
+    marksObtained?: number;
+    percentage?: number;
+    rank?: number;
+    result?: "pass" | "fail" | "absent" | "pending";
+    rewardEligible: boolean;
+    rewardDetails?: {
+      rankFrom: number;
+      rankTo: number;
+      rewardType: string;
+      rewardValue: number;
+      description: string;
+    };
+    enrollmentStatus: "notInterested" | "interested" | "enrolled" | "converted";
+    createdAt: string;
   };
-  enrollmentEligible: boolean;
-  enrollmentStatus: "notInterested" | "interested" | "enrolled" | "converted";
+  exam: {
+    _id: string;
+    examName: string;
+    examCode: string;
+    totalMarks: number;
+    passingMarks: number;
+    examDate: string;
+    resultsPublished: boolean;
+  };
 }
 
-interface ExamStats {
-  totalAppeared: number;
-  totalPassed: number;
-  averageMarks: number;
-  topScore: number;
-}
-
-export default function StudentResultPortal() {
-  const [searchQuery, setSearchQuery] = useState("");
+export default function ResultsPage() {
+  const router = useRouter();
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [result, setResult] = useState<ResultData | null>(null);
-  const [examStats, setExamStats] = useState<ExamStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false);
   const [enrollmentSubmitting, setEnrollmentSubmitting] = useState(false);
 
-  const searchResult = async () => {
-    if (!searchQuery.trim()) {
-      alert("Please enter your registration number");
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!registrationNumber.trim()) {
+      setError("Please enter your registration number");
       return;
     }
 
     setLoading(true);
+    setError("");
+    setResult(null);
+
     try {
-      console.log("🔍 Searching for result:", searchQuery);
-      
-      // Simulate API call - In real implementation, this would call your backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulated result data
-      const simulatedResult: ResultData = {
-        registrationNumber: searchQuery,
-        studentName: "Demo Student",
-        email: "demo@example.com",
-        phone: "+91 9876543210",
-        examName: "Science Scholarship Test 2024",
-        examCode: "EXAM240001",
-        examDate: "2024-11-20T10:00:00Z",
-        marksObtained: 78,
-        totalMarks: 100,
-        percentage: 78,
-        rank: 15,
-        result: "pass",
-        rewardEligible: true,
-        rewardDetails: {
-          type: "percentage",
-          value: 25,
-          description: "25% Scholarship on Tuition Fees"
+      const response = await fetch(`${API_URL}/api/scholarship-exams/public/result/${registrationNumber}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
         },
-        enrollmentEligible: true,
-        enrollmentStatus: "notInterested"
-      };
+      });
 
-      const simulatedStats: ExamStats = {
-        totalAppeared: 1250,
-        totalPassed: 445,
-        averageMarks: 52.3,
-        topScore: 96
-      };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Result not found");
+      }
 
-      setResult(simulatedResult);
-      setExamStats(simulatedStats);
-      
+      const data = await response.json();
+      setResult(data);
     } catch (error) {
-      console.error("❌ Error fetching result:", error);
-      alert("Result not found. Please check your registration number.");
+      console.error("Error fetching result:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch result");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadAdmitCard = async () => {
+    if (!result) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/scholarship-exams/public/admit-card/${result.registration.registrationNumber}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate admit card");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `admit_card_${result.registration.registrationNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading admit card:", error);
+      alert("Failed to download admit card. Please try again.");
     }
   };
 
@@ -104,21 +131,33 @@ export default function StudentResultPortal() {
 
     setEnrollmentSubmitting(true);
     try {
-      console.log("📝 Submitting enrollment interest for:", result.registrationNumber);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const response = await fetch(`${API_URL}/api/scholarship-exams/public/enrollment-interest`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          registrationNumber: result.registration.registrationNumber,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit enrollment interest");
+      }
+
       setResult({
         ...result,
-        enrollmentStatus: "interested"
+        registration: {
+          ...result.registration,
+          enrollmentStatus: "interested"
+        }
       });
       
       setShowEnrollmentForm(false);
       alert("Thank you for your interest! Our admissions team will contact you soon.");
       
     } catch (error) {
-      console.error("❌ Error submitting enrollment interest:", error);
+      console.error("Error submitting enrollment interest:", error);
       alert("Failed to submit interest. Please try again.");
     } finally {
       setEnrollmentSubmitting(false);
@@ -133,22 +172,30 @@ export default function StudentResultPortal() {
     });
   };
 
-  const getResultBadge = (result: string) => {
+  const getResultBadge = () => {
+    if (!result?.registration.result || result.registration.result === "pending") {
+      return (
+        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-full">
+          <AlertCircle size={20} />
+          <span className="font-semibold">Result Pending</span>
+        </div>
+      );
+    }
+
     const badges = {
-      pass: { bg: "bg-green-100", text: "text-green-800", label: "✓ PASSED", icon: CheckCircle },
-      fail: { bg: "bg-red-100", text: "text-red-800", label: "✗ FAILED", icon: XCircle },
-      absent: { bg: "bg-gray-100", text: "text-gray-800", label: "ABSENT", icon: Clock },
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800", label: "PENDING", icon: Clock },
+      pass: { bg: "bg-green-100", text: "text-green-600", label: "PASS", icon: CheckCircle },
+      fail: { bg: "bg-red-100", text: "text-red-600", label: "FAIL", icon: XCircle },
+      absent: { bg: "bg-gray-100", text: "text-gray-600", label: "ABSENT", icon: AlertCircle },
     };
 
-    const badge = badges[result as keyof typeof badges] || badges.pending;
+    const badge = badges[result.registration.result];
     const Icon = badge.icon;
 
     return (
-      <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${badge.bg} ${badge.text}`}>
-        <Icon size={16} />
-        {badge.label}
-      </span>
+      <div className={`flex items-center gap-2 px-4 py-2 ${badge.bg} ${badge.text} rounded-full`}>
+        <Icon size={20} />
+        <span className="font-bold text-lg">{badge.label}</span>
+      </div>
     );
   };
 
@@ -178,30 +225,34 @@ export default function StudentResultPortal() {
           <p className="text-xl text-gray-600">Check your exam results and scholarship eligibility</p>
         </div>
 
-        {/* Search Section */}
+        {/* Search Form */}
         <div className="max-w-md mx-auto mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Enter Your Details</h3>
-            
-            <div className="space-y-4">
-              <div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <form onSubmit={handleSearch}>
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Registration Number
                 </label>
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && searchResult()}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-                  placeholder="e.g., REG240001"
+                  value={registrationNumber}
+                  onChange={(e) => setRegistrationNumber(e.target.value)}
+                  placeholder="Enter your registration number (e.g., EXAM250002-00001)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center font-mono"
+                  disabled={loading}
                 />
               </div>
+              
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
 
               <button
-                onClick={searchResult}
+                type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
               >
                 {loading ? (
                   <>
@@ -215,170 +266,274 @@ export default function StudentResultPortal() {
                   </>
                 )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
-        {/* Result Display */}
+        {/* Results Display */}
         {result && (
           <div className="max-w-4xl mx-auto">
-            {/* Student Info & Result */}
-            <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{result.studentName}</h2>
-                  <p className="text-gray-600">Registration: <span className="font-mono font-semibold">{result.registrationNumber}</span></p>
-                  <p className="text-gray-600">{result.examName}</p>
+            {/* Student Info Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                    {result.registration.studentName}
+                  </h2>
+                  <p className="text-gray-600 mb-1">
+                    Registration: <span className="font-mono font-semibold text-blue-600">{result.registration.registrationNumber}</span>
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {result.exam.examName} • {formatDate(result.registration.createdAt)}
+                  </p>
                 </div>
                 <div className="text-right">
-                  {getResultBadge(result.result)}
-                  <p className="text-sm text-gray-500 mt-2">Exam Date: {formatDate(result.examDate)}</p>
+                  {getResultBadge()}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Personal Details */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Personal Information */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User size={20} />
+                    Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-500">Full Name</label>
+                      <p className="font-medium text-gray-900">{result.registration.studentName}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Class</label>
+                      <p className="font-medium text-gray-900">{result.registration.currentClass}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Email</label>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <Mail size={14} />
+                        {result.registration.email}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Phone</label>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <Phone size={14} />
+                        {result.registration.phone}
+                      </p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-gray-500">School</label>
+                      <p className="font-medium text-gray-900">{result.registration.school}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Exam Information */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText size={20} />
+                    Exam Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-500">Exam Name</label>
+                      <p className="font-medium text-gray-900">{result.exam.examName}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Exam Code</label>
+                      <p className="font-mono font-semibold text-blue-600">{result.exam.examCode}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Exam Date</label>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <Calendar size={14} />
+                        {formatDate(result.exam.examDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Attendance</label>
+                      <p className="font-medium text-gray-900">
+                        {result.registration.hasAttended ? (
+                          <span className="text-green-600 flex items-center gap-1">
+                            <CheckCircle size={16} /> Attended
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 flex items-center gap-1">
+                            <XCircle size={16} /> Not Attended
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Download Options</h3>
+                  <div className="space-y-3">
+                    <button
+                      onClick={downloadAdmitCard}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                    >
+                      <Download size={20} />
+                      Download Admit Card
+                    </button>
+                    <p className="text-sm text-gray-600 text-center">
+                      Keep your admit card safe. You may need it for future reference.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Score Details */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">{result.marksObtained}</div>
-                  <div className="text-sm text-gray-600">Marks Obtained</div>
-                  <div className="text-xs text-gray-500">out of {result.totalMarks}</div>
-                </div>
-
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-3xl font-bold text-green-600 mb-2">{result.percentage}%</div>
-                  <div className="text-sm text-gray-600">Percentage</div>
-                </div>
-
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-3xl font-bold text-purple-600 mb-2">#{result.rank}</div>
-                  <div className="text-sm text-gray-600">Rank</div>
-                </div>
-
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-3xl font-bold text-orange-600 mb-2">
-                    {examStats ? `${((result.rank / examStats.totalAppeared) * 100).toFixed(1)}%` : "N/A"}
-                  </div>
-                  <div className="text-sm text-gray-600">Percentile</div>
-                </div>
-              </div>
-
-              {/* Scholarship Reward */}
-              {result.rewardEligible && result.rewardDetails && (
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6 mb-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Award className="text-yellow-600" size={24} />
-                    <h3 className="text-lg font-semibold text-gray-900">🎉 Congratulations! You've Won a Scholarship!</h3>
-                  </div>
-                  <p className="text-gray-700 text-lg font-medium">
-                    {result.rewardDetails.description}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    This scholarship will be applicable when you enroll in our courses.
-                  </p>
-                </div>
-              )}
-
-              {/* Enrollment Section */}
-              {result.enrollmentEligible && result.result === "pass" && (
-                <div className="border-t pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Admission Enrollment</h3>
-                      <p className="text-gray-600">Join our institute and start your learning journey</p>
-                    </div>
-                    <div>
-                      {getEnrollmentStatusBadge(result.enrollmentStatus)}
+              {/* Right Column - Results */}
+              <div className="space-y-6">
+                {/* Results Card */}
+                {result.registration.hasAttended && result.registration.marksObtained !== undefined && (
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <TrendingUp size={20} />
+                      Your Results
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <div className="text-5xl font-bold mb-2">
+                          {result.registration.marksObtained}
+                        </div>
+                        <div className="text-blue-100">
+                          out of {result.exam.totalMarks} marks
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center py-2 border-t border-blue-400">
+                        <span className="text-blue-100">Percentage</span>
+                        <span className="text-2xl font-bold">{result.registration.percentage?.toFixed(1)}%</span>
+                      </div>
+                      
+                      {result.registration.rank && (
+                        <div className="flex justify-between items-center py-2 border-t border-blue-400">
+                          <span className="text-blue-100">Rank</span>
+                          <span className="text-3xl font-bold text-yellow-300">#{result.registration.rank}</span>
+                        </div>
+                      )}
+                      
+                      <div className="pt-4 border-t border-blue-400 text-center">
+                        <div className="text-blue-100 mb-2">Final Result</div>
+                        {result.registration.result === "pass" ? (
+                          <div className="text-3xl font-bold text-green-300">🎉 PASS</div>
+                        ) : (
+                          <div className="text-3xl font-bold text-red-300">FAIL</div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {result.enrollmentStatus === "notInterested" && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                      <div className="flex items-start gap-4">
-                        <GraduationCap className="text-blue-600 mt-1" size={24} />
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-2">Ready to Join Our Institute?</h4>
-                          <p className="text-gray-700 mb-4">
-                            Based on your excellent performance, you're eligible for admission to our courses. 
-                            {result.rewardEligible && " Plus, you'll get your scholarship benefits!"}
+                {/* Scholarship Reward */}
+                {result.registration.rewardEligible && result.registration.rewardDetails && (
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Award size={24} />
+                      <h3 className="text-xl font-semibold">🎉 Congratulations!</h3>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-purple-100 text-sm">You've won a scholarship!</p>
+                        <p className="text-3xl font-bold">
+                          {result.registration.rewardDetails.rewardValue}
+                          {result.registration.rewardDetails.rewardType === "percentage" ? "%" : "₹"}
+                        </p>
+                      </div>
+                      <div className="pt-3 border-t border-purple-400">
+                        <p className="text-purple-100 text-sm">Reward Description</p>
+                        <p className="font-semibold">{result.registration.rewardDetails.description}</p>
+                      </div>
+                      <div className="bg-purple-400 bg-opacity-30 rounded-lg p-3 mt-4">
+                        <p className="text-purple-100 text-sm">
+                          🎓 You are eligible for this scholarship! Contact the institute for enrollment details.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status Cards */}
+                {!result.exam.resultsPublished && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                    <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                      <AlertCircle size={20} />
+                      Results Not Published Yet
+                    </div>
+                    <p className="text-yellow-700 text-sm">
+                      The exam results haven't been officially published yet. Please check back later.
+                    </p>
+                  </div>
+                )}
+
+                {!result.registration.hasAttended && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                    <div className="flex items-center gap-2 text-gray-800 font-semibold mb-2">
+                      <XCircle size={20} />
+                      Did Not Attend
+                    </div>
+                    <p className="text-gray-700 text-sm">
+                      You were registered but did not attend the exam. Better luck next time!
+                    </p>
+                  </div>
+                )}
+
+                {/* Enrollment Section */}
+                {result.registration.result === "pass" && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <GraduationCap size={20} />
+                      Enrollment Status
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Current Status:</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          result.registration.enrollmentStatus === "interested" ? "bg-blue-100 text-blue-600" :
+                          result.registration.enrollmentStatus === "enrolled" ? "bg-green-100 text-green-600" :
+                          result.registration.enrollmentStatus === "converted" ? "bg-purple-100 text-purple-600" :
+                          "bg-gray-100 text-gray-600"
+                        }`}>
+                          {result.registration.enrollmentStatus === "notInterested" ? "Not Applied" :
+                           result.registration.enrollmentStatus === "interested" ? "Interest Shown" :
+                           result.registration.enrollmentStatus === "enrolled" ? "Enrolled" :
+                           "Student"}
+                        </span>
+                      </div>
+
+                      {result.registration.enrollmentStatus === "notInterested" && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-blue-700 text-sm mb-3">
+                            Based on your performance, you're eligible for admission to our courses!
                           </p>
                           <button
                             onClick={() => setShowEnrollmentForm(true)}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                           >
-                            Enroll Now
+                            Show Interest in Enrollment
                           </button>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      )}
 
-                  {result.enrollmentStatus === "interested" && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className="text-green-600" size={24} />
-                        <div>
-                          <h4 className="font-semibold text-gray-900">Interest Submitted Successfully!</h4>
-                          <p className="text-gray-700">Our admissions team will contact you within 2-3 business days.</p>
+                      {result.registration.enrollmentStatus === "interested" && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <p className="text-green-700 text-sm">
+                            ✅ Interest submitted! Our team will contact you soon.
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  )}
-
-                  {(result.enrollmentStatus === "enrolled" || result.enrollmentStatus === "converted") && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                      <div className="flex items-center gap-3">
-                        <Star className="text-purple-600" size={24} />
-                        <div>
-                          <h4 className="font-semibold text-gray-900">Welcome to Our Institute! 🎓</h4>
-                          <p className="text-gray-700">You are now enrolled. Check your email for further instructions.</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Exam Statistics */}
-            {examStats && (
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                  <TrendingUp className="text-blue-600" size={24} />
-                  Exam Statistics
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-700 mb-2">{examStats.totalAppeared}</div>
-                    <div className="text-sm text-gray-600">Students Appeared</div>
                   </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-700 mb-2">{examStats.totalPassed}</div>
-                    <div className="text-sm text-gray-600">Students Passed</div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-700 mb-2">{examStats.averageMarks}</div>
-                    <div className="text-sm text-gray-600">Average Marks</div>
-                  </div>
-
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-700 mb-2">{examStats.topScore}</div>
-                    <div className="text-sm text-gray-600">Highest Score</div>
-                  </div>
-                </div>
-
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-center text-blue-800">
-                    <strong>Pass Rate:</strong> {((examStats.totalPassed / examStats.totalAppeared) * 100).toFixed(1)}% • 
-                    <strong className="ml-2">Your Performance:</strong> {
-                      result.percentage > examStats.averageMarks ? "Above Average" : "Below Average"
-                    }
-                  </p>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -386,7 +541,7 @@ export default function StudentResultPortal() {
         {showEnrollmentForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Confirm Enrollment Interest</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Show Enrollment Interest</h3>
               
               <div className="space-y-4 mb-6">
                 <p className="text-gray-700">
@@ -400,7 +555,7 @@ export default function StudentResultPortal() {
                   <li>Batch timings and schedules</li>
                 </ul>
 
-                {result?.rewardEligible && (
+                {result?.registration.rewardEligible && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-sm text-yellow-800">
                       <strong>Note:</strong> Your scholarship benefits will be applied during enrollment.
@@ -422,9 +577,7 @@ export default function StudentResultPortal() {
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {enrollmentSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
-                    </>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
                   ) : (
                     "Yes, I'm Interested"
                   )}

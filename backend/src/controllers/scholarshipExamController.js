@@ -622,3 +622,297 @@ export const convertToAdmission = async (req, res) => {
     });
   }
 };
+
+// Upload results from CSV
+export const uploadResultsCSV = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ message: "No CSV file uploaded" });
+    }
+
+    const exam = await ScholarshipExam.findOne({ _id: id, tenantId });
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    // Parse CSV file
+    const csvData = req.file.buffer.toString('utf-8');
+    const lines = csvData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    if (lines.length < 2) {
+      return res.status(400).json({ message: "CSV file must have at least a header row and one data row" });
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const dataRows = lines.slice(1);
+
+    // Validate headers
+    const requiredHeaders = ['Registration Number', 'Marks Obtained', 'Has Attended', 'Result'];
+    const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+    
+    if (missingHeaders.length > 0) {
+      return res.status(400).json({ 
+        message: `Missing required columns: ${missingHeaders.join(', ')}` 
+      });
+    }
+
+    let updatedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
+      const rowData = {};
+      
+      headers.forEach((header, index) => {
+        rowData[header] = row[index] || '';
+      });
+
+      try {
+        const registrationNumber = rowData['Registration Number'];
+        if (!registrationNumber) {
+          errors.push(`Row ${i + 2}: Missing registration number`);
+          errorCount++;
+          continue;
+        }
+
+        // Find registration
+        const registration = await ExamRegistration.findOne({
+          examId: id,
+          registrationNumber: registrationNumber,
+          tenantId
+        });
+
+        if (!registration) {
+          errors.push(`Row ${i + 2}: Registration ${registrationNumber} not found`);
+          errorCount++;
+          continue;
+        }
+
+        // Parse data
+        const marksObtained = parseInt(rowData['Marks Obtained']) || 0;
+        const hasAttended = rowData['Has Attended'].toLowerCase() === 'true';
+        const result = rowData['Result'].toLowerCase();
+        const rank = parseInt(rowData['Rank']) || null;
+
+        // Validate marks
+        if (marksObtained < 0 || marksObtained > exam.totalMarks) {
+          errors.push(`Row ${i + 2}: Invalid marks ${marksObtained} (must be 0-${exam.totalMarks})`);
+          errorCount++;
+          continue;
+        }
+
+        // Validate result
+        if (!['pass', 'fail', 'absent', 'pending'].includes(result)) {
+          errors.push(`Row ${i + 2}: Invalid result "${result}" (must be pass, fail, absent, or pending)`);
+          errorCount++;
+          continue;
+        }
+
+        // Calculate percentage
+        const percentage = exam.totalMarks > 0 ? (marksObtained / exam.totalMarks) * 100 : 0;
+
+        // Update registration
+        await ExamRegistration.findByIdAndUpdate(registration._id, {
+          $set: {
+            marksObtained,
+            percentage,
+            hasAttended,
+            result,
+            rank,
+            status: 'appeared',
+            updatedAt: new Date()
+          }
+        });
+
+        updatedCount++;
+      } catch (error) {
+        console.error(`Error processing row ${i + 2}:`, error);
+        errors.push(`Row ${i + 2}: ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    // Update exam stats
+    const totalRegistrations = await ExamRegistration.countDocuments({ examId: id });
+    const appeared = await ExamRegistration.countDocuments({ examId: id, hasAttended: true });
+    const passed = await ExamRegistration.countDocuments({ examId: id, result: "pass" });
+
+    await ScholarshipExam.findByIdAndUpdate(id, {
+      $set: {
+        "stats.totalRegistrations": totalRegistrations,
+        "stats.totalAppearedStudents": appeared,
+        "stats.passedStudents": passed,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Results uploaded successfully",
+      updatedCount,
+      errorCount,
+      totalRows: dataRows.length,
+      errors: errors.slice(0, 10) // Limit to first 10 errors
+    });
+
+  } catch (err) {
+    console.error("Upload results CSV error:", err);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: err.message 
+    });
+  }
+};
+
+// Public API to get result by registration number
+export const getPublicResult = async (req, res) => {
+  try {
+    const { registrationNumber } = req.params;
+
+    const registration = await ExamRegistration.findOne({
+      registrationNumber: registrationNumber
+    }).populate('examId');
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found"
+      });
+    }
+
+    // Return the result data
+    res.json({
+      success: true,
+      registration: {
+        _id: registration._id,
+        registrationNumber: registration.registrationNumber,
+        studentName: registration.studentName,
+        email: registration.email,
+        phone: registration.phone,
+        currentClass: registration.currentClass,
+        school: registration.school,
+        hasAttended: registration.hasAttended,
+        marksObtained: registration.marksObtained,
+        percentage: registration.percentage,
+        rank: registration.rank,
+        result: registration.result,
+        rewardEligible: registration.rewardEligible,
+        rewardDetails: registration.rewardDetails,
+        enrollmentStatus: registration.enrollmentStatus,
+        createdAt: registration.createdAt
+      },
+      exam: {
+        _id: registration.examId._id,
+        examName: registration.examId.examName,
+        examCode: registration.examId.examCode,
+        totalMarks: registration.examId.totalMarks,
+        passingMarks: registration.examId.passingMarks,
+        examDate: registration.examId.examDate,
+        resultsPublished: registration.examId.resultsPublished
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching public result:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch result"
+    });
+  }
+};
+
+// Download admit card (PDF generation would require a PDF library)
+export const downloadAdmitCard = async (req, res) => {
+  try {
+    const { registrationNumber } = req.params;
+
+    const registration = await ExamRegistration.findOne({
+      registrationNumber: registrationNumber
+    }).populate('examId');
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found"
+      });
+    }
+
+    // For now, return a simple text response
+    // In production, you'd generate a PDF here
+    const admitCardContent = `
+ADMIT CARD
+==========
+
+Exam: ${registration.examId.examName}
+Exam Code: ${registration.examId.examCode}
+Registration Number: ${registration.registrationNumber}
+Student Name: ${registration.studentName}
+Email: ${registration.email}
+Phone: ${registration.phone}
+Class: ${registration.currentClass}
+School: ${registration.school}
+Exam Date: ${new Date(registration.examId.examDate).toLocaleDateString()}
+
+Instructions:
+1. Bring this admit card to the examination center
+2. Arrive 30 minutes before the exam starts
+3. Bring a valid ID proof
+4. Use blue/black pen only
+
+Best of luck!
+    `;
+
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="admit_card_${registrationNumber}.txt"`);
+    res.send(admitCardContent);
+
+  } catch (error) {
+    console.error("Error generating admit card:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate admit card"
+    });
+  }
+};
+
+// Submit enrollment interest
+export const submitEnrollmentInterest = async (req, res) => {
+  try {
+    const { registrationNumber } = req.body;
+
+    const registration = await ExamRegistration.findOne({
+      registrationNumber: registrationNumber
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found"
+      });
+    }
+
+    // Update enrollment status
+    registration.enrollmentStatus = "interested";
+    await registration.save();
+
+    res.json({
+      success: true,
+      message: "Enrollment interest submitted successfully",
+      data: {
+        registrationNumber: registration.registrationNumber,
+        enrollmentStatus: registration.enrollmentStatus
+      }
+    });
+
+  } catch (error) {
+    console.error("Error submitting enrollment interest:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit enrollment interest"
+    });
+  }
+};

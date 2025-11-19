@@ -110,8 +110,10 @@ export default function StudentResultPage() {
     try {
       setLoading(true);
 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+
       // Fetch exam
-      const examResponse = await fetch(`/api/scholarship-exams/${examId}`, {
+      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
         credentials: "include",
       });
       if (examResponse.ok) {
@@ -120,7 +122,7 @@ export default function StudentResultPage() {
       }
 
       // Fetch registration details
-      const regResponse = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
+      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
       if (regResponse.ok) {
@@ -132,8 +134,8 @@ export default function StudentResultPage() {
         }
       }
 
-      // Fetch batches for enrollment
-      const batchResponse = await fetch(`/api/batches?tenantId=${tenantId}`, {
+      // Fetch batches for enrollment  
+      const batchResponse = await fetch(`${API_URL}/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       if (batchResponse.ok) {
@@ -184,7 +186,9 @@ export default function StudentResultPage() {
     try {
       setConverting(true);
 
-      const response = await fetch(`/api/scholarship-exams/registration/${regId}/convert`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      
+      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${regId}/convert`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -210,7 +214,9 @@ export default function StudentResultPage() {
 
   const handleSaveNotes = async () => {
     try {
-      const response = await fetch(`/api/scholarship-exams/registration/${regId}`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      
+      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${regId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
