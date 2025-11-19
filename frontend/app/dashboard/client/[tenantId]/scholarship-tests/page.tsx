@@ -140,19 +140,29 @@ export default function ScholarshipTestsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    if (!dateString) return "Date not set";
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      return "Invalid date";
+    }
   };
 
   const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    if (!timeString) return "Time not set";
+    try {
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (error) {
+      return "Invalid time";
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -164,7 +174,7 @@ export default function ScholarshipTestsPage() {
       cancelled: { bg: "bg-red-100", text: "text-red-600", label: "Cancelled" },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[status as keyof typeof statusConfig] || { bg: "bg-gray-100", text: "text-gray-600", label: status || "Unknown" };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
         {config.label}
@@ -236,14 +246,14 @@ export default function ScholarshipTestsPage() {
                   <MapPin className="text-purple-600" size={20} />
                   <div>
                     <p className="text-sm text-gray-500">Venue</p>
-                    <p className="font-medium">{selectedExam.venue}</p>
+                    <p className="font-medium">{selectedExam.venue || "Venue not set"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Users className="text-purple-600" size={20} />
                   <div>
                     <p className="text-sm text-gray-500">Registrations</p>
-                    <p className="font-medium">{selectedExam.stats.totalRegistrations}</p>
+                    <p className="font-medium">{selectedExam.stats?.totalRegistrations || 0}</p>
                   </div>
                 </div>
               </div>
@@ -252,23 +262,23 @@ export default function ScholarshipTestsPage() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-600">Total Appeared</p>
-                  <p className="text-2xl font-bold text-blue-700">{selectedExam.stats.totalAppeared}</p>
+                  <p className="text-2xl font-bold text-blue-700">{selectedExam.stats?.totalAppeared || 0}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-green-600">Passed</p>
-                  <p className="text-2xl font-bold text-green-700">{selectedExam.stats.totalPassed}</p>
+                  <p className="text-2xl font-bold text-green-700">{selectedExam.stats?.totalPassed || 0}</p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
                   <p className="text-sm text-red-600">Failed</p>
-                  <p className="text-2xl font-bold text-red-700">{selectedExam.stats.totalFailed}</p>
+                  <p className="text-2xl font-bold text-red-700">{selectedExam.stats?.totalFailed || 0}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">Absent</p>
-                  <p className="text-2xl font-bold text-gray-700">{selectedExam.stats.totalAbsent}</p>
+                  <p className="text-2xl font-bold text-gray-700">{selectedExam.stats?.totalAbsent || 0}</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-sm text-purple-600">Pass %</p>
-                  <p className="text-2xl font-bold text-purple-700">{selectedExam.stats.passPercentage.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold text-purple-700">{selectedExam.stats?.passPercentage?.toFixed(1) || 0}%</p>
                 </div>
               </div>
             </div>
@@ -467,25 +477,25 @@ export default function ScholarshipTestsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin size={16} />
-                    {exam.venue}
+                    {exam.venue || "Venue not set"}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Users size={16} />
-                    {exam.stats.totalRegistrations} students registered
+                    {exam.stats?.totalRegistrations || 0} students registered
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-6">
                   <div className="text-center">
-                    <p className="text-xl font-bold text-blue-600">{exam.stats.totalAppeared}</p>
+                    <p className="text-xl font-bold text-blue-600">{exam.stats?.totalAppeared || 0}</p>
                     <p className="text-xs text-gray-500">Appeared</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-bold text-green-600">{exam.stats.totalPassed}</p>
+                    <p className="text-xl font-bold text-green-600">{exam.stats?.totalPassed || 0}</p>
                     <p className="text-xs text-gray-500">Passed</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-bold text-purple-600">{exam.stats.passPercentage.toFixed(1)}%</p>
+                    <p className="text-xl font-bold text-purple-600">{exam.stats?.passPercentage?.toFixed(1) || 0}%</p>
                     <p className="text-xs text-gray-500">Pass Rate</p>
                   </div>
                 </div>
