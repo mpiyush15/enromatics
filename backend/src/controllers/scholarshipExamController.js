@@ -445,12 +445,28 @@ export const registerForExam = async (req, res) => {
       newUser = null;
     }
 
+    // Generate registration number manually as backup
+    const registrationCount = await ExamRegistration.countDocuments({ examId: exam._id });
+    const registrationNumber = `${exam.examCode}-${String(registrationCount + 1).padStart(5, "0")}`;
+    
+    // Generate username manually as backup  
+    const baseUsername = registrationData.email.split("@")[0].toLowerCase();
+    let username = baseUsername;
+    let counter = 1;
+    
+    while (await ExamRegistration.findOne({ username })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
     // Create registration
     const registration = await ExamRegistration.create({
       ...registrationData,
       tenantId: exam.tenantId,
       examId: exam._id,
       userId: newUser?._id,
+      registrationNumber, // Set manually
+      username, // Set manually
       paymentAmount: exam.registrationFee.amount,
       paymentStatus: exam.registrationFee.paymentRequired ? "pending" : "waived",
       // Convert address string to object format expected by schema
@@ -464,6 +480,8 @@ export const registerForExam = async (req, res) => {
       // Set selected exam date
       preferredExamDate: registrationData.selectedExamDate ? new Date(registrationData.selectedExamDate) : null,
     });
+
+    console.log(`Registration created successfully: ${registration.registrationNumber}`);
 
     // Update exam stats
     await ScholarshipExam.findByIdAndUpdate(exam._id, {

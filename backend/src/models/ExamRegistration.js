@@ -228,27 +228,39 @@ examRegistrationSchema.index({ enrollmentStatus: 1 });
 
 // Generate unique registration number
 examRegistrationSchema.pre("save", async function (next) {
-  if (!this.registrationNumber && this.isNew) {
-    const exam = await mongoose.model("ScholarshipExam").findById(this.examId);
-    const count = await mongoose.model("ExamRegistration").countDocuments({ examId: this.examId });
-    this.registrationNumber = `${exam.examCode}-${String(count + 1).padStart(5, "0")}`;
-  }
-
-  // Generate username for student portal
-  if (!this.username && this.isNew) {
-    const baseUsername = this.email.split("@")[0].toLowerCase();
-    let username = baseUsername;
-    let counter = 1;
-    
-    while (await mongoose.model("ExamRegistration").findOne({ username })) {
-      username = `${baseUsername}${counter}`;
-      counter++;
+  try {
+    if (!this.registrationNumber && this.isNew) {
+      const exam = await mongoose.model("ScholarshipExam").findById(this.examId);
+      if (!exam) {
+        return next(new Error('Exam not found'));
+      }
+      
+      const count = await mongoose.model("ExamRegistration").countDocuments({ examId: this.examId });
+      this.registrationNumber = `${exam.examCode}-${String(count + 1).padStart(5, "0")}`;
+      
+      console.log(`Generated registration number: ${this.registrationNumber} for exam ${exam.examCode}`);
     }
-    
-    this.username = username;
-  }
 
-  next();
+    // Generate username for student portal
+    if (!this.username && this.isNew) {
+      const baseUsername = this.email.split("@")[0].toLowerCase();
+      let username = baseUsername;
+      let counter = 1;
+      
+      while (await mongoose.model("ExamRegistration").findOne({ username })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+      
+      this.username = username;
+      console.log(`Generated username: ${this.username}`);
+    }
+
+    next();
+  } catch (error) {
+    console.error('Pre-save hook error:', error);
+    next(error);
+  }
 });
 
 const ExamRegistration = mongoose.models.ExamRegistration || mongoose.model("ExamRegistration", examRegistrationSchema);
