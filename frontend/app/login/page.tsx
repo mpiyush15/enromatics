@@ -162,12 +162,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-light text-gray-700 dark:text-gray-300">
                   Password
                 </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-light text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  Forgot password?
-                </Link>
+                {/* Forgot password link removed to prevent 404 error */}
               </div>
               <div className="relative">
                 <input
