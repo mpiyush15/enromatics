@@ -31,8 +31,14 @@ export const getSidebar = async (req, res) => {
       return true;
     });
 
-    // 🔁 Filter children recursively
+    // 🔁 Filter children recursively and replace [tenantId] placeholder
     const processed = filteredLinks.map(link => {
+      // Replace [tenantId] in parent link href
+      const processedLink = { ...link };
+      if (processedLink.href && tenantId) {
+        processedLink.href = processedLink.href.replace('[tenantId]', tenantId);
+      }
+
       if (link.children) {
         // For tenant users with modules, filter children; otherwise include all
         const allowedChildren = link.children.filter(child => {
@@ -45,10 +51,16 @@ export const getSidebar = async (req, res) => {
             return tenantModules.includes(moduleKey);
           }
           return true; // Include all children if no module restrictions
+        }).map(child => {
+          // Replace [tenantId] in child href
+          if (child.href && tenantId) {
+            return { ...child, href: child.href.replace('[tenantId]', tenantId) };
+          }
+          return child;
         });
-        return { ...link, children: allowedChildren };
+        return { ...processedLink, children: allowedChildren };
       }
-      return link;
+      return processedLink;
     });
 
     console.log("📌 Sidebar returned for role:", role, "tenantId:", tenantId, "links count:", processed.length);

@@ -65,10 +65,8 @@ export const sidebarLinks = [
     roles: ["tenantAdmin", "counsellor"],
     tenantSpecific: true,
     children: [
-      { label: "📋 All Exams", href: "/dashboard/scholarship-exams", roles: ["tenantAdmin", "counsellor"] },
-      { label: "➕ Create Exam", href: "/dashboard/scholarship-exams/create", roles: ["tenantAdmin"] },
-      { label: "👥 Registrations", href: "/dashboard/scholarship-exams/registrations", roles: ["tenantAdmin", "counsellor"] },
-      { label: "📊 Results", href: "/dashboard/scholarship-exams/results", roles: ["tenantAdmin", "counsellor"] },
+      { label: "📋 All Exams", href: "/dashboard/client/[tenantId]/scholarship-exams", roles: ["tenantAdmin", "counsellor"] },
+      { label: "➕ Create Exam", href: "/dashboard/client/[tenantId]/scholarship-exams/create", roles: ["tenantAdmin"] },
     ]
   },
 
@@ -119,8 +117,8 @@ export const sidebarLinks = [
     roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin"],
     children: [
       { label: "👤 Profile", href: "/dashboard/profile" },
-      { label: "� Staff Management", href: "/dashboard/settings/staff", roles: ["tenantAdmin", "Admin"] },
-      { label: "�📦 My Subscription", href: "/dashboard/my-subscription" },
+      { label: "👥 Staff Management", href: "/dashboard/client/[tenantId]/settings/staff", roles: ["tenantAdmin", "Admin"] },
+      { label: "� My Subscription", href: "/dashboard/my-subscription" },
       { label: "📄 View Plan", href: "/dashboard/subscription/view" },
       { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel" },
     ],

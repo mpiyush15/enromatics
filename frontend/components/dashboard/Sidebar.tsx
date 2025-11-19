@@ -104,6 +104,11 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
 
   // ✅ Dynamically build hrefs (inject tenantId for tenant users)
   const buildHref = (href: string) => {
+    // If href already contains /client/, it means backend already replaced [tenantId]
+    if (href.includes('/client/')) {
+      return href;
+    }
+    
     if (
       user?.tenantId &&
       user.role &&
