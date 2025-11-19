@@ -130,19 +130,21 @@ export default function ExamRegistrationPage() {
     
     if (!exam) return;
     
-    // Check registration period
-    const now = new Date();
-    const regStart = new Date(exam.registrationStartDate);
-    const regEnd = new Date(exam.registrationEndDate);
-    
-    if (now < regStart) {
-      alert("Registration has not started yet");
-      return;
-    }
-    
-    if (now > regEnd) {
-      alert("Registration period has ended");
-      return;
+    // Check registration period only if dates are set
+    if (exam.registrationStartDate && exam.registrationEndDate) {
+      const now = new Date();
+      const regStart = new Date(exam.registrationStartDate);
+      const regEnd = new Date(exam.registrationEndDate);
+      
+      if (now < regStart) {
+        alert("Registration has not started yet");
+        return;
+      }
+      
+      if (now > regEnd) {
+        alert("Registration period has ended");
+        return;
+      }
     }
 
     // Age validation
@@ -206,9 +208,17 @@ export default function ExamRegistrationPage() {
 
   const isRegistrationOpen = () => {
     if (!exam) return false;
+    
+    // If no registration dates are set, allow registration
+    if (!exam.registrationStartDate || !exam.registrationEndDate) {
+      return true;
+    }
+    
     const now = new Date();
     const regStart = new Date(exam.registrationStartDate);
     const regEnd = new Date(exam.registrationEndDate);
+    
+    // Allow registration if we're within the period
     return now >= regStart && now <= regEnd;
   };
 
@@ -274,12 +284,28 @@ export default function ExamRegistrationPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => router.push("/")}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Go to Home
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.push("/results")}
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Award size={20} />
+              Check Results Portal
+            </button>
+            <button
+              onClick={() => router.push("/login")}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <User size={20} />
+              Student Login
+            </button>
+            <button
+              onClick={() => router.push("/")}
+              className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Go to Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -293,6 +319,24 @@ export default function ExamRegistrationPage() {
       }}
     >
       <div className="container mx-auto px-4 py-8">
+        {/* Top Action Buttons */}
+        <div className="flex justify-end mb-6 gap-3">
+          <button
+            onClick={() => router.push("/results")}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            <Award size={16} />
+            Check Results
+          </button>
+          <button
+            onClick={() => router.push("/login")}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            <User size={16} />
+            Student Login
+          </button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -351,17 +395,35 @@ export default function ExamRegistrationPage() {
                 </div>
 
                 <div className="border-t pt-4">
-                  <p className="font-medium text-gray-900 mb-2">Registration Period</p>
-                  <p className="text-sm text-gray-600">
-                    {formatDate(exam.registrationStartDate)} - {formatDate(exam.registrationEndDate)}
-                  </p>
-                  
-                  {!isRegistrationOpen() && (
-                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="font-medium text-gray-900 mb-2">Registration Status</p>
+                  {exam.registrationStartDate && exam.registrationEndDate ? (
+                    <>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {formatDate(exam.registrationStartDate)} - {formatDate(exam.registrationEndDate)}
+                      </p>
+                      {isRegistrationOpen() ? (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="text-green-600" size={16} />
+                            <p className="text-sm text-green-700 font-medium">Registration Open</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="text-red-600" size={16} />
+                            <p className="text-sm text-red-700 font-medium">Registration Closed</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="text-red-600" size={16} />
-                        <p className="text-sm text-red-700 font-medium">Registration Closed</p>
+                        <CheckCircle className="text-green-600" size={16} />
+                        <p className="text-sm text-green-700 font-medium">Registration Open</p>
                       </div>
+                      <p className="text-xs text-green-600 mt-1">No deadline set</p>
                     </div>
                   )}
                 </div>
@@ -408,7 +470,7 @@ export default function ExamRegistrationPage() {
                 <p className="text-gray-600 mt-1">Fill in your details to register for the scholarship exam</p>
               </div>
 
-              {!isRegistrationOpen() ? (
+              {!isRegistrationOpen() && exam.registrationStartDate && exam.registrationEndDate ? (
                 <div className="p-6">
                   <div className="text-center py-12">
                     <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
@@ -416,6 +478,22 @@ export default function ExamRegistrationPage() {
                     <p className="text-gray-600">
                       The registration period for this exam has ended. Please check back for future exams.
                     </p>
+                    <div className="mt-4 flex justify-center gap-3">
+                      <button
+                        onClick={() => router.push("/results")}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        <Award size={16} />
+                        Check Results
+                      </button>
+                      <button
+                        onClick={() => router.push("/login")}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        <User size={16} />
+                        Student Login
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
