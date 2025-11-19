@@ -116,4 +116,31 @@ export const sidebarLinks = [
       },
     ],
   },
+  {
+    label: "🎓 Scholarship Tests",
+    href: "#",
+    roles: ["tenantAdmin", "teacher", "staff"],
+    children: [
+      {
+        label: "📋 All Tests",
+        href: "/dashboard/client/[tenantId]/scholarship-exams",
+      },
+      {
+        label: "➕ Create Test",
+        href: "/dashboard/client/[tenantId]/scholarship-exams/create",
+      },
+      {
+        label: "👥 Test Management",
+        href: "/dashboard/client/[tenantId]/scholarship-tests",
+      },
+      {
+        label: "📊 Results Management",
+        href: "/dashboard/client/[tenantId]/scholarship-results",
+      },
+      {
+        label: "🏆 Rewards Overview",
+        href: "/dashboard/client/[tenantId]/scholarship-rewards",
+      },
+    ],
+  },
 ];

@@ -23,6 +23,8 @@ import employeeRoutes from './routes/employeeRoutes.js';
 import batchRoutes from './routes/batchRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
 import scholarshipExamRoutes from './routes/scholarshipExamRoutes.js';
+import scholarshipResultRoutes from './routes/scholarshipResultRoutes.js';
+import scholarshipRewardRoutes from './routes/scholarshipRewardRoutes.js';
 
 
 
@@ -71,6 +73,8 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/batches', batchRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/scholarship-exams', scholarshipExamRoutes);
+app.use('/api/scholarship-results', scholarshipResultRoutes);
+app.use('/api/scholarship-rewards', scholarshipRewardRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
 app.use("/api/auth", authRoutes);
