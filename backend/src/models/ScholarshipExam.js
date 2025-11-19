@@ -16,9 +16,9 @@ const scholarshipExamSchema = new mongoose.Schema(
 
     examCode: {
       type: String,
-      required: true,
       unique: true,
       uppercase: true,
+      sparse: true, // Allow multiple documents with null/undefined examCode during creation
     },
 
     description: {
@@ -252,12 +252,37 @@ scholarshipExamSchema.index({ examDate: 1 });
 
 // Generate unique exam code
 scholarshipExamSchema.pre("save", async function (next) {
-  if (!this.examCode && this.isNew) {
-    const year = new Date().getFullYear().toString().slice(-2);
-    const count = await mongoose.model("ScholarshipExam").countDocuments({ tenantId: this.tenantId });
-    this.examCode = `EXAM${year}${String(count + 1).padStart(4, "0")}`;
+  try {
+    if (!this.examCode && this.isNew) {
+      const year = new Date().getFullYear().toString().slice(-2);
+      const count = await mongoose.model("ScholarshipExam").countDocuments({ tenantId: this.tenantId });
+      let examCode;
+      let attempts = 0;
+      
+      // Generate unique exam code with retry logic
+      do {
+        const sequence = count + attempts + 1;
+        examCode = `EXAM${year}${String(sequence).padStart(4, "0")}`;
+        const existing = await mongoose.model("ScholarshipExam").findOne({ examCode });
+        if (!existing) {
+          this.examCode = examCode;
+          break;
+        }
+        attempts++;
+      } while (attempts < 10);
+      
+      if (!this.examCode) {
+        // Fallback with timestamp
+        this.examCode = `EXAM${year}${Date.now().toString().slice(-4)}`;
+      }
+      
+      console.log(`✅ Generated examCode: ${this.examCode} for tenant: ${this.tenantId}`);
+    }
+    next();
+  } catch (error) {
+    console.error("❌ Error generating examCode:", error);
+    next(error);
   }
-  next();
 });
 
 const ScholarshipExam = mongoose.models.ScholarshipExam || mongoose.model("ScholarshipExam", scholarshipExamSchema);

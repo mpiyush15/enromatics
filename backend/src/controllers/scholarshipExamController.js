@@ -14,16 +14,28 @@ export const createExam = async (req, res) => {
     }
 
     console.log("[CREATE EXAM] Incoming data:", JSON.stringify(req.body, null, 2));
+    console.log("[CREATE EXAM] User info:", { id: req.user._id, tenantId });
 
     const examData = {
       ...req.body,
       tenantId,
       createdBy: req.user._id,
+      // Don't set examCode here - let the pre-save hook handle it
     };
+    
+    // Remove examCode if it was sent in the request to ensure fresh generation
+    delete examData.examCode;
 
     try {
+      console.log("[CREATE EXAM] Attempting to create with data:", {
+        ...examData,
+        rewards: examData.rewards?.length || 0,
+        examDates: examData.examDates?.length || 0
+      });
+      
       const exam = await ScholarshipExam.create(examData);
-      console.log(`[SUCCESS] Exam created: ${exam.examCode}`);
+      console.log(`[SUCCESS] Exam created: ${exam.examCode} (ID: ${exam._id})`);
+      
       res.status(201).json({
         success: true,
         message: "Scholarship exam created successfully",
@@ -32,15 +44,32 @@ export const createExam = async (req, res) => {
       });
     } catch (dbErr) {
       console.error("[DB ERROR] ScholarshipExam.create failed:", dbErr);
-      if (dbErr.errors) {
+      
+      if (dbErr.name === 'ValidationError') {
+        const validationErrors = {};
         Object.keys(dbErr.errors).forEach(key => {
           console.error(`[VALIDATION ERROR] ${key}:`, dbErr.errors[key].message);
+          validationErrors[key] = dbErr.errors[key].message;
+        });
+        
+        return res.status(400).json({
+          message: "Validation failed",
+          error: "Please check the form data",
+          validationErrors,
         });
       }
+      
+      if (dbErr.code === 11000) {
+        return res.status(409).json({
+          message: "Duplicate entry",
+          error: "An exam with this code already exists",
+        });
+      }
+      
       res.status(500).json({
-        message: "Server error",
+        message: "Database error",
         error: dbErr.message,
-        details: dbErr.errors || dbErr.stack,
+        details: process.env.NODE_ENV === 'development' ? dbErr.stack : undefined,
       });
     }
   } catch (err) {
