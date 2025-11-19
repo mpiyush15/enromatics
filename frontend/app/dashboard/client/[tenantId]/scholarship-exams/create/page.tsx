@@ -121,7 +121,10 @@ export default function CreateExamPage() {
         passingMarks,
         examMode,
         venue,
-        registrationFee,
+        registrationFee: {
+          amount: registrationFee,
+          paymentRequired: registrationFee > 0,
+        },
         eligibilityCriteria: {
           minAge,
           maxAge,
