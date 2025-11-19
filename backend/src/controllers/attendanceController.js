@@ -1,5 +1,7 @@
 import Attendance from "../models/Attendance.js";
 import Student from "../models/Student.js";
+import csv from "csv-parser";
+import { Readable } from "stream";
 
 // Mark attendance for one or multiple students
 export const markAttendance = async (req, res) => {
@@ -299,5 +301,126 @@ export const deleteAttendance = async (req, res) => {
   } catch (err) {
     console.error("Delete attendance error:", err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Upload attendance from CSV (biometric machine data)
+export const uploadAttendanceCSV = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { date } = req.body;
+    if (!date) return res.status(400).json({ message: "Date is required" });
+
+    if (!req.file) {
+      return res.status(400).json({ message: "CSV file is required" });
+    }
+
+    const attendanceDate = new Date(date);
+    attendanceDate.setHours(0, 0, 0, 0);
+
+    // Parse CSV data
+    const csvData = [];
+    const csvBuffer = req.file.buffer.toString('utf8');
+    const stream = Readable.from([csvBuffer]);
+
+    await new Promise((resolve, reject) => {
+      stream
+        .pipe(csv())
+        .on('data', (row) => {
+          // Support multiple column name formats
+          const rollNumber = (row.rollNumber || row.RollNumber || row.roll_number || row.ROLLNUMBER || '').trim();
+          const status = (row.status || row.Status || row.STATUS || 'present').toLowerCase().trim();
+          const remarks = (row.remarks || row.Remarks || row.REMARKS || '').trim();
+
+          if (rollNumber) {
+            csvData.push({ rollNumber, status, remarks });
+          }
+        })
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    if (csvData.length === 0) {
+      return res.status(400).json({ 
+        message: "No valid data found in CSV. Please ensure it has 'rollNumber' and 'status' columns." 
+      });
+    }
+
+    // Get all roll numbers from CSV
+    const rollNumbers = csvData.map(d => d.rollNumber);
+
+    // Find students by roll numbers
+    const students = await Student.find({
+      tenantId,
+      rollNumber: { $in: rollNumbers }
+    }).select('_id rollNumber').lean();
+
+    // Create a map of rollNumber -> studentId
+    const rollToStudentMap = {};
+    students.forEach(student => {
+      rollToStudentMap[student.rollNumber] = student._id;
+    });
+
+    // Prepare bulk operations
+    const bulkOps = [];
+    const notFound = [];
+    const validStatuses = ['present', 'absent', 'late', 'excused'];
+
+    csvData.forEach(({ rollNumber, status, remarks }) => {
+      const studentId = rollToStudentMap[rollNumber];
+      
+      if (!studentId) {
+        notFound.push(rollNumber);
+        return;
+      }
+
+      // Validate status
+      const validStatus = validStatuses.includes(status) ? status : 'present';
+
+      bulkOps.push({
+        updateOne: {
+          filter: { tenantId, studentId, date: attendanceDate },
+          update: {
+            $set: {
+              status: validStatus,
+              remarks: remarks || `Imported from CSV`,
+              markedBy: req.user._id,
+              tenantId,
+              studentId,
+              date: attendanceDate
+            }
+          },
+          upsert: true
+        }
+      });
+    });
+
+    // Execute bulk operations
+    let result = { modifiedCount: 0, upsertedCount: 0 };
+    if (bulkOps.length > 0) {
+      result = await Attendance.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Attendance uploaded successfully",
+      processed: bulkOps.length,
+      modified: result.modifiedCount,
+      upserted: result.upsertedCount,
+      notFound: notFound.length > 0 ? notFound : undefined,
+      summary: {
+        totalRows: csvData.length,
+        successfullyProcessed: bulkOps.length,
+        studentsNotFound: notFound.length
+      }
+    });
+  } catch (err) {
+    console.error("Upload attendance CSV error:", err);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
