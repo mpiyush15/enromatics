@@ -34,7 +34,13 @@ interface Registration {
   parentPhone: string;
   currentClass: string;
   school: string;
-  address: string;
+  address: string | {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
   hasAttended: boolean;
   marksObtained?: number;
   percentage?: number;
@@ -49,6 +55,14 @@ interface Registration {
   createdAt: string;
   remarks?: string;
 }
+
+// Utility function to format address
+const formatAddress = (address: string | { street: string; city: string; state: string; zipCode: string; country: string }) => {
+  if (typeof address === 'string') {
+    return address;
+  }
+  return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}, ${address.country}`;
+};
 
 interface Exam {
   _id: string;
@@ -588,7 +602,9 @@ export default function RegistrationsPage() {
               {/* Address */}
               <div className="border-t pt-6">
                 <h3 className="font-semibold text-gray-900 mb-3">Address</h3>
-                <p className="text-sm text-gray-700">{selectedRegistration.address}</p>
+                <p className="text-sm text-gray-700">
+                  {formatAddress(selectedRegistration.address)}
+                </p>
               </div>
 
               {/* Results */}

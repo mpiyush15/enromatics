@@ -34,7 +34,13 @@ interface Registration {
   motherName: string;
   parentPhone: string;
   parentEmail?: string;
-  address: string;
+  address: string | {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
   currentClass: string;
   school: string;
   previousMarks?: string;
@@ -79,6 +85,13 @@ interface Batch {
   course: string;
   fee: number;
 }
+
+const formatAddress = (address: string | { street: string; city: string; state: string; zipCode: string; country: string }) => {
+  if (typeof address === 'string') {
+    return address;
+  }
+  return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}, ${address.country}`;
+};
 
 export default function StudentResultPage() {
   const params = useParams();
@@ -408,7 +421,7 @@ export default function StudentResultPage() {
                 <label className="text-sm text-gray-500">Address</label>
                 <p className="font-medium text-gray-900 flex items-center gap-2">
                   <MapPin size={14} />
-                  {registration.address}
+                  {formatAddress(registration.address)}
                 </p>
               </div>
             </div>
