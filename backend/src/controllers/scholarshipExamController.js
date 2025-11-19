@@ -10,6 +10,8 @@ export const createExam = async (req, res) => {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
+    console.log("📝 Creating exam with data:", JSON.stringify(req.body, null, 2));
+
     const examData = {
       ...req.body,
       tenantId,
@@ -18,6 +20,8 @@ export const createExam = async (req, res) => {
 
     const exam = await ScholarshipExam.create(examData);
 
+    console.log("✅ Exam created successfully:", exam.examCode);
+
     res.status(201).json({
       success: true,
       message: "Scholarship exam created successfully",
@@ -25,10 +29,17 @@ export const createExam = async (req, res) => {
       landingPageUrl: `/exam/${exam.examCode}`,
     });
   } catch (err) {
-    console.error("Create exam error:", err);
+    console.error("❌ Create exam error:", err);
+    console.error("Error details:", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      errors: err.errors,
+    });
     res.status(500).json({ 
       message: "Server error", 
-      error: err.message 
+      error: err.message,
+      details: err.errors || err.stack,
     });
   }
 };

@@ -133,22 +133,17 @@ export default function CreateExamPage() {
         },
         landingPage,
         rewards,
-        formFields: [
-          // Default fields
-          { name: "studentName", label: "Full Name", type: "text", required: true },
-          { name: "email", label: "Email Address", type: "email", required: true },
-          { name: "phone", label: "Phone Number", type: "tel", required: true },
-          { name: "dateOfBirth", label: "Date of Birth", type: "date", required: true },
-          { name: "gender", label: "Gender", type: "select", required: true, options: ["Male", "Female", "Other"] },
-          { name: "fatherName", label: "Father's Name", type: "text", required: true },
-          { name: "motherName", label: "Mother's Name", type: "text", required: true },
-          { name: "parentPhone", label: "Parent's Phone", type: "tel", required: true },
-          { name: "currentClass", label: "Current Class/Standard", type: "text", required: true },
-          { name: "school", label: "School Name", type: "text", required: true },
-          { name: "address", label: "Full Address", type: "textarea", required: true },
-          { name: "preferredExamDate", label: "Preferred Exam Date", type: "select", required: true, options: validExamDates },
-          ...customFields,
-        ],
+        formFields: {
+          collectPhoto: true,
+          collectAadhar: false,
+          collectPreviousMarks: true,
+          customFields: customFields.map(field => ({
+            fieldName: field.name,
+            fieldType: field.type,
+            required: field.required,
+            options: field.options || [],
+          })),
+        },
         status: "draft",
       };
 
