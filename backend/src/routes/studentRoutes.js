@@ -1,11 +1,24 @@
 import express from "express";
-import { addStudent, getStudents, getStudentById, updateStudent } from "../controllers/studentController.js";
+import { addStudent, getStudents, getStudentById, updateStudent, bulkUploadStudents } from "../controllers/studentController.js";
 import { resetStudentPassword } from "../controllers/studentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { requirePermission } from "../middleware/permissionMiddleware.js";
 
 const router = express.Router();
+
+/**
+ * @route POST /api/students/bulk-upload
+ * @desc Bulk upload students from CSV
+ * @access Private - tenantAdmin only
+ */
+router.post(
+  "/bulk-upload",
+  protect,
+  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessStudents"),
+  bulkUploadStudents
+);
 
 /**
  * @route POST /api/students

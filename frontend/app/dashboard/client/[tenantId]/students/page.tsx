@@ -16,6 +16,10 @@ export default function StudentsPage() {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState<any>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -52,6 +56,89 @@ export default function StudentsPage() {
     fetchStudents();
   }, [page, batchFilter, courseFilter, rollFilter, feesStatus]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadFile(e.target.files[0]);
+      setUploadResults(null);
+    }
+  };
+
+  const parseCSV = (text: string) => {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    
+    const students = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      if (values.length < 2) continue; // Skip empty lines
+      
+      const student: any = {};
+      headers.forEach((header, index) => {
+        student[header] = values[index]?.trim() || '';
+      });
+      students.push(student);
+    }
+    return students;
+  };
+
+  const handleUploadCSV = async () => {
+    if (!uploadFile) return;
+    
+    setUploading(true);
+    setUploadResults(null);
+
+    try {
+      const text = await uploadFile.text();
+      const studentsData = parseCSV(text);
+
+      const res = await fetch(`${API_BASE_URL}/api/students/bulk-upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ students: studentsData }),
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setUploadResults(data.results);
+        // Refresh student list
+        const params = new URLSearchParams();
+        params.set("page", "1");
+        params.set("limit", "10");
+        
+        const refreshRes = await fetch(`${API_BASE_URL}/api/students?${params.toString()}`, {
+          method: "GET",
+          credentials: "include",
+        });
+        const refreshData = await refreshRes.json();
+        if (refreshData.success) {
+          setStudents(refreshData.students || []);
+        }
+      } else {
+        alert(data.message || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload CSV");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const downloadSampleCSV = () => {
+    const sample = `name,email,phone,gender,course,batch,address,fees
+John Doe,john@example.com,1234567890,Male,Mathematics,2024,123 Main St,5000
+Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
+    
+    const blob = new Blob([sample], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'students_sample.csv';
+    a.click();
+  };
+
   if (loading) {
     return (
       <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
@@ -78,12 +165,21 @@ export default function StudentsPage() {
               Manage and view all enrolled students
             </p>
           </div>
-          <Link href={`/dashboard/client/${tenantId}/students/add`}>
-            <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
-              <span className="text-xl">➕</span>
-              Add Student
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2"
+            >
+              <span className="text-xl">📤</span>
+              Upload CSV
             </button>
-          </Link>
+            <Link href={`/dashboard/client/${tenantId}/students/add`}>
+              <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
+                <span className="text-xl">➕</span>
+                Add Student
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Filters Card */}
@@ -299,6 +395,101 @@ export default function StudentsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* CSV Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full p-8">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+                📤 Bulk Upload Students
+              </h2>
+
+              <div className="space-y-6">
+                {/* Instructions */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                    📋 CSV Format Instructions
+                  </h3>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                    Your CSV file should have these columns (in order):
+                  </p>
+                  <code className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded block">
+                    name,email,phone,gender,course,batch,address,fees
+                  </code>
+                  <button
+                    onClick={downloadSampleCSV}
+                    className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  >
+                    ⬇️ Download Sample CSV
+                  </button>
+                </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Select CSV File</label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 transition cursor-pointer"
+                  />
+                  {uploadFile && (
+                    <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                      ✓ Selected: {uploadFile.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Upload Results */}
+                {uploadResults && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <h3 className="font-semibold mb-3">Upload Results:</h3>
+                    <div className="space-y-2 text-sm">
+                      <p className="text-green-600 dark:text-green-400">
+                        ✓ Success: {uploadResults.success.length} students
+                      </p>
+                      {uploadResults.failed.length > 0 && (
+                        <div>
+                          <p className="text-red-600 dark:text-red-400 mb-2">
+                            ✗ Failed: {uploadResults.failed.length} students
+                          </p>
+                          <div className="space-y-1 text-xs">
+                            {uploadResults.failed.map((fail: any, idx: number) => (
+                              <div key={idx} className="bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                Row {fail.row}: {fail.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleUploadCSV}
+                    disabled={!uploadFile || uploading}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold shadow-lg transition-all"
+                  >
+                    {uploading ? "Uploading..." : "Upload Students"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setUploadFile(null);
+                      setUploadResults(null);
+                    }}
+                    className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

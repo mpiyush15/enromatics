@@ -191,3 +191,126 @@ export const resetStudentPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+/**
+ * Bulk upload students from CSV
+ * CSV format: name,email,phone,gender,course,batch,address,fees
+ */
+export const bulkUploadStudents = async (req, res) => {
+  try {
+    const { students } = req.body; // Array of student objects
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Tenant ID missing" 
+      });
+    }
+
+    if (!students || !Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "No student data provided" 
+      });
+    }
+
+    const results = {
+      success: [],
+      failed: [],
+      total: students.length
+    };
+
+    // Process each student
+    for (let i = 0; i < students.length; i++) {
+      const studentData = students[i];
+      
+      try {
+        const { name, email, phone, gender, course, batch, batchId, address, fees } = studentData;
+
+        // Validate required fields
+        if (!name || !email) {
+          results.failed.push({
+            row: i + 1,
+            data: studentData,
+            error: "Name and email are required"
+          });
+          continue;
+        }
+
+        // Check if student already exists
+        const existingStudent = await Student.findOne({ 
+          tenantId, 
+          email: email.toLowerCase() 
+        });
+
+        if (existingStudent) {
+          results.failed.push({
+            row: i + 1,
+            data: studentData,
+            error: "Student with this email already exists"
+          });
+          continue;
+        }
+
+        // Generate password
+        const studentPassword = Math.random().toString(36).slice(-8);
+
+        // Generate roll number
+        const batchKey = (batch || "").toString().replace(/[^0-9]/g, "");
+        const existingCount = await Student.countDocuments({ tenantId, batch: batchKey });
+        const seq = existingCount + 1;
+        const seqStr = String(seq).padStart(3, "0");
+        const rollNumber = `${batchKey}/${seqStr}`;
+
+        // Create student
+        const newStudent = await Student.create({
+          tenantId,
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          phone: phone || "",
+          gender: gender || "Other",
+          course: course || "",
+          batch: batchKey,
+          batchId: batchId || null,
+          address: address || "",
+          fees: fees ? Number(fees) : 0,
+          balance: 0,
+          password: studentPassword,
+          rollNumber,
+        });
+
+        results.success.push({
+          row: i + 1,
+          student: {
+            name: newStudent.name,
+            email: newStudent.email,
+            rollNumber: newStudent.rollNumber,
+            password: studentPassword
+          }
+        });
+
+      } catch (error) {
+        results.failed.push({
+          row: i + 1,
+          data: studentData,
+          error: error.message
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk upload completed: ${results.success.length} successful, ${results.failed.length} failed`,
+      results
+    });
+
+  } catch (error) {
+    console.error("Bulk upload error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Bulk upload failed",
+      error: error.message 
+    });
+  }
+};
