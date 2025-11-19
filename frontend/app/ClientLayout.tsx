@@ -51,11 +51,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     (pathname?.startsWith("/dashboard") && !pathname?.startsWith("/dashboard/login")) ||
     (pathname?.startsWith("/student") && !pathname?.startsWith("/student/login"));
 
-  // Hide NavBar and Footer on login and entire dashboard area
+  // Hide NavBar and Footer on login, dashboard area, and exam registration pages
   const hideNavAndFooter =
     pathname?.startsWith("/login") ||
     pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/student");
+    pathname?.startsWith("/student") ||
+    pathname?.startsWith("/exam/");
 
   // For authenticated areas, wrap with session timeout
   if (isAuthenticatedArea) {

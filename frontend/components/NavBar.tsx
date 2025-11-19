@@ -76,6 +76,15 @@ export default function Navbar() {
     setIsServicesOpen(false);
   };
 
+  /* ✅ Handle service link click in mobile menu */
+  const handleServiceLinkClick = () => {
+    // Add a small delay to allow navigation to complete
+    setTimeout(() => {
+      setIsMenuOpen(false);
+      setIsServicesOpen(false);
+    }, 100);
+  };
+
   return (
     <nav className="sticky top-0 z-50 opacity-80 bg-white dark:bg-neutral-900 shadow-md border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12">
@@ -186,35 +195,35 @@ export default function Navbar() {
                 <Link 
                   href="/services/student-management" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={handleLinkClick}
+                  onClick={handleServiceLinkClick}
                 >
                   Student Management
                 </Link>
                 <Link 
                   href="/services/scholarship-exams" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={handleLinkClick}
+                  onClick={handleServiceLinkClick}
                 >
                   Scholarship Exams
                 </Link>
                 <Link 
                   href="/services/video-editing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={handleLinkClick}
+                  onClick={handleServiceLinkClick}
                 >
                   Video Editing
                 </Link>
                 <Link 
                   href="/services/facebook-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={handleLinkClick}
+                  onClick={handleServiceLinkClick}
                 >
                   Facebook Marketing
                 </Link>
                 <Link 
                   href="/services/instagram-marketing" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
-                  onClick={handleLinkClick}
+                  onClick={handleServiceLinkClick}
                 >
                   Instagram Marketing
                 </Link>
