@@ -227,7 +227,9 @@ export default function ExamRegistrationPage() {
       const data = await response.json();
       console.log("✅ Registration successful:", data);
       
-      setRegistrationNumber(data.registration.registrationNumber);
+      // Handle different response structures
+      const regNumber = data.registration?.registrationNumber || data.registrationNumber;
+      setRegistrationNumber(regNumber);
       setRegistrationComplete(true);
     } catch (error: any) {
       console.error("❌ Registration error:", error);
