@@ -28,6 +28,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
   const pathname = usePathname();
   const [links, setLinks] = useState<SidebarLink[]>([]);
   const [loadingSidebar, setLoadingSidebar] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchSidebar = async () => {
@@ -58,6 +59,18 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
         if (data.success) {
           console.log("✅ Sidebar links received:", data.sidebar.length, "items");
           setLinks(data.sidebar);
+          // Auto-expand sections with active children
+          const expanded = new Set<string>();
+          data.sidebar.forEach((link: SidebarLink) => {
+            if (link.children?.some((child: SidebarLink) => {
+              const childHref = child.href || "#";
+              if (childHref === "#") return false;
+              return pathname?.startsWith(childHref);
+            })) {
+              expanded.add(link.label);
+            }
+          });
+          setExpandedSections(expanded);
         } else {
           console.error("❌ Sidebar response not successful:", data);
         }
@@ -103,7 +116,26 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
     return href;
   };
 
-  const isActive = (href: string) => pathname?.startsWith(href);
+  const isActiveExact = (href: string) => {
+    if (href === "#") return false;
+    const builtHref = buildHref(href);
+    if (builtHref.endsWith("/home")) {
+      return pathname === builtHref;
+    }
+    return pathname?.startsWith(builtHref);
+  };
+
+  const toggleSection = (label: string) => {
+    setExpandedSections((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(label)) {
+        newSet.delete(label);
+      } else {
+        newSet.add(label);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <aside
@@ -127,40 +159,55 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
 
               {link.children ? (
                 <div>
-                  <div className="px-4 py-2 text-sm font-semibold text-gray-300">{link.label}</div>
-                  <ul className="ml-4 mt-1 space-y-1">
-                    {link.children.map((child) => {
-                      const href = buildHref(child.href || "#");
-                      const isActiveLink = isActive(href);
-                      return (
-                        <li key={child.label}>
-                          <Link
-                            href={href}
-                            onClick={onClose}
-                            className={`block px-3 py-2 text-sm rounded transition-colors ${
-                              isActiveLink
-                                ? "bg-gray-700 text-white"
-                                : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
-                            }`}
-                          >
-                            {child.label}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <button
+                    onClick={() => toggleSection(link.label)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-700/30 rounded transition-colors"
+                  >
+                    <span>{link.label}</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${expandedSections.has(link.label) ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {expandedSections.has(link.label) && (
+                    <ul className="ml-4 mt-1 space-y-1">
+                      {link.children.map((child) => {
+                        const href = buildHref(child.href || "#");
+                        const isActiveLink = isActiveExact(child.href || "#");
+                        return (
+                          <li key={child.label}>
+                            <Link
+                              href={href}
+                              onClick={onClose}
+                              className={`block px-3 py-2 text-sm rounded transition-colors ${
+                                isActiveLink
+                                  ? "bg-blue-600 text-white font-medium"
+                                  : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
+                              }`}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
               ) : (
                 (() => {
                   const href = buildHref(link.href || "#");
-                  const isActiveLink = isActive(href);
+                  const isActiveLink = isActiveExact(link.href || "#");
                   return (
                     <Link
                       href={href}
                       onClick={onClose}
                       className={`block px-4 py-2 rounded text-sm transition-colors ${
                         isActiveLink
-                          ? "bg-gray-700 text-white"
+                          ? "bg-blue-600 text-white font-medium"
                           : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
                       }`}
                     >
