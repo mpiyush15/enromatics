@@ -8,9 +8,12 @@ import bcrypt from "bcryptjs";
 export const createExam = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+    if (!tenantId) {
+      console.error("[ERROR] Tenant ID missing in createExam");
+      return res.status(403).json({ message: "Tenant ID missing" });
+    }
 
-    console.log("📝 Creating exam with data:", JSON.stringify(req.body, null, 2));
+    console.log("[CREATE EXAM] Incoming data:", JSON.stringify(req.body, null, 2));
 
     const examData = {
       ...req.body,
@@ -18,28 +21,34 @@ export const createExam = async (req, res) => {
       createdBy: req.user._id,
     };
 
-    const exam = await ScholarshipExam.create(examData);
-
-    console.log("✅ Exam created successfully:", exam.examCode);
-
-    res.status(201).json({
-      success: true,
-      message: "Scholarship exam created successfully",
-      exam,
-      landingPageUrl: `/exam/${exam.examCode}`,
-    });
+    try {
+      const exam = await ScholarshipExam.create(examData);
+      console.log(`[SUCCESS] Exam created: ${exam.examCode}`);
+      res.status(201).json({
+        success: true,
+        message: "Scholarship exam created successfully",
+        exam,
+        landingPageUrl: `/exam/${exam.examCode}`,
+      });
+    } catch (dbErr) {
+      console.error("[DB ERROR] ScholarshipExam.create failed:", dbErr);
+      if (dbErr.errors) {
+        Object.keys(dbErr.errors).forEach(key => {
+          console.error(`[VALIDATION ERROR] ${key}:`, dbErr.errors[key].message);
+        });
+      }
+      res.status(500).json({
+        message: "Server error",
+        error: dbErr.message,
+        details: dbErr.errors || dbErr.stack,
+      });
+    }
   } catch (err) {
-    console.error("❌ Create exam error:", err);
-    console.error("Error details:", {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-      errors: err.errors,
-    });
-    res.status(500).json({ 
-      message: "Server error", 
+    console.error("[FATAL ERROR] createExam:", err);
+    res.status(500).json({
+      message: "Server error",
       error: err.message,
-      details: err.errors || err.stack,
+      details: err.stack,
     });
   }
 };
