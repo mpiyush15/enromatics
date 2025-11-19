@@ -1,9 +1,10 @@
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
+import Batch from "../models/Batch.js";
 
 export const addStudent = async (req, res) => {
   try {
-  const { name, email, phone, gender, course, batch, address, fees, password } = req.body;
+    const { name, email, phone, gender, course, batchId, address, fees, password, dateOfBirth } = req.body;
 
     // Tenant comes from JWT
     const tenantId = req.user?.tenantId;
@@ -11,19 +12,31 @@ export const addStudent = async (req, res) => {
     if (!tenantId) {
       return res.status(403).json({ message: "Tenant ID missing" });
     }
+
+    // Get batch details to generate roll number
+    let batchPrefix = "00"; // default if no batch
+    if (batchId) {
+      const batch = await Batch.findById(batchId);
+      if (batch) {
+        // Extract first 2 letters of batch name for prefix (e.g., "Batch 2024" -> "BA" or "Morning" -> "MO")
+        const words = batch.name.split(/\s+/);
+        if (words.length > 1) {
+          batchPrefix = (words[0][0] + words[1][0]).toUpperCase();
+        } else {
+          batchPrefix = batch.name.substring(0, 2).toUpperCase();
+        }
+      }
+    }
     
     // Generate a random password if not provided
     const studentPassword = password || Math.random().toString(36).slice(-8);
 
-    // Generate roll number: BATCH/XXX (e.g., 202526/001)
-    // batch field is expected to be like "202526" or "2025-26", we'll clean it
-    const batchKey = (batch || "").toString().replace(/[^0-9]/g, ""); // Remove non-numeric chars
-
+    // Generate 5-digit roll number: BBXXX (e.g., BA001, MO015)
     // Count existing students for same tenant + batch to generate sequence
-    const existingCount = await Student.countDocuments({ tenantId, batch: batchKey });
+    const existingCount = await Student.countDocuments({ tenantId, batchId: batchId || null });
     const seq = existingCount + 1;
-    const seqStr = String(seq).padStart(3, "0");
-    const rollNumber = `${batchKey}/${seqStr}`;
+    const seqStr = String(seq).padStart(3, "0"); // 3 digits for sequence
+    const rollNumber = `${batchPrefix}${seqStr}`;
 
     const newStudent = await Student.create({
       tenantId,
@@ -32,26 +45,31 @@ export const addStudent = async (req, res) => {
       phone,
       gender,
       course,
-      batch: batchKey,
+      batchId: batchId || null,
       address: address || "",
       fees: fees ? Number(fees) : 0,
       balance: 0,
-      password: studentPassword, // Always set password (will be hashed by pre-save hook)
+      password: studentPassword,
       rollNumber,
+      dateOfBirth: dateOfBirth || null,
     });
+
+    // Increment enrolled count in batch
+    if (batchId) {
+      await Batch.findByIdAndUpdate(batchId, { $inc: { enrolledCount: 1 } });
+    }
     
-    console.log(`✅ Student created: ${newStudent.name} | Email: ${newStudent.email} | Password: ${password ? '(provided)' : studentPassword}`);
+    console.log(`✅ Student created: ${newStudent.name} | Roll: ${rollNumber} | Password: ${password ? '(provided)' : studentPassword}`);
 
     res.status(201).json({
       success: true,
       message: "Student added successfully",
       student: newStudent,
-      // If password was auto-generated, return it so admin can share
       ...(password ? {} : { generatedPassword: studentPassword })
     });
   } catch (err) {
     console.error("Add student error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message || "Server error" });
   }
 };
 
