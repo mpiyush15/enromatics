@@ -485,12 +485,19 @@ export default function RegistrationsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex gap-2">
                         <button
+                          onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}`)}
+                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="View Full Result & Enroll"
+                        >
+                          <FileText size={16} />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedRegistration(reg);
                             setShowDetailsModal(true);
                           }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Details"
+                          title="Quick View"
                         >
                           <Eye size={16} />
                         </button>
@@ -498,7 +505,7 @@ export default function RegistrationsPage() {
                           <button
                             onClick={() => handleConvertToAdmission(reg._id, reg.studentName)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Convert to Admission"
+                            title="Quick Convert"
                           >
                             <UserCheck size={16} />
                           </button>

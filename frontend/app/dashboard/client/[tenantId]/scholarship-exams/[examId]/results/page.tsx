@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle,
   FileSpreadsheet,
+  UserCheck,
 } from "lucide-react";
 
 interface Registration {
@@ -28,6 +29,7 @@ interface Registration {
   result?: "pass" | "fail" | "absent" | "pending";
   rewardEligible: boolean;
   rewardDetails?: any;
+  convertedToStudent?: boolean;
 }
 
 interface Exam {
@@ -395,6 +397,7 @@ export default function ResultsPage() {
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rank</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Result</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Reward</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -474,6 +477,26 @@ export default function ResultsPage() {
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex gap-1 justify-center">
+                        <button
+                          onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}`)}
+                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                          title="View Full Details & Enroll"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        {reg.result === "pass" && !reg.convertedToStudent && (
+                          <button
+                            onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}`)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Convert to Admission"
+                          >
+                            <UserCheck size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
