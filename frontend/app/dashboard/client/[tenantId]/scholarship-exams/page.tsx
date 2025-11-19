@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Search, Filter, Calendar, Users, Award, TrendingUp, Eye, Edit2, Trash2, ExternalLink, Copy, CheckCircle } from "lucide-react";
 
@@ -63,7 +64,7 @@ export default function ScholarshipExamsPage() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/scholarship-exams?tenantId=${tenantId}`, {
+      const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
         credentials: "include",
       });
 
@@ -129,7 +130,7 @@ export default function ScholarshipExamsPage() {
     }
 
     try {
-      const response = await fetch(`/api/scholarship-exams/${examId}`, {
+      const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
         method: "DELETE",
         credentials: "include",
       });
