@@ -62,11 +62,14 @@ export const sidebarLinks = [
   {
     label: "🎓 Scholarship Exams",
     href: "#",
-    roles: ["tenantAdmin", "counsellor"],
+    roles: ["tenantAdmin", "counsellor", "teacher", "staff"],
     tenantSpecific: true,
     children: [
-      { label: "📋 All Exams", href: "/dashboard/client/[tenantId]/scholarship-exams", roles: ["tenantAdmin", "counsellor"] },
+      { label: "📋 All Exams", href: "/dashboard/client/[tenantId]/scholarship-exams", roles: ["tenantAdmin", "counsellor", "teacher", "staff"] },
       { label: "➕ Create Exam", href: "/dashboard/client/[tenantId]/scholarship-exams/create", roles: ["tenantAdmin"] },
+      { label: "👥 Test Management", href: "/dashboard/client/[tenantId]/scholarship-tests", roles: ["tenantAdmin", "teacher", "staff"] },
+      { label: "📊 Results Management", href: "/dashboard/client/[tenantId]/scholarship-results", roles: ["tenantAdmin", "teacher"] },
+      { label: "🏆 Rewards Overview", href: "/dashboard/client/[tenantId]/scholarship-rewards", roles: ["tenantAdmin"] },
     ]
   },
 
