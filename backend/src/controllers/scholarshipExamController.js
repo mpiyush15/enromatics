@@ -419,23 +419,50 @@ export const registerForExam = async (req, res) => {
     // Create user account for student portal
     const tempPassword = `${registrationData.studentName.split(" ")[0].toLowerCase()}@${new Date().getFullYear()}`;
     
-    const newUser = await User.create({
-      name: registrationData.studentName,
-      email: registrationData.email,
-      password: tempPassword,
-      tenantId: exam.tenantId,
-      role: "student",
-      status: "active",
-    });
+    let newUser;
+    try {
+      // Check if user already exists
+      const existingUser = await User.findOne({ 
+        email: registrationData.email,
+        tenantId: exam.tenantId 
+      });
+      
+      if (existingUser) {
+        newUser = existingUser;
+      } else {
+        newUser = await User.create({
+          name: registrationData.studentName,
+          email: registrationData.email,
+          password: tempPassword,
+          tenantId: exam.tenantId,
+          role: "student",
+          status: "active",
+        });
+      }
+    } catch (userError) {
+      console.error("User creation error:", userError);
+      // Continue without user - registration can still work
+      newUser = null;
+    }
 
     // Create registration
     const registration = await ExamRegistration.create({
       ...registrationData,
       tenantId: exam.tenantId,
       examId: exam._id,
-      userId: newUser._id,
+      userId: newUser?._id,
       paymentAmount: exam.registrationFee.amount,
       paymentStatus: exam.registrationFee.paymentRequired ? "pending" : "waived",
+      // Convert address string to object format expected by schema
+      address: typeof registrationData.address === 'string' ? {
+        street: registrationData.address,
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'India'
+      } : registrationData.address,
+      // Set selected exam date
+      preferredExamDate: registrationData.selectedExamDate ? new Date(registrationData.selectedExamDate) : null,
     });
 
     // Update exam stats
@@ -446,13 +473,33 @@ export const registerForExam = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Registration successful! Check your email for login credentials.",
-      registrationNumber: registration.registrationNumber,
-      username: registration.username,
-      temporaryPassword: tempPassword,
-      loginUrl: `/exam-portal/login`,
+      registration: {
+        registrationNumber: registration.registrationNumber,
+        username: registration.username,
+        temporaryPassword: newUser ? tempPassword : null,
+        loginUrl: `/exam-portal/login`,
+      }
     });
   } catch (err) {
     console.error("Register for exam error:", err);
+    
+    // Handle specific validation errors
+    if (err.name === 'ValidationError') {
+      console.error("Validation errors:", err.errors);
+      return res.status(400).json({
+        message: "Validation failed",
+        error: Object.keys(err.errors).map(key => err.errors[key].message).join(', ')
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      return res.status(400).json({
+        message: "Duplicate registration",
+        error: "This email or phone number is already registered for this exam"
+      });
+    }
+    
     res.status(500).json({ 
       message: "Server error", 
       error: err.message 
