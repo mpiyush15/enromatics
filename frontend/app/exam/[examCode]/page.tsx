@@ -148,6 +148,7 @@ export default function ExamRegistrationPage() {
     }
 
     // Age validation
+    const now = new Date();
     const birthDate = new Date(dateOfBirth);
     const age = Math.floor((now.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
     
