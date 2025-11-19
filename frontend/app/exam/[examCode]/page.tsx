@@ -242,12 +242,21 @@ export default function ExamRegistrationPage() {
     
     // If no registration dates are set, allow registration
     if (!exam.registrationStartDate || !exam.registrationEndDate) {
+      console.log("🟢 Registration dates not set, allowing registration");
       return true;
     }
     
     const now = new Date();
     const regStart = new Date(exam.registrationStartDate);
     const regEnd = new Date(exam.registrationEndDate);
+    
+    console.log("📅 Registration Status Check:");
+    console.log("Current time:", now);
+    console.log("Registration Start:", regStart);
+    console.log("Registration End:", regEnd);
+    console.log("Is now >= regStart?", now >= regStart);
+    console.log("Is now <= regEnd?", now <= regEnd);
+    console.log("Final result:", now >= regStart && now <= regEnd);
     
     // Allow registration if we're within the period
     return now >= regStart && now <= regEnd;

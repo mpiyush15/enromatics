@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+
 export default function StudentLoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -16,7 +18,7 @@ export default function StudentLoginPage() {
     e.preventDefault();
     setStatus("Logging in...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/student-auth/login`, {
+      const res = await fetch(`${API_URL}/api/student-auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
