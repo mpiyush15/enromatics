@@ -29,6 +29,7 @@ interface ScholarshipExam {
   registrationStartDate: string;
   registrationEndDate: string;
   examDate: string;
+  examDates?: string[];
   resultDate: string;
   examDuration: number;
   totalMarks: number;
@@ -316,8 +317,19 @@ export default function ScholarshipExamsPage() {
                     </div>
 
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Exam Date</p>
-                      <p className="font-semibold text-gray-900">{formatDate(exam.examDate)}</p>
+                      <p className="text-xs text-gray-500 mb-1">Exam Date{exam.examDates && exam.examDates.length > 1 ? 's' : ''}</p>
+                      {exam.examDates && exam.examDates.length > 0 ? (
+                        <div className="font-semibold text-gray-900">
+                          {exam.examDates.slice(0, 2).map((date, idx) => (
+                            <div key={idx}>{formatDate(date)}</div>
+                          ))}
+                          {exam.examDates.length > 2 && (
+                            <div className="text-xs text-blue-600">+{exam.examDates.length - 2} more</div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-semibold text-gray-900">{formatDate(exam.examDate)}</p>
+                      )}
                     </div>
 
                     <div>

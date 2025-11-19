@@ -84,6 +84,11 @@ const examRegistrationSchema = new mongoose.Schema(
       of: mongoose.Schema.Types.Mixed,
     },
 
+    // Preferred Exam Date
+    preferredExamDate: {
+      type: Date,
+    },
+
     // Login Credentials (for student portal)
     userId: {
       type: mongoose.Schema.Types.ObjectId,

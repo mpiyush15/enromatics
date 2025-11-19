@@ -41,6 +41,11 @@ const scholarshipExamSchema = new mongoose.Schema(
       required: true,
     },
 
+    examDates: {
+      type: [Date],
+      default: [],
+    },
+
     resultDate: {
       type: Date,
     },

@@ -43,7 +43,7 @@ export default function CreateExamPage() {
   const [description, setDescription] = useState("");
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
-  const [examDate, setExamDate] = useState("");
+  const [examDates, setExamDates] = useState<string[]>([""]);
   const [resultDate, setResultDate] = useState("");
   const [examDuration, setExamDuration] = useState(180);
   const [totalMarks, setTotalMarks] = useState(100);
@@ -77,18 +77,44 @@ export default function CreateExamPage() {
   // Form Fields
   const [customFields, setCustomFields] = useState<FormField[]>([]);
 
+  const addExamDate = () => {
+    setExamDates([...examDates, ""]);
+  };
+
+  const removeExamDate = (index: number) => {
+    if (examDates.length > 1) {
+      setExamDates(examDates.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateExamDate = (index: number, value: string) => {
+    const updated = [...examDates];
+    updated[index] = value;
+    setExamDates(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Filter out empty dates
+      const validExamDates = examDates.filter(date => date.trim() !== "");
+      
+      if (validExamDates.length === 0) {
+        alert("Please add at least one exam date");
+        setLoading(false);
+        return;
+      }
+
       const examData = {
         tenantId,
         examName,
         description,
         registrationStartDate,
         registrationEndDate,
-        examDate,
+        examDates: validExamDates,
+        examDate: validExamDates[0], // Keep first date as primary for backward compatibility
         resultDate,
         examDuration,
         totalMarks,
@@ -117,6 +143,7 @@ export default function CreateExamPage() {
           { name: "currentClass", label: "Current Class/Standard", type: "text", required: true },
           { name: "school", label: "School Name", type: "text", required: true },
           { name: "address", label: "Full Address", type: "textarea", required: true },
+          { name: "preferredExamDate", label: "Preferred Exam Date", type: "select", required: true, options: validExamDates },
           ...customFields,
         ],
         status: "draft",
@@ -299,17 +326,46 @@ export default function CreateExamPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Exam Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={examDate}
-                      onChange={(e) => setExamDate(e.target.value)}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                  {/* Multiple Exam Dates */}
+                  <div className="md:col-span-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Exam Dates <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addExamDate}
+                        className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Plus size={16} />
+                        Add Date
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {examDates.map((date, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => updateExamDate(index, e.target.value)}
+                            required
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          {examDates.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeExamDate(index)}
+                              className="px-3 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Students will choose their preferred exam date during registration
+                    </p>
                   </div>
 
                   <div>
