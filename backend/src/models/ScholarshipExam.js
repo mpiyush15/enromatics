@@ -78,10 +78,22 @@ const scholarshipExamSchema = new mongoose.Schema(
 
     // Eligibility
     eligibilityCriteria: {
-      minAge: Number,
-      maxAge: Number,
-      qualification: String,
-      class: String,
+      minAge: {
+        type: Number,
+        default: 10,
+      },
+      maxAge: {
+        type: Number,  
+        default: 18,
+      },
+      eligibleClasses: {
+        type: [String],
+        default: [],
+      },
+      qualification: {
+        type: String,
+        default: "",
+      },
     },
 
     // Registration Form Fields
@@ -111,10 +123,27 @@ const scholarshipExamSchema = new mongoose.Schema(
     // Scholarship/Rewards Structure
     rewards: [
       {
-        rank: String, // "1", "2-5", "6-10", etc.
-        rewardType: String, // "scholarship", "discount", "certificate"
-        rewardValue: String, // "100%", "50%", "Rs. 5000"
-        description: String,
+        rankFrom: {
+          type: Number,
+          required: true,
+        },
+        rankTo: {
+          type: Number,
+          required: true,
+        },
+        rewardType: {
+          type: String,
+          enum: ["percentage", "fixed", "certificate"],
+          required: true,
+        },
+        rewardValue: {
+          type: Number,
+          required: true,
+        },
+        description: {
+          type: String,
+          required: true,
+        },
       },
     ],
 

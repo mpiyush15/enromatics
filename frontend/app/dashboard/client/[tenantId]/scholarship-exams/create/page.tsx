@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save, Eye } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+
 interface Reward {
   rankFrom: number;
   rankTo: number;
@@ -147,10 +149,14 @@ export default function CreateExamPage() {
         status: "draft",
       };
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      console.log("🚀 Creating exam with data:", examData);
+      console.log("📡 API URL:", `${API_URL}/api/scholarship-exams`);
+      
       const response = await fetch(`${API_URL}/api/scholarship-exams`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+        },
         credentials: "include",
         body: JSON.stringify(examData),
       });
