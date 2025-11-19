@@ -825,7 +825,7 @@ export const getPublicResult = async (req, res) => {
   }
 };
 
-// Download admit card (PDF generation would require a PDF library)
+// Download admit card (generates HTML that can be printed or saved as PDF)
 export const downloadAdmitCard = async (req, res) => {
   try {
     const { registrationNumber } = req.params;
@@ -841,34 +841,207 @@ export const downloadAdmitCard = async (req, res) => {
       });
     }
 
-    // For now, return a simple text response
-    // In production, you'd generate a PDF here
-    const admitCardContent = `
-ADMIT CARD
-==========
+    // Generate HTML admit card
+    const admitCardHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admit Card - ${registration.registrationNumber}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .admit-card {
+            background: white;
+            border: 2px solid #000;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 18px;
+            color: #374151;
+        }
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .detail-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .label {
+            font-weight: bold;
+            color: #374151;
+            font-size: 14px;
+        }
+        .value {
+            font-size: 16px;
+            color: #000;
+            margin-top: 5px;
+        }
+        .instructions {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .instructions h3 {
+            color: #92400e;
+            margin-top: 0;
+        }
+        .instructions ul {
+            color: #92400e;
+        }
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #000;
+        }
+        .signature {
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin-bottom: 5px;
+        }
+        @media print {
+            body { background: white; }
+            .admit-card { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admit-card">
+        <div class="header">
+            <div class="title">ADMIT CARD</div>
+            <div class="subtitle">${registration.examId.examName}</div>
+        </div>
+        
+        <div class="details">
+            <div class="detail-item">
+                <div class="label">Registration Number</div>
+                <div class="value">${registration.registrationNumber}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Exam Code</div>
+                <div class="value">${registration.examId.examCode}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Student Name</div>
+                <div class="value">${registration.studentName}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Father's Name</div>
+                <div class="value">${registration.fatherName}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Date of Birth</div>
+                <div class="value">${new Date(registration.dateOfBirth).toLocaleDateString('en-IN')}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Gender</div>
+                <div class="value">${registration.gender}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Email</div>
+                <div class="value">${registration.email}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Phone</div>
+                <div class="value">${registration.phone}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Current Class</div>
+                <div class="value">${registration.currentClass}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">School</div>
+                <div class="value">${registration.school}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Exam Date</div>
+                <div class="value">${new Date(registration.examId.examDate).toLocaleDateString('en-IN', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}</div>
+            </div>
+            <div class="detail-item">
+                <div class="label">Exam Time</div>
+                <div class="value">${new Date(registration.examId.examDate).toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}</div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 EXAMINATION INSTRUCTIONS</h3>
+            <ul>
+                <li><strong>Arrival Time:</strong> Please arrive at the examination center 30 minutes before the scheduled exam time</li>
+                <li><strong>Required Documents:</strong> Bring this admit card along with a valid photo ID proof (Aadhaar Card/School ID)</li>
+                <li><strong>Writing Materials:</strong> Use only blue or black ballpoint pen. Pencils and erasers are not allowed</li>
+                <li><strong>Electronic Devices:</strong> Mobile phones, calculators, and other electronic devices are strictly prohibited</li>
+                <li><strong>Dress Code:</strong> Come in comfortable, formal attire. Avoid wearing shoes with metal parts</li>
+                <li><strong>Food & Water:</strong> You're allowed to bring a water bottle (transparent) and light snacks if needed</li>
+            </ul>
+        </div>
+        
+        <div class="signature-section">
+            <div class="signature">
+                <div class="signature-line"></div>
+                <div>Student Signature</div>
+            </div>
+            <div class="signature">
+                <div class="signature-line"></div>
+                <div>Invigilator Signature</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #6b7280;">
+            Generated on ${new Date().toLocaleDateString('en-IN')} | Best of Luck! 🍀
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print functionality
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>`;
 
-Exam: ${registration.examId.examName}
-Exam Code: ${registration.examId.examCode}
-Registration Number: ${registration.registrationNumber}
-Student Name: ${registration.studentName}
-Email: ${registration.email}
-Phone: ${registration.phone}
-Class: ${registration.currentClass}
-School: ${registration.school}
-Exam Date: ${new Date(registration.examId.examDate).toLocaleDateString()}
-
-Instructions:
-1. Bring this admit card to the examination center
-2. Arrive 30 minutes before the exam starts
-3. Bring a valid ID proof
-4. Use blue/black pen only
-
-Best of luck!
-    `;
-
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename="admit_card_${registrationNumber}.txt"`);
-    res.send(admitCardContent);
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Disposition', `attachment; filename="admit_card_${registrationNumber}.html"`);
+    res.send(admitCardHTML);
 
   } catch (error) {
     console.error("Error generating admit card:", error);
