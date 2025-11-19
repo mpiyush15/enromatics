@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Tenant ID is required" }, { status: 400 });
     }
 
-    // Get auth cookie
-    const cookie = request.cookies.get("token");
+  // Get auth cookie
+  const cookie = request.cookies.get("jwt");
 
     const response = await fetch(`${BACKEND_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
       method: "GET",
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Get auth cookie
-    const cookie = request.cookies.get("token");
+  // Get auth cookie
+  const cookie = request.cookies.get("jwt");
 
     const response = await fetch(`${BACKEND_URL}/api/scholarship-exams`, {
       method: "POST",
