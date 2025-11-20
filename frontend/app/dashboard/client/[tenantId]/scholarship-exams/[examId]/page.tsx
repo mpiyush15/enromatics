@@ -20,6 +20,7 @@ import {
   Download,
   Eye,
   UserCheck,
+  Clock,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
@@ -147,6 +148,13 @@ export default function ExamDashboard() {
       icon: Users,
       color: "bg-blue-500 hover:bg-blue-600",
       route: `/dashboard/client/${tenantId}/scholarship-exams/${examId}/students`,
+    },
+    {
+      title: "Test Management",
+      description: "Select exam date and manage attendance",
+      icon: Clock,
+      color: "bg-indigo-500 hover:bg-indigo-600",
+      route: `/dashboard/client/${tenantId}/scholarship-exams/${examId}/test-management`,
     },
     {
       title: "View Registrations",
@@ -325,7 +333,7 @@ export default function ExamDashboard() {
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (

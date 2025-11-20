@@ -562,6 +562,63 @@ export const updateRegistration = async (req, res) => {
   }
 };
 
+// Update attendance for a specific registration
+export const updateAttendance = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { id } = req.params;
+    const { hasAttended, examDateAttended } = req.body;
+
+    const updateData = {
+      hasAttended: Boolean(hasAttended),
+      attendanceMarked: true,
+    };
+
+    // Only set examDateAttended if student is marked as attended
+    if (hasAttended && examDateAttended) {
+      updateData.examDateAttended = new Date(examDateAttended);
+    } else if (!hasAttended) {
+      updateData.examDateAttended = null;
+    }
+
+    const registration = await ExamRegistration.findOneAndUpdate(
+      { _id: id, tenantId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!registration) {
+      return res.status(404).json({ message: "Registration not found" });
+    }
+
+    // Update exam stats
+    const examId = registration.examId;
+    const totalAppeared = await ExamRegistration.countDocuments({ 
+      examId, 
+      tenantId, 
+      hasAttended: true 
+    });
+
+    await ScholarshipExam.findByIdAndUpdate(examId, {
+      $set: { "stats.totalAppearedStudents": totalAppeared }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Attendance updated successfully",
+      registration,
+    });
+  } catch (err) {
+    console.error("Update attendance error:", err);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
+  }
+};
+
 // Convert registration to student admission
 export const convertToAdmission = async (req, res) => {
   try {

@@ -113,6 +113,10 @@ const examRegistrationSchema = new mongoose.Schema(
       default: false,
     },
 
+    examDateAttended: {
+      type: Date,
+    },
+
     attendanceMarked: {
       type: Boolean,
       default: false,

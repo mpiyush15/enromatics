@@ -11,6 +11,7 @@ import {
   getExamRegistrations,
   registerForExam,
   updateRegistration,
+  updateAttendance,
   convertToAdmission,
   getPublicResult,
   downloadAdmitCard,
@@ -44,6 +45,7 @@ router.get("/:id/registrations", getExamRegistrations);
 
 // Registration management
 router.put("/registration/:id", updateRegistration);
+router.put("/registration/:id/attendance", updateAttendance);
 router.post("/registration/:id/convert", convertToAdmission);
 
 export default router;
