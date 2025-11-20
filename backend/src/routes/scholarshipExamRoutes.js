@@ -16,6 +16,7 @@ import {
   getPublicResult,
   downloadAdmitCard,
   submitEnrollmentInterest,
+  updateEnrollmentStatus,
 } from "../controllers/scholarshipExamController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -46,6 +47,7 @@ router.get("/:id/registrations", getExamRegistrations);
 // Registration management
 router.put("/registration/:id", updateRegistration);
 router.put("/registration/:id/attendance", updateAttendance);
+router.put("/registration/:registrationId/enrollment-status", updateEnrollmentStatus);
 router.post("/registration/:id/convert", convertToAdmission);
 
 export default router;

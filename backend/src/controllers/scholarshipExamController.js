@@ -1149,3 +1149,78 @@ export const submitEnrollmentInterest = async (req, res) => {
     });
   }
 };
+
+// Update enrollment status for a registration
+const updateEnrollmentStatus = async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    const { enrollmentStatus } = req.body;
+
+    // Validate enrollment status
+    const validStatuses = [
+      "notInterested", 
+      "interested", 
+      "followUp", 
+      "enrolled", 
+      "converted", 
+      "directAdmission",
+      "waitingList",
+      "cancelled"
+    ];
+
+    if (!validStatuses.includes(enrollmentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid enrollment status"
+      });
+    }
+
+    // Find the registration
+    const registration = await ExamRegistration.findById(registrationId);
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "Registration not found"
+      });
+    }
+
+    // Check if user has permission (basic tenant check)
+    const exam = await ScholarshipExam.findById(registration.examId);
+    if (!exam || exam.tenantId.toString() !== req.user.tenantId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access"
+      });
+    }
+
+    // Update enrollment status
+    registration.enrollmentStatus = enrollmentStatus;
+    
+    // Add enrollment date if status is enrolled, converted, or directAdmission
+    if (["enrolled", "converted", "directAdmission"].includes(enrollmentStatus)) {
+      registration.enrollmentDate = new Date();
+    }
+
+    await registration.save();
+
+    res.json({
+      success: true,
+      message: "Enrollment status updated successfully",
+      data: {
+        registrationId: registration._id,
+        enrollmentStatus: registration.enrollmentStatus,
+        enrollmentDate: registration.enrollmentDate
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating enrollment status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update enrollment status"
+    });
+  }
+};
+
+export { updateEnrollmentStatus };

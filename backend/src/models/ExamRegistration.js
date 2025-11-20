@@ -156,7 +156,16 @@ const examRegistrationSchema = new mongoose.Schema(
     // Enrollment Status
     enrollmentStatus: {
       type: String,
-      enum: ["notInterested", "interested", "enrolled", "converted"],
+      enum: [
+        "notInterested", 
+        "interested", 
+        "followUp", 
+        "enrolled", 
+        "converted", 
+        "directAdmission",
+        "waitingList",
+        "cancelled"
+      ],
       default: "notInterested",
     },
 

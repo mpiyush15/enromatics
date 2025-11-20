@@ -44,7 +44,7 @@ interface Registration {
     rewardValue: number;
     description: string;
   };
-  enrollmentStatus: "notInterested" | "interested" | "enrolled" | "converted";
+  enrollmentStatus: "notInterested" | "interested" | "followUp" | "enrolled" | "converted" | "directAdmission" | "waitingList" | "cancelled";
   convertedToStudent: boolean;
   createdAt: string;
 }
@@ -93,6 +93,7 @@ export default function StudentsManagementPage() {
   const [converting, setConverting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -208,16 +209,49 @@ export default function StudentsManagementPage() {
     }
   };
 
+  const handleEnrollmentStatusUpdate = async (registrationId: string, newStatus: Registration["enrollmentStatus"]) => {
+    if (updatingStatus === registrationId) return; // Prevent multiple updates
+
+    try {
+      setUpdatingStatus(registrationId);
+
+      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/enrollment-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ enrollmentStatus: newStatus }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update enrollment status");
+
+      // Update the local state
+      setRegistrations(prev => 
+        prev.map(reg => 
+          reg._id === registrationId 
+            ? { ...reg, enrollmentStatus: newStatus }
+            : reg
+        )
+      );
+
+      // Optional: Show success message
+      // You can uncomment this if you want visual feedback
+      // alert("Enrollment status updated successfully!");
+
+    } catch (error) {
+      console.error("Error updating enrollment status:", error);
+      alert("Failed to update enrollment status");
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const filteredRegistrations = registrations.filter((reg) => {
     const matchesSearch = 
       reg.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reg.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reg.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = filterStatus === "all" || 
-      (filterStatus === "converted" && reg.convertedToStudent) ||
-      (filterStatus === "interested" && reg.enrollmentStatus === "interested" && !reg.convertedToStudent) ||
-      (filterStatus === "notInterested" && reg.enrollmentStatus === "notInterested");
+    const matchesStatus = filterStatus === "all" || reg.enrollmentStatus === filterStatus;
     
     const matchesResult = filterResult === "all" || reg.result === filterResult;
 
@@ -251,28 +285,112 @@ export default function StudentsManagementPage() {
   };
 
   const getEnrollmentStatusBadge = (registration: Registration) => {
-    if (registration.convertedToStudent) {
-      return (
-        <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-600 rounded-full text-xs font-medium">
-          <CheckCircle size={12} />
-          Student
-        </span>
-      );
-    }
-    
-    if (registration.enrollmentStatus === "interested") {
-      return (
-        <span className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-medium">
-          <AlertCircle size={12} />
-          Interested
-        </span>
-      );
-    }
+    const statusConfig = {
+      notInterested: { 
+        bg: "bg-gray-100", 
+        text: "text-gray-600", 
+        label: "Not Interested", 
+        icon: XCircle 
+      },
+      interested: { 
+        bg: "bg-blue-100", 
+        text: "text-blue-600", 
+        label: "Interested", 
+        icon: AlertCircle 
+      },
+      followUp: { 
+        bg: "bg-yellow-100", 
+        text: "text-yellow-600", 
+        label: "Follow Up", 
+        icon: RefreshCw 
+      },
+      enrolled: { 
+        bg: "bg-green-100", 
+        text: "text-green-600", 
+        label: "Enrolled", 
+        icon: CheckCircle 
+      },
+      converted: { 
+        bg: "bg-green-100", 
+        text: "text-green-600", 
+        label: "Student", 
+        icon: GraduationCap 
+      },
+      directAdmission: { 
+        bg: "bg-purple-100", 
+        text: "text-purple-600", 
+        label: "Direct Admission", 
+        icon: Award 
+      },
+      waitingList: { 
+        bg: "bg-orange-100", 
+        text: "text-orange-600", 
+        label: "Waiting List", 
+        icon: Calendar 
+      },
+      cancelled: { 
+        bg: "bg-red-100", 
+        text: "text-red-600", 
+        label: "Cancelled", 
+        icon: XCircle 
+      }
+    };
+
+    const config = statusConfig[registration.enrollmentStatus] || statusConfig.notInterested;
+    const Icon = config.icon;
 
     return (
-      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-        Not Interested
+      <span className={`flex items-center gap-1 px-3 py-1 ${config.bg} ${config.text} rounded-full text-xs font-medium`}>
+        <Icon size={12} />
+        {config.label}
       </span>
+    );
+  };
+
+  const getEnrollmentStatusDropdown = (registration: Registration) => {
+    const statusOptions = [
+      { value: "notInterested", label: "Not Interested", color: "text-gray-600" },
+      { value: "interested", label: "Interested", color: "text-blue-600" },
+      { value: "followUp", label: "Follow Up", color: "text-yellow-600" },
+      { value: "enrolled", label: "Enrolled", color: "text-green-600" },
+      { value: "directAdmission", label: "Direct Admission", color: "text-purple-600" },
+      { value: "waitingList", label: "Waiting List", color: "text-orange-600" },
+      { value: "cancelled", label: "Cancelled", color: "text-red-600" },
+    ];
+
+    const isUpdating = updatingStatus === registration._id;
+
+    return (
+      <div className="relative">
+        <select
+          value={registration.enrollmentStatus}
+          onChange={(e) => handleEnrollmentStatusUpdate(registration._id, e.target.value as Registration["enrollmentStatus"])}
+          disabled={isUpdating}
+          className={`w-full px-3 py-1 text-xs font-medium rounded-full border-0 focus:ring-2 focus:ring-blue-500 ${
+            isUpdating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"
+          } ${getEnrollmentStatusBadge(registration).props.className.split(' ').slice(3).join(' ')}`}
+          style={{ 
+            backgroundColor: getEnrollmentStatusBadge(registration).props.className.includes('bg-gray') ? '#f3f4f6' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-blue') ? '#dbeafe' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-yellow') ? '#fef3c7' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-green') ? '#dcfce7' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-purple') ? '#f3e8ff' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-orange') ? '#fed7aa' :
+                            getEnrollmentStatusBadge(registration).props.className.includes('bg-red') ? '#fecaca' : '#f3f4f6'
+          }}
+        >
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value} className={option.color}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {isUpdating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -388,7 +506,12 @@ export default function StudentsManagementPage() {
               <option value="all">All Status</option>
               <option value="notInterested">Not Interested</option>
               <option value="interested">Interested</option>
+              <option value="followUp">Follow Up</option>
+              <option value="enrolled">Enrolled</option>
               <option value="converted">Converted to Student</option>
+              <option value="directAdmission">Direct Admission</option>
+              <option value="waitingList">Waiting List</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
 
@@ -496,7 +619,9 @@ export default function StudentsManagementPage() {
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getEnrollmentStatusBadge(registration)}
+                    <div className="w-40">
+                      {getEnrollmentStatusDropdown(registration)}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
