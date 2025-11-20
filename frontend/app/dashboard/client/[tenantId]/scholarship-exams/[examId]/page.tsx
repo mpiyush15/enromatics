@@ -29,6 +29,8 @@ interface Exam {
   examName: string;
   examCode: string;
   description: string;
+  goal?: "NEET" | "JEE" | "MHT-CET";
+  registrationCount?: number;
   examDate: string;
   resultDate: string;
   totalMarks: number;
@@ -120,16 +122,6 @@ export default function ExamDashboard() {
       day: "2-digit",
       month: "long",
       year: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -225,6 +217,11 @@ export default function ExamDashboard() {
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{exam.examName}</h1>
+                {exam.goal && (
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
+                    {exam.goal}
+                  </span>
+                )}
                 <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusBadge.color}`}>
                   <StatusIcon size={16} />
                   {statusBadge.label}
@@ -238,7 +235,7 @@ export default function ExamDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Calendar size={16} />
-                  <span>Exam: {formatDateTime(exam.examDate)}</span>
+                  <span>Exam: {formatDate(exam.examDate)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Award size={16} />
@@ -270,7 +267,12 @@ export default function ExamDashboard() {
             </div>
             <div>
               <div className="text-2xl font-bold text-gray-900">{exam.stats.totalRegistrations}</div>
-              <div className="text-sm text-gray-600">Total Registered</div>
+              <div className="text-sm text-gray-600">
+                Total Registered
+                {exam.registrationCount && exam.registrationCount > 0 && (
+                  <span className="text-xs text-blue-600 ml-1">(Display: {exam.registrationCount})</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

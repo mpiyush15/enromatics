@@ -11,6 +11,8 @@ interface ExamData {
   examName: string;
   examCode: string;
   description: string;
+  goal?: "NEET" | "JEE" | "MHT-CET";
+  registrationCount?: number;
   registrationStartDate: string;
   registrationEndDate: string;
   examDate: string;
@@ -272,13 +274,6 @@ export default function ExamRegistrationPage() {
     });
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -428,6 +423,13 @@ export default function ExamRegistrationPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             {exam.landingPage.heroTitle || exam.examName}
           </h1>
+          {exam.goal && (
+            <div className="flex justify-center mb-4">
+              <span className="px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
+                {exam.goal} Preparation
+              </span>
+            </div>
+          )}
           <p className="text-xl text-gray-600 mb-6">
             {exam.landingPage.heroSubtitle}
           </p>
@@ -476,7 +478,11 @@ export default function ExamRegistrationPage() {
                   <Users className="text-purple-600 mt-1" size={18} />
                   <div>
                     <p className="font-medium text-gray-900">Registrations</p>
-                    <p className="text-sm text-gray-600">{exam.stats?.totalRegistrations || 0} students</p>
+                    <p className="text-sm text-gray-600">
+                      {exam.registrationCount && exam.registrationCount > 0 
+                        ? exam.registrationCount 
+                        : exam.stats?.totalRegistrations || 0} students
+                    </p>
                   </div>
                 </div>
 
@@ -598,7 +604,7 @@ export default function ExamRegistrationPage() {
                       >
                         {exam.examDates.map((date, idx) => (
                           <option key={idx} value={date}>
-                            {formatDate(date)} - {formatTime(date)}
+                            {formatDate(date)}
                           </option>
                         ))}
                       </select>
