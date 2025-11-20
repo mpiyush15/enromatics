@@ -89,6 +89,12 @@ const examRegistrationSchema = new mongoose.Schema(
       type: Date,
     },
 
+    // Student's Goal/Target
+    goal: {
+      type: String,
+      enum: ["NEET", "JEE", "MHT-CET"],
+    },
+
     // Login Credentials (for student portal)
     userId: {
       type: mongoose.Schema.Types.ObjectId,

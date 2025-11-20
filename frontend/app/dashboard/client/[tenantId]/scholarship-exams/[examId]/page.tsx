@@ -29,7 +29,6 @@ interface Exam {
   examName: string;
   examCode: string;
   description: string;
-  goal?: "NEET" | "JEE" | "MHT-CET";
   registrationCount?: number;
   examDate: string;
   resultDate: string;
@@ -217,11 +216,6 @@ export default function ExamDashboard() {
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{exam.examName}</h1>
-                {exam.goal && (
-                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
-                    {exam.goal}
-                  </span>
-                )}
                 <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusBadge.color}`}>
                   <StatusIcon size={16} />
                   {statusBadge.label}

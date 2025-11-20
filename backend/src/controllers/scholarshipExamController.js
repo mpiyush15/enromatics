@@ -483,9 +483,12 @@ export const registerForExam = async (req, res) => {
 
     console.log(`Registration created successfully: ${registration.registrationNumber}`);
 
-    // Update exam stats
+    // Update exam stats and registration count
     await ScholarshipExam.findByIdAndUpdate(exam._id, {
-      $inc: { "stats.totalRegistrations": 1 },
+      $inc: { 
+        "stats.totalRegistrations": 1,
+        "registrationCount": 1
+      },
     });
 
     res.status(201).json({

@@ -11,7 +11,6 @@ interface ExamData {
   examName: string;
   examCode: string;
   description: string;
-  goal?: "NEET" | "JEE" | "MHT-CET";
   registrationCount?: number;
   registrationStartDate: string;
   registrationEndDate: string;
@@ -79,6 +78,7 @@ export default function ExamRegistrationPage() {
 
   // Form states
   const [selectedExamDate, setSelectedExamDate] = useState("");
+  const [goal, setGoal] = useState("");
   const [studentName, setStudentName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -121,8 +121,6 @@ export default function ExamRegistrationPage() {
 
       const data = await response.json();
       console.log("✅ Exam data fetched:", data);
-      console.log("🎯 Goal field:", data.exam?.goal);
-      console.log("📊 Registration count:", data.exam?.registrationCount);
       
       if (!data.exam) {
         throw new Error("No exam data returned from API");
@@ -198,6 +196,7 @@ export default function ExamRegistrationPage() {
         examId: exam._id,
         examCode: exam.examCode,
         selectedExamDate,
+        goal,
         studentName,
         email,
         phone,
@@ -425,13 +424,6 @@ export default function ExamRegistrationPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             {exam.landingPage.heroTitle || exam.examName}
           </h1>
-          {exam.goal && (
-            <div className="flex justify-center mb-4">
-              <span className="px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
-                {exam.goal} Preparation
-              </span>
-            </div>
-          )}
           <p className="text-xl text-gray-600 mb-6">
             {exam.landingPage.heroSubtitle}
           </p>
@@ -592,37 +584,7 @@ export default function ExamRegistrationPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                  {/* Debug Goal Info */}
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm">
-                    <p><strong>Debug Info:</strong></p>
-                    <p>Goal value: "{exam.goal}" (type: {typeof exam.goal})</p>
-                    <p>Goal exists: {exam.goal ? 'YES' : 'NO'}</p>
-                    <p>Registration Count: {exam.registrationCount || 'Not set'}</p>
-                  </div>
 
-                  {/* Goal Display - Always show if exists */}
-                  {exam.goal && exam.goal.trim() !== "" && (
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 mb-6">
-                      <div className="flex items-center justify-center gap-3">
-                        <Award className="text-indigo-600" size={24} />
-                        <div className="text-center">
-                          <p className="text-sm font-medium text-indigo-700">Exam Goal</p>
-                          <p className="text-xl font-bold text-indigo-800">{exam.goal} Preparation</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Test Goal Display for debugging */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-center gap-3">
-                      <Award className="text-red-600" size={24} />
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-red-700">Test Goal Display</p>
-                        <p className="text-xl font-bold text-red-800">NEET Preparation</p>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Exam Date Selection */}
                   {exam.examDates.length > 1 && (
@@ -657,6 +619,27 @@ export default function ExamRegistrationPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Goal Selection for Students */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Your Goal *
+                    </label>
+                    <select
+                      value={goal}
+                      onChange={(e) => setGoal(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select your preparation goal</option>
+                      <option value="NEET">NEET (Medical Entrance)</option>
+                      <option value="JEE">JEE (Engineering Entrance)</option>
+                      <option value="MHT-CET">MHT-CET (Maharashtra Common Entrance)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose the entrance exam you are preparing for
+                    </p>
+                  </div>
 
                   {/* Personal Information */}
                   <div>

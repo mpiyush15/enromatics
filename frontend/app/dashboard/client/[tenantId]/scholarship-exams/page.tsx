@@ -27,7 +27,6 @@ interface ScholarshipExam {
   examName: string;
   examCode: string;
   description: string;
-  goal?: "NEET" | "JEE" | "MHT-CET";
   registrationCount?: number;
   registrationStartDate: string;
   registrationEndDate: string;
@@ -310,11 +309,6 @@ export default function ScholarshipExamsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-xl font-semibold text-gray-900">{exam.examName}</h3>
-                    {exam.goal && (
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-600 text-xs font-medium rounded-full">
-                        {exam.goal}
-                      </span>
-                    )}
                     {getStatusBadge(exam.status)}
                   </div>
                   <p className="text-gray-600 mb-3">{exam.description}</p>

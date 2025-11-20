@@ -43,7 +43,6 @@ export default function CreateExamPage() {
   // Basic Details
   const [examName, setExamName] = useState("");
   const [description, setDescription] = useState("");
-  const [goal, setGoal] = useState<"NEET" | "JEE" | "MHT-CET" | "">("");
   const [registrationCount, setRegistrationCount] = useState(0);
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
@@ -112,10 +111,8 @@ export default function CreateExamPage() {
       }
 
       const examData = {
-        tenantId,
         examName,
         description,
-        goal,
         registrationCount,
         registrationStartDate,
         registrationEndDate,
@@ -310,22 +307,7 @@ export default function CreateExamPage() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Goal <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={goal}
-                      onChange={(e) => setGoal(e.target.value as "NEET" | "JEE" | "MHT-CET" | "")}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select Goal</option>
-                      <option value="NEET">NEET</option>
-                      <option value="JEE">JEE</option>
-                      <option value="MHT-CET">MHT-CET</option>
-                    </select>
-                  </div>
+
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
