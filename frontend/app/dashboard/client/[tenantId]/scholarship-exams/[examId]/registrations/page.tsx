@@ -632,7 +632,7 @@ export default function RegistrationsPage() {
                         </button>
                         {!reg.convertedToStudent && (
                           <button
-                            onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}/enroll`)}
+                            onClick={() => router.push(`/dashboard/client/${tenantId}/students/add?regId=${reg._id}&examId=${examId}&from=scholarship`)}
                             className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
                             title="Enroll Student"
                           >

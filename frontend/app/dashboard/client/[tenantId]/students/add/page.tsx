@@ -12,11 +12,16 @@ interface Batch {
 
 export default function AddStudentPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
   const router = useRouter();
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  
+  const tenantId = params.tenantId as string;
+  const regId = searchParams.get('regId');
+  const fromScholarship = searchParams.get('from') === 'scholarship';
   
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
+  const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [form, setForm] = useState({
     studentName: "",
     email: "",
@@ -41,7 +46,10 @@ export default function AddStudentPage() {
 
   useEffect(() => {
     fetchBatches();
-  }, []);
+    if (regId && fromScholarship) {
+      fetchRegistrationData();
+    }
+  }, [regId, fromScholarship]);
 
   const fetchBatches = async () => {
     try {
@@ -58,6 +66,61 @@ export default function AddStudentPage() {
     } catch (error) {
       console.error("Error fetching batches:", error);
       setLoadingBatches(false);
+    }
+  };
+
+  const fetchRegistrationData = async () => {
+    if (!regId) return;
+    
+    try {
+      setLoadingRegistration(true);
+      
+      // Get examId from URL parameters (if coming from scholarship registration)
+      const examId = searchParams.get('examId');
+      if (!examId) {
+        setStatus("❌ Missing exam information");
+        return;
+      }
+      
+      // Fetch all registrations for the exam and find the specific one
+      const res = await fetch(`${API_BASE_URL}/api/scholarship-exams/${examId}/registrations`, {
+        credentials: "include",
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const registration = data.registrations?.find((r: any) => r._id === regId);
+        
+        if (registration) {
+          // Pre-fill form with registration data
+          setForm(prev => ({
+            ...prev,
+            studentName: registration.studentName || "",
+            email: registration.email || "",
+            phone: registration.phone || "",
+            dateOfBirth: registration.dateOfBirth ? registration.dateOfBirth.split('T')[0] : "",
+            gender: registration.gender || "",
+            fatherName: registration.fatherName || "",
+            motherName: registration.motherName || "",
+            parentPhone: registration.parentPhone || "",
+            currentClass: registration.currentClass || "",
+            school: registration.school || "",
+            address: typeof registration.address === 'string' 
+              ? registration.address 
+              : `${registration.address?.street || ""}, ${registration.address?.city || ""}, ${registration.address?.state || ""} ${registration.address?.zipCode || ""}`.trim(),
+            previousMarks: registration.previousMarks || "",
+          }));
+          
+          setStatus("✅ Pre-filled with scholarship registration data");
+        } else {
+          setStatus("❌ Registration not found");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching registration data:", error);
+      setStatus("❌ Could not load registration data");
+    } finally {
+      setLoadingRegistration(false);
     }
   };
 
@@ -112,11 +175,20 @@ export default function AddStudentPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Student Admission Form
+                {fromScholarship ? "Scholarship Student Enrollment" : "Student Admission Form"}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Fill in the details to enroll a new student
+                {fromScholarship 
+                  ? "Convert scholarship exam registration to full student admission"
+                  : "Fill in the details to enroll a new student"
+                }
               </p>
+              {fromScholarship && loadingRegistration && (
+                <div className="mt-2 flex items-center gap-2 text-blue-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm">Loading registration data...</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
