@@ -175,7 +175,7 @@ export default function EnrollmentFormPage() {
     setFormData(prev => ({ ...prev, selectedBatch: batchId }));
     const batch = batches.find((b) => b._id === batchId);
     if (batch) {
-      const baseFee = batch.fee;
+      const baseFee = batch.fee || 0;
       let discount = 0;
 
       // Apply scholarship discount if eligible
@@ -361,7 +361,7 @@ export default function EnrollmentFormPage() {
                   <option value="">Select a batch...</option>
                   {batches.map((batch) => (
                     <option key={batch._id} value={batch._id}>
-                      {batch.batchName} - {batch.course} | Duration: {batch.duration} | Fee: ₹{batch.fee.toLocaleString()}
+                      {batch.batchName} - {batch.course} | Duration: {batch.duration} | Fee: ₹{(batch.fee || 0).toLocaleString()}
                     </option>
                   ))}
                 </select>
@@ -388,7 +388,7 @@ export default function EnrollmentFormPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Base Fee</p>
-                          <p className="font-semibold">₹{batch.fee.toLocaleString()}</p>
+                          <p className="font-semibold">₹{(batch.fee || 0).toLocaleString()}</p>
                         </div>
                         {batch.description && (
                           <div className="md:col-span-2">
@@ -415,7 +415,7 @@ export default function EnrollmentFormPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-lg">
                   <span className="text-gray-600">Base Fee</span>
-                  <span className="font-semibold text-gray-900">₹{feeAmount.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">₹{(feeAmount || 0).toLocaleString()}</span>
                 </div>
                 
                 {discountApplied > 0 && (
@@ -424,13 +424,13 @@ export default function EnrollmentFormPage() {
                       <Award size={16} />
                       Scholarship Discount
                     </span>
-                    <span className="font-semibold text-green-600">- ₹{discountApplied.toLocaleString()}</span>
+                    <span className="font-semibold text-green-600">- ₹{(discountApplied || 0).toLocaleString()}</span>
                   </div>
                 )}
                 
                 <div className="pt-3 border-t border-gray-300 flex justify-between items-center">
                   <span className="text-xl font-bold text-gray-900">Final Fee</span>
-                  <span className="text-3xl font-bold text-blue-600">₹{finalFee.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-blue-600">₹{(finalFee || 0).toLocaleString()}</span>
                 </div>
 
                 <div className="mt-4">
@@ -445,7 +445,7 @@ export default function EnrollmentFormPage() {
                         onChange={(e) => setFormData(prev => ({ ...prev, paymentPlan: e.target.value }))}
                         className="mr-2"
                       />
-                      <span>Pay Full Amount (₹{finalFee.toLocaleString()})</span>
+                      <span>Pay Full Amount (₹{(finalFee || 0).toLocaleString()})</span>
                     </label>
                     <label className="flex items-center">
                       <input
