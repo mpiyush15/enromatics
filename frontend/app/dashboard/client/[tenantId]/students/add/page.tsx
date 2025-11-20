@@ -27,7 +27,7 @@ export default function AddStudentPage() {
     email: "",
     phone: "",
     dateOfBirth: "",
-    gender: "male",
+    gender: "",
     fatherName: "",
     motherName: "",
     parentPhone: "",
@@ -99,7 +99,7 @@ export default function AddStudentPage() {
             email: registration.email || "",
             phone: registration.phone || "",
             dateOfBirth: registration.dateOfBirth ? registration.dateOfBirth.split('T')[0] : "",
-            gender: registration.gender || "",
+            gender: registration.gender ? registration.gender.toLowerCase() : "",
             fatherName: registration.fatherName || "",
             motherName: registration.motherName || "",
             parentPhone: registration.parentPhone || "",
@@ -142,6 +142,8 @@ export default function AddStudentPage() {
         credentials: "include",
         body: JSON.stringify({
           ...form,
+          name: form.studentName, // Map studentName to name for backend
+          gender: form.gender.charAt(0).toUpperCase() + form.gender.slice(1), // Capitalize gender
           fees: form.fees ? parseFloat(form.fees) : 0,
         }),
       });
