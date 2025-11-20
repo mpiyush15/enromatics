@@ -86,7 +86,7 @@ export default function ScholarshipResultsPage() {
 
   const fetchExams = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
         credentials: "include",
       });
@@ -101,7 +101,7 @@ export default function ScholarshipResultsPage() {
 
   const fetchResults = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const url = selectedExam === "all" 
         ? `${API_URL}/api/scholarship-results?tenantId=${tenantId}`
         : `${API_URL}/api/scholarship-results?tenantId=${tenantId}&examId=${selectedExam}`;
@@ -137,7 +137,7 @@ export default function ScholarshipResultsPage() {
       formData.append("file", uploadFile);
       formData.append("examId", selectedExam);
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-results/upload`, {
         method: "POST",
         credentials: "include",

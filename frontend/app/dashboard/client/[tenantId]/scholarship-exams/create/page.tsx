@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save, Eye } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 
 interface Reward {
   rankFrom: number;

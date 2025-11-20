@@ -3,8 +3,8 @@
  * Centralized API URL management for all backend requests
  */
 
-// Get API URL from environment variable, fallback to localhost for development
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
+// Get API URL from environment variable, fallback to production for deployment
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://enromatics.com';
 
 /**
  * Helper function to construct full API endpoint URLs

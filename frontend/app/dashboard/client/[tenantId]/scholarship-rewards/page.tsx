@@ -81,7 +81,7 @@ export default function ScholarshipRewardsPage() {
 
   const fetchRewards = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-rewards?tenantId=${tenantId}`, {
         credentials: "include",
       });
@@ -96,7 +96,7 @@ export default function ScholarshipRewardsPage() {
 
   const fetchStats = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-rewards/stats?tenantId=${tenantId}`, {
         credentials: "include",
       });
@@ -113,7 +113,7 @@ export default function ScholarshipRewardsPage() {
 
   const updateRewardStatus = async (rewardId: string, status: string) => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-rewards/${rewardId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

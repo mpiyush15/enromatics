@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Clock, User, CheckCircle, AlertCircle, FileText, Send } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 
 interface Question {
   id: string;

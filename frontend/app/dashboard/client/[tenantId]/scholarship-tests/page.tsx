@@ -84,7 +84,7 @@ export default function ScholarshipTestsPage() {
 
   const fetchExams = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
         credentials: "include",
       });
@@ -101,7 +101,7 @@ export default function ScholarshipTestsPage() {
 
   const fetchRegistrations = async (examId: string) => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
@@ -134,7 +134,7 @@ export default function ScholarshipTestsPage() {
     }
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       console.log("🔄 Updating attendance:", { registrationId, attended, selectedDate });
       
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance`, {
@@ -189,7 +189,7 @@ export default function ScholarshipTestsPage() {
 
     for (const registration of filteredRegistrations) {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
         const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registration._id}/attendance`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

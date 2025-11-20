@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Search, Filter, Calendar, Users, Award, TrendingUp, Eye, Edit2, Trash2, ExternalLink, Copy, CheckCircle } from "lucide-react";
 

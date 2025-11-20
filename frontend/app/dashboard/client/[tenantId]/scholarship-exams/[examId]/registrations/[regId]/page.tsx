@@ -123,7 +123,7 @@ export default function StudentResultPage() {
     try {
       setLoading(true);
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 
       // Fetch exam
       const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
@@ -199,7 +199,7 @@ export default function StudentResultPage() {
     try {
       setConverting(true);
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${regId}/convert`, {
         method: "POST",
@@ -227,7 +227,7 @@ export default function StudentResultPage() {
 
   const handleSaveNotes = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${regId}`, {
         method: "PUT",
