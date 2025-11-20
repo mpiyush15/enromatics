@@ -12,6 +12,7 @@ interface ExamData {
   examCode: string;
   description: string;
   registrationCount?: number;
+  tenantWebsite?: string;
   registrationStartDate: string;
   registrationEndDate: string;
   examDate: string;
@@ -382,7 +383,13 @@ export default function ExamRegistrationPage() {
               Student Login
             </button>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => {
+                if (exam.tenantWebsite) {
+                  window.open(exam.tenantWebsite, '_blank');
+                } else {
+                  router.push("/");
+                }
+              }}
               className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Go to Home

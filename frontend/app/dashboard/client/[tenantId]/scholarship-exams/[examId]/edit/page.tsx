@@ -39,6 +39,7 @@ interface ExamData {
   description: string;
   goal?: "NEET" | "JEE" | "MHT-CET";
   registrationCount?: number;
+  tenantWebsite?: string;
   registrationStartDate: string;
   registrationEndDate: string;
   examDate: string;

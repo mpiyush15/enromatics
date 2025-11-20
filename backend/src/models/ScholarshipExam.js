@@ -35,6 +35,10 @@ const scholarshipExamSchema = new mongoose.Schema(
       default: 0,
     },
 
+    tenantWebsite: {
+      type: String,
+    },
+
     // Exam Dates
     registrationStartDate: {
       type: Date,
