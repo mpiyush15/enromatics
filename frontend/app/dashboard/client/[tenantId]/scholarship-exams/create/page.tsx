@@ -43,6 +43,8 @@ export default function CreateExamPage() {
   // Basic Details
   const [examName, setExamName] = useState("");
   const [description, setDescription] = useState("");
+  const [goal, setGoal] = useState<"NEET" | "JEE" | "MHT-CET" | "">("");
+  const [registrationCount, setRegistrationCount] = useState(0);
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
   const [examDates, setExamDates] = useState<string[]>([""]);
@@ -113,6 +115,8 @@ export default function CreateExamPage() {
         tenantId,
         examName,
         description,
+        goal,
+        registrationCount,
         registrationStartDate,
         registrationEndDate,
         examDates: validExamDates,
@@ -304,6 +308,40 @@ export default function CreateExamPage() {
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Goal <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={goal}
+                      onChange={(e) => setGoal(e.target.value as "NEET" | "JEE" | "MHT-CET" | "")}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Goal</option>
+                      <option value="NEET">NEET</option>
+                      <option value="JEE">JEE</option>
+                      <option value="MHT-CET">MHT-CET</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Registration Count (Display)
+                    </label>
+                    <input
+                      type="number"
+                      value={registrationCount}
+                      onChange={(e) => setRegistrationCount(parseInt(e.target.value) || 0)}
+                      min={0}
+                      placeholder="Number to show on public page"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This number will be displayed on the public registration page to show current registrations
+                    </p>
                   </div>
 
                   <div>

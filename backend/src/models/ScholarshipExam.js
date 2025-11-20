@@ -25,6 +25,16 @@ const scholarshipExamSchema = new mongoose.Schema(
       type: String,
     },
 
+    goal: {
+      type: String,
+      enum: ["NEET", "JEE", "MHT-CET"],
+    },
+
+    registrationCount: {
+      type: Number,
+      default: 0,
+    },
+
     // Exam Dates
     registrationStartDate: {
       type: Date,

@@ -37,6 +37,8 @@ interface ExamData {
   examName: string;
   examCode: string;
   description: string;
+  goal?: "NEET" | "JEE" | "MHT-CET";
+  registrationCount?: number;
   registrationStartDate: string;
   registrationEndDate: string;
   examDate: string;
@@ -81,6 +83,8 @@ export default function EditExamPage() {
   // Form states
   const [examName, setExamName] = useState("");
   const [description, setDescription] = useState("");
+  const [goal, setGoal] = useState<"NEET" | "JEE" | "MHT-CET" | "">("");
+  const [registrationCount, setRegistrationCount] = useState(0);
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
   const [examDates, setExamDates] = useState<string[]>([""]);
@@ -137,6 +141,8 @@ export default function EditExamPage() {
       // Populate form fields
       setExamName(exam.examName || "");
       setDescription(exam.description || "");
+      setGoal(exam.goal || "");
+      setRegistrationCount(exam.registrationCount || 0);
       setRegistrationStartDate(exam.registrationStartDate ? new Date(exam.registrationStartDate).toISOString().split('T')[0] : "");
       setRegistrationEndDate(exam.registrationEndDate ? new Date(exam.registrationEndDate).toISOString().split('T')[0] : "");
       setExamDates(exam.examDates?.length > 0 ? exam.examDates.map(date => new Date(date).toISOString().split('T')[0]) : [new Date(exam.examDate).toISOString().split('T')[0]]);
@@ -213,6 +219,8 @@ export default function EditExamPage() {
       const examData = {
         examName,
         description,
+        goal: goal || undefined,
+        registrationCount,
         registrationStartDate,
         registrationEndDate,
         examDates: validExamDates,
@@ -400,6 +408,35 @@ export default function EditExamPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Brief description of the scholarship exam"
                 />
+              </div>
+
+              {/* Goal and Registration Count */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Goal</label>
+                  <select
+                    value={goal}
+                    onChange={(e) => setGoal(e.target.value as "NEET" | "JEE" | "MHT-CET" | "")}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select Goal</option>
+                    <option value="NEET">NEET</option>
+                    <option value="JEE">JEE</option>
+                    <option value="MHT-CET">MHT-CET</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Registration Count (for display)</label>
+                  <input
+                    type="number"
+                    value={registrationCount}
+                    onChange={(e) => setRegistrationCount(Number(e.target.value))}
+                    min={0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Number to show on public registration page"
+                  />
+                </div>
               </div>
 
               {/* Exam Dates */}
