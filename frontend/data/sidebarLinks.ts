@@ -130,8 +130,8 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/scholarship-exams/create",
       },
       {
-        label: "👥 Test Management",
-        href: "/dashboard/client/[tenantId]/scholarship-tests",
+        label: "👥 Manage Tests",
+        href: "/dashboard/client/[tenantId]/scholarship-exams",
       },
       {
         label: "📊 Results Management",

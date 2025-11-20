@@ -40,6 +40,7 @@ interface Exam {
   examName: string;
   examCode: string;
   examDate: string;
+  examDates: string[];
   examTime: string;
   duration: number;
   venue: string;
@@ -75,6 +76,7 @@ export default function ScholarshipTestsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [attendanceFilter, setAttendanceFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
     fetchExams();
@@ -114,29 +116,156 @@ export default function ScholarshipTestsPage() {
 
   const handleViewTest = async (exam: Exam) => {
     setSelectedExam(exam);
+    
+    // Set default date
+    if (exam.examDates && exam.examDates.length > 0) {
+      setSelectedDate(exam.examDates[0]); // Set first date as default
+    } else {
+      setSelectedDate(exam.examDate); // Use single date
+    }
+    
     await fetchRegistrations(exam._id);
   };
 
   const markAttendance = async (registrationId: string, attended: boolean) => {
+    if (attended && !selectedDate) {
+      alert("Please select an exam date first before marking attendance.");
+      return;
+    }
+    
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+      console.log("🔄 Updating attendance:", { registrationId, attended, selectedDate });
+      
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ hasAttended: attended }),
+        body: JSON.stringify({ 
+          hasAttended: attended,
+          examDateAttended: attended ? selectedDate : null 
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to update attendance");
+      console.log("📡 API Response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ API Error:", errorData);
+        throw new Error(errorData.message || `Failed to update attendance (${response.status})`);
+      }
+
+      const result = await response.json();
+      console.log("✅ API Success:", result);
       
       // Refresh registrations
       if (selectedExam) {
         await fetchRegistrations(selectedExam._id);
       }
+      
+      // Show success message
+      alert(`Attendance ${attended ? "marked" : "removed"} successfully!`);
     } catch (error) {
-      console.error("Error updating attendance:", error);
-      alert("Failed to update attendance");
+      console.error("❌ Error updating attendance:", error);
+      alert(error instanceof Error ? error.message : "Failed to update attendance");
     }
+  };
+
+  const markBulkAttendance = async (attended: boolean) => {
+    if (attended && !selectedDate) {
+      alert("Please select an exam date first before marking attendance.");
+      return;
+    }
+
+    const action = attended ? "present" : "absent";
+    const confirmation = confirm(
+      `Are you sure you want to mark all ${filteredRegistrations.length} filtered students as ${action}?`
+    );
+    
+    if (!confirmation) return;
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const registration of filteredRegistrations) {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+        const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registration._id}/attendance`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ 
+            hasAttended: attended,
+            examDateAttended: attended ? selectedDate : null 
+          }),
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      } catch (error) {
+        console.error("Error updating attendance for:", registration.registrationNumber, error);
+        errorCount++;
+      }
+    }
+
+    // Refresh the data
+    if (selectedExam) {
+      await fetchRegistrations(selectedExam._id);
+    }
+
+    // Show results
+    if (errorCount === 0) {
+      alert(`✅ Successfully marked ${successCount} students as ${action}!`);
+    } else {
+      alert(`⚠️ Updated ${successCount} students. ${errorCount} failed to update.`);
+    }
+  };
+
+  const exportToCSV = () => {
+    if (filteredRegistrations.length === 0) return;
+
+    const headers = [
+      "Registration Number",
+      "Student Name", 
+      "Email",
+      "Phone",
+      "Class",
+      "School",
+      "Status",
+      "Attendance",
+      "Marks",
+      "Result"
+    ];
+
+    const csvData = filteredRegistrations.map(reg => [
+      reg.registrationNumber,
+      reg.studentName,
+      reg.email,
+      reg.phone,
+      reg.currentClass,
+      reg.school,
+      reg.status,
+      reg.hasAttended ? "Present" : "Absent",
+      reg.marksObtained !== undefined ? reg.marksObtained : "Not Evaluated",
+      reg.result || "Pending"
+    ]);
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${selectedExam?.examCode}_attendance_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const formatDate = (dateString: string) => {
@@ -284,9 +413,53 @@ export default function ScholarshipTestsPage() {
             </div>
           </div>
 
-          {/* Filters */}
+          {/* Date Selection */}
+          {selectedExam.examDates && selectedExam.examDates.length > 0 && (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">Select Exam Date:</label>
+                <select
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent min-w-48"
+                >
+                  <option value="">Choose a date...</option>
+                  {selectedExam.examDates.map((date, index) => (
+                    <option key={index} value={date}>
+                      {formatDate(date)}
+                    </option>
+                  ))}
+                </select>
+                {selectedDate && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full font-medium">
+                      Selected: {formatDate(selectedDate)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {!selectedDate && (
+                <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
+                  <AlertCircle size={16} />
+                  Please select a date before marking attendance
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Single Date Display (if no multiple dates) */}
+          {(!selectedExam.examDates || selectedExam.examDates.length === 0) && (
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-6">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Calendar size={16} />
+                <span className="font-medium">Single Exam Date: {formatDate(selectedExam.examDate)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Filters and Bulk Actions */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6">
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex-1 min-w-64">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -318,6 +491,34 @@ export default function ScholarshipTestsPage() {
                 <option value="attended">Attended</option>
                 <option value="absent">Absent</option>
               </select>
+              
+              {/* Bulk Actions */}
+              <div className="flex gap-2 border-l pl-4">
+                <button
+                  onClick={() => markBulkAttendance(true)}
+                  disabled={!selectedDate || filteredRegistrations.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                >
+                  <UserCheck size={16} />
+                  Mark All Present
+                </button>
+                <button
+                  onClick={() => markBulkAttendance(false)}
+                  disabled={filteredRegistrations.length === 0}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                >
+                  <XCircle size={16} />
+                  Mark All Absent
+                </button>
+                <button
+                  onClick={exportToCSV}
+                  disabled={filteredRegistrations.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Export CSV
+                </button>
+              </div>
             </div>
           </div>
 
