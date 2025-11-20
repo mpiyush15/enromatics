@@ -142,6 +142,7 @@ export default function TestManagementPage() {
 
   const updateAttendance = async (registrationId: string, attended: boolean) => {
     try {
+      console.log("Updating attendance:", { registrationId, attended, selectedDate });
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -152,7 +153,14 @@ export default function TestManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update attendance");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("API Error:", response.status, errorData);
+        throw new Error(errorData.message || `Failed to update attendance (${response.status})`);
+      }
+
+      const data = await response.json();
+      console.log("Attendance updated successfully:", data);
 
       // Update local state
       setRegistrations(prev =>
@@ -170,6 +178,7 @@ export default function TestManagementPage() {
       return true;
     } catch (error) {
       console.error("Error updating attendance:", error);
+      alert(`Failed to update attendance: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     }
   };
