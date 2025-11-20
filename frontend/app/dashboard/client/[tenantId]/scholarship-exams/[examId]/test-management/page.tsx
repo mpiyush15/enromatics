@@ -82,14 +82,24 @@ export default function TestManagementPage() {
       });
       if (examResponse.ok) {
         const examData = await examResponse.json();
+        console.log("📅 Exam data fetched:", examData.exam);
+        console.log("📅 Available exam dates:", examData.exam.examDates);
+        console.log("📅 Single exam date:", examData.exam.examDate);
+        
         setExam(examData.exam);
         
         // Set default selected date to the first exam date
         if (examData.exam.examDates && examData.exam.examDates.length > 0) {
+          console.log("📅 Setting first exam date:", examData.exam.examDates[0]);
           setSelectedDate(examData.exam.examDates[0]);
         } else if (examData.exam.examDate) {
+          console.log("📅 Setting single exam date:", examData.exam.examDate);
           setSelectedDate(examData.exam.examDate);
+        } else {
+          console.log("❌ No exam dates found in exam data");
         }
+      } else {
+        console.error("❌ Failed to fetch exam data:", examResponse.status);
       }
 
       // Fetch registrations
@@ -142,7 +152,18 @@ export default function TestManagementPage() {
 
   const updateAttendance = async (registrationId: string, attended: boolean) => {
     try {
-      console.log("Updating attendance:", { registrationId, attended, selectedDate });
+      console.log("🔄 Updating attendance:", { 
+        registrationId, 
+        attended, 
+        selectedDate, 
+        apiUrl: `${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance` 
+      });
+      
+      if (!selectedDate) {
+        alert("Please select an exam date first");
+        return false;
+      }
+      
       const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -248,13 +269,26 @@ export default function TestManagementPage() {
   };
 
   const getAvailableDates = () => {
-    if (!exam) return [];
+    if (!exam) {
+      console.log("📅 No exam data available for dates");
+      return [];
+    }
+    
+    console.log("📅 Getting available dates from exam:", {
+      examDates: exam.examDates,
+      examDate: exam.examDate,
+      examDatesLength: exam.examDates?.length
+    });
     
     if (exam.examDates && exam.examDates.length > 0) {
+      console.log("📅 Returning examDates:", exam.examDates);
       return exam.examDates;
     } else if (exam.examDate) {
+      console.log("📅 Returning single examDate:", [exam.examDate]);
       return [exam.examDate];
     }
+    
+    console.log("❌ No dates available");
     return [];
   };
 
@@ -315,6 +349,11 @@ export default function TestManagementPage() {
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900">Test Management</h1>
             <p className="text-gray-600">{exam.examName} - {exam.examCode}</p>
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-1">
+                Debug: Selected Date: {selectedDate || 'None'} | Available Dates: {availableDates.length}
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -369,8 +408,31 @@ export default function TestManagementPage() {
         )}
       </div>
 
+      {!selectedDate && availableDates.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="text-yellow-600" size={24} />
+            <div>
+              <h3 className="font-semibold text-yellow-800">Please Select an Exam Date</h3>
+              <p className="text-yellow-700">Choose an exam date above to view and manage student attendance.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedDate && (
         <>
+          {/* Current Selected Date Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Calendar className="text-blue-600" size={20} />
+              <div>
+                <h3 className="font-semibold text-blue-800">Managing Attendance For:</h3>
+                <p className="text-blue-700">{formatDate(selectedDate)} at {formatTime(selectedDate)}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
