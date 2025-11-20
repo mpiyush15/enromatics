@@ -44,6 +44,7 @@ export default function CreateExamPage() {
   const [examName, setExamName] = useState("");
   const [description, setDescription] = useState("");
   const [registrationCount, setRegistrationCount] = useState(0);
+  const [tenantWebsite, setTenantWebsite] = useState("");
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
   const [examDates, setExamDates] = useState<string[]>([""]);
@@ -114,6 +115,7 @@ export default function CreateExamPage() {
         examName,
         description,
         registrationCount,
+        tenantWebsite,
         registrationStartDate,
         registrationEndDate,
         examDates: validExamDates,
@@ -323,6 +325,22 @@ export default function CreateExamPage() {
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       This number will be displayed on the public registration page to show current registrations
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tenant Website URL
+                    </label>
+                    <input
+                      type="url"
+                      value={tenantWebsite}
+                      onChange={(e) => setTenantWebsite(e.target.value)}
+                      placeholder="https://your-website.com"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Students will be redirected to this website when they click "Go to Home" after successful registration
                     </p>
                   </div>
 

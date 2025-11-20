@@ -84,6 +84,7 @@ export default function EditExamPage() {
   const [examName, setExamName] = useState("");
   const [description, setDescription] = useState("");
   const [registrationCount, setRegistrationCount] = useState(0);
+  const [tenantWebsite, setTenantWebsite] = useState("");
   const [registrationStartDate, setRegistrationStartDate] = useState("");
   const [registrationEndDate, setRegistrationEndDate] = useState("");
   const [examDates, setExamDates] = useState<string[]>([""]);
@@ -141,6 +142,7 @@ export default function EditExamPage() {
       setExamName(exam.examName || "");
       setDescription(exam.description || "");
       setRegistrationCount(exam.registrationCount || 0);
+      setTenantWebsite(exam.tenantWebsite || "");
       setRegistrationStartDate(exam.registrationStartDate ? new Date(exam.registrationStartDate).toISOString().split('T')[0] : "");
       setRegistrationEndDate(exam.registrationEndDate ? new Date(exam.registrationEndDate).toISOString().split('T')[0] : "");
       setExamDates(exam.examDates?.length > 0 ? exam.examDates.map(date => new Date(date).toISOString().split('T')[0]) : [new Date(exam.examDate).toISOString().split('T')[0]]);
@@ -407,20 +409,36 @@ export default function EditExamPage() {
                 />
               </div>
 
-              {/* Registration Count */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Registration Count (for display)</label>
-                <input
-                  type="number"
-                  value={registrationCount}
-                  onChange={(e) => setRegistrationCount(Number(e.target.value))}
-                  min={0}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Number to show on public registration page"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This number will be displayed on the public registration page
-                </p>
+              {/* Registration Count and Website */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Registration Count (for display)</label>
+                  <input
+                    type="number"
+                    value={registrationCount}
+                    onChange={(e) => setRegistrationCount(Number(e.target.value))}
+                    min={0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Number to show on public registration page"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    This number will be displayed on the public registration page
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tenant Website URL</label>
+                  <input
+                    type="url"
+                    value={tenantWebsite}
+                    onChange={(e) => setTenantWebsite(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://your-website.com"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Students will be redirected here after registration
+                  </p>
+                </div>
               </div>
 
               {/* Exam Dates */}
