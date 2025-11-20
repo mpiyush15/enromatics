@@ -80,6 +80,17 @@ export default function CreateExamPage() {
 
   // Form Fields
   const [customFields, setCustomFields] = useState<FormField[]>([]);
+  
+  // Standard Form Field Selections
+  const [collectPhoto, setCollectPhoto] = useState(true);
+  const [collectDateOfBirth, setCollectDateOfBirth] = useState(true);
+  const [collectGender, setCollectGender] = useState(true);
+  const [collectParentDetails, setCollectParentDetails] = useState(true);
+  const [collectCurrentClass, setCollectCurrentClass] = useState(true);
+  const [collectSchool, setCollectSchool] = useState(true);
+  const [collectAddress, setCollectAddress] = useState(true);
+  const [collectPreviousMarks, setCollectPreviousMarks] = useState(false);
+  const [collectAadhar, setCollectAadhar] = useState(false);
 
   const addExamDate = () => {
     setExamDates([...examDates, ""]);
@@ -139,9 +150,15 @@ export default function CreateExamPage() {
         landingPage,
         rewards,
         formFields: {
-          collectPhoto: true,
-          collectAadhar: false,
-          collectPreviousMarks: true,
+          collectPhoto,
+          collectDateOfBirth,
+          collectGender,
+          collectParentDetails,
+          collectCurrentClass,
+          collectSchool,
+          collectAddress,
+          collectPreviousMarks,
+          collectAadhar,
           customFields: customFields.map(field => ({
             fieldName: field.name,
             fieldType: field.type,
@@ -771,23 +788,139 @@ export default function CreateExamPage() {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Registration Form Fields</h3>
-                <p className="text-sm text-gray-600">Default fields are always included. Add custom fields below.</p>
+                <p className="text-sm text-gray-600">Select which fields to include in your registration form.</p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-blue-900 mb-2">Default Fields (Always Included):</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-700">
+              {/* Always Required Fields */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-green-900 mb-2">Always Required:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-green-700">
                   <div>✓ Full Name</div>
                   <div>✓ Email</div>
                   <div>✓ Phone</div>
-                  <div>✓ Date of Birth</div>
-                  <div>✓ Gender</div>
-                  <div>✓ Father's Name</div>
-                  <div>✓ Mother's Name</div>
-                  <div>✓ Parent's Phone</div>
-                  <div>✓ Current Class</div>
-                  <div>✓ School Name</div>
-                  <div>✓ Full Address</div>
+                </div>
+              </div>
+
+              {/* Selectable Standard Fields */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-gray-900 mb-4">Optional Standard Fields:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectPhoto}
+                      onChange={(e) => setCollectPhoto(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Student Photo</div>
+                      <div className="text-sm text-gray-500">Upload profile picture</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectDateOfBirth}
+                      onChange={(e) => setCollectDateOfBirth(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Date of Birth</div>
+                      <div className="text-sm text-gray-500">Student's birth date</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectGender}
+                      onChange={(e) => setCollectGender(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Gender</div>
+                      <div className="text-sm text-gray-500">Student's gender</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectParentDetails}
+                      onChange={(e) => setCollectParentDetails(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Parent Details</div>
+                      <div className="text-sm text-gray-500">Father & mother name, parent phone</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectCurrentClass}
+                      onChange={(e) => setCollectCurrentClass(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Current Class</div>
+                      <div className="text-sm text-gray-500">Student's current grade/class</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectSchool}
+                      onChange={(e) => setCollectSchool(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">School Name</div>
+                      <div className="text-sm text-gray-500">Current school/institution</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectAddress}
+                      onChange={(e) => setCollectAddress(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Full Address</div>
+                      <div className="text-sm text-gray-500">Complete residential address</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectPreviousMarks}
+                      onChange={(e) => setCollectPreviousMarks(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Previous Marks</div>
+                      <div className="text-sm text-gray-500">Last exam/grade marks</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={collectAadhar}
+                      onChange={(e) => setCollectAadhar(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Aadhar Card</div>
+                      <div className="text-sm text-gray-500">Government ID document</div>
+                    </div>
+                  </label>
                 </div>
               </div>
 

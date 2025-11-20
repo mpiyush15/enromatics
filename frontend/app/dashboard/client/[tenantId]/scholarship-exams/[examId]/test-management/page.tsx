@@ -253,6 +253,101 @@ export default function TestManagementPage() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadCSVTemplate = () => {
+    const headers = ["Registration Number", "Attendance Status"];
+    const sampleData = [
+      ["REG001", "Present"],
+      ["REG002", "Absent"],
+      ["REG003", "Present"]
+    ];
+    
+    const csvContent = [
+      headers.join(","),
+      ...sampleData.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance_upload_template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!selectedDate) {
+      alert("Please select an exam date first");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        alert("CSV file must have at least a header row and one data row");
+        return;
+      }
+
+      // Parse CSV (simple parsing - assumes no commas in data)
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const regNumberIndex = headers.findIndex(h => h.includes('registration'));
+      const attendanceIndex = headers.findIndex(h => h.includes('attendance'));
+
+      if (regNumberIndex === -1 || attendanceIndex === -1) {
+        alert("CSV must have 'Registration Number' and 'Attendance Status' columns");
+        return;
+      }
+
+      setSaving(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const data = lines[i].split(',').map(d => d.trim());
+        const regNumber = data[regNumberIndex];
+        const attendanceStatus = data[attendanceIndex];
+
+        if (!regNumber || !attendanceStatus) continue;
+
+        // Find the registration
+        const registration = filteredRegistrations.find(r => 
+          r.registrationNumber.toLowerCase() === regNumber.toLowerCase()
+        );
+
+        if (registration) {
+          const isPresent = attendanceStatus.toLowerCase().includes('present');
+          const success = await updateAttendance(registration._id, isPresent);
+          if (success) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } else {
+          errorCount++;
+          console.warn(`Registration number not found: ${regNumber}`);
+        }
+      }
+
+      alert(`CSV upload completed!\nSuccessful updates: ${successCount}\nErrors: ${errorCount}`);
+      
+      // Refresh data
+      await fetchData();
+      
+    } catch (error) {
+      console.error("Error processing CSV:", error);
+      alert("Failed to process CSV file. Please check the format and try again.");
+    } finally {
+      setSaving(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -510,25 +605,114 @@ export default function TestManagementPage() {
             </div>
 
             {/* Bulk Actions */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Quick Selection Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setSelectedStudents(filteredRegistrations.map(r => r._id))}
+                  className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors"
+                >
+                  Select All ({filteredRegistrations.length})
+                </button>
+                <button
+                  onClick={() => setSelectedStudents([])}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Clear Selection
+                </button>
+                <button
+                  onClick={() => {
+                    const presentStudents = filteredRegistrations
+                      .filter(r => r.hasAttended && r.examDateAttended === selectedDate)
+                      .map(r => r._id);
+                    setSelectedStudents(presentStudents);
+                  }}
+                  className="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200 transition-colors"
+                >
+                  Select Present ({stats.present})
+                </button>
+                <button
+                  onClick={() => {
+                    const absentStudents = filteredRegistrations
+                      .filter(r => !(r.hasAttended && r.examDateAttended === selectedDate))
+                      .map(r => r._id);
+                    setSelectedStudents(absentStudents);
+                  }}
+                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 transition-colors"
+                >
+                  Select Absent ({stats.absent})
+                </button>
+              </div>
+
+              {/* CSV Upload */}
+              <div className="flex gap-2 items-center">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCSVUpload}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label
+                  htmlFor="csv-upload"
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Upload size={16} />
+                  Upload CSV
+                </label>
+                <button
+                  onClick={downloadCSVTemplate}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700 transition-colors flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Template
+                </button>
+              </div>
+            </div>
+
+            {/* Selected Students Actions */}
             {selectedStudents.length > 0 && (
-              <div className="flex items-center gap-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm font-medium text-blue-700">
-                  {selectedStudents.length} students selected
-                </span>
+              <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg mt-4">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="text-blue-600" size={20} />
+                  <span className="text-sm font-medium text-blue-700">
+                    {selectedStudents.length} student{selectedStudents.length !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleBulkAttendance(true)}
                     disabled={saving}
-                    className="px-4 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {saving ? "Updating..." : "Mark Present"}
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={16} />
+                        Mark Present
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={() => handleBulkAttendance(false)}
                     disabled={saving}
-                    className="px-4 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {saving ? "Updating..." : "Mark Absent"}
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle size={16} />
+                        Mark Absent
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

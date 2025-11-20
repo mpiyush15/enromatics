@@ -116,13 +116,37 @@ const scholarshipExamSchema = new mongoose.Schema(
         type: Boolean,
         default: true,
       },
-      collectAadhar: {
+      collectDateOfBirth: {
         type: Boolean,
-        default: false,
+        default: true,
+      },
+      collectGender: {
+        type: Boolean,
+        default: true,
+      },
+      collectParentDetails: {
+        type: Boolean,
+        default: true,
+      },
+      collectCurrentClass: {
+        type: Boolean,
+        default: true,
+      },
+      collectSchool: {
+        type: Boolean,
+        default: true,
+      },
+      collectAddress: {
+        type: Boolean,
+        default: true,
       },
       collectPreviousMarks: {
         type: Boolean,
-        default: true,
+        default: false,
+      },
+      collectAadhar: {
+        type: Boolean,
+        default: false,
       },
       customFields: [
         {
