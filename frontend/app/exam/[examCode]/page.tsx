@@ -121,6 +121,8 @@ export default function ExamRegistrationPage() {
 
       const data = await response.json();
       console.log("✅ Exam data fetched:", data);
+      console.log("🎯 Goal field:", data.exam?.goal);
+      console.log("📊 Registration count:", data.exam?.registrationCount);
       
       if (!data.exam) {
         throw new Error("No exam data returned from API");
@@ -590,46 +592,61 @@ export default function ExamRegistrationPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                  {/* Exam Date Selection and Goal */}
-                  {(exam.examDates.length > 1 || exam.goal) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {exam.examDates.length > 1 && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Exam Date *
-                          </label>
-                          <select
-                            value={selectedExamDate}
-                            onChange={(e) => setSelectedExamDate(e.target.value)}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            {exam.examDates.map((date, idx) => (
-                              <option key={idx} value={date}>
-                                {formatDate(date)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
+                  {/* Debug Goal Info */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm">
+                    <p><strong>Debug Info:</strong></p>
+                    <p>Goal value: "{exam.goal}" (type: {typeof exam.goal})</p>
+                    <p>Goal exists: {exam.goal ? 'YES' : 'NO'}</p>
+                    <p>Registration Count: {exam.registrationCount || 'Not set'}</p>
+                  </div>
 
-                      {exam.goal && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Exam Goal
-                          </label>
-                          <div className="w-full px-3 py-2 border border-gray-200 bg-indigo-50 rounded-lg">
-                            <span className="text-indigo-700 font-semibold text-lg">
-                              {exam.goal} Preparation
-                            </span>
-                          </div>
+                  {/* Goal Display - Always show if exists */}
+                  {exam.goal && exam.goal.trim() !== "" && (
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-center justify-center gap-3">
+                        <Award className="text-indigo-600" size={24} />
+                        <div className="text-center">
+                          <p className="text-sm font-medium text-indigo-700">Exam Goal</p>
+                          <p className="text-xl font-bold text-indigo-800">{exam.goal} Preparation</p>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test Goal Display for debugging */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-center gap-3">
+                      <Award className="text-red-600" size={24} />
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-red-700">Test Goal Display</p>
+                        <p className="text-xl font-bold text-red-800">NEET Preparation</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Exam Date Selection */}
+                  {exam.examDates.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Exam Date *
+                      </label>
+                      <select
+                        value={selectedExamDate}
+                        onChange={(e) => setSelectedExamDate(e.target.value)}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {exam.examDates.map((date, idx) => (
+                          <option key={idx} value={date}>
+                            {formatDate(date)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
 
                   {/* Single Exam Date Info (when no selection needed) */}
-                  {exam.examDates.length === 1 && !exam.goal && (
+                  {exam.examDates.length === 1 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="text-blue-600" size={20} />
