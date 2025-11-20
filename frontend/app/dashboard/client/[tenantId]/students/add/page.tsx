@@ -18,17 +18,21 @@ export default function AddStudentPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
   const [form, setForm] = useState({
-    name: "",
+    studentName: "",
     email: "",
     phone: "",
-    gender: "Male",
     dateOfBirth: "",
+    gender: "male",
+    fatherName: "",
+    motherName: "",
+    parentPhone: "",
+    currentClass: "",
+    school: "",
+    address: "",
+    previousMarks: "",
     course: "",
     batchId: "",
-    address: "",
     fees: "",
-    guardianName: "",
-    guardianPhone: "",
     password: "",
   });
   const [status, setStatus] = useState("");
@@ -132,8 +136,8 @@ export default function AddStudentPage() {
                   Full Name *
                 </label>
                 <input
-                  name="name"
-                  value={form.name}
+                  name="studentName"
+                  value={form.studentName}
                   onChange={handleChange}
                   placeholder="Enter student's full name"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
@@ -193,9 +197,10 @@ export default function AddStudentPage() {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
                 >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
@@ -225,25 +230,38 @@ export default function AddStudentPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Guardian Name
+                  Father's Name
                 </label>
                 <input
-                  name="guardianName"
-                  value={form.guardianName}
+                  name="fatherName"
+                  value={form.fatherName}
                   onChange={handleChange}
-                  placeholder="Father's / Mother's name"
+                  placeholder="Father's name"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Guardian Phone
+                  Mother's Name
                 </label>
                 <input
-                  name="guardianPhone"
+                  name="motherName"
+                  value={form.motherName}
+                  onChange={handleChange}
+                  placeholder="Mother's name"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Parent Phone
+                </label>
+                <input
+                  name="parentPhone"
                   type="tel"
-                  value={form.guardianPhone}
+                  value={form.parentPhone}
                   onChange={handleChange}
                   placeholder="+91 98765 43210"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
@@ -260,6 +278,45 @@ export default function AddStudentPage() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Class
+                </label>
+                <input
+                  name="currentClass"
+                  value={form.currentClass}
+                  onChange={handleChange}
+                  placeholder="e.g., Class 10, Class 12"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  School Name
+                </label>
+                <input
+                  name="school"
+                  value={form.school}
+                  onChange={handleChange}
+                  placeholder="School/College name"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Previous Academic Marks
+                </label>
+                <input
+                  name="previousMarks"
+                  value={form.previousMarks}
+                  onChange={handleChange}
+                  placeholder="e.g., 95% in 10th grade"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Course / Program *
