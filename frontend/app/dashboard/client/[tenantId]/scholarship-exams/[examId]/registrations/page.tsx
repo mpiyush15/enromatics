@@ -19,6 +19,9 @@ import {
   TrendingUp,
   Eye,
   UserCheck,
+  RefreshCw,
+  AlertCircle,
+  GraduationCap,
 } from "lucide-react";
 
 interface Registration {
@@ -48,7 +51,7 @@ interface Registration {
   result?: "pass" | "fail" | "absent" | "pending";
   rewardEligible: boolean;
   rewardDetails?: any;
-  enrollmentStatus: "notInterested" | "interested" | "enrolled" | "converted";
+  enrollmentStatus: "notInterested" | "interested" | "followUp" | "enrolled" | "converted" | "directAdmission" | "waitingList" | "cancelled";
   convertedToStudent: boolean;
   studentId?: string;
   status: "registered" | "approved" | "rejected" | "appeared" | "resultPublished";
@@ -95,6 +98,7 @@ export default function RegistrationsPage() {
   const [resultFilter, setResultFilter] = useState<string>("all");
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchExamAndRegistrations();
@@ -165,24 +169,128 @@ export default function RegistrationsPage() {
     );
   };
 
-  const getEnrollmentBadge = (enrollmentStatus: string, converted: boolean) => {
-    if (converted) {
-      return (
-        <span className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
-          <CheckCircle size={12} />
-          Converted to Student
-        </span>
-      );
-    }
+  const handleEnrollmentStatusUpdate = async (registrationId: string, newStatus: Registration["enrollmentStatus"]) => {
+    if (updatingStatus === registrationId) return; // Prevent multiple updates
 
-    const badges: Record<string, { bg: string; text: string; label: string }> = {
-      notInterested: { bg: "bg-gray-100", text: "text-gray-600", label: "Not Interested" },
-      interested: { bg: "bg-yellow-100", text: "text-yellow-600", label: "Interested" },
-      enrolled: { bg: "bg-blue-100", text: "text-blue-600", label: "Enrolled" },
+    try {
+      setUpdatingStatus(registrationId);
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
+
+      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/enrollment-status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ enrollmentStatus: newStatus }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update enrollment status");
+
+      // Update the local state
+      setRegistrations(prev => 
+        prev.map(reg => 
+          reg._id === registrationId 
+            ? { ...reg, enrollmentStatus: newStatus }
+            : reg
+        )
+      );
+
+    } catch (error) {
+      console.error("Error updating enrollment status:", error);
+      alert("Failed to update enrollment status");
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const getEnrollmentStatusDropdown = (registration: Registration) => {
+    const statusConfig = {
+      notInterested: { 
+        bg: "bg-gray-100", 
+        text: "text-gray-600", 
+        label: "Not Interested", 
+        icon: XCircle 
+      },
+      interested: { 
+        bg: "bg-blue-100", 
+        text: "text-blue-600", 
+        label: "Interested", 
+        icon: AlertCircle 
+      },
+      followUp: { 
+        bg: "bg-yellow-100", 
+        text: "text-yellow-600", 
+        label: "Follow Up", 
+        icon: RefreshCw 
+      },
+      enrolled: { 
+        bg: "bg-green-100", 
+        text: "text-green-600", 
+        label: "Enrolled", 
+        icon: CheckCircle 
+      },
+      converted: { 
+        bg: "bg-green-100", 
+        text: "text-green-600", 
+        label: "Student", 
+        icon: GraduationCap 
+      },
+      directAdmission: { 
+        bg: "bg-purple-100", 
+        text: "text-purple-600", 
+        label: "Direct Admission", 
+        icon: Award 
+      },
+      waitingList: { 
+        bg: "bg-orange-100", 
+        text: "text-orange-600", 
+        label: "Waiting List", 
+        icon: Calendar 
+      },
+      cancelled: { 
+        bg: "bg-red-100", 
+        text: "text-red-600", 
+        label: "Cancelled", 
+        icon: XCircle 
+      }
     };
 
-    const badge = badges[enrollmentStatus] || badges.notInterested;
-    return <span className={`px-3 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>{badge.label}</span>;
+    const statusOptions = [
+      { value: "notInterested", label: "Not Interested", color: "text-gray-600" },
+      { value: "interested", label: "Interested", color: "text-blue-600" },
+      { value: "followUp", label: "Follow Up", color: "text-yellow-600" },
+      { value: "enrolled", label: "Enrolled", color: "text-green-600" },
+      { value: "directAdmission", label: "Direct Admission", color: "text-purple-600" },
+      { value: "waitingList", label: "Waiting List", color: "text-orange-600" },
+      { value: "cancelled", label: "Cancelled", color: "text-red-600" },
+    ];
+
+    const config = statusConfig[registration.enrollmentStatus] || statusConfig.notInterested;
+    const Icon = config.icon;
+    const isUpdating = updatingStatus === registration._id;
+
+    return (
+      <div className="relative w-40">
+        <select
+          value={registration.enrollmentStatus}
+          onChange={(e) => handleEnrollmentStatusUpdate(registration._id, e.target.value as Registration["enrollmentStatus"])}
+          disabled={isUpdating}
+          className={`w-full px-3 py-1 text-xs font-medium rounded-full border-0 focus:ring-2 focus:ring-blue-500 ${
+            isUpdating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"
+          } ${config.bg} ${config.text}`}
+        >
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value} className={option.color}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {isUpdating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const getResultBadge = (result?: string) => {
@@ -389,8 +497,12 @@ export default function RegistrationsPage() {
               <option value="all">All Enrollment Status</option>
               <option value="notInterested">Not Interested</option>
               <option value="interested">Interested</option>
+              <option value="followUp">Follow Up</option>
               <option value="enrolled">Enrolled</option>
               <option value="converted">Converted</option>
+              <option value="directAdmission">Direct Admission</option>
+              <option value="waitingList">Waiting List</option>
+              <option value="cancelled">Cancelled</option>
             </select>
 
             <select
@@ -497,14 +609,14 @@ export default function RegistrationsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getEnrollmentBadge(reg.enrollmentStatus, reg.convertedToStudent)}
+                      {getEnrollmentStatusDropdown(reg)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex gap-2">
                         <button
                           onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}`)}
                           className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="View Full Result & Enroll"
+                          title="View Details"
                         >
                           <FileText size={16} />
                         </button>
@@ -518,13 +630,13 @@ export default function RegistrationsPage() {
                         >
                           <Eye size={16} />
                         </button>
-                        {!reg.convertedToStudent && reg.enrollmentStatus === "interested" && (
+                        {!reg.convertedToStudent && (
                           <button
-                            onClick={() => handleConvertToAdmission(reg._id, reg.studentName)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Quick Convert"
+                            onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${reg._id}/enroll`)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
+                            title="Enroll Student"
                           >
-                            <UserCheck size={16} />
+                            Enroll Now
                           </button>
                         )}
                       </div>

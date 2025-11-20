@@ -336,13 +336,22 @@ export default function StudentResultPage() {
             {/* Quick Actions */}
             <div className="flex gap-2">
               {!registration.convertedToStudent && (
-                <button
-                  onClick={() => setShowEnrollmentModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <UserCheck size={20} />
-                  Convert to Admission
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push(`/dashboard/client/${tenantId}/scholarship-exams/${examId}/registrations/${regId}/enroll`)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <UserCheck size={20} />
+                    Enroll Now
+                  </button>
+                  <button
+                    onClick={() => setShowEnrollmentModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <UserCheck size={20} />
+                    Quick Convert
+                  </button>
+                </>
               )}
               <button
                 onClick={() => setShowNotesModal(true)}
