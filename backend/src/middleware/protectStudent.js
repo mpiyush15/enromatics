@@ -17,11 +17,20 @@ export const protectStudent = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("🔍 protectStudent: Token decoded:", { id: decoded.id, role: decoded.role });
     
-    req.student = await Student.findById(decoded.id).select("-password");
+    // Support both web tokens (id) and mobile tokens (studentId/userId)
+    const studentId = decoded.id || decoded.studentId || decoded.userId;
+    console.log("🔍 protectStudent: Token decoded:", { 
+      id: decoded.id, 
+      userId: decoded.userId, 
+      studentId: decoded.studentId,
+      role: decoded.role,
+      finalStudentId: studentId 
+    });
+    
+    req.student = await Student.findById(studentId).select("-password");
     if (!req.student) {
-      console.log("❌ protectStudent: Student not found for ID:", decoded.id);
+      console.log("❌ protectStudent: Student not found for ID:", studentId);
       return res.status(401).json({ message: "Student not found" });
     }
     

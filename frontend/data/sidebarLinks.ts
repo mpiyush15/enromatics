@@ -90,6 +90,11 @@ export const sidebarLinks = [
     roles: ["admin", "user", "subscriber"],
   },
   {
+    href: "/dashboard/subscription",
+    label: "💰 Subscription & Mobile App",
+    roles: ["tenantAdmin"],
+  },
+  {
     label: "📚 Academics",
     href: "#",
     roles: ["tenantAdmin", "teacher", "staff", "student"],

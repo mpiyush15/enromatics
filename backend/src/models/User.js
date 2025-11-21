@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
 
     password: { type: String, required: true, minlength: 6 },
 
-    tenantId: { type: String, required: true, index: true },
+    tenantId: { type: String, required: true },
 
     role: {
       type: String,
@@ -77,8 +77,8 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes for performance
-userSchema.index({ email: 1 });
+// Indexes for performance (email unique index already exists, tenantId added below)
+userSchema.index({ tenantId: 1 });
 
 // Password hashing middleware
 userSchema.pre("save", async function (next) {

@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# React Native / Mobile App Development
+EnromaticsMobile/
+android/
+ios/
+*.apk
+*.ipa
+*.aab
+
+# Frontend build artifacts
+frontend/dist/
+frontend/android/
+frontend/.next/
+frontend/out/
+
+# Backend uploads and generated files
+backend/uploads/
+backend/dist/
+
+# Package manager lock files (keep one, ignore others)
+package-lock.json
+yarn.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.tgz
+*.tar.gz
+.eslintcache
