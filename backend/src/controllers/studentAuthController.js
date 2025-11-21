@@ -45,7 +45,11 @@ export const loginStudent = async (req, res) => {
       path: "/",
     });
 
-    res.status(200).json({ success: true, student: student.toObject() });
+    res.status(200).json({ 
+      success: true, 
+      token, // Include token for mobile apps
+      student: student.toObject() 
+    });
   } catch (err) {
     console.error("Student login error:", err);
     res.status(500).json({ message: "Server error" });
