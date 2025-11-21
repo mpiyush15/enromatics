@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Search, Filter, Calendar, Users, Award, TrendingUp, Eye, Edit2, Trash2, ExternalLink, Copy, CheckCircle } from "lucide-react";
+import MobileAppBanner from "@/components/dashboard/MobileAppBanner";
 
 interface Reward {
   rankFrom: number;
@@ -200,6 +201,9 @@ export default function ScholarshipExamsPage() {
           </button>
         </div>
       </div>
+
+      {/* Mobile App Banner */}
+      <MobileAppBanner tenantId={tenantId} className="mb-8" />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
