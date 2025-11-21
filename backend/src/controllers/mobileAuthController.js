@@ -66,7 +66,7 @@ const registerMobileUser = async (req, res) => {
     let defaultBatch = batch || 'Mobile Registration';
     
     // Tenant-specific defaults for better user experience
-    if (tenantId === 'utkarsh_education_2024') {
+    if (tenantId === '0946d809') {
       defaultCourse = course || currentClass || 'JEE/NEET Foundation';
       defaultBatch = batch || 'Foundation Batch 2024';
     } else if (tenantId === 'enromatics_main_portal') {
