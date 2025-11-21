@@ -6,17 +6,27 @@ const generateToken = (id, tenantId) =>
 
 export const loginStudent = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, tenantId } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password required" });
 
+    // Require tenantId for student mobile login to enforce tenant isolation.
+    // If tenantId is not provided, reject and ask client to include the tenant identifier (the tenant app or registration link provides this).
+    if (!tenantId) {
+      console.log("❌ Tenant ID not provided in student login request");
+      return res.status(400).json({ message: "tenantId is required for student login. Please use your institute's app or include the tenant identifier." });
+    }
+
     const emailQuery = String(email).trim();
-    console.log("🔐 Student login attempt for email:", emailQuery);
-    // case-insensitive search to avoid mismatch due to casing or surrounding spaces
-    const student = await Student.findOne({ email: { $regex: `^${emailQuery}$`, $options: "i" } });
-    
+    console.log("🔐 Student login attempt for email:", emailQuery, "tenantId:", tenantId);
+    // case-insensitive search and tenant-scoped lookup to avoid cross-tenant logins
+    const student = await Student.findOne({ 
+      email: { $regex: `^${emailQuery}$`, $options: "i" },
+      tenantId: tenantId
+    });
+
     if (!student) {
-      console.log("❌ Student not found with email:", emailQuery);
-      return res.status(404).json({ message: "Student not found with this email. Please check your email address." });
+      console.log("❌ Student not found for email:", emailQuery, "under tenant:", tenantId);
+      return res.status(404).json({ message: "Student not found for this institute. Please ensure you are using the correct institute app or registration link." });
     }
     
     console.log("✅ Student found:", student.name, "| Has password:", !!student.password);
