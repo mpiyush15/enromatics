@@ -7,6 +7,11 @@ const studentSchema = new mongoose.Schema({
     required: true,
     index: true, // so we can quickly find students by tenant
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    index: true, // for linking mobile registrations to user accounts
+  },
   name: {
     type: String,
     required: true,
