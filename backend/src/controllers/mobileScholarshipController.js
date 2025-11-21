@@ -3,22 +3,24 @@ import ExamRegistration from '../models/ExamRegistration.js';
 import User from '../models/User.js';
 import Student from '../models/Student.js';
 
-// Get scholarship exams for mobile app (tenant-specific)
+// Get scholarship exams for mobile app (EXACT same as web dashboard)
 const getMobileScholarshipExams = async (req, res) => {
   try {
-    const { tenantId } = req.user;
-
+    const tenantId = req.user?.tenantId;
+    
     if (!tenantId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Tenant ID required'
+      return res.status(403).json({ 
+        message: "Tenant ID missing" 
       });
     }
 
-    // Get ALL exams for this tenant (same as web dashboard)
-    const exams = await ScholarshipExam.find({ tenantId })
-    .sort({ createdAt: -1 })
-    .lean();
+    // Use EXACT same query as web dashboard getAllExams controller
+    const filter = { tenantId };
+    
+    const total = await ScholarshipExam.countDocuments(filter);
+    const exams = await ScholarshipExam.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Get registration counts for each exam
     const examsWithCounts = await Promise.all(
@@ -71,16 +73,19 @@ const getMobileScholarshipExams = async (req, res) => {
       })
     );
 
-    res.json({
+    // Return EXACT same structure as web dashboard
+    res.status(200).json({
       success: true,
+      total,
+      page: 1,
+      pages: 1, 
       exams: examsWithCounts
     });
 
   } catch (error) {
-    console.error('Error fetching mobile scholarship exams:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch scholarship exams'
+    console.error('Get all exams error:', error);
+    res.status(500).json({ 
+      message: "Server error" 
     });
   }
 };
