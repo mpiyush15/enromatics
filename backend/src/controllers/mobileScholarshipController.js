@@ -196,12 +196,12 @@ const registerForScholarshipExam = async (req, res) => {
       address: student.address,
       currentClass: student.currentClass,
       school: student.school,
-      gender: student.gender || 'not-specified',
+      gender: student.gender && ['male', 'female', 'other'].includes(student.gender) ? student.gender : 'other',
       category: student.category || 'general',
       registrationDate: new Date(),
       status: 'registered',
       registrationSource: 'mobile_app',
-      paymentStatus: exam.registrationFee?.paymentRequired ? 'pending' : 'not-required',
+      paymentStatus: exam.registrationFee?.paymentRequired ? 'pending' : 'waived',
       feeAmount: exam.registrationFee?.amount || 0,
     };
 
