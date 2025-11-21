@@ -83,12 +83,26 @@ const registerForScholarshipExam = async (req, res) => {
     }
 
     if (!user || !student) {
+      console.log('❌ Mobile scholarship registration - User/Student not found:', {
+        userId, studentId, tenantId, 
+        hasUser: !!user, hasStudent: !!student,
+        userEmail: user?.email,
+        studentPhone: student?.phone
+      });
       return res.status(404).json({
         success: false,
         message: 'User or student record not found',
         debug: { userId, studentId, tenantId, hasUser: !!user, hasStudent: !!student }
       });
     }
+
+    console.log('✅ Found user and student for scholarship registration:', {
+      userName: user.name,
+      userEmail: user.email,
+      studentName: student.name,
+      studentPhone: student.phone,
+      examId
+    });
 
     // Find exam
     const exam = await ScholarshipExam.findOne({ 
