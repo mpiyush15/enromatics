@@ -15,22 +15,32 @@ const getMobileScholarshipExams = async (req, res) => {
       });
     }
 
-    // Get active exams for this tenant
-    const exams = await ScholarshipExam.find({
-      tenantId,
-      status: 'active',
-      isPublic: true,
-      registrationEndDate: { $gte: new Date() } // Only show exams with open registration
-    })
-    .select('examName examCode description registrationStartDate registrationEndDate examDate totalMarks passingMarks scholarshipDetails eligibleClasses minimumPercentage ageLimit examFee registrationFee')
+    // Get ALL exams for this tenant (same as web dashboard)
+    const exams = await ScholarshipExam.find({ tenantId })
     .sort({ createdAt: -1 })
     .lean();
 
     // Get registration counts for each exam
     const examsWithCounts = await Promise.all(
       exams.map(async (exam) => {
-        const registrationCount = await ExamRegistration.countDocuments({
+        // Get exam statistics (same structure as web dashboard)
+        const totalRegistrations = await ExamRegistration.countDocuments({
           examId: exam._id
+        });
+        
+        const totalAppeared = await ExamRegistration.countDocuments({
+          examId: exam._id,
+          attendanceStatus: 'present'
+        });
+        
+        const totalPassed = await ExamRegistration.countDocuments({
+          examId: exam._id,
+          status: 'passed'
+        });
+        
+        const totalEnrolled = await ExamRegistration.countDocuments({
+          examId: exam._id,
+          enrollmentStatus: 'enrolled'
         });
 
         const userRegistration = await ExamRegistration.findOne({
@@ -41,9 +51,19 @@ const getMobileScholarshipExams = async (req, res) => {
           ]
         });
 
+        // Return exact same structure as web dashboard
         return {
           ...exam,
-          appliedCount: registrationCount,
+          stats: {
+            totalRegistrations,
+            totalAppeared, 
+            totalPassed,
+            totalEnrolled,
+            passPercentage: totalAppeared > 0 ? Math.round((totalPassed / totalAppeared) * 100) : 0,
+            conversionRate: totalRegistrations > 0 ? Math.round((totalEnrolled / totalRegistrations) * 100) : 0
+          },
+          // Mobile-specific additions
+          appliedCount: totalRegistrations,
           hasApplied: !!userRegistration,
           userRegistrationId: userRegistration?._id,
           registrationNumber: userRegistration?.registrationNumber,
