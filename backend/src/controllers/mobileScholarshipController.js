@@ -69,16 +69,24 @@ const getMobileScholarshipExams = async (req, res) => {
 const registerForScholarshipExam = async (req, res) => {
   try {
     const { examId } = req.params;
-    const { userId, tenantId } = req.user;
+    const { _id: userId, tenantId, studentId } = req.user;
 
-    // Get user and student details
-    const user = await User.findById(userId);
-    const student = await Student.findOne({ userId, tenantId });
+    // Get user and student details  
+    const user = req.user; // Already loaded by protect middleware
+    let student;
+    
+    // Try to find student by studentId first (from JWT), then fallback to userId lookup
+    if (studentId) {
+      student = await Student.findById(studentId);
+    } else {
+      student = await Student.findOne({ userId, tenantId });
+    }
 
     if (!user || !student) {
       return res.status(404).json({
         success: false,
-        message: 'User or student record not found'
+        message: 'User or student record not found',
+        debug: { userId, studentId, tenantId, hasUser: !!user, hasStudent: !!student }
       });
     }
 
