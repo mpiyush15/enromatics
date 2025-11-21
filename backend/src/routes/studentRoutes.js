@@ -4,6 +4,7 @@ import { resetStudentPassword } from "../controllers/studentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { requirePermission } from "../middleware/permissionMiddleware.js";
+import Student from "../models/Student.js";
 
 const router = express.Router();
 
@@ -71,6 +72,38 @@ router.put(
   authorizeRoles("tenantAdmin", "teacher", "staff"),
   requirePermission("canAccessStudents"),
   resetStudentPassword
+);
+
+// Delete student
+router.delete(
+  "/:id",
+  protect,
+  authorizeRoles("tenantAdmin"),
+  requirePermission("canAccessStudents"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.user.tenantId;
+      
+      // Find and delete student (only for current tenant)
+      const deletedStudent = await Student.findOneAndDelete({ 
+        _id: id, 
+        tenantId: tenantId 
+      });
+      
+      if (!deletedStudent) {
+        return res.status(404).json({ message: 'Student not found' });
+      }
+      
+      res.json({ 
+        message: 'Student deleted successfully',
+        student: deletedStudent 
+      });
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
 );
 
 export default router;
