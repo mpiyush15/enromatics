@@ -18,6 +18,8 @@ const registerMobileUser = async (req, res) => {
       address,
       school,
       currentClass,
+      course, // Allow course to be provided directly
+      batch,  // Allow batch to be provided directly
       registrationSource = 'mobile_app'
     } = req.body;
 
@@ -59,11 +61,26 @@ const registerMobileUser = async (req, res) => {
 
     const user = await User.create(userData);
 
+    // Determine course and batch based on tenant and provided data
+    let defaultCourse = course || currentClass || 'General Studies';
+    let defaultBatch = batch || 'Mobile Registration';
+    
+    // Tenant-specific defaults for better user experience
+    if (tenantId === 'utkarsh_education_2024') {
+      defaultCourse = course || currentClass || 'JEE/NEET Foundation';
+      defaultBatch = batch || 'Foundation Batch 2024';
+    } else if (tenantId === 'enromatics_main_portal') {
+      defaultCourse = course || currentClass || 'Competitive Exam Prep';
+      defaultBatch = batch || 'Regular Batch';
+    }
+
     // Create corresponding student record for scholarship eligibility
     const studentData = {
       name,
       email: user.email,
       phone,
+      course: defaultCourse,
+      batch: defaultBatch,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
       fatherName,
       motherName,
