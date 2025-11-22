@@ -220,8 +220,18 @@ export default function WhatsAppDashboardPage() {
             
             <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
               <button
-                onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/campaigns`)}
+                onClick={() => router.push(`/dashboard/whatsapp/inbox`)}
                 className="px-4 py-2 md:px-6 md:py-3 bg-white text-green-600 rounded-lg md:rounded-xl hover:bg-green-50 font-semibold shadow-lg flex items-center gap-2 text-sm md:text-base"
+              >
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                Inbox
+              </button>
+              
+              <button
+                onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/campaigns`)}
+                className="px-4 py-2 md:px-6 md:py-3 bg-white/20 text-white rounded-lg md:rounded-xl hover:bg-white/30 font-semibold backdrop-blur-sm flex items-center gap-2 text-sm md:text-base"
               >
                 <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />

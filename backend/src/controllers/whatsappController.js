@@ -3,6 +3,7 @@ import WhatsAppConfig from '../models/WhatsAppConfig.js';
 import WhatsAppMessage from '../models/WhatsAppMessage.js';
 import WhatsAppContact from '../models/WhatsAppContact.js';
 import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
+import WhatsAppInbox from '../models/WhatsAppInbox.js';
 
 // Helper function to get tenantId (supports SuperAdmin accessing any tenant)
 const getTenantId = (req, source = 'query') => {
@@ -491,9 +492,134 @@ export const handleWebhook = async (req, res) => {
 
             // Handle incoming messages
             if (value.messages) {
-              console.log('📬 Incoming messages:', value.messages.length);
-              console.log('Messages:', JSON.stringify(value.messages, null, 2));
-              // TODO: Handle incoming messages if needed
+              console.log('📬 ========== INCOMING MESSAGES ==========');
+              console.log(`Received ${value.messages.length} incoming message(s)`);
+              
+              for (const message of value.messages) {
+                try {
+                  console.log('📥 Processing incoming message:', message.id);
+                  console.log('From:', message.from);
+                  console.log('Type:', message.type);
+                  console.log('Timestamp:', message.timestamp);
+                  
+                  // Get tenant ID from phone number configuration
+                  const config = await WhatsAppConfig.findOne({ 
+                    phoneNumberId: value.metadata?.phone_number_id || entry.id 
+                  });
+                  
+                  if (!config) {
+                    console.log('⚠️ No config found for phone number ID:', value.metadata?.phone_number_id);
+                    continue;
+                  }
+                  
+                  const tenantId = config.tenantId;
+                  console.log('📋 TenantId:', tenantId);
+                  
+                  // Create conversation ID (unique per sender)
+                  const conversationId = `${tenantId}_${message.from}`;
+                  
+                  // Prepare message content based on type
+                  const content = {};
+                  let messageType = message.type;
+                  
+                  switch (message.type) {
+                    case 'text':
+                      content.text = message.text?.body;
+                      break;
+                      
+                    case 'image':
+                    case 'document':
+                    case 'audio':
+                    case 'video':
+                    case 'voice':
+                      const media = message[message.type];
+                      content.mediaId = media?.id;
+                      content.mimeType = media?.mime_type;
+                      content.filename = media?.filename;
+                      content.caption = media?.caption;
+                      if (message.type === 'voice') messageType = 'audio';
+                      break;
+                      
+                    case 'location':
+                      content.latitude = message.location?.latitude;
+                      content.longitude = message.location?.longitude;
+                      content.address = message.location?.address;
+                      content.name = message.location?.name;
+                      break;
+                      
+                    case 'contacts':
+                      content.contacts = message.contacts?.map(contact => ({
+                        name: contact.name?.formatted_name,
+                        phone: contact.phones?.[0]?.phone,
+                        email: contact.emails?.[0]?.email
+                      }));
+                      messageType = 'contact';
+                      break;
+                      
+                    case 'interactive':
+                      if (message.interactive?.type === 'button_reply') {
+                        content.interactiveType = 'button_reply';
+                        content.buttonId = message.interactive.button_reply?.id;
+                        content.buttonText = message.interactive.button_reply?.title;
+                      } else if (message.interactive?.type === 'list_reply') {
+                        content.interactiveType = 'list_reply';
+                        content.listId = message.interactive.list_reply?.id;
+                        content.listTitle = message.interactive.list_reply?.title;
+                        content.listDescription = message.interactive.list_reply?.description;
+                      }
+                      break;
+                      
+                    case 'reaction':
+                      content.reactionEmoji = message.reaction?.emoji;
+                      content.reactedToMessageId = message.reaction?.message_id;
+                      break;
+                      
+                    default:
+                      console.log('⚠️ Unsupported message type:', message.type);
+                      content.text = `[${message.type.toUpperCase()}] Unsupported message type`;
+                  }
+                  
+                  // Get sender profile information
+                  const contacts = value.contacts || [];
+                  const senderProfile = contacts.find(c => c.wa_id === message.from);
+                  
+                  // Create inbox message
+                  const inboxMessage = {
+                    tenantId,
+                    waMessageId: message.id,
+                    senderPhone: message.from,
+                    senderName: senderProfile?.profile?.name,
+                    senderProfileName: senderProfile?.profile?.name,
+                    messageType,
+                    content,
+                    timestamp: new Date(parseInt(message.timestamp) * 1000),
+                    conversationId,
+                    context: {
+                      forwarded: message.context?.forwarded || false,
+                      quotedMessageId: message.context?.id,
+                      quotedMessage: message.context?.body
+                    },
+                    webhookData: message
+                  };
+                  
+                  // Save to inbox
+                  const savedMessage = await WhatsAppInbox.create(inboxMessage);
+                  console.log('✅ Saved incoming message to inbox:', savedMessage._id);
+                  
+                  // Log message details
+                  console.log('💬 Message details:');
+                  console.log(`  - Type: ${messageType}`);
+                  console.log(`  - From: ${message.from} (${senderProfile?.profile?.name || 'Unknown'})`);
+                  console.log(`  - Content: ${JSON.stringify(content, null, 2)}`);
+                  console.log(`  - Conversation: ${conversationId}`);
+                  
+                } catch (messageError) {
+                  console.error('❌ Error processing incoming message:', messageError);
+                  console.error('Message data:', JSON.stringify(message, null, 2));
+                }
+              }
+              
+              console.log('========== INCOMING MESSAGES PROCESSED ==========');
             }
           } else {
             console.log('ℹ️ Ignoring field:', change.field);
@@ -1131,6 +1257,290 @@ export const debugMessages = async (req, res) => {
   }
 };
 
+// ========== INBOX MANAGEMENT ==========
+
+// Get inbox conversations list
+export const getInboxConversations = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { limit = 20, unreadOnly = false } = req.query;
+
+    console.log('📥 Getting inbox conversations for tenant:', tenantId);
+
+    // Get conversations with aggregation
+    const conversations = await WhatsAppInbox.getConversations(tenantId, parseInt(limit));
+    
+    // Filter unread only if requested
+    const filteredConversations = unreadOnly === 'true' 
+      ? conversations.filter(conv => conv.unreadCount > 0)
+      : conversations;
+
+    // Get total unread count
+    const totalUnreadCount = await WhatsAppInbox.getUnreadCount(tenantId);
+
+    res.json({
+      success: true,
+      conversations: filteredConversations,
+      totalUnreadCount,
+      count: filteredConversations.length
+    });
+  } catch (error) {
+    console.error('Get inbox conversations error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Get conversation messages
+export const getConversation = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { conversationId } = req.params;
+    const { limit = 50, page = 1 } = req.query;
+
+    console.log('💬 Getting conversation:', conversationId, 'for tenant:', tenantId);
+
+    const messages = await WhatsAppInbox.getConversation(
+      tenantId, 
+      conversationId, 
+      parseInt(limit)
+    );
+
+    // Mark messages as read when viewing conversation
+    await WhatsAppInbox.updateMany(
+      { tenantId, conversationId, isRead: false },
+      { 
+        $set: { 
+          isRead: true, 
+          readAt: new Date(),
+          readBy: req.user._id
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      messages: messages.reverse(), // Show oldest first
+      conversationId,
+      count: messages.length
+    });
+  } catch (error) {
+    console.error('Get conversation error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Mark conversation as read
+export const markConversationRead = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { conversationId } = req.params;
+
+    console.log('✅ Marking conversation as read:', conversationId);
+
+    const result = await WhatsAppInbox.updateMany(
+      { tenantId, conversationId, isRead: false },
+      { 
+        $set: { 
+          isRead: true, 
+          readAt: new Date(),
+          readBy: req.user._id
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Conversation marked as read',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Mark conversation read error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Reply to a conversation
+export const replyToConversation = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { conversationId } = req.params;
+    const { message, messageType = 'text' } = req.body;
+
+    console.log('📤 Replying to conversation:', conversationId);
+
+    // Extract phone number from conversation ID
+    const senderPhone = conversationId.replace(`${tenantId}_`, '');
+    
+    // Send message via WhatsApp API
+    const result = await whatsappService.sendMessage(
+      tenantId,
+      {
+        recipientPhone: senderPhone,
+        message: message,
+        messageType: messageType
+      },
+      { 
+        campaign: 'inbox_reply',
+        sentBy: req.user._id 
+      }
+    );
+
+    if (result.success) {
+      // Mark original messages as replied
+      await WhatsAppInbox.updateMany(
+        { tenantId, conversationId, replied: false },
+        { 
+          $set: { 
+            replied: true, 
+            repliedAt: new Date(),
+            repliedBy: req.user._id,
+            replyMessageId: result.messageId
+          }
+        }
+      );
+    }
+
+    res.json({
+      success: result.success,
+      message: result.success ? 'Reply sent successfully' : 'Failed to send reply',
+      messageId: result.messageId,
+      error: result.error
+    });
+  } catch (error) {
+    console.error('Reply to conversation error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Get inbox stats
+export const getInboxStats = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+
+    console.log('📊 Getting inbox stats for tenant:', tenantId);
+
+    const stats = await WhatsAppInbox.aggregate([
+      { $match: { tenantId } },
+      {
+        $group: {
+          _id: null,
+          totalMessages: { $sum: 1 },
+          unreadMessages: {
+            $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] }
+          },
+          repliedMessages: {
+            $sum: { $cond: [{ $eq: ['$replied', true] }, 1, 0] }
+          },
+          todayMessages: {
+            $sum: {
+              $cond: [
+                {
+                  $gte: ['$createdAt', new Date(new Date().setHours(0, 0, 0, 0))]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalMessages: 0,
+      unreadMessages: 0,
+      repliedMessages: 0,
+      todayMessages: 0
+    };
+
+    // Get unique conversations count
+    const conversationsCount = await WhatsAppInbox.distinct('conversationId', { tenantId });
+
+    res.json({
+      success: true,
+      stats: {
+        ...result,
+        uniqueConversations: conversationsCount.length,
+        responseRate: result.totalMessages > 0 
+          ? ((result.repliedMessages / result.totalMessages) * 100).toFixed(1) + '%'
+          : '0%'
+      }
+    });
+  } catch (error) {
+    console.error('Get inbox stats error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
+// Search inbox messages
+export const searchInbox = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { query, messageType, dateFrom, dateTo, limit = 50 } = req.query;
+
+    console.log('🔍 Searching inbox for:', query);
+
+    const searchFilter = { tenantId };
+
+    // Add text search
+    if (query) {
+      searchFilter.$or = [
+        { 'content.text': { $regex: query, $options: 'i' } },
+        { senderPhone: { $regex: query, $options: 'i' } },
+        { senderName: { $regex: query, $options: 'i' } },
+        { senderProfileName: { $regex: query, $options: 'i' } }
+      ];
+    }
+
+    // Add message type filter
+    if (messageType) {
+      searchFilter.messageType = messageType;
+    }
+
+    // Add date range filter
+    if (dateFrom || dateTo) {
+      searchFilter.createdAt = {};
+      if (dateFrom) searchFilter.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) searchFilter.createdAt.$lte = new Date(dateTo);
+    }
+
+    const messages = await WhatsAppInbox.find(searchFilter)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .populate('readBy', 'name email')
+      .populate('repliedBy', 'name email')
+      .lean();
+
+    res.json({
+      success: true,
+      messages,
+      count: messages.length,
+      searchQuery: query
+    });
+  } catch (error) {
+    console.error('Search inbox error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+
 export default {
   saveConfig,
   getConfig,
@@ -1153,5 +1563,12 @@ export default {
   deleteContact,
   debugSendMessage,
   debugMetaAPI,
-  debugMessages
+  debugMessages,
+  // Inbox endpoints
+  getInboxConversations,
+  getConversation,
+  markConversationRead,
+  replyToConversation,
+  getInboxStats,
+  searchInbox
 };

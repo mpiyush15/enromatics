@@ -40,4 +40,12 @@ router.post('/debug-send', protect, whatsappController.debugSendMessage);
 router.get('/debug-api', protect, whatsappController.debugMetaAPI);
 router.get('/debug-messages', protect, whatsappController.debugMessages);
 
+// Inbox routes
+router.get('/inbox/conversations', protect, whatsappController.getInboxConversations);
+router.get('/inbox/conversation/:conversationId', protect, whatsappController.getConversation);
+router.post('/inbox/conversation/:conversationId/read', protect, whatsappController.markConversationRead);
+router.post('/inbox/conversation/:conversationId/reply', protect, whatsappController.replyToConversation);
+router.get('/inbox/stats', protect, whatsappController.getInboxStats);
+router.get('/inbox/search', protect, whatsappController.searchInbox);
+
 export default router;
