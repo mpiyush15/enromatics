@@ -36,6 +36,7 @@ router.get('/webhook', whatsappController.verifyWebhook);
 router.post('/webhook', whatsappController.handleWebhook);
 
 // Debug routes
+router.post('/debug-send', protect, whatsappController.debugSendMessage);
 router.get('/debug-api', protect, whatsappController.debugMetaAPI);
 router.get('/debug-messages', protect, whatsappController.debugMessages);
 

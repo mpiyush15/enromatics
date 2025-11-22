@@ -50,7 +50,20 @@ class WhatsAppService {
       });
 
       // Send via WhatsApp Cloud API
-      console.log('🚀 Sending to Meta API:', `${GRAPH_API_URL}/${config.phoneNumberId}/messages`);
+      console.log('🚀 ========== SENDING TO META API ==========');
+      console.log('  API URL:', `${GRAPH_API_URL}/${config.phoneNumberId}/messages`);
+      console.log('  Phone Number ID:', config.phoneNumberId);
+      console.log('  Access Token Length:', config.accessToken?.length);
+      console.log('  Access Token Preview:', config.accessToken?.substring(0, 20) + '...');
+      console.log('  Recipient Phone:', cleanPhone);
+      console.log('  Message Text:', messageText);
+      console.log('  Request Payload:', JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: 'text',
+        text: { body: messageText }
+      }, null, 2));
       
       const response = await axios.post(
         `${GRAPH_API_URL}/${config.phoneNumberId}/messages`,
@@ -69,7 +82,25 @@ class WhatsAppService {
         }
       );
 
-      console.log('✅ Meta API Response:', JSON.stringify(response.data, null, 2));
+      console.log('✅ ========== META API RESPONSE ==========');
+      console.log('  Status Code:', response.status);
+      console.log('  Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.log('  Response Data:', JSON.stringify(response.data, null, 2));
+      
+      if (response.data.messages && response.data.messages[0]) {
+        console.log('📨 Message Details from Meta:');
+        console.log('  - WhatsApp Message ID:', response.data.messages[0].id);
+        console.log('  - Message Status:', response.data.messages[0].message_status || 'Not provided');
+        console.log('  - Recipient ID:', response.data.contacts?.[0]?.wa_id || 'Not provided');
+        console.log('  - Input Phone:', response.data.contacts?.[0]?.input || 'Not provided');
+      }
+      
+      // Check if Meta immediately indicates any issues
+      if (response.data.error) {
+        console.error('❌ Meta API returned error in response:', response.data.error);
+      }
+      
+      console.log('==========================================');
 
       // Update message with WhatsApp message ID
       message.waMessageId = response.data.messages[0].id;
@@ -110,12 +141,44 @@ class WhatsAppService {
       };
 
     } catch (error) {
-      console.error('❌ WhatsApp send error:');
-      console.error('Error details:', error.response?.data || error.message);
-      console.error('Config used:', {
-        phoneNumberId: (await this.getTenantConfig(tenantId).catch(() => null))?.phoneNumberId,
-        recipientPhone: recipientPhone
-      });
+      console.error('❌ ========== WHATSAPP SEND ERROR ==========');
+      console.error('  Error Type:', error.name);
+      console.error('  Error Message:', error.message);
+      console.error('  HTTP Status:', error.response?.status);
+      console.error('  HTTP Status Text:', error.response?.statusText);
+      
+      if (error.response?.data) {
+        console.error('  Meta API Error Response:', JSON.stringify(error.response.data, null, 2));
+        
+        // Check for specific Meta error codes
+        if (error.response.data.error) {
+          const metaError = error.response.data.error;
+          console.error('  Meta Error Details:');
+          console.error('    - Code:', metaError.code);
+          console.error('    - Type:', metaError.type);
+          console.error('    - Message:', metaError.message);
+          console.error('    - Subcode:', metaError.error_subcode);
+          console.error('    - User Title:', metaError.error_user_title);
+          console.error('    - User Message:', metaError.error_user_msg);
+          console.error('    - Trace ID:', metaError.fbtrace_id);
+        }
+      }
+      
+      console.error('  Request Config Used:');
+      console.error('    - Tenant ID:', tenantId);
+      console.error('    - Original Phone:', recipientPhone);
+      console.error('    - Cleaned Phone:', recipientPhone.replace(/[\s+()-]/g, ''));
+      console.error('    - Message Text:', messageText);
+      
+      try {
+        const config = await this.getTenantConfig(tenantId);
+        console.error('    - Phone Number ID:', config.phoneNumberId);
+        console.error('    - WABA ID:', config.wabaId);
+        console.error('    - Token Length:', config.accessToken?.length);
+      } catch (configErr) {
+        console.error('    - Config Error:', configErr.message);
+      }
+      console.error('==========================================');
       
       // Save failed message
       if (message) {

@@ -439,15 +439,42 @@ export const handleWebhook = async (req, res) => {
               console.log(`🔔 ${value.statuses.length} status update(s) received`);
               
               for (const statusUpdate of value.statuses) {
-                console.log('📊 Status Update Details:');
+                console.log('📊 ========== STATUS UPDATE DETAILS ==========');
                 console.log('  - Message ID:', statusUpdate.id);
                 console.log('  - Status:', statusUpdate.status);
                 console.log('  - Timestamp:', statusUpdate.timestamp);
-                console.log('  - Recipient:', statusUpdate.recipient_id);
+                console.log('  - Recipient ID:', statusUpdate.recipient_id);
+                console.log('  - Conversation ID:', statusUpdate.conversation?.id || 'Not provided');
+                console.log('  - Pricing Model:', statusUpdate.pricing?.pricing_model || 'Not provided');
                 
-                if (statusUpdate.errors) {
-                  console.log('  ❌ Errors:', JSON.stringify(statusUpdate.errors, null, 2));
+                if (statusUpdate.errors && statusUpdate.errors.length > 0) {
+                  console.log('  ❌ ========== ERROR DETAILS ==========');
+                  statusUpdate.errors.forEach((error, index) => {
+                    console.log(`  Error ${index + 1}:`);
+                    console.log(`    - Code: ${error.code}`);
+                    console.log(`    - Title: ${error.title}`);
+                    console.log(`    - Message: ${error.message || 'No message'}`);
+                    console.log(`    - Details: ${error.details || 'No details'}`);
+                    console.log(`    - Error Data: ${JSON.stringify(error.error_data || {}, null, 2)}`);
+                  });
+                  console.log('  ========================================');
+                } else {
+                  console.log('  ✅ No errors - successful status update');
                 }
+                
+                // Log why this message might have failed
+                if (statusUpdate.status === 'failed') {
+                  console.log('  🔍 ========== FAILURE ANALYSIS ==========');
+                  console.log('  Possible reasons for failure:');
+                  console.log('  1. Phone number not on WhatsApp');
+                  console.log('  2. Invalid phone number format');
+                  console.log('  3. 24-hour messaging window expired');
+                  console.log('  4. Account quality/rate limiting');
+                  console.log('  5. Template message required');
+                  console.log('  =========================================');
+                }
+                
+                console.log('===============================================');
                 
                 await whatsappService.handleStatusUpdate(
                   statusUpdate.id,
@@ -960,6 +987,54 @@ export const deleteContact = async (req, res) => {
   }
 };
 
+// Debug endpoint to send test message with detailed logging
+export const debugSendMessage = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    const { phone, message = "🔍 Debug test message from Enromatics - checking delivery status" } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Phone number is required' 
+      });
+    }
+
+    console.log('🧪 ========== DEBUG MESSAGE SEND ==========');
+    console.log('Tenant ID:', tenantId);
+    console.log('Test Phone:', phone);
+    console.log('Test Message:', message);
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('User ID:', req.user._id);
+    console.log('=========================================');
+
+    const result = await whatsappService.sendTextMessage(
+      tenantId, 
+      phone, 
+      message,
+      { 
+        campaign: 'debug_test',
+        sentBy: req.user._id 
+      }
+    );
+
+    console.log('🧪 Debug send result:', result);
+
+    res.json({
+      success: true,
+      result,
+      message: 'Debug message sent - check Railway logs for detailed tracking',
+      instructions: 'Watch the console logs above for detailed Meta API interaction'
+    });
+  } catch (error) {
+    console.error('🧪 Debug send error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+};
+
 // Debug endpoint to test Meta API directly
 export const debugMetaAPI = async (req, res) => {
   try {
@@ -1076,6 +1151,7 @@ export default {
   createContact,
   importContacts,
   deleteContact,
+  debugSendMessage,
   debugMetaAPI,
   debugMessages
 };
