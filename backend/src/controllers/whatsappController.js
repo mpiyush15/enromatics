@@ -1606,7 +1606,7 @@ export const searchInbox = async (req, res) => {
   }
 };
 
-// Get consenting contacts for campaigns (users who opted in)
+// Get contacts for campaigns (users who opted in + ALL tenants with phone numbers)
 export const getConsentingContacts = async (req, res) => {
   try {
     const tenantId = getTenantId(req);

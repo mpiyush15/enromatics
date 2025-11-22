@@ -24,8 +24,8 @@ export default function DashboardLayout({
 
   return (
     <>
-      {/* Trial Banner - Shows at top of dashboard */}
-      {user?.trialEndDate && (
+      {/* Trial Banner - Shows at top of dashboard (hidden for SuperAdmin) */}
+      {user?.trialEndDate && user?.role !== "SuperAdmin" && (
         <TrialBanner 
           trialEndDate={user.trialEndDate}
           plan={user.plan}
