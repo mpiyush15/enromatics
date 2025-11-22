@@ -11,7 +11,7 @@ const generateToken = (id, role, tenantId) =>
  */
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, tenantId, role, instituteName } = req.body;
+    const { name, email, password, tenantId, role, instituteName, phone, whatsappOptIn } = req.body;
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: "User already exists" });
@@ -28,6 +28,8 @@ export const registerUser = async (req, res) => {
         name,
         email,
         password,
+        phone: phone || null,
+        whatsappOptIn: whatsappOptIn || false,
         tenantId,
         role: role || "employee",
       });
@@ -61,6 +63,8 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password,
+      phone: phone || null,
+      whatsappOptIn: whatsappOptIn || false,
       tenantId: newTenantId,
       role: "tenantAdmin",
     });

@@ -17,6 +17,7 @@ router.get('/messages', protect, whatsappController.getMessages);
 
 // Contacts routes
 router.get('/contacts', protect, whatsappController.getContacts);
+router.get('/contacts/consenting', protect, whatsappController.getConsentingContacts);
 router.post('/contacts', protect, whatsappController.createContact);
 router.post('/contacts/import', protect, whatsappController.importContacts);
 router.delete('/contacts/:id', protect, whatsappController.deleteContact);

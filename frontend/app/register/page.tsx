@@ -11,6 +11,8 @@ export default function RegisterPage() {
     instituteName: "",
     email: "",
     password: "",
+    phone: "",
+    whatsappOptIn: false,
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -18,8 +20,14 @@ export default function RegisterPage() {
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    const { name, value, type, checked } = e.target;
+    
+    // Handle checkbox differently
+    if (type === 'checkbox') {
+      setForm({ ...form, [name]: checked });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
     
     // Clear error for this field
     if (errors[name]) {
@@ -62,6 +70,11 @@ export default function RegisterPage() {
       newErrors.password = "Password is required";
     } else if (form.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
+    }
+
+    // Phone validation (optional but if provided, should be valid)
+    if (form.phone.trim() && !/^\+?[1-9]\d{9,14}$/.test(form.phone.replace(/[\s()-]/g, ''))) {
+      newErrors.phone = "Please enter a valid phone number";
     }
 
     setErrors(newErrors);
@@ -294,6 +307,57 @@ export default function RegisterPage() {
               {errors.password && (
                 <p className="mt-1.5 text-xs font-light text-red-600 dark:text-red-400">{errors.password}</p>
               )}
+            </div>
+
+            {/* Phone Number Input */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-light text-gray-700 dark:text-gray-300 mb-2">
+                Phone Number <span className="text-gray-500">(Optional)</span>
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={form.phone}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 rounded-xl border ${
+                  errors.phone 
+                    ? 'border-red-300 dark:border-red-700 focus:ring-red-500' 
+                    : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                } bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all font-light text-base`}
+                placeholder="+1 (555) 123-4567"
+                disabled={loading}
+              />
+              {errors.phone && (
+                <p className="mt-1.5 text-xs font-light text-red-600 dark:text-red-400">{errors.phone}</p>
+              )}
+            </div>
+
+            {/* WhatsApp Consent Checkbox */}
+            <div className="flex items-start space-x-3">
+              <input
+                id="whatsappOptIn"
+                name="whatsappOptIn"
+                type="checkbox"
+                checked={form.whatsappOptIn}
+                onChange={handleChange}
+                className="mt-1 w-4 h-4 text-green-600 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded focus:ring-green-500 focus:ring-2 transition-all"
+                disabled={loading}
+              />
+              <div className="flex-1">
+                <label htmlFor="whatsappOptIn" className="text-sm font-light text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <span className="flex items-start gap-2">
+                    <span className="text-green-600">📱</span>
+                    <div>
+                      <strong className="font-medium">Receive WhatsApp Notifications</strong>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                        Get important updates, announcements, and communications via WhatsApp. 
+                        You can unsubscribe anytime. We respect your privacy and won't spam you.
+                      </p>
+                    </div>
+                  </span>
+                </label>
+              </div>
             </div>
 
             {/* Submit Button */}

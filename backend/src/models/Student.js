@@ -24,6 +24,10 @@ const studentSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
+  whatsappOptIn: { 
+    type: Boolean, 
+    default: false 
+  }, // Consent for WhatsApp messages
   gender: {
     type: String,
     enum: ["Male", "Female", "Other"],

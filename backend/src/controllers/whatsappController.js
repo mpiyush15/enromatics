@@ -4,6 +4,7 @@ import WhatsAppMessage from '../models/WhatsAppMessage.js';
 import WhatsAppContact from '../models/WhatsAppContact.js';
 import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
 import WhatsAppInbox from '../models/WhatsAppInbox.js';
+import User from '../models/User.js';
 
 // Helper function to get tenantId (supports SuperAdmin accessing any tenant)
 const getTenantId = (req, source = 'query') => {
@@ -1634,5 +1635,75 @@ export default {
   markConversationRead,
   replyToConversation,
   getInboxStats,
-  searchInbox
+  searchInbox,
+  getConsentingContacts
+};
+
+// Get consenting contacts for campaigns (users who opted in)
+export const getConsentingContacts = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    
+    console.log('📋 Fetching consenting contacts for tenant:', tenantId);
+
+    // Get users (tenants/staff) who opted in to WhatsApp
+    const consentingUsers = await User.find({ 
+      tenantId, 
+      whatsappOptIn: true,
+      phone: { $exists: true, $ne: null, $ne: "" }
+    }).select('name email phone role');
+
+    // Get students who opted in to WhatsApp  
+    const Student = (await import('../models/Student.js')).default;
+    const consentingStudents = await Student.find({
+      tenantId,
+      whatsappOptIn: true,
+      phone: { $exists: true, $ne: null, $ne: "" }
+    }).select('name email phone rollNumber class');
+
+    const contacts = [
+      // Add users
+      ...consentingUsers.map(user => ({
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        type: 'user',
+        role: user.role,
+        displayName: `${user.name} (${user.role})`
+      })),
+      // Add students  
+      ...consentingStudents.map(student => ({
+        id: student._id,
+        name: student.name,
+        phone: student.phone,
+        email: student.email,
+        type: 'student',
+        rollNumber: student.rollNumber,
+        class: student.class,
+        displayName: `${student.name} - ${student.class} (Student)`
+      }))
+    ];
+
+    console.log(`✅ Found ${contacts.length} consenting contacts:`, {
+      users: consentingUsers.length,
+      students: consentingStudents.length
+    });
+
+    res.json({
+      success: true,
+      contacts,
+      summary: {
+        total: contacts.length,
+        users: consentingUsers.length,
+        students: consentingStudents.length
+      }
+    });
+  } catch (error) {
+    console.error('Failed to fetch consenting contacts:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch consenting contacts' 
+    });
+  }
 };

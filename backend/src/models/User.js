@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema(
 
     password: { type: String, required: true, minlength: 6 },
 
+    phone: { type: String, sparse: true }, // Optional phone number
+
+    whatsappOptIn: { type: Boolean, default: false }, // Consent for WhatsApp messages
+
     tenantId: { type: String, required: true },
 
     role: {
