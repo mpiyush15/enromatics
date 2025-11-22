@@ -1606,39 +1606,6 @@ export const searchInbox = async (req, res) => {
   }
 };
 
-export default {
-  saveConfig,
-  getConfig,
-  removeConfig,
-  testConnection,
-  sendMessage,
-  sendTemplate,
-  getMessages,
-  getContacts,
-  syncContacts,
-  getStats,
-  verifyWebhook,
-  handleWebhook,
-  getTemplates,
-  syncTemplatesFromMeta,
-  submitTemplateToMeta,
-  createTemplate,
-  createContact,
-  importContacts,
-  deleteContact,
-  debugSendMessage,
-  debugMetaAPI,
-  debugMessages,
-  // Inbox endpoints
-  getInboxConversations,
-  getConversation,
-  markConversationRead,
-  replyToConversation,
-  getInboxStats,
-  searchInbox,
-  getConsentingContacts
-};
-
 // Get consenting contacts for campaigns (users who opted in)
 export const getConsentingContacts = async (req, res) => {
   try {
@@ -1706,4 +1673,37 @@ export const getConsentingContacts = async (req, res) => {
       message: 'Failed to fetch consenting contacts' 
     });
   }
+};
+
+export default {
+  saveConfig,
+  getConfig,
+  removeConfig,
+  testConnection,
+  sendMessage,
+  sendTemplate,
+  getMessages,
+  getContacts,
+  syncContacts,
+  getStats,
+  verifyWebhook,
+  handleWebhook,
+  getTemplates,
+  syncTemplatesFromMeta,
+  submitTemplateToMeta,
+  createTemplate,
+  createContact,
+  importContacts,
+  deleteContact,
+  debugSendMessage,
+  debugMetaAPI,
+  debugMessages,
+  // Inbox endpoints
+  getInboxConversations,
+  getConversation,
+  markConversationRead,
+  replyToConversation,
+  getInboxStats,
+  searchInbox,
+  getConsentingContacts
 };
