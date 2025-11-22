@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Pixels Digital",
-  description: "Privacy Policy for Pixels Digital platform",
+  title: "Privacy Policy | Enromatics",
+  description: "Privacy Policy for Enromatics social media analytics platform",
 };
 
 export default function PrivacyPage() {
@@ -10,15 +10,15 @@ export default function PrivacyPage() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
       <p className="text-sm text-gray-600 mb-8">
-        <strong>Effective Date:</strong> November 1, 2025<br />
-        <strong>Last Updated:</strong> November 1, 2025
+        <strong>Effective Date:</strong> November 22, 2024<br />
+        <strong>Last Updated:</strong> November 22, 2024
       </p>
 
       <div className="prose prose-lg max-w-none">
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Introduction</h2>
           <p>
-            Welcome to Pixels Digital (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform and services.
+            Welcome to Enromatics (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our social media analytics platform and services.
           </p>
           <p>
             By using our services, you agree to the collection and use of information in accordance with this Privacy Policy.
@@ -176,7 +176,7 @@ export default function PrivacyPage() {
           <h3 className="text-xl font-semibold mb-3 mt-6">How to Exercise Your Rights:</h3>
           <ul className="list-disc ml-6">
             <li><strong>Account Settings:</strong> Update information in your dashboard</li>
-            <li><strong>Contact Us:</strong> Email info@pixelsdigital.com</li>
+            <li><strong>Contact Us:</strong> Email privacy@enromatics.com</li>
             <li><strong>Delete Account:</strong> Use account deletion feature or contact support</li>
           </ul>
         </section>
@@ -203,8 +203,8 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-semibold mb-4">9. Contact Us</h2>
           <p>If you have questions, concerns, or requests regarding this Privacy Policy:</p>
           <div className="bg-gray-50 p-4 rounded-lg mt-4">
-            <p><strong>Email:</strong> info@pixelsdigital.com</p>
-            <p><strong>Website:</strong> <a href="https://pixelsagency.vercel.app" className="text-primary hover:underline">https://pixelsagency.vercel.app</a></p>
+            <p><strong>Email:</strong> privacy@enromatics.com</p>
+            <p><strong>Website:</strong> <a href="https://enromatics.com" className="text-primary hover:underline">https://enromatics.com</a></p>
           </div>
         </section>
 
@@ -223,11 +223,11 @@ export default function PrivacyPage() {
 
         <div className="border-t pt-6 mt-12">
           <p className="text-sm text-gray-600">
-            <strong>Last Updated:</strong> November 1, 2025<br />
+            <strong>Last Updated:</strong> November 22, 2024<br />
             <strong>Version:</strong> 1.0
           </p>
           <p className="text-sm text-gray-600 mt-4">
-            © 2025 Pixels Digital. All rights reserved.
+            © 2024 Enromatics. All rights reserved.
           </p>
         </div>
       </div>

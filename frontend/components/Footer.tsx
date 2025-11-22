@@ -18,6 +18,8 @@ export default function Footer() {
           <a href="/about" className="hover:text-white transition">About</a>
           <a href="/services" className="hover:text-white transition">Services</a>
           <a href="/contact" className="hover:text-white transition">Contact</a>
+          <a href="/privacy-policy" className="hover:text-white transition">Privacy Policy</a>
+          <a href="/terms-of-service" className="hover:text-white transition">Terms of Service</a>
           <a
             href="https://github.com/enromatics"
             target="_blank"
