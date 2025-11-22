@@ -4,7 +4,7 @@ import { useState} from "react";
 import { useParams } from "next/navigation";
 
 export default function UpdateSocialStats() {
-  const { id } = useParams(); // 👈 get user ID from URL
+  const { tenantId } = useParams(); // 👈 get tenant ID from URL
   const [form, setForm] = useState({
     facebookFollowers: "",
     facebookLikes: "",
@@ -25,7 +25,7 @@ export default function UpdateSocialStats() {
     const res = await fetch(`/api/social/update`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: id, ...form }),
+      body: JSON.stringify({ userId: tenantId, ...form }),
     });
 
     const result = await res.json();
@@ -39,7 +39,7 @@ export default function UpdateSocialStats() {
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white dark:bg-gray-900 rounded shadow">
-      <h2 className="text-xl font-bold mb-4">📢 Update Social Stats for User ID: {id}</h2>
+      <h2 className="text-xl font-bold mb-4">📢 Update Social Stats for Tenant ID: {tenantId}</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           name="facebookFollowers"
