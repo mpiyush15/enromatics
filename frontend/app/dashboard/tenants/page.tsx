@@ -26,7 +26,7 @@ export default function AdminTenantsPage() {
     const fetchTenants = async () => {
       try {
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || API_BASE_URL}/api/tenants`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {
