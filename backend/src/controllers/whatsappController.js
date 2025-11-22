@@ -1373,24 +1373,42 @@ export const replyToConversation = async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     const { conversationId } = req.params;
-    const { message, messageType = 'text' } = req.body;
+    const { message, messageType = 'text', templateName, templateParams = [] } = req.body;
 
     console.log('📤 Replying to conversation:', conversationId);
-
+    console.log('📄 Message type:', messageType);
+    
     // Extract phone number from conversation ID
     const senderPhone = conversationId.replace(`${tenantId}_`, '');
     
     // Send message via WhatsApp API
     try {
-      const result = await whatsappService.sendTextMessage(
-        tenantId,
-        senderPhone,
-        message,
-        { 
-          campaign: 'inbox_reply',
-          sentBy: req.user._id 
-        }
-      );
+      let result;
+      
+      if (messageType === 'template' && templateName) {
+        console.log('📋 Sending template message:', templateName);
+        result = await whatsappService.sendTemplateMessage(
+          tenantId,
+          senderPhone,
+          templateName,
+          templateParams,
+          { 
+            campaign: 'inbox_reply',
+            sentBy: req.user._id 
+          }
+        );
+      } else {
+        console.log('💬 Sending text message:', message);
+        result = await whatsappService.sendTextMessage(
+          tenantId,
+          senderPhone,
+          message,
+          { 
+            campaign: 'inbox_reply',
+            sentBy: req.user._id 
+          }
+        );
+      }
 
       if (result.success) {
         // Mark original messages as replied
