@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
+import MessageDetailsModal from "@/components/whatsapp/MessageDetailsModal";
 
 interface Stats {
   total: number;
@@ -36,6 +37,10 @@ export default function WhatsAppDashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
+  
+  // Modal states for message details
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [showMessageModal, setShowMessageModal] = useState(false);
   
   const [templateForm, setTemplateForm] = useState({
     name: "",
@@ -247,72 +252,120 @@ export default function WhatsAppDashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Now Clickable for Message Details */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-blue-500">
+            {/* Total Messages Card */}
+            <button
+              onClick={() => {
+                setSelectedStatus('all');
+                setShowMessageModal(true);
+              }}
+              className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-blue-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-left group"
+            >
               <div className="flex items-center justify-between mb-1 md:mb-2">
-                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Total</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium group-hover:text-blue-600">Total</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-            </div>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{stats.total}</p>
+              <p className="text-xs text-gray-400 group-hover:text-blue-500 mt-1">Click to view all</p>
+            </button>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-green-500">
+            {/* Sent Messages Card */}
+            <button
+              onClick={() => {
+                setSelectedStatus('sent');
+                setShowMessageModal(true);
+              }}
+              className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-green-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-left group"
+            >
               <div className="flex items-center justify-between mb-1 md:mb-2">
-                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Sent</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium group-hover:text-green-600">Sent</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.sent}</p>
-            </div>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-green-600 transition-colors">{stats.sent}</p>
+              <p className="text-xs text-gray-400 group-hover:text-green-500 mt-1">Click for details</p>
+            </button>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-purple-500">
+            {/* Delivered Messages Card */}
+            <button
+              onClick={() => {
+                setSelectedStatus('delivered');
+                setShowMessageModal(true);
+              }}
+              className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-purple-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-left group"
+            >
               <div className="flex items-center justify-between mb-1 md:mb-2">
-                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Delivered</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium group-hover:text-purple-600">Delivered</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" transform="translate(3,0)" />
                   </svg>
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.delivered}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{stats.delivered}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stats.deliveryRate} rate</p>
-            </div>
+            </button>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-teal-500">
+            {/* Read Messages Card */}
+            <button
+              onClick={() => {
+                setSelectedStatus('read');
+                setShowMessageModal(true);
+              }}
+              className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-teal-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-left group"
+            >
               <div className="flex items-center justify-between mb-1 md:mb-2">
-                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Read</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium group-hover:text-teal-600">Read</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center group-hover:bg-teal-200 transition-colors">
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.read}</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-teal-600 transition-colors">{stats.read}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stats.readRate} rate</p>
-            </div>
+            </button>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-red-500">
+            {/* Failed Messages Card - Most Important for Debugging */}
+            <button
+              onClick={() => {
+                setSelectedStatus('failed');
+                setShowMessageModal(true);
+              }}
+              className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-md p-3 md:p-5 border-l-4 border-red-500 hover:shadow-lg hover:scale-105 transition-all duration-200 text-left group relative"
+            >
               <div className="flex items-center justify-between mb-1 md:mb-2">
-                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">Failed</span>
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                <span className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium group-hover:text-red-600">Failed</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
                   <svg className="w-4 h-4 md:w-5 md:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{stats.failed}</p>
-            </div>
+              <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 transition-colors flex items-center gap-2">
+                {stats.failed}
+                {stats.failed > 0 && (
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                )}
+              </p>
+              <p className="text-xs text-red-500 group-hover:text-red-600 mt-1 font-medium">Click for error details</p>
+              {stats.failed > 0 && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold animate-bounce">
+                  !
+                </div>
+              )}
+            </button>
           </div>
         )}
 
@@ -601,6 +654,14 @@ export default function WhatsAppDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Message Details Modal */}
+        <MessageDetailsModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          status={selectedStatus}
+          tenantId={tenantId as string}
+        />
       </div>
     </div>
   );
