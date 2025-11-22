@@ -46,7 +46,7 @@ const whatsAppMessageSchema = new mongoose.Schema({
   },
   campaign: {
     type: String,
-    enum: ['manual', 'bulk_campaign', 'welcome', 'fee_reminder', 'attendance_alert', 'test_notification', 'other'],
+    enum: ['manual', 'bulk_campaign', 'welcome', 'fee_reminder', 'attendance_alert', 'test_notification', 'inbox_reply', 'debug_test', 'other'],
     default: 'manual'
   },
   metadata: {
