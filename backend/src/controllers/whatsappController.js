@@ -1628,8 +1628,15 @@ export const getConsentingContacts = async (req, res) => {
       phone: { $exists: true, $ne: null, $ne: "" }
     }).select('name email phone rollNumber class');
 
+    // Get ALL tenants (free and paid) with phone numbers for campaign targeting
+    const Tenant = (await import('../models/Tenant.js')).default;
+    const tenantContacts = await Tenant.find({
+      'contact.phone': { $exists: true, $ne: null, $ne: "" },
+      active: true // Only active tenants
+    }).select('name instituteName email contact.phone plan tenantId');
+
     const contacts = [
-      // Add users
+      // Add users who opted in
       ...consentingUsers.map(user => ({
         id: user._id,
         name: user.name,
@@ -1639,7 +1646,7 @@ export const getConsentingContacts = async (req, res) => {
         role: user.role,
         displayName: `${user.name} (${user.role})`
       })),
-      // Add students  
+      // Add students who opted in  
       ...consentingStudents.map(student => ({
         id: student._id,
         name: student.name,
@@ -1649,12 +1656,25 @@ export const getConsentingContacts = async (req, res) => {
         rollNumber: student.rollNumber,
         class: student.class,
         displayName: `${student.name} - ${student.class} (Student)`
+      })),
+      // Add ALL tenants (free and paid) for campaign targeting
+      ...tenantContacts.map(tenant => ({
+        id: tenant._id,
+        name: tenant.name,
+        phone: tenant.contact.phone,
+        email: tenant.email,
+        type: 'tenant',
+        plan: tenant.plan,
+        tenantId: tenant.tenantId,
+        instituteName: tenant.instituteName,
+        displayName: `${tenant.name} - ${tenant.instituteName || 'Owner'} (${tenant.plan.toUpperCase()} Plan)`
       }))
     ];
 
-    console.log(`✅ Found ${contacts.length} consenting contacts:`, {
+    console.log(`✅ Found ${contacts.length} total contacts:`, {
       users: consentingUsers.length,
-      students: consentingStudents.length
+      students: consentingStudents.length,
+      tenants: tenantContacts.length
     });
 
     res.json({
@@ -1663,7 +1683,13 @@ export const getConsentingContacts = async (req, res) => {
       summary: {
         total: contacts.length,
         users: consentingUsers.length,
-        students: consentingStudents.length
+        students: consentingStudents.length,
+        tenants: tenantContacts.length,
+        breakdown: {
+          freePlan: tenantContacts.filter(t => t.plan === 'free').length,
+          trialPlan: tenantContacts.filter(t => t.plan === 'trial').length,
+          paidPlan: tenantContacts.filter(t => ['pro', 'enterprise'].includes(t.plan)).length
+        }
       }
     });
   } catch (error) {
