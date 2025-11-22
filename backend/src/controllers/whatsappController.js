@@ -1381,40 +1381,46 @@ export const replyToConversation = async (req, res) => {
     const senderPhone = conversationId.replace(`${tenantId}_`, '');
     
     // Send message via WhatsApp API
-    const result = await whatsappService.sendMessage(
-      tenantId,
-      {
-        recipientPhone: senderPhone,
-        message: message,
-        messageType: messageType
-      },
-      { 
-        campaign: 'inbox_reply',
-        sentBy: req.user._id 
-      }
-    );
-
-    if (result.success) {
-      // Mark original messages as replied
-      await WhatsAppInbox.updateMany(
-        { tenantId, conversationId, replied: false },
+    try {
+      const result = await whatsappService.sendTextMessage(
+        tenantId,
+        senderPhone,
+        message,
         { 
-          $set: { 
-            replied: true, 
-            repliedAt: new Date(),
-            repliedBy: req.user._id,
-            replyMessageId: result.messageId
-          }
+          campaign: 'inbox_reply',
+          sentBy: req.user._id 
         }
       );
-    }
 
-    res.json({
-      success: result.success,
-      message: result.success ? 'Reply sent successfully' : 'Failed to send reply',
-      messageId: result.messageId,
-      error: result.error
-    });
+      if (result.success) {
+        // Mark original messages as replied
+        await WhatsAppInbox.updateMany(
+          { tenantId, conversationId, replied: false },
+          { 
+            $set: { 
+              replied: true, 
+              repliedAt: new Date(),
+              repliedBy: req.user._id,
+              replyMessageId: result.waMessageId
+            }
+          }
+        );
+      }
+
+      res.json({
+        success: result.success,
+        message: result.success ? 'Reply sent successfully' : 'Failed to send reply',
+        messageId: result.messageId,
+        waMessageId: result.waMessageId
+      });
+    } catch (sendError) {
+      console.error('Reply send error:', sendError);
+      res.json({
+        success: false,
+        message: `Failed to send reply: ${sendError.message}`,
+        error: sendError.message
+      });
+    }
   } catch (error) {
     console.error('Reply to conversation error:', error);
     res.status(500).json({ 
