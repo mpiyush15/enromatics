@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
 
@@ -64,10 +64,21 @@ export default function WhatsAppInboxPage() {
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     fetchInboxData();
   }, [filter]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -106,21 +117,40 @@ export default function WhatsAppInboxPage() {
     }
   };
 
-  const fetchConversationMessages = async (conversationId: string) => {
+  const fetchConversationMessages = async (conversationId: string, silent: boolean = false) => {
     try {
+      if (!silent) setRefreshing(true);
+      
       const response = await fetch(
-        `${API_BASE_URL}/api/whatsapp/inbox/conversation/${conversationId}`,
+        `${API_BASE_URL}/api/whatsapp/inbox/conversation/${conversationId}?limit=100`,
         { credentials: 'include' }
       );
       
       const data = await response.json();
       if (data.success) {
         setMessages(data.messages);
-        // Refresh conversations to update unread count
-        fetchInboxData();
+        // Update only the specific conversation's unread count locally
+        setConversations(prev => prev.map(conv => 
+          conv.conversationId === conversationId 
+            ? { ...conv, unreadCount: 0 }
+            : conv
+        ));
+        
+        // Update stats locally without full refresh
+        if (stats) {
+          const conversation = conversations.find(c => c.conversationId === conversationId);
+          if (conversation && conversation.unreadCount > 0) {
+            setStats(prev => prev ? {
+              ...prev,
+              unreadMessages: Math.max(0, prev.unreadMessages - conversation.unreadCount)
+            } : null);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to fetch conversation messages:', error);
+    } finally {
+      if (!silent) setRefreshing(false);
     }
   };
 
@@ -151,9 +181,37 @@ export default function WhatsAppInboxPage() {
       const data = await response.json();
       if (data.success) {
         setReplyText('');
-        // Refresh conversation
-        fetchConversationMessages(selectedConversation);
-        fetchInboxData();
+        
+        // Add the sent message to local state immediately for better UX
+        const newMessage: InboxMessage = {
+          _id: `temp_${Date.now()}`,
+          waMessageId: data.waMessageId || `temp_${Date.now()}`,
+          senderPhone: 'You',
+          senderName: 'You',
+          displayName: 'You',
+          messageType: messageType,
+          content: templateName ? { text: `Template: ${templateName}` } : { text: replyText },
+          timestamp: new Date().toISOString(),
+          isRead: true,
+          replied: false,
+          conversationId: selectedConversation,
+          createdAt: new Date().toISOString()
+        };
+        
+        setMessages(prev => [...prev, newMessage]);
+        
+        // Update conversation in sidebar (reduce unread count)
+        setConversations(prev => prev.map(conv => 
+          conv.conversationId === selectedConversation 
+            ? { ...conv, unreadCount: 0, lastMessageTime: new Date().toISOString() }
+            : conv
+        ));
+        
+        // Only refresh conversation messages in background to get the real message ID
+        setTimeout(() => {
+          fetchConversationMessages(selectedConversation, true); // Silent refresh
+        }, 1000);
+        
       } else {
         // Show user-friendly error message
         let errorMessage = data.message || 'Failed to send reply';
@@ -178,7 +236,7 @@ export default function WhatsAppInboxPage() {
       const errorMessage = 'Network error: Could not send reply. Please check your internet connection and try again.';
       if (confirm(`❌ ${errorMessage}\n\nWould you like to retry?`)) {
         // Retry sending
-        setTimeout(() => sendReply(), 1000);
+        setTimeout(() => sendReply(messageType, templateName), 1000);
       }
     } finally {
       setSending(false);
@@ -200,12 +258,24 @@ export default function WhatsAppInboxPage() {
            `+${conversation.senderPhone}`;
   };
 
-  const renderMessageContent = (message: InboxMessage) => {
+  const renderMessageContent = (message: any) => {
     const { content, messageType } = message;
     
     switch (messageType) {
       case 'text':
         return <p className="text-gray-800 dark:text-gray-200">{content.text}</p>;
+      
+      case 'template':
+        return (
+          <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800 font-medium">Template: {content.templateName}</p>
+            {content.templateParams && content.templateParams.length > 0 && (
+              <p className="text-xs text-green-600 mt-1">
+                Params: {content.templateParams.join(', ')}
+              </p>
+            )}
+          </div>
+        );
       
       case 'image':
         return (
@@ -447,36 +517,66 @@ export default function WhatsAppInboxPage() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message) => (
-                    <div key={message._id} className="flex flex-col">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 max-w-md">
-                        <div className="flex items-start justify-between mb-2">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                            {getDisplayName({
-                              senderName: message.senderName,
-                              senderProfileName: message.senderProfileName,
-                              senderPhone: message.senderPhone
-                            } as Conversation)}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatTime(message.timestamp)}
-                          </span>
-                        </div>
-                        {renderMessageContent(message)}
-                        <div className="flex items-center gap-2 mt-2">
-                          {message.isRead && (
-                            <span className="text-xs text-green-600">✓ Read</span>
-                          )}
-                          {message.replied && (
-                            <span className="text-xs text-blue-600">↩ Replied</span>
-                          )}
+                  {messages.map((message: any) => {
+                    const isOutgoing = message.direction === 'outbound' || message.senderPhone === 'You';
+                    
+                    return (
+                      <div key={message._id} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-md rounded-lg p-3 ${
+                          isOutgoing 
+                            ? 'bg-green-500 text-white ml-12' 
+                            : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 mr-12'
+                        }`}>
+                          <div className="flex items-start justify-between mb-2">
+                            <span className={`text-xs font-medium ${
+                              isOutgoing 
+                                ? 'text-green-100' 
+                                : 'text-blue-600 dark:text-blue-400'
+                            }`}>
+                              {isOutgoing ? 'You' : (message.displayName || `+${message.senderPhone}`)}
+                            </span>
+                            <span className={`text-xs ml-2 ${
+                              isOutgoing 
+                                ? 'text-green-200' 
+                                : 'text-gray-500'
+                            }`}>
+                              {formatTime(message.timestamp || message.createdAt)}
+                            </span>
+                          </div>
+                          
+                          <div className={isOutgoing ? 'text-white' : ''}>
+                            {renderMessageContent(message)}
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mt-2">
+                            {isOutgoing && message.status && (
+                              <span className={`text-xs ${
+                                message.status === 'sent' ? 'text-green-200' :
+                                message.status === 'delivered' ? 'text-green-100' :
+                                message.status === 'read' ? 'text-green-100' :
+                                message.status === 'failed' ? 'text-red-200' :
+                                'text-green-200'
+                              }`}>
+                                {message.status === 'sent' && '✓'}
+                                {message.status === 'delivered' && '✓✓'}
+                                {message.status === 'read' && '✓✓'}
+                                {message.status === 'failed' && '✗'}
+                                {' '}{message.status}
+                              </span>
+                            )}
+                            {!isOutgoing && message.isRead && (
+                              <span className="text-xs text-green-600">✓ Read</span>
+                            )}
+                            {!isOutgoing && message.replied && (
+                              <span className="text-xs text-blue-600">↩ Replied</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Reply Input */}
+                      );
+                    })}
+                  <div ref={messagesEndRef} />
+                </div>                {/* Reply Input */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex gap-2">
                     <input

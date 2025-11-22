@@ -1298,17 +1298,56 @@ export const getConversation = async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     const { conversationId } = req.params;
-    const { limit = 50, page = 1 } = req.query;
+    const { limit = 100, page = 1 } = req.query;
 
     console.log('💬 Getting conversation:', conversationId, 'for tenant:', tenantId);
+    console.log('📄 Requested limit:', limit, 'page:', page);
 
-    const messages = await WhatsAppInbox.getConversation(
+    // Get messages with higher limit and include both inbox and sent messages
+    const messages = await WhatsAppInbox.find({ tenantId, conversationId })
+      .sort({ createdAt: 1 }) // Oldest first for conversation view
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .populate('readBy', 'name email')
+      .populate('repliedBy', 'name email')
+      .lean();
+
+    // Also get sent messages from WhatsAppMessage collection for complete history
+    const sentMessages = await WhatsAppMessage.find({ 
       tenantId, 
-      conversationId, 
-      parseInt(limit)
-    );
+      recipientPhone: conversationId.replace(`${tenantId}_`, '')
+    })
+      .sort({ createdAt: 1 })
+      .limit(parseInt(limit))
+      .populate('sentBy', 'name email')
+      .lean();
 
-    // Mark messages as read when viewing conversation
+    // Combine and sort all messages by timestamp
+    const allMessages = [
+      ...messages.map(msg => ({
+        ...msg,
+        direction: 'inbound',
+        displayName: msg.senderName || msg.senderProfileName || `+${msg.senderPhone}`
+      })),
+      ...sentMessages.map(msg => ({
+        _id: msg._id,
+        waMessageId: msg.waMessageId,
+        senderPhone: 'You',
+        senderName: 'You',
+        displayName: 'You',
+        messageType: msg.messageType,
+        content: msg.content,
+        timestamp: msg.createdAt,
+        isRead: true,
+        replied: false,
+        conversationId: conversationId,
+        createdAt: msg.createdAt,
+        direction: 'outbound',
+        status: msg.status
+      }))
+    ].sort((a, b) => new Date(a.createdAt || a.timestamp).getTime() - new Date(b.createdAt || b.timestamp).getTime());
+
+    // Mark inbox messages as read when viewing conversation
     await WhatsAppInbox.updateMany(
       { tenantId, conversationId, isRead: false },
       { 
@@ -1322,9 +1361,10 @@ export const getConversation = async (req, res) => {
 
     res.json({
       success: true,
-      messages: messages.reverse(), // Show oldest first
+      messages: allMessages,
       conversationId,
-      count: messages.length
+      count: allMessages.length,
+      hasMore: allMessages.length === parseInt(limit) // Indicates if there are more messages
     });
   } catch (error) {
     console.error('Get conversation error:', error);
