@@ -65,6 +65,7 @@ export default function WhatsAppInboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -73,7 +74,14 @@ export default function WhatsAppInboxPage() {
   };
 
   useEffect(() => {
-    fetchInboxData();
+    fetchInboxData(true); // Initial load
+  }, []);
+
+  useEffect(() => {
+    // When filter changes, only update conversations without full page reload
+    if (conversations.length > 0) {
+      fetchInboxData(false); // Filter change - no loading screen
+    }
   }, [filter]);
 
   useEffect(() => {
@@ -86,9 +94,12 @@ export default function WhatsAppInboxPage() {
     }
   }, [selectedConversation]);
 
-  const fetchInboxData = async () => {
+  const fetchInboxData = async (isInitialLoad: boolean = false) => {
     try {
-      setLoading(true);
+      // Only show full loading for initial page load
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       
       // Fetch conversations and stats in parallel
       const [conversationsRes, statsRes] = await Promise.all([
@@ -103,23 +114,32 @@ export default function WhatsAppInboxPage() {
       const conversationsData = await conversationsRes.json();
       const statsData = await statsRes.json();
 
-      if (conversationsData.success) {
+      // Batch state updates to prevent multiple re-renders
+      if (conversationsData.success && statsData.success) {
+        // Use functional updates to prevent race conditions
         setConversations(conversationsData.conversations);
-      }
-
-      if (statsData.success) {
         setStats(statsData.stats);
+      } else {
+        if (conversationsData.success) {
+          setConversations(conversationsData.conversations);
+        }
+        if (statsData.success) {
+          setStats(statsData.stats);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch inbox data:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
   const fetchConversationMessages = async (conversationId: string, silent: boolean = false) => {
     try {
-      if (!silent) setRefreshing(true);
+      // Use separate loading state for messages to avoid full page reload
+      if (!silent) setMessagesLoading(true);
       
       const response = await fetch(
         `${API_BASE_URL}/api/whatsapp/inbox/conversation/${conversationId}?limit=100`,
@@ -128,29 +148,30 @@ export default function WhatsAppInboxPage() {
       
       const data = await response.json();
       if (data.success) {
+        // Batch all state updates to minimize re-renders
+        const conversation = conversations.find(c => c.conversationId === conversationId);
+        const unreadCount = conversation?.unreadCount || 0;
+        
+        // Update all related states in one batch
         setMessages(data.messages);
-        // Update only the specific conversation's unread count locally
         setConversations(prev => prev.map(conv => 
           conv.conversationId === conversationId 
             ? { ...conv, unreadCount: 0 }
             : conv
         ));
         
-        // Update stats locally without full refresh
-        if (stats) {
-          const conversation = conversations.find(c => c.conversationId === conversationId);
-          if (conversation && conversation.unreadCount > 0) {
-            setStats(prev => prev ? {
-              ...prev,
-              unreadMessages: Math.max(0, prev.unreadMessages - conversation.unreadCount)
-            } : null);
-          }
+        // Update stats only if there were unread messages
+        if (stats && unreadCount > 0) {
+          setStats(prev => prev ? {
+            ...prev,
+            unreadMessages: Math.max(0, prev.unreadMessages - unreadCount)
+          } : null);
         }
       }
     } catch (error) {
       console.error('Failed to fetch conversation messages:', error);
     } finally {
-      if (!silent) setRefreshing(false);
+      if (!silent) setMessagesLoading(false);
     }
   };
 
@@ -198,9 +219,8 @@ export default function WhatsAppInboxPage() {
           createdAt: new Date().toISOString()
         };
         
+        // Batch state updates to minimize re-renders
         setMessages(prev => [...prev, newMessage]);
-        
-        // Update conversation in sidebar (reduce unread count)
         setConversations(prev => prev.map(conv => 
           conv.conversationId === selectedConversation 
             ? { ...conv, unreadCount: 0, lastMessageTime: new Date().toISOString() }
@@ -208,9 +228,10 @@ export default function WhatsAppInboxPage() {
         ));
         
         // Only refresh conversation messages in background to get the real message ID
+        // Use shorter timeout for better perceived performance
         setTimeout(() => {
           fetchConversationMessages(selectedConversation, true); // Silent refresh
-        }, 1000);
+        }, 500);
         
       } else {
         // Show user-friendly error message
@@ -449,7 +470,12 @@ export default function WhatsAppInboxPage() {
                     .map((conversation) => (
                       <button
                         key={conversation.conversationId}
-                        onClick={() => setSelectedConversation(conversation.conversationId)}
+                        onClick={() => {
+                          // Only change if different conversation is selected
+                          if (selectedConversation !== conversation.conversationId) {
+                            setSelectedConversation(conversation.conversationId);
+                          }
+                        }}
                         className={`w-full p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                           selectedConversation === conversation.conversationId
                             ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-600'
@@ -517,7 +543,15 @@ export default function WhatsAppInboxPage() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((message: any) => {
+                  {messagesLoading ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-green-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-500">Loading messages...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    messages.map((message: any) => {
                     const isOutgoing = message.direction === 'outbound' || message.senderPhone === 'You';
                     
                     return (
@@ -574,7 +608,8 @@ export default function WhatsAppInboxPage() {
                         </div>
                       </div>
                       );
-                    })}
+                    })
+                  )}
                   <div ref={messagesEndRef} />
                 </div>                {/* Reply Input */}
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700">
