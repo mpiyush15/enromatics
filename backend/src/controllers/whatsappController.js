@@ -1726,6 +1726,46 @@ export const getConsentingContacts = async (req, res) => {
   }
 };
 
+// Debug endpoint to check tenant data
+export const debugTenantData = async (req, res) => {
+  try {
+    const { default: Tenant } = await import('../models/Tenant.js');
+    
+    // Get all tenants
+    const allTenants = await Tenant.find({});
+    
+    // Get active tenants with phone numbers
+    const activeTenantsWithPhone = await Tenant.find({
+      active: true,
+      'contact.phone': { $exists: true, $ne: null, $ne: '' }
+    });
+
+    res.json({
+      success: true,
+      total: allTenants.length,
+      activeWithPhone: activeTenantsWithPhone.length,
+      tenants: allTenants.map(t => ({
+        _id: t._id,
+        name: t.name,
+        instituteName: t.instituteName,
+        active: t.active,
+        phone: t.contact?.phone,
+        plan: t.plan,
+        hasPhone: !!t.contact?.phone
+      })),
+      activeTenantsWithPhone: activeTenantsWithPhone.map(t => ({
+        name: t.name,
+        instituteName: t.instituteName,
+        phone: t.contact?.phone,
+        plan: t.plan
+      }))
+    });
+  } catch (error) {
+    console.error('Debug tenant data error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export default {
   saveConfig,
   getConfig,
@@ -1750,6 +1790,7 @@ export default {
   debugSendMessage,
   debugMetaAPI,
   debugMessages,
+  debugTenantData,
   // Inbox endpoints
   getInboxConversations,
   getConversation,

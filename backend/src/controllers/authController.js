@@ -57,6 +57,10 @@ export const registerUser = async (req, res) => {
       email,
       plan: "free",
       subscription: { status: "active", startDate: new Date() },
+      contact: {
+        phone: phone || null, // Store phone in tenant contact for WhatsApp sync
+      },
+      whatsappOptIn: whatsappOptIn || false, // Store WhatsApp consent
     });
 
     const user = await User.create({

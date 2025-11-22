@@ -101,7 +101,12 @@ export default function AdminTenantsPage() {
                     className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {tenant.name}
+                      <a
+                        href={`/dashboard/tenants/${tenant.tenantId}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-semibold cursor-pointer transition-colors"
+                      >
+                        {tenant.name}
+                      </a>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                       {tenant.email}
@@ -131,12 +136,20 @@ export default function AdminTenantsPage() {
                         : "—"}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <a
-                        href={`/dashboard/tenants/${tenant.tenantId}`}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium underline"
-                      >
-                        Manage
-                      </a>
+                      <div className="flex gap-2">
+                        <a
+                          href={`/dashboard/tenants/${tenant.tenantId}`}
+                          className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        >
+                          👁️ View
+                        </a>
+                        <a
+                          href={`/dashboard/client/${tenant.tenantId}`}
+                          className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                        >
+                          ⚙️ Manage
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}

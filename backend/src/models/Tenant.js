@@ -81,6 +81,12 @@ const tenantSchema = new mongoose.Schema(
       country: { type: String, default: "India" },
     },
 
+    // WhatsApp consent for marketing messages
+    whatsappOptIn: {
+      type: Boolean,
+      default: true, // Default to true for existing tenants
+    },
+
     // Analytics and usage tracking (for future scaling)
     usage: {
       studentsCount: { type: Number, default: 0 },

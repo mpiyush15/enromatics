@@ -436,46 +436,79 @@ class WhatsAppService {
   async syncTenantContacts(currentTenantId) {
     try {
       const { default: Tenant } = await import('../models/Tenant.js');
-      const tenants = await Tenant.find({ 
-        active: true // Use correct field name for active status
-        // Note: For now, sync all active tenants since whatsappOptIn field doesn't exist yet
-      });
-
+      const { default: User } = await import('../models/User.js');
+      
+      // Get all active tenants first
+      const allTenants = await Tenant.find({ active: true });
+      
+      console.log(`🔄 Found ${allTenants.length} active tenants`);
+      
       let synced = 0;
       let skipped = 0;
 
-      for (const tenant of tenants) {
-        // Check for phone in contact object
-        if (!tenant.contact?.phone) {
+      for (const tenant of allTenants) {
+        let phoneNumber = null;
+        
+        // First check if tenant has phone in contact field (new registrations)
+        if (tenant.contact?.phone) {
+          phoneNumber = tenant.contact.phone;
+        } else {
+          // For older tenants, get phone from the tenantAdmin user record
+          try {
+            const tenantAdmin = await User.findOne({ 
+              tenantId: tenant.tenantId, 
+              role: 'tenantAdmin',
+              phone: { $exists: true, $ne: null, $ne: '' }
+            });
+            
+            if (tenantAdmin?.phone) {
+              phoneNumber = tenantAdmin.phone;
+            }
+          } catch (err) {
+            console.log(`Could not find admin user for tenant ${tenant.name}`);
+          }
+        }
+        
+        // Skip if no phone number found
+        if (!phoneNumber) {
+          console.log(`⚠️ Skipping ${tenant.name} - no phone number found`);
           skipped++;
           continue;
         }
 
-        const cleanPhone = tenant.contact.phone.replace(/[\s+()-]/g, '');
-        
-        await WhatsAppContact.updateOne(
-          { tenantId: currentTenantId, whatsappNumber: cleanPhone },
-          {
-            $set: {
-              tenantId: currentTenantId,
-              name: tenant.instituteName || tenant.name,
-              phone: tenant.contact.phone,
-              whatsappNumber: cleanPhone,
-              type: 'tenant',
-              metadata: {
-                plan: tenant.plan,
-                subscriptionStatus: tenant.subscription?.status,
-                originalTenantId: tenant._id, // Store the original tenant's ID
-                tenantId: tenant.tenantId,
-                instituteName: tenant.instituteName
+        try {
+          const cleanPhone = phoneNumber.replace(/[\s+()-]/g, '');
+          
+          await WhatsAppContact.updateOne(
+            { tenantId: currentTenantId, whatsappNumber: cleanPhone },
+            {
+              $set: {
+                tenantId: currentTenantId,
+                name: tenant.instituteName || tenant.name,
+                phone: phoneNumber,
+                whatsappNumber: cleanPhone,
+                type: 'tenant',
+                metadata: {
+                  plan: tenant.plan,
+                  subscriptionStatus: tenant.subscription?.status,
+                  originalTenantId: tenant._id, // Store the original tenant's ID
+                  tenantId: tenant.tenantId,
+                  instituteName: tenant.instituteName
+                }
               }
-            }
-          },
-          { upsert: true }
-        );
-        synced++;
+            },
+            { upsert: true }
+          );
+          
+          console.log(`✅ Synced ${tenant.name} - ${cleanPhone}`);
+          synced++;
+        } catch (err) {
+          console.error(`❌ Error syncing tenant ${tenant.name}:`, err);
+          skipped++;
+        }
       }
 
+      console.log(`✅ Tenant sync complete: ${synced} synced, ${skipped} skipped`);
       return { synced, skipped };
     } catch (error) {
       console.error('Sync tenant contacts error:', error);
