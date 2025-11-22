@@ -212,6 +212,13 @@ class WhatsAppService {
       const config = await this.getTenantConfig(tenantId);
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
 
+      console.log('📋 ========== SENDING TEMPLATE MESSAGE ==========');
+      console.log('Template Name:', templateName);
+      console.log('Recipient Phone:', cleanPhone);
+      console.log('Parameters:', params);
+      console.log('Campaign:', metadata.campaign);
+      console.log('Tenant Config:', { phoneNumberId: config.phoneNumberId, wabaId: config.wabaId });
+
       const message = new WhatsAppMessage({
         tenantId,
         recipientPhone: cleanPhone,
@@ -229,8 +236,24 @@ class WhatsAppService {
       // Build template components
       const components = params.length > 0 ? [{
         type: 'body',
-        parameters: params.map(p => ({ type: 'text', text: p }))
+        parameters: params.map(p => ({ type: 'text', text: String(p) }))
       }] : [];
+      
+      console.log('📝 Template Components:', JSON.stringify(components, null, 2));
+
+      console.log('📤 Sending to Meta API:', {
+        url: `${GRAPH_API_URL}/${config.phoneNumberId}/messages`,
+        payload: {
+          messaging_product: 'whatsapp',
+          to: cleanPhone,
+          type: 'template',
+          template: {
+            name: templateName,
+            language: { code: 'en' },
+            components
+          }
+        }
+      });
 
       const response = await axios.post(
         `${GRAPH_API_URL}/${config.phoneNumberId}/messages`,
@@ -251,6 +274,8 @@ class WhatsAppService {
           }
         }
       );
+
+      console.log('✅ Meta API Response:', response.data);
 
       message.waMessageId = response.data.messages[0].id;
       message.status = 'sent';
@@ -273,7 +298,31 @@ class WhatsAppService {
       };
 
     } catch (error) {
-      console.error('Template send error:', error.response?.data || error.message);
+      console.error('🚨 ========== TEMPLATE SEND ERROR ==========');
+      console.error('Template Name:', templateName);
+      console.error('Recipient Phone:', recipientPhone);
+      console.error('Parameters:', params);
+      console.error('Meta API Response:', error.response?.data);
+      console.error('Error Status:', error.response?.status);
+      console.error('Error Headers:', error.response?.headers);
+      console.error('Full Error:', error.message);
+      console.error('=========================================');
+      
+      // Save failed message to database for tracking
+      if (message) {
+        message.status = 'failed';
+        message.failedAt = new Date();
+        message.errorMessage = error.response?.data?.error?.message || error.message;
+        message.errorCode = error.response?.data?.error?.code;
+        message.statusUpdates.push({
+          status: 'failed',
+          timestamp: new Date(),
+          errorMessage: error.response?.data?.error?.message || error.message,
+          errorCode: error.response?.data?.error?.code
+        });
+        await message.save();
+      }
+      
       throw new Error(error.response?.data?.error?.message || 'Failed to send template');
     }
   }
