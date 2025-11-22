@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
+import useAuth from "@/hooks/useAuth";
 
 interface Contact {
   _id: string;
@@ -25,6 +26,7 @@ interface Template {
 
 export default function WhatsappCampaignsPage() {
   const { tenantId } = useParams();
+  const { user } = useAuth(); // Get user info to check role
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -413,12 +415,15 @@ export default function WhatsappCampaignsPage() {
                   >
                     📄 Import CSV
                   </button>
-                  <button
-                    onClick={syncContacts}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                  >
-                    🔄 Sync Students
-                  </button>
+                  {/* Only show sync students for non-SuperAdmin users */}
+                  {user?.role !== "SuperAdmin" && (
+                    <button
+                      onClick={syncContacts}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      🔄 Sync Students
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -440,7 +445,10 @@ export default function WhatsappCampaignsPage() {
                     <div className="text-6xl mb-4">👥</div>
                     <h3 className="text-lg font-semibold mb-2">No Contacts Found</h3>
                     <p className="text-gray-600 mb-4">
-                      Click "Sync Contacts" to import from student database
+                      {user?.role === "SuperAdmin" 
+                        ? "Add contacts manually or import from CSV to start campaigns"
+                        : "Click \"Sync Students\" to import from student database or add contacts manually"
+                      }
                     </p>
                   </div>
                 ) : (
