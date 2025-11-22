@@ -127,6 +127,27 @@ export default function WhatsappCampaignsPage() {
     }
   };
 
+  const syncTenantContacts = async () => {
+    setStatus("Syncing contacts from tenants database...");
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/whatsapp/sync-tenant-contacts`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setStatus(`✅ ${data.message}`);
+        fetchContacts();
+        setTimeout(() => setStatus(""), 3000);
+      }
+    } catch (err: any) {
+      setStatus(`❌ Error: ${err.message}`);
+    }
+  };
+
   const handleAddContact = async () => {
     if (!newContact.name || !newContact.phone) {
       setStatus("❌ Name and phone are required");
@@ -415,8 +436,15 @@ export default function WhatsappCampaignsPage() {
                   >
                     📄 Import CSV
                   </button>
-                  {/* Only show sync students for non-SuperAdmin users */}
-                  {user?.role !== "SuperAdmin" && (
+                  {/* Show sync buttons based on user role */}
+                  {user?.role === "SuperAdmin" ? (
+                    <button
+                      onClick={syncTenantContacts}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    >
+                      🔄 Sync Tenants
+                    </button>
+                  ) : (
                     <button
                       onClick={syncContacts}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
@@ -446,7 +474,7 @@ export default function WhatsappCampaignsPage() {
                     <h3 className="text-lg font-semibold mb-2">No Contacts Found</h3>
                     <p className="text-gray-600 mb-4">
                       {user?.role === "SuperAdmin" 
-                        ? "Add contacts manually or import from CSV to start campaigns for this tenant"
+                        ? "Click \"Sync Tenants\" to import all tenant contacts for campaigns across tenants"
                         : "Click \"Sync Students\" to import from student database or add contacts manually"
                       }
                     </p>

@@ -431,6 +431,57 @@ class WhatsAppService {
   }
 
   /**
+   * Sync tenant contacts for SuperAdmin (fetches all tenants who opted in for WhatsApp)
+   */
+  async syncTenantContacts(currentTenantId) {
+    try {
+      const { default: Tenant } = await import('../models/Tenant.js');
+      const tenants = await Tenant.find({ 
+        isActive: true,
+        whatsappOptIn: true // Only sync tenants who consented to WhatsApp messages
+      });
+
+      let synced = 0;
+      let skipped = 0;
+
+      for (const tenant of tenants) {
+        if (!tenant.phone) {
+          skipped++;
+          continue;
+        }
+
+        const cleanPhone = tenant.phone.replace(/[\s+()-]/g, '');
+        
+        await WhatsAppContact.updateOne(
+          { tenantId: currentTenantId, whatsappNumber: cleanPhone },
+          {
+            $set: {
+              tenantId: currentTenantId,
+              name: tenant.businessName || tenant.name,
+              phone: tenant.phone,
+              whatsappNumber: cleanPhone,
+              type: 'tenant',
+              metadata: {
+                businessType: tenant.businessType,
+                plan: tenant.plan,
+                subscriptionStatus: tenant.subscriptionStatus,
+                originalTenantId: tenant._id // Store the original tenant's ID
+              }
+            }
+          },
+          { upsert: true }
+        );
+        synced++;
+      }
+
+      return { synced, skipped };
+    } catch (error) {
+      console.error('Sync tenant contacts error:', error);
+      throw new Error('Failed to sync tenant contacts');
+    }
+  }
+
+  /**
    * Handle webhook status updates from WhatsApp
    */
   async handleStatusUpdate(waMessageId, status, timestamp, errorInfo = {}) {

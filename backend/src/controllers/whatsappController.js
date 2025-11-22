@@ -364,6 +364,31 @@ export const syncContacts = async (req, res) => {
   }
 };
 
+// Sync tenant contacts (SuperAdmin only)
+export const syncTenantContacts = async (req, res) => {
+  try {
+    // Only SuperAdmin can sync tenant contacts
+    if (req.user.role !== 'SuperAdmin') {
+      return res.status(403).json({ 
+        message: 'Access denied. Only SuperAdmin can sync tenant contacts.' 
+      });
+    }
+
+    const tenantId = getTenantId(req);
+    
+    const result = await whatsappService.syncTenantContacts(tenantId);
+
+    res.json({
+      success: true,
+      message: `Synced ${result.synced} tenant contacts (${result.skipped} skipped)`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Sync tenant contacts error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Get statistics
 export const getStats = async (req, res) => {
   try {
@@ -1711,6 +1736,7 @@ export default {
   getMessages,
   getContacts,
   syncContacts,
+  syncTenantContacts,
   getStats,
   verifyWebhook,
   handleWebhook,

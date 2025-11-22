@@ -22,6 +22,7 @@ router.post('/contacts', protect, whatsappController.createContact);
 router.post('/contacts/import', protect, whatsappController.importContacts);
 router.delete('/contacts/:id', protect, whatsappController.deleteContact);
 router.post('/sync-contacts', protect, whatsappController.syncContacts);
+router.post('/sync-tenant-contacts', protect, whatsappController.syncTenantContacts);
 
 // Statistics
 router.get('/stats', protect, whatsappController.getStats);
