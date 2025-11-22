@@ -437,35 +437,37 @@ class WhatsAppService {
     try {
       const { default: Tenant } = await import('../models/Tenant.js');
       const tenants = await Tenant.find({ 
-        isActive: true,
-        whatsappOptIn: true // Only sync tenants who consented to WhatsApp messages
+        active: true // Use correct field name for active status
+        // Note: For now, sync all active tenants since whatsappOptIn field doesn't exist yet
       });
 
       let synced = 0;
       let skipped = 0;
 
       for (const tenant of tenants) {
-        if (!tenant.phone) {
+        // Check for phone in contact object
+        if (!tenant.contact?.phone) {
           skipped++;
           continue;
         }
 
-        const cleanPhone = tenant.phone.replace(/[\s+()-]/g, '');
+        const cleanPhone = tenant.contact.phone.replace(/[\s+()-]/g, '');
         
         await WhatsAppContact.updateOne(
           { tenantId: currentTenantId, whatsappNumber: cleanPhone },
           {
             $set: {
               tenantId: currentTenantId,
-              name: tenant.businessName || tenant.name,
-              phone: tenant.phone,
+              name: tenant.instituteName || tenant.name,
+              phone: tenant.contact.phone,
               whatsappNumber: cleanPhone,
               type: 'tenant',
               metadata: {
-                businessType: tenant.businessType,
                 plan: tenant.plan,
-                subscriptionStatus: tenant.subscriptionStatus,
-                originalTenantId: tenant._id // Store the original tenant's ID
+                subscriptionStatus: tenant.subscription?.status,
+                originalTenantId: tenant._id, // Store the original tenant's ID
+                tenantId: tenant.tenantId,
+                instituteName: tenant.instituteName
               }
             }
           },
