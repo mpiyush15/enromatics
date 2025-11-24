@@ -26,6 +26,7 @@ export default function PlansPage() {
         "Up to 50 students",
         "Basic attendance tracking",
         "Student portal access",
+        "Basic mobile app access",
         "Email support",
         "Basic reports",
         "14-day trial period"
@@ -41,6 +42,7 @@ export default function PlansPage() {
         "Up to 200 students",
         "Advanced attendance tracking",
         "Student & parent portal",
+        "White-labeled mobile app",
         "Fee management",
         "SMS notifications",
         "Priority email support",
@@ -57,6 +59,7 @@ export default function PlansPage() {
       features: [
         "Up to 1000 students",
         "Everything in Starter",
+        "Custom branded mobile app",
         "Test & exam management",
         "Advanced analytics",
         "WhatsApp integration",
@@ -74,6 +77,8 @@ export default function PlansPage() {
       features: [
         "Unlimited students",
         "Everything in Professional",
+        "Fully customized mobile apps",
+        "Custom subdomain (yourname.enromatics.com)",
         "Custom integrations",
         "Dedicated account manager",
         "On-premise deployment option",

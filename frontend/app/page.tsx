@@ -32,6 +32,12 @@ export default function Home() {
     },
     {
       icon: "📱",
+      title: "Student Mobile App",
+      description: "White-labeled mobile app for students to check attendance, view grades, make payments, and stay connected with your institute.",
+      highlights: ["iOS & Android Apps", "Attendance Tracking", "Fee Payments", "Push Notifications"]
+    },
+    {
+      icon: "📈",
       title: "Facebook & Meta Ads",
       description: "Run and manage Facebook ad campaigns directly from the dashboard. Track ROI and optimize your marketing spend.",
       highlights: ["Ad Campaign Management", "Lead Generation", "Performance Tracking"]
@@ -109,7 +115,7 @@ export default function Home() {
               {/* Subheadline */}
               <p className="text-lg sm:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
                 Automate operations, boost revenue, and grow faster with our intelligent platform. 
-                <span className="font-semibold text-slate-900 dark:text-white"> Save 10+ hours per week.</span>
+                <span className="font-semibold text-slate-900 dark:text-white"> Complete with white-labeled mobile apps for students.</span>
               </p>
 
               {/* CTA Buttons */}
@@ -400,6 +406,158 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Mobile App Section */}
+      <section className="py-20 md:py-32 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 dark:from-indigo-950/30 dark:via-blue-950/30 dark:to-cyan-950/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left Content */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600/10 to-blue-600/10 border border-indigo-200 dark:border-indigo-800 rounded-full text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-6">
+                <span className="text-xl">📱</span>
+                White-Labeled Mobile Apps
+              </div>
+              
+              <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6">
+                Your Own Branded 
+                <span className="bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent"> Student App</span>
+              </h2>
+              
+              <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                Give your students a completely branded mobile app experience. From attendance tracking to fee payments, 
+                everything under your institute's name and branding.
+              </p>
+
+              <div className="space-y-4 mb-8">
+                {[
+                  { icon: "🎨", title: "White-Labeled Branding", desc: "Your logo, colors, and institute name throughout the app" },
+                  { icon: "📊", title: "Complete Student Portal", desc: "Attendance, grades, assignments, and fee management" },
+                  { icon: "🔔", title: "Push Notifications", desc: "Instant alerts for assignments, announcements, and fee reminders" },
+                  { icon: "💳", title: "In-App Payments", desc: "Students can pay fees directly through the mobile app" },
+                  { icon: "👨‍👩‍👧‍👦", title: "Parent Access", desc: "Parents can track their child's progress and attendance" },
+                  { icon: "🌐", title: "Deep Linking", desc: "Direct app downloads from your website registration forms" }
+                ].map((feature, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    viewport={{ once: true }}
+                    className="flex items-start gap-4"
+                  >
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                      {feature.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-white mb-1">{feature.title}</h3>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm">{feature.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <motion.button
+                  onClick={() => router.push("/subscribe")}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 transition-all duration-300"
+                >
+                  Get Your Mobile App
+                </motion.button>
+                <button
+                  onClick={() => router.push("/services")}
+                  className="px-8 py-4 bg-white dark:bg-gray-900 border-2 border-slate-300 dark:border-gray-700 text-slate-900 dark:text-white rounded-xl font-bold hover:border-indigo-500 dark:hover:border-indigo-500 transition-all duration-300"
+                >
+                  View Demo
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Right Content - Mobile App Mockups */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="relative flex justify-center items-center">
+                {/* Phone Mockups */}
+                <div className="relative">
+                  {/* Main Phone */}
+                  <div className="relative w-72 h-[600px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3rem] p-2 shadow-2xl">
+                    <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
+                      {/* Status Bar */}
+                      <div className="h-12 bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">Your Institute App</span>
+                      </div>
+                      {/* App Content */}
+                      <div className="p-4 space-y-4">
+                        <div className="bg-slate-100 rounded-xl p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full"></div>
+                            <div>
+                              <div className="h-3 bg-slate-300 rounded w-24 mb-1"></div>
+                              <div className="h-2 bg-slate-200 rounded w-16"></div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white rounded-lg p-3 text-center">
+                              <div className="text-2xl mb-1">📊</div>
+                              <div className="text-xs font-semibold">Attendance</div>
+                            </div>
+                            <div className="bg-white rounded-lg p-3 text-center">
+                              <div className="text-2xl mb-1">📝</div>
+                              <div className="text-xs font-semibold">Assignments</div>
+                            </div>
+                            <div className="bg-white rounded-lg p-3 text-center">
+                              <div className="text-2xl mb-1">💰</div>
+                              <div className="text-xs font-semibold">Fees</div>
+                            </div>
+                            <div className="bg-white rounded-lg p-3 text-center">
+                              <div className="text-2xl mb-1">📈</div>
+                              <div className="text-xs font-semibold">Results</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Secondary Phone (Parent View) */}
+                  <div className="absolute -right-16 top-20 w-48 h-96 bg-gradient-to-br from-slate-800 to-slate-700 rounded-[2rem] p-2 shadow-xl opacity-80 transform rotate-12 scale-75">
+                    <div className="w-full h-full bg-white rounded-[1.5rem] overflow-hidden">
+                      <div className="h-8 bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">Parent Portal</span>
+                      </div>
+                      <div className="p-3 space-y-3">
+                        <div className="bg-purple-50 rounded-lg p-3">
+                          <div className="h-2 bg-purple-200 rounded w-full mb-2"></div>
+                          <div className="h-2 bg-purple-100 rounded w-3/4"></div>
+                        </div>
+                        <div className="bg-pink-50 rounded-lg p-3">
+                          <div className="h-2 bg-pink-200 rounded w-full mb-2"></div>
+                          <div className="h-2 bg-pink-100 rounded w-2/3"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Elements */}
+                <div className="absolute -top-4 -left-8 w-16 h-16 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-2xl shadow-lg opacity-80 animate-bounce"></div>
+                <div className="absolute -bottom-8 -right-4 w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl shadow-lg opacity-60 animate-pulse"></div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section className="py-20 md:py-32 bg-white dark:bg-gray-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -414,7 +572,7 @@ export default function Home() {
                 Get Started in Minutes
               </h2>
               <p className="text-xl text-slate-600 dark:text-slate-400">
-                Simple setup process to get your institute online
+                Simple setup process to get your institute online + mobile app
               </p>
             </motion.div>
           </div>

@@ -28,13 +28,18 @@ export default function StudentManagementPage() {
     },
     {
       icon: "📱",
+      title: "White-Labeled Mobile App",
+      description: "Students get your own branded mobile app for attendance, assignments, fee payments, and more."
+    },
+    {
+      icon: "👨‍👩‍👧‍👦",
       title: "Parent Portal",
-      description: "Give parents 24/7 access to their child's progress, attendance, and fee status."
+      description: "Give parents 24/7 access to their child's progress, attendance, and fee status through web and mobile."
     },
     {
       icon: "🔔",
       title: "Smart Notifications",
-      description: "Automated WhatsApp and SMS alerts for attendance, fees, exams, and announcements."
+      description: "Automated WhatsApp, SMS and push notifications for attendance, fees, exams, and announcements."
     }
   ];
 
@@ -119,7 +124,7 @@ export default function StudentManagementPage() {
               </h1>
 
               <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                Complete student lifecycle management from admission to graduation. Automate administrative tasks, track performance, and keep parents engaged.
+                Complete student lifecycle management from admission to graduation. Automate administrative tasks, track performance, and engage students with your own branded mobile app.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
