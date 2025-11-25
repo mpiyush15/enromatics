@@ -29,7 +29,7 @@ interface DashboardData {
 export default function SocialMediaDashboard() {
   const params = useParams();
   const tenantId = params.tenantId as string;
-  const { isConnected, connect, refresh, isLoading, error } = useFacebookConnection();
+  const { isConnected, connect, disconnect, refresh, isLoading, error } = useFacebookConnection();
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -134,14 +134,31 @@ export default function SocialMediaDashboard() {
             <h1 className="text-2xl font-light text-gray-900 dark:text-white">Social Media</h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Manage your Facebook advertising campaigns</p>
           </div>
-          <button
-            onClick={() => refresh()}
-            disabled={dataLoading}
-            className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-light text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-          >
-            <span className={dataLoading ? "animate-spin" : ""}>🔄</span>
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => refresh()}
+              disabled={dataLoading}
+              className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-light text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              <span className={dataLoading ? "animate-spin" : ""}>🔄</span>
+              Refresh
+            </button>
+            <button
+              onClick={async () => {
+                if (confirm('Are you sure you want to disconnect your Facebook account?')) {
+                  const success = await disconnect();
+                  if (success) {
+                    alert('Facebook account disconnected successfully!');
+                  } else {
+                    alert('Failed to disconnect Facebook account. Please try again.');
+                  }
+                }
+              }}
+              className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg px-3 py-2 text-sm font-light hover:bg-red-100 dark:hover:bg-red-900/30"
+            >
+              🔌 Disconnect
+            </button>
+          </div>
         </div>
 
         {/* Quick Stats */}

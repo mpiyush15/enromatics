@@ -563,6 +563,71 @@ export const getDashboardData = async (req, res) => {
   }
 };
 
+// Disconnect Facebook account
+export const disconnectFacebook = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Determine tenantId
+    const tenantId = req.query.tenantId || req.user.tenantId || null;
+
+    if (!tenantId && req.user.role !== 'SuperAdmin') {
+      return res.status(400).json({ 
+        message: 'Tenant ID required for non-SuperAdmin users' 
+      });
+    }
+
+    console.log('🔌 Disconnecting Facebook for:', {
+      userId: req.user._id,
+      tenantId: tenantId,
+      userRole: req.user.role
+    });
+
+    // Find and delete the Facebook connection
+    const connection = await FacebookConnection.findByTenant(tenantId);
+    
+    if (connection) {
+      // Optional: Revoke the access token from Facebook
+      try {
+        if (connection.accessToken) {
+          await facebookApiRequest(`/me/permissions`, connection.accessToken);
+          console.log('✅ Facebook permissions revoked successfully');
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not revoke Facebook permissions:', error.message);
+        // Continue with disconnect even if revoke fails
+      }
+
+      // Delete the connection from database
+      await FacebookConnection.findByIdAndDelete(connection._id);
+      console.log('✅ Facebook connection deleted from database');
+    }
+
+    // Also clear any old Facebook data from User model (legacy cleanup)
+    if (req.user.facebookBusiness) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $unset: { facebookBusiness: 1 }
+      });
+      console.log('✅ Legacy Facebook data cleared from User model');
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Facebook account disconnected successfully' 
+    });
+
+  } catch (error) {
+    console.error('❌ Disconnect Facebook error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to disconnect Facebook account',
+      error: error.message 
+    });
+  }
+};
+
 // Helper function to calculate insights summary
 const calculateInsightsSummary = (insights) => {
   if (!insights.length) return null;

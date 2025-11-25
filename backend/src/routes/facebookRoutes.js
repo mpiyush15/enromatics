@@ -2,6 +2,7 @@ import express from 'express';
 import { 
   connectFacebook, 
   facebookCallback,
+  disconnectFacebook,
   getConnectionStatus,
   getAdAccounts,
   getCampaigns,
@@ -17,6 +18,7 @@ const router = express.Router();
 // OAuth routes
 router.get('/connect', protect, connectFacebook);
 router.get('/callback', protect, facebookCallback);
+router.post('/disconnect', protect, disconnectFacebook);
 
 // Connection status
 router.get('/status', protect, getConnectionStatus);

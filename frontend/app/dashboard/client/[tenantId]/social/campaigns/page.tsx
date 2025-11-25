@@ -41,9 +41,7 @@ interface CampaignTemplate {
 export default function CampaignPlanningPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
-
-  const [connected, setConnected] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { isConnected, connect, disconnect } = useFacebookConnection();
 
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
