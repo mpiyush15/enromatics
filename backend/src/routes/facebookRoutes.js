@@ -9,7 +9,10 @@ import {
   getAdInsights,
   getPages,
   getPagePosts,
-  getDashboardData
+  getDashboardData,
+  getPaymentMethods,
+  getCampaignTemplates,
+  createCampaign
 } from '../controllers/facebookController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -35,6 +38,11 @@ router.get('/pages/:pageId/posts', protect, getPagePosts);
 
 // Dashboard data
 router.get('/dashboard', protect, getDashboardData);
+
+// Payment methods and campaign creation
+router.get('/ad-accounts/:adAccountId/payment-methods', protect, getPaymentMethods);
+router.get('/campaign-templates', protect, getCampaignTemplates);
+router.post('/campaigns/create', protect, createCampaign);
 
 // Debug endpoint to check user's Facebook data
 router.get('/debug', protect, async (req, res) => {
