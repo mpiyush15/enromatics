@@ -79,10 +79,48 @@ export const sidebarLinks = [
     href: "#",
     roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"],
     children: [
-      { label: "📝 Posts", href: "/dashboard/social/posts" },
-      { label: "📅 Content Plan", href: "/dashboard/social/plan" },
-      { label: "📊 Reports", href: "/dashboard/social/reports" },
-      { label: "⚙️ Connect Facebook", href: "/dashboard/settings/facebook" },
+      { 
+        label: "� Dashboard", 
+        href: "/dashboard/social", 
+        superAdminHref: "/dashboard/social",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "� Campaigns", 
+        href: "/dashboard/client/[tenantId]/social/campaigns", 
+        superAdminHref: "/dashboard/social/campaigns",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "📊 Analytics", 
+        href: "/dashboard/client/[tenantId]/social/analytics", 
+        superAdminHref: "/dashboard/social/analytics",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "🎯 Create Ads", 
+        href: "/dashboard/client/[tenantId]/social/create-ads", 
+        superAdminHref: "/dashboard/social/create-ads",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "📅 Content Planner", 
+        href: "/dashboard/client/[tenantId]/social/content-planner", 
+        superAdminHref: "/dashboard/social/content-planner",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "🏢 Business Assets", 
+        href: "/dashboard/client/[tenantId]/social/business-assets", 
+        superAdminHref: "/dashboard/social/business-assets",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
+      { 
+        label: "⚙️ Settings", 
+        href: "/dashboard/client/[tenantId]/social/settings", 
+        superAdminHref: "/dashboard/social/settings",
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+      },
     ],
   },
 
