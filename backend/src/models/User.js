@@ -77,6 +77,17 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+
+    // Facebook Business Integration
+    facebookBusiness: {
+      connected: { type: Boolean, default: false },
+      facebookUserId: { type: String },
+      accessToken: { type: String },
+      tokenExpiry: { type: Date },
+      permissions: [{ type: String }],
+      connectedAt: { type: Date },
+      lastSyncAt: { type: Date }
+    },
   },
   { timestamps: true }
 );

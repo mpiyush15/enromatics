@@ -112,6 +112,8 @@ export const facebookCallback = async (req, res) => {
     }
 
     console.log('✅ Found user for Facebook callback:', user.email, 'Role:', user.role);
+    console.log('🔍 User ID for callback:', user._id);
+    console.log('🔍 User tenantId:', user.tenantId);
 
     // Update user record with facebook business info
     console.log('💾 Saving Facebook connection data...');
@@ -119,7 +121,12 @@ export const facebookCallback = async (req, res) => {
     console.log('💾 Access Token (first 10 chars):', accessToken.substring(0, 10) + '...');
     console.log('💾 Permissions:', granted);
     
-    user.facebookBusiness = user.facebookBusiness || {};
+    // Initialize facebookBusiness object if it doesn't exist
+    if (!user.facebookBusiness) {
+      user.facebookBusiness = {};
+      console.log('🔧 Initializing facebookBusiness object');
+    }
+    
     user.facebookBusiness.connected = true;
     user.facebookBusiness.facebookUserId = me.id;
     user.facebookBusiness.accessToken = accessToken;
@@ -127,8 +134,26 @@ export const facebookCallback = async (req, res) => {
     user.facebookBusiness.permissions = granted;
     user.facebookBusiness.connectedAt = new Date();
 
+    // Mark the facebookBusiness field as modified to ensure it's saved
+    user.markModified('facebookBusiness');
+    
+    console.log('💾 Data to save:', {
+      connected: user.facebookBusiness.connected,
+      facebookUserId: user.facebookBusiness.facebookUserId,
+      hasAccessToken: !!user.facebookBusiness.accessToken,
+      connectedAt: user.facebookBusiness.connectedAt
+    });
+
     await user.save();
     console.log('✅ Facebook connection data saved successfully!');
+    
+    // Verify the save worked by re-querying the user
+    const verifyUser = await User.findById(user._id);
+    console.log('🔍 Verification - Saved data:', {
+      connected: verifyUser.facebookBusiness?.connected,
+      facebookUserId: verifyUser.facebookBusiness?.facebookUserId,
+      hasAccessToken: !!verifyUser.facebookBusiness?.accessToken
+    });
 
     // Redirect back to appropriate social media dashboard based on user role
     const redirectUrl = user.role === 'SuperAdmin' 
@@ -164,6 +189,9 @@ export const getConnectionStatus = async (req, res) => {
     }
 
     console.log('✅ Checking Facebook connection for user:', user.email);
+    console.log('🔍 User ID for status check:', user._id);
+    console.log('🔍 User tenantId:', user.tenantId);
+    console.log('🔍 Full facebookBusiness object:', user.facebookBusiness);
     console.log('🔍 Facebook Business Data:', {
       connected: user.facebookBusiness?.connected,
       facebookUserId: user.facebookBusiness?.facebookUserId,
