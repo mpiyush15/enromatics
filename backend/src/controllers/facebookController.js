@@ -129,7 +129,25 @@ export const facebookCallback = async (req, res) => {
 // Get user's Facebook connection status
 export const getConnectionStatus = async (req, res) => {
   try {
+    // Enhanced authentication check
+    if (!req.user) {
+      console.error('❌ No authenticated user found in getConnectionStatus');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
     const user = await User.findById(req.user._id);
+    if (!user) {
+      console.error('❌ User not found in database:', req.user._id);
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    console.log('✅ Checking Facebook connection for user:', user.email);
     
     if (!user.facebookBusiness?.connected) {
       return res.json({
@@ -323,10 +341,33 @@ export const getPagePosts = async (req, res) => {
 // Get comprehensive social media analytics dashboard data
 export const getDashboardData = async (req, res) => {
   try {
+    // Enhanced authentication check
+    if (!req.user) {
+      console.error('❌ No authenticated user found in getDashboardData');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
     const user = await User.findById(req.user._id);
+    if (!user) {
+      console.error('❌ User not found in database:', req.user._id);
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+    
+    console.log('✅ User found:', user.email, 'Role:', user.role);
+    console.log('✅ Facebook Business Status:', user.facebookBusiness?.connected ? 'Connected' : 'Not Connected');
     
     if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
-      return res.status(401).json({ message: 'Facebook account not connected' });
+      return res.json({ 
+        success: false,
+        connected: false,
+        message: 'Facebook account not connected' 
+      });
     }
 
     const token = user.facebookBusiness.accessToken;
