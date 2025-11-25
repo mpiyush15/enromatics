@@ -90,20 +90,35 @@ export const facebookCallback = async (req, res) => {
 
     // At this point, we expect the user to be logged in (cookie present)
     // If not, we'll attempt to use state (tenantId) to find user — but prefer cookie
+    console.log('🔍 Facebook Callback - Checking user authentication...');
+    console.log('🔍 req.user:', req.user ? `${req.user.email} (${req.user._id})` : 'null');
+    console.log('🔍 req.query.state (tenantId):', req.query.state);
+    
     let user = null;
     if (req.user) {
+      console.log('✅ Using authenticated user from cookie');
       user = await User.findById(req.user._id);
     } else if (req.query.state) {
+      console.log('⚠️ No cookie auth, trying to find user by tenantId:', req.query.state);
       user = await User.findOne({ tenantId: req.query.state });
     }
 
     if (!user) {
-      console.error('No logged-in user found during Facebook callback');
+      console.error('❌ No logged-in user found during Facebook callback');
+      console.error('❌ req.user:', req.user);
+      console.error('❌ req.query.state:', req.query.state);
       // Redirect back to login page with error
       return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/login?error=no_user`);
     }
 
+    console.log('✅ Found user for Facebook callback:', user.email, 'Role:', user.role);
+
     // Update user record with facebook business info
+    console.log('💾 Saving Facebook connection data...');
+    console.log('💾 Facebook User ID:', me.id);
+    console.log('💾 Access Token (first 10 chars):', accessToken.substring(0, 10) + '...');
+    console.log('💾 Permissions:', granted);
+    
     user.facebookBusiness = user.facebookBusiness || {};
     user.facebookBusiness.connected = true;
     user.facebookBusiness.facebookUserId = me.id;
@@ -113,6 +128,7 @@ export const facebookCallback = async (req, res) => {
     user.facebookBusiness.connectedAt = new Date();
 
     await user.save();
+    console.log('✅ Facebook connection data saved successfully!');
 
     // Redirect back to appropriate social media dashboard based on user role
     const redirectUrl = user.role === 'SuperAdmin' 
@@ -148,17 +164,37 @@ export const getConnectionStatus = async (req, res) => {
     }
 
     console.log('✅ Checking Facebook connection for user:', user.email);
+    console.log('🔍 Facebook Business Data:', {
+      connected: user.facebookBusiness?.connected,
+      facebookUserId: user.facebookBusiness?.facebookUserId,
+      hasAccessToken: !!user.facebookBusiness?.accessToken,
+      tokenLength: user.facebookBusiness?.accessToken?.length,
+      connectedAt: user.facebookBusiness?.connectedAt,
+      permissions: user.facebookBusiness?.permissions?.slice(0, 3)
+    });
     
     if (!user.facebookBusiness?.connected) {
+      console.log('❌ Facebook not connected - facebookBusiness.connected is false');
       return res.json({
         success: true,
         connected: false
       });
     }
 
+    if (!user.facebookBusiness?.accessToken) {
+      console.log('❌ Facebook connected but no access token found');
+      return res.json({
+        success: true,
+        connected: false,
+        error: 'No access token found'
+      });
+    }
+
     // Check if token is still valid by making a test request
     try {
-      await facebookApiRequest('me', user.facebookBusiness.accessToken);
+      console.log('🔍 Testing Facebook access token validity...');
+      const testResult = await facebookApiRequest('me', user.facebookBusiness.accessToken);
+      console.log('✅ Facebook token is valid. User info:', testResult);
       
       return res.json({
         success: true,
@@ -168,6 +204,7 @@ export const getConnectionStatus = async (req, res) => {
         connectedAt: user.facebookBusiness.connectedAt
       });
     } catch (error) {
+      console.error('❌ Facebook token validation failed:', error.message);
       // Token is invalid, mark as disconnected
       user.facebookBusiness.connected = false;
       await user.save();
