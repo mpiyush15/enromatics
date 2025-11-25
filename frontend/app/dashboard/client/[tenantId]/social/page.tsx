@@ -361,25 +361,35 @@ export default function SocialMediaDashboard() {
 
         {/* Quick Actions */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">⚡ Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">⚡ Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <a
+              href={`/dashboard/client/${tenantId}/social/assets`}
+              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+            >
+              <div className="text-2xl mb-2">🎨</div>
+              <div>Business Assets</div>
+            </a>
             <a
               href={`/dashboard/client/${tenantId}/social/reports`}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-center font-semibold transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
             >
-              📊 View Detailed Reports
+              <div className="text-2xl mb-2">📊</div>
+              <div>Detailed Reports</div>
+            </a>
+            <a
+              href={`/dashboard/client/${tenantId}/social/campaigns`}
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+            >
+              <div className="text-2xl mb-2">🎯</div>
+              <div>Campaign Planner</div>
             </a>
             <a
               href={`/dashboard/client/${tenantId}/social/posts`}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-xl text-center font-semibold transition-colors"
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
             >
-              📝 Manage Posts
-            </a>
-            <a
-              href={`/dashboard/client/${tenantId}/social/plan`}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-xl text-center font-semibold transition-colors"
-            >
-              🎯 Campaign Planner
+              <div className="text-2xl mb-2">📝</div>
+              <div>Manage Posts</div>
             </a>
           </div>
         </div>
