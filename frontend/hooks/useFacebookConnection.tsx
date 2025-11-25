@@ -129,8 +129,8 @@ export function useFacebookConnection() {
     
     // Use backend OAuth URL for both SuperAdmin and tenant users
     const authUrl = user?.role === 'SuperAdmin' 
-      ? `${API_BASE_URL}/api/facebook/auth`  // SuperAdmin doesn't need tenantId
-      : `${API_BASE_URL}/api/facebook/auth?tenantId=${user.tenantId}`;
+      ? `${API_BASE_URL}/api/facebook/connect`  // SuperAdmin doesn't need tenantId
+      : `${API_BASE_URL}/api/facebook/connect?tenantId=${user.tenantId}`;
     
     window.location.href = authUrl;
   };

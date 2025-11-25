@@ -3,8 +3,8 @@
  * Centralized API URL management for all backend requests
  */
 
-// Get API URL from environment variable, fallback to production for deployment
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://enromatics.com';
+// Get API URL from environment variable, fallback to production backend for deployment
+export const API_BASE_URL = (process as any).env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
 /**
  * Helper function to construct full API endpoint URLs
