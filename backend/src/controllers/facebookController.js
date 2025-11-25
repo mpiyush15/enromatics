@@ -99,8 +99,8 @@ export const facebookCallback = async (req, res) => {
 
     if (!user) {
       console.error('No logged-in user found during Facebook callback');
-      // Redirect back to frontend with error
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/settings/facebook?error=no_user`);
+      // Redirect back to login page with error
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/login?error=no_user`);
     }
 
     // Update user record with facebook business info
@@ -114,11 +114,15 @@ export const facebookCallback = async (req, res) => {
 
     await user.save();
 
-      // Redirect back to frontend settings page
-      return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/settings/facebook?connected=1`);
+    // Redirect back to appropriate social media dashboard based on user role
+    const redirectUrl = user.role === 'SuperAdmin' 
+      ? `${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/social?connected=1`
+      : `${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/client/${user.tenantId}/social?connected=1`;
+      
+    return res.redirect(redirectUrl);
   } catch (err) {
     console.error('Facebook callback error:', err);
-    return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/settings/facebook?error=${encodeURIComponent(err.message)}`);
+    return res.redirect(`${process.env.FRONTEND_URL || 'https://enromatics.com'}/login?error=${encodeURIComponent(err.message)}`);
   }
 };
 
