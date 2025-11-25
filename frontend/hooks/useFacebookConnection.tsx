@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { authService } from '@/lib/authService';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface FacebookConnectionState {
   isConnected: boolean;
@@ -43,7 +44,7 @@ export function useFacebookConnection() {
   }, []);
 
   const checkConnection = async () => {
-    if (!user?.tenantId) {
+    if (!user?.tenantId && user?.role !== 'SuperAdmin') {
       setConnectionState(prev => ({ ...prev, isLoading: false }));
       return;
     }
@@ -51,7 +52,11 @@ export function useFacebookConnection() {
     try {
       setConnectionState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      const response = await fetch(`/api/facebook/dashboard?tenantId=${user.tenantId}`, {
+      const dashboardUrl = user?.role === 'SuperAdmin'
+        ? `${API_BASE_URL}/api/facebook/dashboard`
+        : `${API_BASE_URL}/api/facebook/dashboard?tenantId=${user.tenantId}`;
+      
+      const response = await fetch(dashboardUrl, {
         credentials: 'include'
       });
 
@@ -89,10 +94,14 @@ export function useFacebookConnection() {
   };
 
   const disconnect = async () => {
-    if (!user?.tenantId) return false;
+    if (!user?.tenantId && user?.role !== 'SuperAdmin') return false;
 
     try {
-      const response = await fetch(`/api/facebook/disconnect?tenantId=${user.tenantId}`, {
+      const disconnectUrl = user?.role === 'SuperAdmin'
+        ? `${API_BASE_URL}/api/facebook/disconnect`
+        : `${API_BASE_URL}/api/facebook/disconnect?tenantId=${user.tenantId}`;
+      
+      const response = await fetch(disconnectUrl, {
         method: 'POST',
         credentials: 'include'
       });
@@ -116,17 +125,21 @@ export function useFacebookConnection() {
   };
 
   const connect = () => {
-    if (!user?.tenantId) return;
+    if (!user?.tenantId && user?.role !== 'SuperAdmin') return;
     
-    const authUrl = `/api/facebook/auth?tenantId=${user.tenantId}`;
+    // Use backend OAuth URL for both SuperAdmin and tenant users
+    const authUrl = user?.role === 'SuperAdmin' 
+      ? `${API_BASE_URL}/api/facebook/auth`  // SuperAdmin doesn't need tenantId
+      : `${API_BASE_URL}/api/facebook/auth?tenantId=${user.tenantId}`;
+    
     window.location.href = authUrl;
   };
 
   useEffect(() => {
-    if (user?.tenantId) {
+    if (user?.tenantId || user?.role === 'SuperAdmin') {
       checkConnection();
     }
-  }, [user?.tenantId]);
+  }, [user?.tenantId, user?.role]);
 
   return {
     ...connectionState,
