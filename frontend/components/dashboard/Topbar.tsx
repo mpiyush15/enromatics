@@ -62,14 +62,14 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
           {dateTime}
         </p>
 
-        {/* Admin CMS Button */}
+        {/* Social Media Dashboard Button */}
         {isAdmin && (
           <Link
-            href="/admin"
+            href="/dashboard/social"
             className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-lg shadow-sm transition-all hover:shadow-md"
           >
-            <span>⚙️</span>
-            <span className="hidden sm:inline">CMS</span>
+            <span>📱</span>
+            <span className="hidden sm:inline">Social</span>
           </Link>
         )}
         
