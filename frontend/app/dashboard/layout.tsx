@@ -37,6 +37,7 @@ export default function DashboardLayout({
         userName={user?.tenant?.instituteName || user?.name || "User"}
         userRole={user?.role}
         isAdmin={user?.role === "SuperAdmin"}
+        user={user}
       >
         {children}
       </ClientDashboard>

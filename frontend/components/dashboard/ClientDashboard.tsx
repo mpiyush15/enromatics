@@ -10,12 +10,14 @@ export default function ClientDashboard({
   userRole,
   isAdmin = false,
   sidebarLinks,
+  user,
 }: {
   children: React.ReactNode;
   userName: string;
   userRole?: string;
   isAdmin?: boolean;
   sidebarLinks?: any[];
+  user?: any;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -31,7 +33,7 @@ export default function ClientDashboard({
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
       {/* Sidebar - Fixed on desktop, overlay on mobile */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} links={sidebarLinks} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} links={sidebarLinks} user={user} />
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 h-screen overflow-hidden">
