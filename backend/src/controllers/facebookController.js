@@ -274,14 +274,23 @@ export const getAdAccounts = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     
-    if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
+    // Get Facebook connection using dedicated model
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    
+    if (!facebookConnection || !facebookConnection.connected || !facebookConnection.accessToken) {
       return res.status(401).json({ message: 'Facebook account not connected' });
     }
 
+    console.log('🔍 Fetching Facebook ad accounts...');
     const data = await facebookApiRequest(
       'me/adaccounts?fields=id,name,account_status,balance,currency,timezone_name,created_time,account_id',
-      user.facebookBusiness.accessToken
+      facebookConnection.accessToken
     );
+
+    console.log('✅ Facebook ad accounts response:', {
+      count: data.data?.length || 0,
+      accounts: data.data?.map(acc => ({ id: acc.id, name: acc.name }))
+    });
 
     res.json({
       success: true,
@@ -378,14 +387,23 @@ export const getPages = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     
-    if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
+    // Get Facebook connection using dedicated model
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    
+    if (!facebookConnection || !facebookConnection.connected || !facebookConnection.accessToken) {
       return res.status(401).json({ message: 'Facebook account not connected' });
     }
 
+    console.log('🔍 Fetching Facebook pages...');
     const data = await facebookApiRequest(
       'me/accounts?fields=id,name,category,followers_count,fan_count,link,picture,access_token',
-      user.facebookBusiness.accessToken
+      facebookConnection.accessToken
     );
+
+    console.log('✅ Facebook pages response:', {
+      count: data.data?.length || 0,
+      pages: data.data?.map(p => ({ id: p.id, name: p.name }))
+    });
 
     res.json({
       success: true,
@@ -404,14 +422,23 @@ export const getPagePosts = async (req, res) => {
     const { limit = 25 } = req.query;
     const user = await User.findById(req.user._id);
     
-    if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
+    // Get Facebook connection using dedicated model
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    
+    if (!facebookConnection || !facebookConnection.connected || !facebookConnection.accessToken) {
       return res.status(401).json({ message: 'Facebook account not connected' });
     }
 
+    console.log(`🔍 Fetching posts for page ${pageId}...`);
     const data = await facebookApiRequest(
       `${pageId}/posts?fields=id,message,story,created_time,updated_time,type,status_type,link,picture,full_picture,likes.summary(true),comments.summary(true),shares&limit=${limit}`,
-      user.facebookBusiness.accessToken
+      facebookConnection.accessToken
     );
+
+    console.log('✅ Facebook posts response:', {
+      count: data.data?.length || 0,
+      posts: data.data?.slice(0, 3).map(p => ({ id: p.id, type: p.type, hasMessage: !!p.message }))
+    });
 
     res.json({
       success: true,
@@ -462,13 +489,31 @@ export const getDashboardData = async (req, res) => {
     const token = facebookConnection.accessToken;
     
     // Fetch multiple data sources in parallel
+    console.log('🔍 Fetching Facebook dashboard data with token...');
     const [adAccountsRes, pagesRes] = await Promise.allSettled([
       facebookApiRequest('me/adaccounts?fields=id,name,account_status,balance,currency', token),
       facebookApiRequest('me/accounts?fields=id,name,followers_count,fan_count', token)
     ]);
 
+    console.log('🔍 Ad Accounts API Result:', {
+      status: adAccountsRes.status,
+      data: adAccountsRes.status === 'fulfilled' ? adAccountsRes.value : adAccountsRes.reason
+    });
+    
+    console.log('🔍 Pages API Result:', {
+      status: pagesRes.status,
+      data: pagesRes.status === 'fulfilled' ? pagesRes.value : pagesRes.reason
+    });
+
     const adAccounts = adAccountsRes.status === 'fulfilled' ? adAccountsRes.value.data : [];
     const pages = pagesRes.status === 'fulfilled' ? pagesRes.value.data : [];
+    
+    console.log('✅ Processed data:', {
+      adAccountsCount: adAccounts?.length || 0,
+      pagesCount: pages?.length || 0,
+      adAccounts: adAccounts?.map(acc => ({ id: acc.id, name: acc.name })),
+      pages: pages?.map(page => ({ id: page.id, name: page.name }))
+    });
 
     // Get insights for first ad account if available
     let insights = null;
