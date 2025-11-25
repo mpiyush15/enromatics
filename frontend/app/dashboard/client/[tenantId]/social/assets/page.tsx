@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
 import Link from "next/link";
+import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
 interface AdAccount {
   id: string;
