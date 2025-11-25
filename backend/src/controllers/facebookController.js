@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import FacebookConnection from '../models/FacebookConnection.js';
 
 // Helper function to make Facebook API requests with error handling
 const facebookApiRequest = async (endpoint, accessToken) => {
@@ -115,44 +116,57 @@ export const facebookCallback = async (req, res) => {
     console.log('🔍 User ID for callback:', user._id);
     console.log('🔍 User tenantId:', user.tenantId);
 
-    // Update user record with facebook business info
-    console.log('💾 Saving Facebook connection data...');
+    // Create or update Facebook connection using dedicated model
+    console.log('💾 Saving Facebook connection data to FacebookConnection model...');
     console.log('💾 Facebook User ID:', me.id);
     console.log('💾 Access Token (first 10 chars):', accessToken.substring(0, 10) + '...');
     console.log('💾 Permissions:', granted);
     
-    // Initialize facebookBusiness object if it doesn't exist
-    if (!user.facebookBusiness) {
-      user.facebookBusiness = {};
-      console.log('🔧 Initializing facebookBusiness object');
-    }
-    
-    user.facebookBusiness.connected = true;
-    user.facebookBusiness.facebookUserId = me.id;
-    user.facebookBusiness.accessToken = accessToken;
-    user.facebookBusiness.tokenExpiry = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
-    user.facebookBusiness.permissions = granted;
-    user.facebookBusiness.connectedAt = new Date();
-
-    // Mark the facebookBusiness field as modified to ensure it's saved
-    user.markModified('facebookBusiness');
-    
-    console.log('💾 Data to save:', {
-      connected: user.facebookBusiness.connected,
-      facebookUserId: user.facebookBusiness.facebookUserId,
-      hasAccessToken: !!user.facebookBusiness.accessToken,
-      connectedAt: user.facebookBusiness.connectedAt
+    // Check if connection already exists
+    let facebookConnection = await FacebookConnection.findOne({ 
+      tenantId: user.tenantId,
+      userId: user._id 
     });
 
-    await user.save();
-    console.log('✅ Facebook connection data saved successfully!');
+    if (facebookConnection) {
+      console.log('� Updating existing Facebook connection...');
+      // Update existing connection
+      facebookConnection.connected = true;
+      facebookConnection.facebookUserId = me.id;
+      facebookConnection.facebookUserName = me.name;
+      facebookConnection.accessToken = accessToken;
+      facebookConnection.tokenExpiry = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+      facebookConnection.permissions = granted;
+      facebookConnection.connectedAt = new Date();
+      facebookConnection.lastSyncAt = new Date();
+    } else {
+      console.log('🆕 Creating new Facebook connection...');
+      // Create new connection
+      facebookConnection = new FacebookConnection({
+        userId: user._id,
+        tenantId: user.tenantId,
+        connected: true,
+        facebookUserId: me.id,
+        facebookUserName: me.name,
+        accessToken: accessToken,
+        tokenExpiry: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+        permissions: granted,
+        connectedAt: new Date(),
+        lastSyncAt: new Date(),
+      });
+    }
+
+    await facebookConnection.save();
+    console.log('✅ Facebook connection data saved successfully to FacebookConnection model!');
     
-    // Verify the save worked by re-querying the user
-    const verifyUser = await User.findById(user._id);
-    console.log('🔍 Verification - Saved data:', {
-      connected: verifyUser.facebookBusiness?.connected,
-      facebookUserId: verifyUser.facebookBusiness?.facebookUserId,
-      hasAccessToken: !!verifyUser.facebookBusiness?.accessToken
+    // Verify the save worked
+    const verifyConnection = await FacebookConnection.findByTenant(user.tenantId);
+    console.log('🔍 Verification - Saved connection:', {
+      id: verifyConnection?._id,
+      connected: verifyConnection?.connected,
+      facebookUserId: verifyConnection?.facebookUserId,
+      hasAccessToken: !!verifyConnection?.accessToken,
+      tenantId: verifyConnection?.tenantId
     });
 
     // Redirect back to appropriate social media dashboard based on user role
@@ -191,25 +205,29 @@ export const getConnectionStatus = async (req, res) => {
     console.log('✅ Checking Facebook connection for user:', user.email);
     console.log('🔍 User ID for status check:', user._id);
     console.log('🔍 User tenantId:', user.tenantId);
-    console.log('🔍 Full facebookBusiness object:', user.facebookBusiness);
-    console.log('🔍 Facebook Business Data:', {
-      connected: user.facebookBusiness?.connected,
-      facebookUserId: user.facebookBusiness?.facebookUserId,
-      hasAccessToken: !!user.facebookBusiness?.accessToken,
-      tokenLength: user.facebookBusiness?.accessToken?.length,
-      connectedAt: user.facebookBusiness?.connectedAt,
-      permissions: user.facebookBusiness?.permissions?.slice(0, 3)
+
+    // Check Facebook connection using dedicated model
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    
+    console.log('🔍 Facebook Connection Data:', {
+      found: !!facebookConnection,
+      connected: facebookConnection?.connected,
+      facebookUserId: facebookConnection?.facebookUserId,
+      hasAccessToken: !!facebookConnection?.accessToken,
+      tokenLength: facebookConnection?.accessToken?.length,
+      connectedAt: facebookConnection?.connectedAt,
+      permissions: facebookConnection?.permissions?.slice(0, 3)
     });
     
-    if (!user.facebookBusiness?.connected) {
-      console.log('❌ Facebook not connected - facebookBusiness.connected is false');
+    if (!facebookConnection || !facebookConnection.connected) {
+      console.log('❌ Facebook not connected - no FacebookConnection found or not connected');
       return res.json({
         success: true,
         connected: false
       });
     }
 
-    if (!user.facebookBusiness?.accessToken) {
+    if (!facebookConnection.accessToken) {
       console.log('❌ Facebook connected but no access token found');
       return res.json({
         success: true,
@@ -221,21 +239,23 @@ export const getConnectionStatus = async (req, res) => {
     // Check if token is still valid by making a test request
     try {
       console.log('🔍 Testing Facebook access token validity...');
-      const testResult = await facebookApiRequest('me', user.facebookBusiness.accessToken);
+      const testResult = await facebookApiRequest('me', facebookConnection.accessToken);
       console.log('✅ Facebook token is valid. User info:', testResult);
       
       return res.json({
         success: true,
         connected: true,
-        facebookUserId: user.facebookBusiness.facebookUserId,
-        permissions: user.facebookBusiness.permissions,
-        connectedAt: user.facebookBusiness.connectedAt
+        facebookUserId: facebookConnection.facebookUserId,
+        permissions: facebookConnection.permissions,
+        connectedAt: facebookConnection.connectedAt
       });
     } catch (error) {
       console.error('❌ Facebook token validation failed:', error.message);
       // Token is invalid, mark as disconnected
-      user.facebookBusiness.connected = false;
-      await user.save();
+      facebookConnection.connected = false;
+      facebookConnection.lastSyncError = error.message;
+      facebookConnection.syncStatus = 'error';
+      await facebookConnection.save();
       
       return res.json({
         success: true,
@@ -425,9 +445,13 @@ export const getDashboardData = async (req, res) => {
     }
     
     console.log('✅ User found:', user.email, 'Role:', user.role);
-    console.log('✅ Facebook Business Status:', user.facebookBusiness?.connected ? 'Connected' : 'Not Connected');
     
-    if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
+    // Get Facebook connection using dedicated model
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    
+    console.log('✅ Facebook Connection Status:', facebookConnection?.connected ? 'Connected' : 'Not Connected');
+    
+    if (!facebookConnection || !facebookConnection.connected || !facebookConnection.accessToken) {
       return res.json({ 
         success: false,
         connected: false,
@@ -435,7 +459,7 @@ export const getDashboardData = async (req, res) => {
       });
     }
 
-    const token = user.facebookBusiness.accessToken;
+    const token = facebookConnection.accessToken;
     
     // Fetch multiple data sources in parallel
     const [adAccountsRes, pagesRes] = await Promise.allSettled([

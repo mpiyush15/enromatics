@@ -38,21 +38,39 @@ router.get('/dashboard', protect, getDashboardData);
 router.get('/debug', protect, async (req, res) => {
   try {
     const User = (await import('../models/User.js')).default;
+    const FacebookConnection = (await import('../models/FacebookConnection.js')).default;
+    
     const user = await User.findById(req.user._id);
+    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
+    const allConnections = await FacebookConnection.find({ tenantId: user.tenantId });
     
     res.json({
       success: true,
       debug: {
-        userId: user._id,
-        email: user.email,
-        role: user.role,
-        tenantId: user.tenantId,
-        facebookBusiness: user.facebookBusiness,
-        hasFacebookBusiness: !!user.facebookBusiness,
-        isConnected: user.facebookBusiness?.connected,
-        hasAccessToken: !!user.facebookBusiness?.accessToken,
-        tokenPreview: user.facebookBusiness?.accessToken ? 
-          user.facebookBusiness.accessToken.substring(0, 10) + '...' : null
+        user: {
+          userId: user._id,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId,
+          oldFacebookBusiness: user.facebookBusiness || 'undefined'
+        },
+        facebookConnection: {
+          found: !!facebookConnection,
+          id: facebookConnection?._id,
+          connected: facebookConnection?.connected,
+          facebookUserId: facebookConnection?.facebookUserId,
+          hasAccessToken: !!facebookConnection?.accessToken,
+          tokenPreview: facebookConnection?.accessToken ? 
+            facebookConnection.accessToken.substring(0, 10) + '...' : null,
+          connectedAt: facebookConnection?.connectedAt,
+          permissions: facebookConnection?.permissions
+        },
+        allConnections: allConnections.map(conn => ({
+          id: conn._id,
+          connected: conn.connected,
+          facebookUserId: conn.facebookUserId,
+          connectedAt: conn.connectedAt
+        }))
       }
     });
   } catch (error) {
