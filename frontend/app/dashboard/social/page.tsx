@@ -26,6 +26,22 @@ export default function SuperAdminSocialMediaDashboard() {
             </p>
           </div>
 
+          {/* SuperAdmin Notice */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 rounded-lg p-6 mb-8 max-w-3xl mx-auto">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="text-2xl">🔧</div>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">SuperAdmin Notice</h3>
+                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                  As SuperAdmin, connecting your Facebook account will establish the platform's default integration. 
+                  Individual tenants can override this with their own Facebook connections if needed.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Connection Card */}
           <div className="flex justify-center mb-8">
             <FacebookConnectionCard />
@@ -98,6 +114,27 @@ export default function SuperAdminSocialMediaDashboard() {
               )}
             </div>
             <div className="text-6xl opacity-20">📊</div>
+          </div>
+        </div>
+
+        {/* SuperAdmin Notice */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 rounded-lg p-6 mb-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <div className="text-2xl">🔧</div>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">SuperAdmin Notice</h3>
+              <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                As SuperAdmin, this Facebook connection will be used as the platform's default integration. 
+                Individual tenants can override this with their own Facebook connections if needed.
+              </p>
+              <ul className="mt-2 text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                <li>• This integration provides platform-wide social media capabilities</li>
+                <li>• Tenants without their own connections will use this default integration</li>
+                <li>• Platform analytics and insights are available through this connection</li>
+              </ul>
+            </div>
           </div>
         </div>
 
