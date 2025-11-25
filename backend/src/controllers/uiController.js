@@ -31,11 +31,11 @@ export const getSidebar = async (req, res) => {
       return true;
     });
 
-    // 🔁 Filter children recursively and replace [tenantId] placeholder
+    // 🔁 Filter children recursively and handle routing for SuperAdmin vs tenant users
     const processed = filteredLinks.map(link => {
-      // Replace [tenantId] in parent link href
+      // Replace [tenantId] in parent link href for non-SuperAdmin
       const processedLink = { ...link };
-      if (processedLink.href && tenantId) {
+      if (processedLink.href && tenantId && role !== 'SuperAdmin') {
         processedLink.href = processedLink.href.replace('[tenantId]', tenantId);
       }
 
@@ -46,14 +46,21 @@ export const getSidebar = async (req, res) => {
           if (child.roles && !child.roles.includes(role)) return false;
 
           if (!child.href) return true;
-          if (tenantId && tenantModules.length > 0) {
+          if (tenantId && tenantModules.length > 0 && role !== 'SuperAdmin') {
             const moduleKey = child.href.split("/dashboard/")[1]?.split("/")[0];
             return tenantModules.includes(moduleKey);
           }
-          return true; // Include all children if no module restrictions
+          return true; // Include all children if no module restrictions or SuperAdmin
         }).map(child => {
-          // Replace [tenantId] in child href
-          if (child.href && tenantId) {
+          // Handle SuperAdmin vs tenant routing
+          if (role === 'SuperAdmin') {
+            // Use superAdminHref if available, otherwise use regular href
+            return { 
+              ...child, 
+              href: child.superAdminHref || child.href 
+            };
+          } else if (child.href && tenantId) {
+            // Replace [tenantId] in child href for tenant users
             return { ...child, href: child.href.replace('[tenantId]', tenantId) };
           }
           return child;
