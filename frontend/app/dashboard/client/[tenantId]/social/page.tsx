@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
+import { useFacebookConnection } from "@/hooks/useFacebookConnection";
+import FacebookConnectionCard from "@/components/dashboard/FacebookConnectionCard";
 
 interface AdAccount {
   id: string;
@@ -47,67 +49,61 @@ interface ConnectionStatus {
 export default function SocialMediaDashboard() {
   const params = useParams();
   const tenantId = params.tenantId as string;
+  
+  const {
+    isConnected,
+    isLoading: connectionLoading,
+    userInfo,
+    pages,
+    adAccounts,
+    error: connectionError
+  } = useFacebookConnection();
 
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchConnectionStatus = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
-        credentials: 'include',
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setConnectionStatus(data);
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch connection status:', err);
-      setError(err.message);
-    }
-  };
+  const fetchDashboardInsights = async () => {
+    if (!isConnected) return;
 
-  const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/dashboard`, {
+      setLoading(true);
+      const response = await fetch(`/api/facebook/dashboard?tenantId=${tenantId}`, {
         credentials: 'include',
       });
       const data = await response.json();
       
-      if (data.success) {
-        setDashboardData(data.dashboard);
+      if (response.ok) {
+        setDashboardData({
+          adAccounts: data.adAccounts || [],
+          pages: data.pages || [],
+          insights: data.insights || null,
+          summary: {
+            totalAdAccounts: data.adAccounts?.length || 0,
+            totalPages: data.pages?.length || 0,
+            totalFollowers: data.pages?.reduce((sum: number, page: any) => sum + (page.followers || 0), 0) || 0
+          }
+        });
       } else {
         setError(data.message || 'Failed to fetch dashboard data');
       }
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
       setError(err.message);
-    }
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await fetchConnectionStatus();
+    } finally {
       setLoading(false);
-    };
-
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (connectionStatus?.connected) {
-      fetchDashboardData();
     }
-  }, [connectionStatus]);
-
-  const handleConnect = () => {
-    window.location.href = `${API_BASE_URL}/api/facebook/connect`;
   };
 
-  if (loading) {
+  useEffect(() => {
+    if (isConnected) {
+      fetchDashboardInsights();
+    } else {
+      setLoading(false);
+    }
+  }, [isConnected, tenantId]);
+
+  if (connectionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
@@ -118,7 +114,7 @@ export default function SocialMediaDashboard() {
     );
   }
 
-  if (!connectionStatus?.connected) {
+  if (!isConnected) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
@@ -134,17 +130,24 @@ export default function SocialMediaDashboard() {
           </div>
 
           {/* Connection Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-            <div className="text-5xl mb-6">🔗</div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Connect Your Facebook Business Account
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
-              To access your social media analytics, ad performance, and page insights, 
-              you need to connect your Facebook Business account. This will allow us to fetch:
-            </p>
+          <div className="flex justify-center mb-8">
+            <FacebookConnectionCard />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Features Overview */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8">
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-6">🔗</div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                Facebook Business Integration
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
+                Connect your Facebook Business account to access comprehensive social media analytics, 
+                ad performance data, and page insights all in one place.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
                 <div className="text-3xl mb-2">📊</div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">Ad Analytics</h3>
@@ -175,17 +178,10 @@ export default function SocialMediaDashboard() {
               </div>
             </div>
 
-            <button
-              onClick={handleConnect}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
-            >
-              🔗 Connect Facebook Account
-            </button>
-
-            {connectionStatus?.error && (
+            {connectionError && (
               <div className="mt-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
                 <p className="text-red-600 dark:text-red-400">
-                  ❌ Connection failed: {connectionStatus.error}
+                  ❌ Connection failed: {connectionError}
                 </p>
               </div>
             )}
@@ -200,72 +196,77 @@ export default function SocialMediaDashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-3xl shadow-2xl p-8 text-white">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">📱 Social Media Analytics</h1>
               <p className="text-blue-100">
-                Connected as Facebook User ID: {connectionStatus.facebookUserId}
+                Connected as: {userInfo?.name || 'Facebook User'}
               </p>
-              <p className="text-blue-200 text-sm">
-                Connected on {connectionStatus.connectedAt ? new Date(connectionStatus.connectedAt).toLocaleDateString() : 'N/A'}
-              </p>
+              {userInfo?.email && (
+                <p className="text-blue-200 text-sm">
+                  {userInfo.email}
+                </p>
+              )}
             </div>
             <div className="text-6xl opacity-20">📊</div>
           </div>
         </div>
 
+        {/* Connection Status Card */}
+        <div className="flex justify-center mb-6">
+          <FacebookConnectionCard />
+        </div>
+
         {/* Quick Stats */}
-        {dashboardData && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ad Accounts</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {dashboardData.summary.totalAdAccounts}
-                  </p>
-                </div>
-                <div className="text-3xl">💼</div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ad Accounts</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {adAccounts.length}
+                </p>
               </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Facebook Pages</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {dashboardData.summary.totalPages}
-                  </p>
-                </div>
-                <div className="text-3xl">📄</div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Followers</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {dashboardData.summary.totalFollowers.toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-3xl">👥</div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Weekly Spend</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    ${dashboardData.insights?.spend.toFixed(2) || '0.00'}
-                  </p>
-                </div>
-                <div className="text-3xl">💰</div>
-              </div>
+              <div className="text-3xl">💼</div>
             </div>
           </div>
-        )}
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Facebook Pages</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {pages.length}
+                </p>
+              </div>
+              <div className="text-3xl">📄</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Followers</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {pages.reduce((sum: number, page: any) => sum + (page.fan_count || 0), 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="text-3xl">👥</div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Weekly Spend</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  ${dashboardData?.insights?.spend?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+              <div className="text-3xl">💰</div>
+            </div>
+          </div>
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -275,22 +276,22 @@ export default function SocialMediaDashboard() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">💼 Ad Accounts</h2>
             </div>
             <div className="p-6 space-y-4">
-              {dashboardData?.adAccounts.length ? (
-                dashboardData.adAccounts.map((account) => (
+              {adAccounts.length ? (
+                adAccounts.map((account: any) => (
                   <div key={account.id} className="border rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white">{account.name}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">ID: {account.id.replace('act_', '')}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">ID: {account.id?.replace?.('act_', '') || account.id}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          {account.balance} {account.currency}
+                          {account.balance || '0'} {account.currency || 'USD'}
                         </p>
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          account.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          account.account_status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {account.status === 1 ? 'Active' : 'Inactive'}
+                          {account.account_status === 1 ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </div>
@@ -308,8 +309,8 @@ export default function SocialMediaDashboard() {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">📄 Facebook Pages</h2>
             </div>
             <div className="p-6 space-y-4">
-              {dashboardData?.pages.length ? (
-                dashboardData.pages.map((page) => (
+              {pages.length ? (
+                pages.map((page: any) => (
                   <div key={page.id} className="border rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex items-center justify-between">
                       <div>
@@ -317,7 +318,7 @@ export default function SocialMediaDashboard() {
                         <p className="text-sm text-gray-600 dark:text-gray-400">Page ID: {page.id}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-blue-600">{page.followers.toLocaleString()}</p>
+                        <p className="text-lg font-bold text-blue-600">{(page.fan_count || 0).toLocaleString()}</p>
                         <p className="text-xs text-gray-500">followers</p>
                       </div>
                     </div>

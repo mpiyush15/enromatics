@@ -44,20 +44,28 @@ export const sidebarLinks = [
     roles: ["subscriber", "admin" , "user", "tenantAdmin", "SuperAdmin"],
     children: [
       {
-        label: "📝 Posts",
-        href: "/dashboard/social/posts",
+        label: "� Dashboard",
+        href: "/dashboard/client/[tenantId]/social",
       },
       {
-        label: "📅 Content Plan",
-        href: "/dashboard/social/plan",
+        label: "🎨 Business Assets",
+        href: "/dashboard/client/[tenantId]/social/assets",
       },
       {
-        label: "📊 Reports",
-        href: "/dashboard/social/reports",
+        label: "� Posts Manager",
+        href: "/dashboard/client/[tenantId]/social/posts",
       },
       {
-        label: "⚙️ Connect Facebook",
-        href: "/dashboard/settings/facebook",
+        label: "� Reports & Analytics",
+        href: "/dashboard/client/[tenantId]/social/reports",
+      },
+      {
+        label: "🎯 Campaign Planner",
+        href: "/dashboard/client/[tenantId]/social/campaigns",
+      },
+      {
+        label: "⚙️ Facebook Settings",
+        href: "/dashboard/client/[tenantId]/settings/facebook",
       },
     ],
   },
