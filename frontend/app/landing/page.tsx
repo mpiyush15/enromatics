@@ -7,60 +7,64 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 overflow-hidden">
-        {/* Background with Image */}
-        <div className="absolute inset-0 -z-10 w-full h-full">
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 -z-10 w-full h-full opacity-20 dark:opacity-10">
           <Image
             src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-            alt="Dashboard"
+            alt="Dashboard Pattern"
             fill
             className="object-cover object-center"
             quality={100}
             priority
           />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/50 to-black/60"></div>
+        </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute inset-0 -z-20">
+          <div className="absolute top-20 right-20 w-72 h-72 bg-blue-400/10 dark:bg-blue-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 left-20 w-72 h-72 bg-indigo-400/10 dark:bg-indigo-500/5 rounded-full blur-3xl"></div>
         </div>
 
         {/* Hero Content */}
         <div className="max-w-4xl w-full text-center relative z-10">
-          <h1 className="text-5xl md:text-7xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-5xl md:text-7xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
             Drive Real Institute Growth with Enromatics
           </h1>
           
-          <p className="text-xl md:text-2xl text-white/90 mb-12 font-light max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-12 font-light max-w-3xl mx-auto leading-relaxed">
             Manage admissions, students, payments, and analytics—all in one intuitive dashboard built for coaching institutes.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link 
               href="/login" 
-              className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-lg text-lg shadow-lg hover:bg-gray-100 transition active:scale-95"
+              className="px-8 py-4 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg text-lg shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition active:scale-95"
             >
               Get Started Free
             </Link>
             <Link 
               href="#features" 
-              className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg text-lg hover:bg-white/10 transition"
+              className="px-8 py-4 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-semibold rounded-lg text-lg hover:bg-blue-50 dark:hover:bg-gray-800 transition"
             >
               Explore Features
             </Link>
           </div>
 
-          <p className="text-white/70 text-sm font-light">
+          <p className="text-gray-600 dark:text-gray-400 text-sm font-light">
             No credit card required. Start free for 14 days.
           </p>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-6 bg-white dark:bg-gray-900">
+      <section id="features" className="py-24 px-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
               Everything you need to manage your coaching institute
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto font-light">
               Streamline operations, boost student success, and grow your business with powerful tools designed for educators.
             </p>
           </div>
@@ -68,7 +72,7 @@ export default function LandingPage() {
           {/* Feature 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mb-24">
             <div>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Student Management & Admissions</h3>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Student Management & Admissions</h3>
               <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
                 Simplify the admission process, track student progress, and manage academic records all in one place. Reduce administrative overhead and focus on teaching.
               </p>
@@ -108,7 +112,7 @@ export default function LandingPage() {
               />
             </div>
             <div className="order-1 md:order-2">
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Secure Payment Processing</h3>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Secure Payment Processing</h3>
               <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
                 Accept payments from students and track financial transactions with complete security and transparency. Never miss a payment reminder again.
               </p>
@@ -132,7 +136,7 @@ export default function LandingPage() {
           {/* Feature 3 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             <div>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Analytics & Insights</h3>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Analytics & Insights</h3>
               <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
                 Make data-driven decisions with real-time analytics. Monitor institute performance, student outcomes, and identify growth opportunities.
               </p>
