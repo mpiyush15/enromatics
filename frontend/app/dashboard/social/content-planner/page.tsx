@@ -62,7 +62,7 @@ export default function SuperAdminContentPlannerPage() {
   const getCurrentDate = () => new Date().toISOString().split('T')[0];
   
   const getPostsForDate = (date: string) => {
-    return posts.filter(post => post.scheduledDate === date);
+    return contentPosts.filter((post: any) => post.scheduledDate === date);
   };
 
   const generateCalendarDays = () => {
@@ -113,8 +113,8 @@ export default function SuperAdminContentPlannerPage() {
     setShowCreateModal(false);
   };
 
-  const deletePost = (postId: string) => {
-    setPosts(posts.filter(post => post.id !== postId));
+  const deletePost = (postId: string | number) => {
+    setContentPosts(contentPosts.filter((post: any) => post.id !== postId));
   };
 
   const getStatusColor = (status: string) => {

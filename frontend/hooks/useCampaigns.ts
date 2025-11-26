@@ -44,10 +44,10 @@ export const useCampaigns = (adAccounts: AdAccount[], isConnected: boolean) => {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts/${accountId}/campaigns`, {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });

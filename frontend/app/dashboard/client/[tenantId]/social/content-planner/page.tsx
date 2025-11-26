@@ -119,8 +119,8 @@ export default function TenantContentPlannerPage() {
     setShowCreateModal(false);
   };
 
-  const deletePost = (postId: string) => {
-    setPosts(posts.filter(post => post.id !== postId));
+  const deletePost = (postId: string | number) => {
+    setContentPosts(contentPosts.filter((post: any) => post.id !== postId));
   };
 
   const getStatusColor = (status: string) => {
