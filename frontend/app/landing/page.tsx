@@ -8,32 +8,52 @@ export default function LandingPage() {
     <main className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
       {/* Hero Section */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        {/* Background Image with Overlay */}
-        <div className="absolute inset-0 -z-10 w-full h-full opacity-20 dark:opacity-10">
-          <Image
-            src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-            alt="Dashboard Pattern"
-            fill
-            className="object-cover object-center"
-            quality={100}
-            priority
-          />
+        {/* Dashboard Background with Multiple Layers */}
+        <div className="absolute inset-0 -z-20 w-full h-full">
+          <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.08]">
+            <Image
+              src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
+              alt="Dashboard Background"
+              fill
+              className="object-cover object-center"
+              quality={100}
+              priority
+            />
+          </div>
+          
+          {/* Dashboard UI Pattern Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent dark:via-transparent dark:to-transparent opacity-30 dark:opacity-20"
+               style={{
+                 backgroundImage: `
+                   repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(59, 130, 246, 0.03) 1px, rgba(59, 130, 246, 0.03) 2px),
+                   repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(59, 130, 246, 0.03) 1px, rgba(59, 130, 246, 0.03) 2px)
+                 `
+               }}></div>
         </div>
 
-        {/* Decorative Elements */}
-        <div className="absolute inset-0 -z-20">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-blue-400/10 dark:bg-blue-500/5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-72 h-72 bg-indigo-400/10 dark:bg-indigo-500/5 rounded-full blur-3xl"></div>
+        {/* Decorative Gradient Elements */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-20 right-20 w-80 h-80 bg-blue-400/15 dark:bg-blue-500/8 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 left-20 w-80 h-80 bg-indigo-400/15 dark:bg-indigo-500/8 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-cyan-300/10 dark:bg-cyan-500/5 rounded-full blur-3xl"></div>
         </div>
 
         {/* Hero Content */}
-        <div className="max-w-4xl w-full text-center relative z-10">
-          <h1 className="text-5xl md:text-7xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+        <div className="max-w-5xl w-full text-center relative z-10">
+          <div className="inline-block mb-6 px-4 py-2 bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-full">
+            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">✨ White Label Platform</span>
+          </div>
+
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
             Drive Real Institute Growth with Enromatics
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-12 font-light max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-4 font-light max-w-3xl mx-auto leading-relaxed">
             Manage admissions, students, payments, and analytics—all in one intuitive dashboard built for coaching institutes.
+          </p>
+
+          <p className="text-lg md:text-xl text-blue-600 dark:text-blue-400 mb-12 font-semibold max-w-3xl mx-auto">
+            📱 Mobile App Included | 🎨 Full White Label Support | 🚀 Ready to Deploy
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
@@ -54,6 +74,24 @@ export default function LandingPage() {
           <p className="text-gray-600 dark:text-gray-400 text-sm font-light">
             No credit card required. Start free for 14 days.
           </p>
+
+          {/* Dashboard Preview Highlight */}
+          <div className="mt-16 relative">
+            <div className="max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
+              <Image
+                src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
+                alt="Enromatics Dashboard"
+                width={1200}
+                height={600}
+                className="w-full rounded-lg"
+                priority
+              />
+              <div className="absolute inset-0 rounded-2xl border-2 border-blue-400/30 dark:border-blue-500/20 pointer-events-none"></div>
+            </div>
+            <div className="absolute -top-4 left-8 bg-white dark:bg-gray-800 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 shadow-lg">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">Powerful Dashboard UI</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -162,6 +200,102 @@ export default function LandingPage() {
                 fill
                 className="object-cover"
               />
+            </div>
+          </div>
+
+          {/* Feature 4: Mobile App */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mt-24 pt-24 border-t border-gray-200 dark:border-gray-700">
+            <div className="relative h-96 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📱</div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Mobile App</p>
+                  <p className="text-gray-600 dark:text-gray-400">iOS & Android</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="inline-block px-3 py-1 bg-green-100 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-full mb-4">
+                <span className="text-xs font-semibold text-green-700 dark:text-green-300">NEW FEATURE</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Manage on the Go with Mobile App</h3>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+                Access your institute dashboard anywhere, anytime with our native mobile app for iOS and Android. Make critical decisions from your pocket with full feature parity to the web platform.
+              </p>
+              <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-8">
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
+                  <span>Native iOS & Android apps</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
+                  <span>Full feature parity with web dashboard</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
+                  <span>Push notifications for important updates</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
+                  <span>Offline mode for critical information</span>
+                </li>
+              </ul>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <span className="text-2xl">🍎</span>
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">App Store</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">iPhone & iPad</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <span className="text-2xl">🤖</span>
+                  <div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Google Play</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">Android</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 5: White Label */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mt-24 pt-24 border-t border-gray-200 dark:border-gray-700">
+            <div>
+              <div className="inline-block px-3 py-1 bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700 rounded-full mb-4">
+                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">ENTERPRISE</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Full White Label Solution</h3>
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+                Rebrand the entire platform as your own. Customize colors, logos, domain names, and more—making Enromatics invisible to your clients while you take full credit for the technology.
+              </p>
+              <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-8">
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
+                  <span>Custom branding & themes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
+                  <span>Your own domain and email</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
+                  <span>Completely reskinned mobile apps</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
+                  <span>Custom help docs and support portal</span>
+                </li>
+              </ul>
+            </div>
+            <div className="relative h-96 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🎨</div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">White Label</p>
+                  <p className="text-gray-600 dark:text-gray-400">Your Brand, Your Success</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
