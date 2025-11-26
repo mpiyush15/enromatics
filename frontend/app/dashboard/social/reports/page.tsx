@@ -180,9 +180,9 @@ export default function SocialReportsPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-800 rounded-3xl shadow-2xl p-8 text-white">
-          <h1 className="text-4xl font-bold mb-2">📊 Detailed Analytics Reports</h1>
-          <p className="text-purple-100">Comprehensive insights for your Facebook advertising campaigns</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">📊 Detailed Analytics Reports</h1>
+          <p className="text-gray-600 dark:text-gray-400">Comprehensive insights for your Facebook advertising campaigns</p>
         </div>
 
         {/* Controls */}
