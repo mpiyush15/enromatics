@@ -207,7 +207,7 @@ export default function SocialMediaDashboard() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">📱</div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
               Social Media Analytics
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300">
@@ -284,7 +284,7 @@ export default function SocialMediaDashboard() {
         <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-3xl shadow-2xl p-8 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2">📱 Meta Business Analytics</h1>
+              <h1 className="text-2xl font-semibold mb-2">📱 Meta Business Analytics</h1>
               <p className="text-blue-100 text-lg">
                 Connected as Facebook User: {connectionStatus.facebookUserId}
               </p>
@@ -354,7 +354,7 @@ export default function SocialMediaDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-green-100">Facebook Pages</p>
-                        <p className="text-3xl font-bold">
+                        <p className="text-2xl font-semibold">
                           {dashboardData.summary.totalPages}
                         </p>
                       </div>
@@ -396,25 +396,25 @@ export default function SocialMediaDashboard() {
                     <div className="p-6">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div className="text-center">
-                          <div className="text-4xl font-bold text-blue-600 mb-2">
+                          <div className="text-2xl font-semibold text-blue-600 mb-2">
                             {dashboardData.insights.impressions.toLocaleString()}
                           </div>
                           <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Impressions</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-4xl font-bold text-green-600 mb-2">
+                          <div className="text-2xl font-semibold text-green-600 mb-2">
                             {dashboardData.insights.clicks.toLocaleString()}
                           </div>
                           <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Clicks</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-4xl font-bold text-purple-600 mb-2">
+                          <div className="text-2xl font-semibold text-purple-600 mb-2">
                             ${dashboardData.insights.spend.toFixed(2)}
                           </div>
                           <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Spend</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-4xl font-bold text-orange-600 mb-2">
+                          <div className="text-2xl font-semibold text-orange-600 mb-2">
                             {dashboardData.insights.reach.toLocaleString()}
                           </div>
                           <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Reach</div>

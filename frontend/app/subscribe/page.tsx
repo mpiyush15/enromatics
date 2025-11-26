@@ -16,7 +16,7 @@ export default async function SubscriptionPage({ params }: Props) {
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left: Plan Info */}
       <div className="md:w-1/2 w-full bg-blue-100 dark:bg-gray-800 p-8 text-black dark:text-white">
-        <h1 className="text-3xl font-bold mb-4">{plan.title}</h1>
+  <h1 className="text-2xl font-semibold mb-4">{plan.title}</h1>
         <p className="text-2xl font-semibold mb-2">₹{plan.price}</p>
         <p className="mb-4">{plan.description}</p>
         <ul className="list-disc ml-5 text-sm space-y-1">

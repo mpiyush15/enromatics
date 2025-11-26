@@ -106,7 +106,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-3xl font-light text-gray-900 dark:text-white mb-2 tracking-tight">
               Sign in to Enromatics
-            </h1>
             <p className="text-sm font-light text-gray-600 dark:text-gray-400">
               Access your business dashboard
             </p>

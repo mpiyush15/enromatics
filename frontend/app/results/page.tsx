@@ -221,7 +221,7 @@ export default function ResultsPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Scholarship Exam Results</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Scholarship Exam Results</h1>
           <p className="text-xl text-gray-600">Check your exam results and scholarship eligibility</p>
         </div>
 
@@ -277,7 +277,7 @@ export default function ResultsPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
                     {result.registration.studentName}
                   </h2>
                   <p className="text-gray-600 mb-1">
@@ -400,7 +400,7 @@ export default function ResultsPage() {
                     </h3>
                     <div className="space-y-4">
                       <div className="text-center">
-                        <div className="text-5xl font-bold mb-2">
+                        <div className="text-2xl font-semibold mb-2">
                           {result.registration.marksObtained}
                         </div>
                         <div className="text-blue-100">
@@ -416,16 +416,16 @@ export default function ResultsPage() {
                       {result.registration.rank && (
                         <div className="flex justify-between items-center py-2 border-t border-blue-400">
                           <span className="text-blue-100">Rank</span>
-                          <span className="text-3xl font-bold text-yellow-300">#{result.registration.rank}</span>
+                          <span className="text-2xl font-semibold text-yellow-300">#{result.registration.rank}</span>
                         </div>
                       )}
                       
                       <div className="pt-4 border-t border-blue-400 text-center">
                         <div className="text-blue-100 mb-2">Final Result</div>
                         {result.registration.result === "pass" ? (
-                          <div className="text-3xl font-bold text-green-300">🎉 PASS</div>
+                          <div className="text-2xl font-semibold text-green-300">🎉 PASS</div>
                         ) : (
-                          <div className="text-3xl font-bold text-red-300">FAIL</div>
+                          <div className="text-2xl font-semibold text-red-300">FAIL</div>
                         )}
                       </div>
                     </div>
@@ -442,7 +442,7 @@ export default function ResultsPage() {
                     <div className="space-y-3">
                       <div>
                         <p className="text-purple-100 text-sm">You've won a scholarship!</p>
-                        <p className="text-3xl font-bold">
+                        <p className="text-2xl font-semibold">
                           {result.registration.rewardDetails.rewardValue}
                           {result.registration.rewardDetails.rewardType === "percentage" ? "%" : "₹"}
                         </p>

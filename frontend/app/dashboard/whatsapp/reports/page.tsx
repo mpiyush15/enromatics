@@ -114,7 +114,7 @@ export default function WhatsappReportsPage() {
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-700 rounded-xl md:rounded-3xl shadow-2xl p-4 md:p-8 text-white">
-          <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">📈 WhatsApp Reports</h1>
+          <h1 className="text-2xl font-semibold mb-2">📈 WhatsApp Reports</h1>
           <p className="text-sm md:text-base text-purple-100">
             Track message delivery & campaign performance
           </p>

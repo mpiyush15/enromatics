@@ -411,7 +411,7 @@ export default function WhatsappCampaignsPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 rounded-3xl shadow-2xl p-8 text-white">
-          <h1 className="text-4xl font-bold mb-2">📨 WhatsApp Campaigns</h1>
+          <h1 className="text-2xl font-semibold mb-2">📨 WhatsApp Campaigns</h1>
           <p className="text-blue-100">Send bulk messages to students & parents</p>
         </div>
 

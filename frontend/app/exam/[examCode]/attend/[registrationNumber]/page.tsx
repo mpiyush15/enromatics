@@ -250,7 +250,7 @@ export default function ExamAttendancePage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{exam.examName}</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">{exam.examName}</h1>
             <p className="text-gray-600">Exam Code: <span className="font-mono font-bold">{exam.examCode}</span></p>
           </div>
 

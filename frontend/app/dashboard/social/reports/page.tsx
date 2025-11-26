@@ -146,7 +146,7 @@ export default function SocialReportsPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-8">
         <div className="max-w-2xl mx-auto text-center">
           <div className="text-6xl mb-4">🔗</div>
-          <h1 className="text-3xl font-bold mb-4">Connect Facebook Account</h1>
+          <h1 className="text-2xl font-semibold mb-4">Connect Facebook Account</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Please connect your Facebook account to view detailed reports.
           </p>

@@ -108,7 +108,7 @@ export default function SocialAnalyticsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Impressions</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                     {analytics.impressions.toLocaleString()}
                   </p>
                   <p className="text-green-600 text-sm mt-1">+8.3% vs last period</p>

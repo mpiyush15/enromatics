@@ -183,7 +183,7 @@ export default function WhatsAppDashboardPage() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-3xl shadow-2xl p-12 text-center border-2 border-green-100">
             <div className="text-8xl mb-6">💬</div>
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">
               WhatsApp Business Not Configured
             </h1>
             <p className="text-gray-600 mb-8 text-lg">
@@ -213,7 +213,7 @@ export default function WhatsAppDashboardPage() {
                 💬
               </div>
               <div className="text-white">
-                <h1 className="text-xl md:text-3xl font-bold">WhatsApp Business</h1>
+                <h1 className="text-2xl font-semibold">WhatsApp Business</h1>
                 <p className="text-sm md:text-base text-green-100">Manage campaigns & templates</p>
               </div>
             </div>

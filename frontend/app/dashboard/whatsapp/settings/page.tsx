@@ -207,7 +207,7 @@ export default function WhatsappSettingsPage() {
           <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
             <div className="text-4xl md:text-6xl">💬</div>
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold">WhatsApp Business Setup</h1>
+              <h1 className="text-2xl font-semibold">WhatsApp Business Setup</h1>
               <p className="text-green-100 text-sm md:text-base mt-1 md:mt-2">
                 Connect your WhatsApp Business Account
               </p>
