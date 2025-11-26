@@ -15,149 +15,66 @@ export default function LandingPage() {
     setShowDemoModal(false);
   };
   return (
-    <main className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
-      {/* Hero Section - Full Width ClassPlus Style */}
-      <section className="relative w-screen h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        {/* Background Image */}
-        <div className="absolute inset-0 -z-10 w-full h-full opacity-10 dark:opacity-5">
-          <Image
-            src="https://ik.imagekit.io/a0ivf97jq/alop.png"
-            alt="Background"
-            fill
-            className="object-cover"
-            priority
-          />
+    <div className="w-full">
+      {/* Hero Section - Dark Blue Gradient with Dashboard */}
+      <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800">
+        {/* Decorative Gradient Overlay */}
+        <div className="absolute inset-0 -z-10 opacity-40">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-1/3 w-96 h-96 bg-slate-400/10 rounded-full blur-3xl"></div>
         </div>
 
-        {/* Decorative Elements */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-3xl"></div>
-        </div>
+        {/* Content Container - Fully Responsive */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            {/* Left Side - Text (White on Dark) */}
+            <div className="flex flex-col justify-center order-2 lg:order-1 relative z-10">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight">
+                Grow your<br />Coaching Institute<br />with Enro Matics
+              </h1>
+              
+              <p className="text-base sm:text-lg lg:text-xl text-gray-200 mb-8 sm:mb-10 font-light leading-relaxed">
+                Manage admissions, scholarship exams, social media, student reports, parents communication, daily attendance, fees reminders seamlessly with your own Brand Name
+              </p>
 
-        {/* Content */}
-        <div className="max-w-6xl w-full px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-          {/* Left Side */}
-          <div>
-            <h1 className="text-6xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-              Grow Your Coaching Institute With Enromatics
-            </h1>
-            
-            <p className="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-light leading-relaxed">
-              Manage admissions, track attendance, process payments, and analyze performance—all in one platform.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={() => setShowDemoModal(true)}
-                className="px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition text-lg shadow-lg"
-              >
-                Book Demo
-              </button>
-              <Link 
-                href="/login"
-                className="px-8 py-4 border-2 border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 font-bold rounded-lg hover:bg-blue-50 dark:hover:bg-gray-800 transition text-lg text-center"
-              >
-                Visit Website
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button 
+                  onClick={() => setShowDemoModal(true)}
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition text-base sm:text-lg shadow-lg w-full sm:w-auto"
+                >
+                  Book Demo
+                </button>
+                <Link 
+                  href="/login"
+                  className="px-6 sm:px-8 py-3 sm:py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-base sm:text-lg text-center w-full sm:w-auto"
+                >
+                  Visit Website
+                </Link>
+              </div>
             </div>
-          </div>
 
-          {/* Right Side - Image */}
-          <div className="relative hidden md:block">
-            <div className="relative w-full aspect-square">
-              <Image
-                src="https://ik.imagekit.io/a0ivf97jq/alop.png"
-                alt="Enromatics Dashboard"
-                fill
-                className="object-contain"
-                priority
-              />
+            {/* Right Side - Dashboard Image with 3D Effect */}
+            <div className="relative order-1 lg:order-2 perspective">
+              <div className="relative w-full h-auto" style={{
+                perspective: "1200px",
+              }}>
+                <Image
+                  src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png?updatedAt=1764163494512"
+                  alt="Enromatics Dashboard"
+                  width={600}
+                  height={500}
+                  className="w-full h-auto drop-shadow-2xl"
+                  style={{
+                    transform: "rotateY(-15deg) rotateX(5deg) translateZ(0)",
+                    transformStyle: "preserve-3d",
+                  }}
+                  priority
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* USP Section */}
-      <section id="features" className="py-24 px-6 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white text-center mb-16">
-            What You Can Do
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* USP Card 1 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">👥</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Student Management</h3>
-              <p className="text-gray-600 dark:text-gray-400">Manage admissions, attendance, and student records with ease.</p>
-            </div>
-
-            {/* USP Card 2 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">💳</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Payment Processing</h3>
-              <p className="text-gray-600 dark:text-gray-400">Accept payments securely with automated reminders and tracking.</p>
-            </div>
-
-            {/* USP Card 3 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Analytics & Insights</h3>
-              <p className="text-gray-600 dark:text-gray-400">Get real-time analytics to make data-driven decisions.</p>
-            </div>
-
-            {/* USP Card 4 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">📱</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Mobile App</h3>
-              <p className="text-gray-600 dark:text-gray-400">Manage everything on iOS and Android with full feature parity.</p>
-            </div>
-
-            {/* USP Card 5 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">🎨</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">White Label</h3>
-              <p className="text-gray-600 dark:text-gray-400">Rebrand the entire platform as your own business.</p>
-            </div>
-
-            {/* USP Card 6 */}
-            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
-              <div className="text-4xl mb-4">🔒</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Secure & Reliable</h3>
-              <p className="text-gray-600 dark:text-gray-400">Enterprise-grade security with 99.9% uptime guarantee.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 px-6 bg-blue-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to grow your coaching institute?
-          </h2>
-          <p className="text-xl text-blue-100 mb-12">
-            Book a demo today to see how Enromatics can transform your business.
-          </p>
-          
-          <button 
-            onClick={() => setShowDemoModal(true)}
-            className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg text-lg hover:bg-blue-50 transition"
-          >
-            Book a Free Demo
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-950 text-gray-400 py-12 px-6">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm font-light">
-            © 2025 Enromatics. All rights reserved. | Empowering coaching institutes with technology.
-          </p>
-        </div>
-      </footer>
 
       {/* Demo Modal */}
       {showDemoModal && (
@@ -243,6 +160,6 @@ export default function LandingPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
