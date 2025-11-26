@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+import { useSocialMediaContext } from '@/components/dashboard/SocialMediaWrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,15 +31,30 @@ import {
 
 const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
 
+interface PaymentMethod {
+  id: string;
+  lastFour: string;
+  type: string;
+  expiry: string;
+  status: string;
+}
+
+interface CampaignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  objective: string;
+}
+
 export default function TenantCreateAdsPage() {
   const params = useParams();
   const tenantId = params.tenantId as string;
-  const { isConnected, adAccounts } = useFacebookConnection();
+  const { isConnected, adAccounts } = useSocialMediaContext();
   
   const [selectedAdAccount, setSelectedAdAccount] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
-  const [campaignTemplates, setCampaignTemplates] = useState([]);
+  const [campaignTemplates, setCampaignTemplates] = useState<CampaignTemplate[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Campaign Form Data

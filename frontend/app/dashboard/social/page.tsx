@@ -10,9 +10,9 @@ export default function SuperAdminSocialMediaDashboard() {
     userInfo,
     pages,
     adAccounts,
-    connectToFacebook,
-    disconnectFromFacebook,
-    loading,
+    connect,
+    disconnect,
+    isLoading,
     error
   } = useSocialMediaContext();
 

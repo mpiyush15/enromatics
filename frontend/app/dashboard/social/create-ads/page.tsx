@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+import { useSocialMediaContext } from '@/components/dashboard/SocialMediaWrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +28,33 @@ import {
 
 const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
 
+interface AdAccount {
+  id: string;
+  name: string;
+  currency: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  lastFour: string;
+  type: string;
+  expiry: string;
+  status: string;
+}
+
+interface CampaignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  objective: string;
+}
+
 export default function SuperAdminCreateAdsPage() {
-  const { isConnected, adAccounts } = useFacebookConnection();
+  const { isConnected, adAccounts } = useSocialMediaContext();
   const [selectedAdAccount, setSelectedAdAccount] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
-  const [campaignTemplates, setCampaignTemplates] = useState([]);
+  const [campaignTemplates, setCampaignTemplates] = useState<CampaignTemplate[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Campaign Form Data
@@ -53,10 +74,10 @@ export default function SuperAdminCreateAdsPage() {
     targeting: {
       ageMin: 18,
       ageMax: 65,
-      genders: [],
-      locations: [],
-      interests: [],
-      behaviors: []
+      genders: [] as string[],
+      locations: [] as string[],
+      interests: [] as string[],
+      behaviors: [] as string[]
     },
     placement: 'automatic',
     optimization: 'link_clicks'
@@ -70,8 +91,8 @@ export default function SuperAdminCreateAdsPage() {
     description: '',
     callToAction: 'learn_more',
     linkUrl: '',
-    images: [],
-    videos: []
+    images: [] as string[],
+    videos: [] as string[]
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);

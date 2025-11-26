@@ -67,7 +67,7 @@ export default function TenantContentPlannerPage() {
 
   const getCurrentDate = () => new Date().toISOString().split('T')[0];
   
-  const getPostsForDate = (date) => {
+  const getPostsForDate = (date: string) => {
     return contentPosts.filter(post => post.scheduledDate === date);
   };
 
@@ -119,11 +119,11 @@ export default function TenantContentPlannerPage() {
     setShowCreateModal(false);
   };
 
-  const deletePost = (postId) => {
-    setContentPosts(contentPosts.filter(post => post.id !== postId));
+  const deletePost = (postId: string) => {
+    setPosts(posts.filter(post => post.id !== postId));
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'published': return 'bg-green-100 text-green-800';
       case 'scheduled': return 'bg-blue-100 text-blue-800';
@@ -133,7 +133,7 @@ export default function TenantContentPlannerPage() {
     }
   };
 
-  const getPlatformIcon = (platform) => {
+  const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'facebook': return '📘';
       case 'instagram': return '📷';
