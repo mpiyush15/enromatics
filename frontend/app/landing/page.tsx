@@ -2,410 +2,247 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function LandingPage() {
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoData, setDemoData] = useState({ name: "", email: "", phone: "", message: "" });
+
+  const handleDemoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Will integrate email and mobile OTP here
+    console.log("Demo booking:", demoData);
+    setShowDemoModal(false);
+  };
   return (
     <main className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 overflow-hidden bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        {/* Dashboard Background with Multiple Layers */}
-        <div className="absolute inset-0 -z-20 w-full h-full">
-          <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.08]">
-            <Image
-              src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-              alt="Dashboard Background"
-              fill
-              className="object-cover object-center"
-              quality={100}
-              priority
-            />
-          </div>
-          
-          {/* Dashboard UI Pattern Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent dark:via-transparent dark:to-transparent opacity-30 dark:opacity-20"
-               style={{
-                 backgroundImage: `
-                   repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(59, 130, 246, 0.03) 1px, rgba(59, 130, 246, 0.03) 2px),
-                   repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(59, 130, 246, 0.03) 1px, rgba(59, 130, 246, 0.03) 2px)
-                 `
-               }}></div>
+      {/* Hero Section - Full Width ClassPlus Style */}
+      <section className="relative w-screen h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+        {/* Background Image */}
+        <div className="absolute inset-0 -z-10 w-full h-full opacity-10 dark:opacity-5">
+          <Image
+            src="https://ik.imagekit.io/a0ivf97jq/alop.png"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
         </div>
 
-        {/* Decorative Gradient Elements */}
+        {/* Decorative Elements */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-20 right-20 w-80 h-80 bg-blue-400/15 dark:bg-blue-500/8 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-indigo-400/15 dark:bg-indigo-500/8 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-cyan-300/10 dark:bg-cyan-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-3xl"></div>
         </div>
 
-        {/* Hero Content */}
-        <div className="max-w-5xl w-full text-center relative z-10">
-          <div className="inline-block mb-6 px-4 py-2 bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-full">
-            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">✨ White Label Platform</span>
+        {/* Content */}
+        <div className="max-w-6xl w-full px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
+          {/* Left Side */}
+          <div>
+            <h1 className="text-6xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+              Grow Your Coaching Institute With Enromatics
+            </h1>
+            
+            <p className="text-2xl text-gray-700 dark:text-gray-300 mb-8 font-light leading-relaxed">
+              Manage admissions, track attendance, process payments, and analyze performance—all in one platform.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={() => setShowDemoModal(true)}
+                className="px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition text-lg shadow-lg"
+              >
+                Book Demo
+              </button>
+              <Link 
+                href="/login"
+                className="px-8 py-4 border-2 border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400 font-bold rounded-lg hover:bg-blue-50 dark:hover:bg-gray-800 transition text-lg text-center"
+              >
+                Visit Website
+              </Link>
+            </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-            Drive Real Institute Growth with Enromatics
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-4 font-light max-w-3xl mx-auto leading-relaxed">
-            Manage admissions, students, payments, and analytics—all in one intuitive dashboard built for coaching institutes.
-          </p>
-
-          <p className="text-lg md:text-xl text-blue-600 dark:text-blue-400 mb-12 font-semibold max-w-3xl mx-auto">
-            📱 Mobile App Included | 🎨 Full White Label Support | 🚀 Ready to Deploy
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Link 
-              href="/login" 
-              className="px-8 py-4 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg text-lg shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition active:scale-95"
-            >
-              Get Started Free
-            </Link>
-            <Link 
-              href="#features" 
-              className="px-8 py-4 border-2 border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400 font-semibold rounded-lg text-lg hover:bg-blue-50 dark:hover:bg-gray-800 transition"
-            >
-              Explore Features
-            </Link>
-          </div>
-
-          <p className="text-gray-600 dark:text-gray-400 text-sm font-light">
-            No credit card required. Start free for 14 days.
-          </p>
-
-          {/* Dashboard Preview Highlight */}
-          <div className="mt-16 relative">
-            <div className="max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
+          {/* Right Side - Image */}
+          <div className="relative hidden md:block">
+            <div className="relative w-full aspect-square">
               <Image
-                src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
+                src="https://ik.imagekit.io/a0ivf97jq/alop.png"
                 alt="Enromatics Dashboard"
-                width={1200}
-                height={600}
-                className="w-full rounded-lg"
+                fill
+                className="object-contain"
                 priority
               />
-              <div className="absolute inset-0 rounded-2xl border-2 border-blue-400/30 dark:border-blue-500/20 pointer-events-none"></div>
-            </div>
-            <div className="absolute -top-4 left-8 bg-white dark:bg-gray-800 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 shadow-lg">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Powerful Dashboard UI</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 px-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      {/* USP Section */}
+      <section id="features" className="py-24 px-6 bg-gray-50 dark:bg-gray-800">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-              Everything you need to manage your coaching institute
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto font-light">
-              Streamline operations, boost student success, and grow your business with powerful tools designed for educators.
-            </p>
-          </div>
-
-          {/* Feature 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mb-24">
-            <div>
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Student Management & Admissions</h3>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Simplify the admission process, track student progress, and manage academic records all in one place. Reduce administrative overhead and focus on teaching.
-              </p>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Automated admission workflows</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Real-time attendance tracking</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Performance monitoring & reports</span>
-                </li>
-              </ul>
-            </div>
-            <div className="relative h-80 rounded-xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <Image
-                src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-                alt="Student Management"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mb-24">
-            <div className="relative h-80 rounded-xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 order-2 md:order-1">
-              <Image
-                src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-                alt="Payment Management"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="order-1 md:order-2">
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Secure Payment Processing</h3>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Accept payments from students and track financial transactions with complete security and transparency. Never miss a payment reminder again.
-              </p>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Multiple payment methods</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Automated payment reminders</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Detailed financial reports</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            <div>
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Analytics & Insights</h3>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Make data-driven decisions with real-time analytics. Monitor institute performance, student outcomes, and identify growth opportunities.
-              </p>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Real-time performance dashboards</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Student success metrics</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Revenue & financial insights</span>
-                </li>
-              </ul>
-            </div>
-            <div className="relative h-80 rounded-xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <Image
-                src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png"
-                alt="Analytics"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-
-          {/* Feature 4: Mobile App */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mt-24 pt-24 border-t border-gray-200 dark:border-gray-700">
-            <div className="relative h-96 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">📱</div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Mobile App</p>
-                  <p className="text-gray-600 dark:text-gray-400">iOS & Android</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="inline-block px-3 py-1 bg-green-100 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-full mb-4">
-                <span className="text-xs font-semibold text-green-700 dark:text-green-300">NEW FEATURE</span>
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Manage on the Go with Mobile App</h3>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Access your institute dashboard anywhere, anytime with our native mobile app for iOS and Android. Make critical decisions from your pocket with full feature parity to the web platform.
-              </p>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-8">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Native iOS & Android apps</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Full feature parity with web dashboard</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Push notifications for important updates</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">✓</span>
-                  <span>Offline mode for critical information</span>
-                </li>
-              </ul>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <span className="text-2xl">🍎</span>
-                  <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">App Store</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">iPhone & iPad</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <span className="text-2xl">🤖</span>
-                  <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Google Play</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">Android</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Feature 5: White Label */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center mt-24 pt-24 border-t border-gray-200 dark:border-gray-700">
-            <div>
-              <div className="inline-block px-3 py-1 bg-purple-100 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700 rounded-full mb-4">
-                <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">ENTERPRISE</span>
-              </div>
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">Full White Label Solution</h3>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                Rebrand the entire platform as your own. Customize colors, logos, domain names, and more—making Enromatics invisible to your clients while you take full credit for the technology.
-              </p>
-              <ul className="space-y-3 text-gray-700 dark:text-gray-300 mb-8">
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Custom branding & themes</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Your own domain and email</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Completely reskinned mobile apps</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Custom help docs and support portal</span>
-                </li>
-              </ul>
-            </div>
-            <div className="relative h-96 rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🎨</div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">White Label</p>
-                  <p className="text-gray-600 dark:text-gray-400">Your Brand, Your Success</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-24 px-6 bg-gray-900 dark:bg-gray-950 text-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-16 text-center">
-            <div>
-              <div className="text-6xl font-bold mb-4 text-blue-400">500+</div>
-              <p className="text-xl text-gray-300 font-light">Coaching Institutes Trust Us</p>
-            </div>
-            <div>
-              <div className="text-6xl font-bold mb-4 text-blue-400">50K+</div>
-              <p className="text-xl text-gray-300 font-light">Students Successfully Managed</p>
-            </div>
-            <div>
-              <div className="text-6xl font-bold mb-4 text-blue-400">₹10Cr+</div>
-              <p className="text-xl text-gray-300 font-light">Payments Processed Securely</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Section */}
-      <section className="py-24 px-6 bg-white dark:bg-gray-900">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white text-center mb-20">
-            Why Enromatics?
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white text-center mb-16">
+            What You Can Do
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="text-5xl mb-4">🚀</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Easy to Use</h3>
-              <p className="text-gray-600 dark:text-gray-400 font-light">Intuitive interface designed specifically for educators, not tech experts.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* USP Card 1 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">👥</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Student Management</h3>
+              <p className="text-gray-600 dark:text-gray-400">Manage admissions, attendance, and student records with ease.</p>
             </div>
-            
-            <div className="p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="text-5xl mb-4">🔒</div>
+
+            {/* USP Card 2 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">💳</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Payment Processing</h3>
+              <p className="text-gray-600 dark:text-gray-400">Accept payments securely with automated reminders and tracking.</p>
+            </div>
+
+            {/* USP Card 3 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Analytics & Insights</h3>
+              <p className="text-gray-600 dark:text-gray-400">Get real-time analytics to make data-driven decisions.</p>
+            </div>
+
+            {/* USP Card 4 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">📱</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Mobile App</h3>
+              <p className="text-gray-600 dark:text-gray-400">Manage everything on iOS and Android with full feature parity.</p>
+            </div>
+
+            {/* USP Card 5 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">🎨</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">White Label</h3>
+              <p className="text-gray-600 dark:text-gray-400">Rebrand the entire platform as your own business.</p>
+            </div>
+
+            {/* USP Card 6 */}
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition">
+              <div className="text-4xl mb-4">🔒</div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Secure & Reliable</h3>
-              <p className="text-gray-600 dark:text-gray-400 font-light">Enterprise-grade security with 99.9% uptime guarantee.</p>
-            </div>
-            
-            <div className="p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="text-5xl mb-4">📱</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Mobile Ready</h3>
-              <p className="text-gray-600 dark:text-gray-400 font-light">Manage your institute from anywhere, anytime on any device.</p>
-            </div>
-            
-            <div className="p-8 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <div className="text-5xl mb-4">💬</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">24/7 Support</h3>
-              <p className="text-gray-600 dark:text-gray-400 font-light">Dedicated support team ready to help with any questions.</p>
+              <p className="text-gray-600 dark:text-gray-400">Enterprise-grade security with 99.9% uptime guarantee.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 bg-gray-50 dark:bg-gray-800">
+      <section className="py-24 px-6 bg-blue-600">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Ready to transform your coaching institute?
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Ready to grow your coaching institute?
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 font-light">
-            Join hundreds of coaching institutes already using Enromatics to streamline operations and grow their business.
+          <p className="text-xl text-blue-100 mb-12">
+            Book a demo today to see how Enromatics can transform your business.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/login" 
-              className="px-8 py-4 bg-gray-900 dark:bg-blue-600 text-white font-semibold rounded-lg text-lg hover:bg-gray-800 dark:hover:bg-blue-700 transition active:scale-95"
-            >
-              Start Free Trial
-            </Link>
-            <Link 
-              href="/login" 
-              className="px-8 py-4 border-2 border-gray-900 dark:border-blue-600 text-gray-900 dark:text-white font-semibold rounded-lg text-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              Schedule a Demo
-            </Link>
-          </div>
-
-          <p className="text-gray-600 dark:text-gray-400 mt-8 text-sm font-light">
-            14 days free. No credit card required. Cancel anytime.
-          </p>
+          <button 
+            onClick={() => setShowDemoModal(true)}
+            className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg text-lg hover:bg-blue-50 transition"
+          >
+            Book a Free Demo
+          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-950 text-gray-400 py-16 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-white mb-2">Enromatics</h3>
-            <p className="text-gray-500 mb-12 font-light">The complete platform for coaching institutes</p>
-            
-            <div className="flex justify-center gap-8 mb-12 text-sm">
-              <Link href="#" className="text-gray-400 hover:text-white transition">Privacy</Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition">Terms</Link>
-              <Link href="#" className="text-gray-400 hover:text-white transition">Contact</Link>
-            </div>
-            
-            <p className="text-gray-600 text-sm font-light">
-              © 2025 Enromatics. All rights reserved. | Empowering coaching institutes with technology.
-            </p>
-          </div>
+      <footer className="bg-gray-900 dark:bg-gray-950 text-gray-400 py-12 px-6">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-sm font-light">
+            © 2025 Enromatics. All rights reserved. | Empowering coaching institutes with technology.
+          </p>
         </div>
       </footer>
+
+      {/* Demo Modal */}
+      {showDemoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Book a Demo</h3>
+              <button 
+                onClick={() => setShowDemoModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleDemoSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={demoData.name}
+                  onChange={(e) => setDemoData({ ...demoData, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Your name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={demoData.email}
+                  onChange={(e) => setDemoData({ ...demoData, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="your@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={demoData.phone}
+                  onChange={(e) => setDemoData({ ...demoData, phone: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+91 XXXXX XXXXX"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={demoData.message}
+                  onChange={(e) => setDemoData({ ...demoData, message: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tell us about your institute..."
+                  rows={3}
+                />
+              </div>
+
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                We'll send you OTP for verification before scheduling the demo.
+              </p>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition mt-6"
+              >
+                Request Demo
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
