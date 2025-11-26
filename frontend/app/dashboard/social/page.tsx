@@ -1,6 +1,7 @@
 "use client";
 
-import { useFacebookConnection } from '@/hooks/useFacebookConnection';
+import Link from 'next/link';
+import { useSocialMediaContext } from '@/components/dashboard/SocialMediaWrapper';
 import FacebookConnectionCard from '@/components/dashboard/FacebookConnectionCard';
 
 export default function SuperAdminSocialMediaDashboard() {
@@ -9,7 +10,11 @@ export default function SuperAdminSocialMediaDashboard() {
     userInfo,
     pages,
     adAccounts,
-  } = useFacebookConnection();
+    connectToFacebook,
+    disconnectFromFacebook,
+    loading,
+    error
+  } = useSocialMediaContext();
 
   if (!isConnected) {
     return (
@@ -259,34 +264,66 @@ export default function SuperAdminSocialMediaDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">⚡ Platform Management</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <a
-              href="/dashboard/social/assets"
-              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+            <Link
+              href="/dashboard/social/business-assets"
+              className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
             >
               <div className="text-2xl mb-2">🎨</div>
-              <div>Platform Assets</div>
-            </a>
-            <a
-              href="/dashboard/social/reports"
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+              <div>Business Assets</div>
+            </Link>
+            <Link
+              href="/dashboard/social/analytics"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
             >
               <div className="text-2xl mb-2">📊</div>
-              <div>Analytics Overview</div>
-            </a>
-            <a
+              <div>Analytics</div>
+            </Link>
+            <Link
               href="/dashboard/social/campaigns"
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
             >
               <div className="text-2xl mb-2">🎯</div>
-              <div>Campaign Manager</div>
-            </a>
-            <a
+              <div>Campaigns</div>
+            </Link>
+            <Link
+              href="/dashboard/social/create-ads"
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
+            >
+              <div className="text-2xl mb-2">🎯</div>
+              <div>Create Ads</div>
+            </Link>
+          </div>
+          
+          {/* Additional Actions Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <Link
+              href="/dashboard/social/content-planner"
+              className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
+            >
+              <div className="text-2xl mb-2">📅</div>
+              <div>Content Planner</div>
+            </Link>
+            <Link
+              href="/dashboard/social/analytics"
+              className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
+            >
+              <div className="text-2xl mb-2">📈</div>
+              <div>Analytics</div>
+            </Link>
+            <Link
               href="/dashboard/social/settings"
-              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg"
+              className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-4 rounded-xl text-center font-semibold transition-all transform hover:scale-105 shadow-lg block"
+              prefetch={false}
             >
               <div className="text-2xl mb-2">⚙️</div>
-              <div>Platform Settings</div>
-            </a>
+              <div>Settings</div>
+            </Link>
           </div>
         </div>
       </div>

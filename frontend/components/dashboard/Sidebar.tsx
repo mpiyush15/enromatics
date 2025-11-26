@@ -127,7 +127,15 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
     if (builtHref.endsWith("/home")) {
       return pathname === builtHref;
     }
-    return pathname?.startsWith(builtHref);
+    // More precise matching - only exact path or direct child path
+    return pathname === builtHref || pathname?.startsWith(builtHref + '/');
+  };
+
+  const hasActiveChild = (children: SidebarLink[]) => {
+    return children.some(child => {
+      const childHref = child.href || "#";
+      return isActiveExact(childHref);
+    });
   };
 
   const toggleSection = (label: string) => {
@@ -166,7 +174,11 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                 <div>
                   <button
                     onClick={() => toggleSection(link.label)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-700/30 rounded transition-colors"
+                    className={`w-full flex items-center justify-between px-4 py-2 text-sm font-semibold transition-colors rounded ${
+                      hasActiveChild(link.children) 
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" 
+                        : "text-gray-300 hover:bg-gray-700/30"
+                    }`}
                   >
                     <span>{link.label}</span>
                     <svg
@@ -190,9 +202,10 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                               onClick={onClose}
                               className={`block px-3 py-2 text-sm rounded transition-colors ${
                                 isActiveLink
-                                  ? "bg-blue-600 text-white font-medium"
+                                  ? "bg-blue-500 text-white font-medium shadow-sm"
                                   : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
                               }`}
+                              prefetch={false}
                             >
                               {child.label}
                             </Link>
@@ -212,9 +225,10 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                       onClick={onClose}
                       className={`block px-4 py-2 rounded text-sm transition-colors ${
                         isActiveLink
-                          ? "bg-blue-600 text-white font-medium"
+                          ? "bg-blue-500 text-white font-medium shadow-sm"
                           : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
                       }`}
+                      prefetch={false}
                     >
                       {link.label}
                     </Link>

@@ -1,0 +1,2 @@
+we fetcehd campaign templates but can not use it 
+can not create campaigns is it due to permission tll now or create the pages to create campagins adn all please create complete ad creation flow even add payment methods option do this for now

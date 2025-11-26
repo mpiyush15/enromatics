@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import Link from "next/link";
 
 interface AdAccount {
   id: string;
