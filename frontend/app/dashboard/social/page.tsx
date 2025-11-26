@@ -22,11 +22,11 @@ export default function SuperAdminSocialMediaDashboard() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-6xl mb-4">📱</div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="text-5xl mb-4">📱</div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
               Platform Social Media Analytics
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
+            <p className="text-base text-gray-600 dark:text-gray-300">
               Connect Facebook to enable social media features for the platform
             </p>
           </div>
@@ -105,20 +105,20 @@ export default function SuperAdminSocialMediaDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 rounded-3xl shadow-2xl p-8 text-white">
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2">📱 Platform Social Media Analytics</h1>
-              <p className="text-blue-100">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">📱 Platform Social Media Analytics</h1>
+              <p className="text-gray-600 dark:text-gray-400">
                 Connected as: {userInfo?.name || 'Facebook User'} (Platform Integration)
               </p>
               {userInfo?.email && (
-                <p className="text-blue-200 text-sm">
+                <p className="text-gray-500 dark:text-gray-500 text-sm">
                   {userInfo.email}
                 </p>
               )}
             </div>
-            <div className="text-6xl opacity-20">📊</div>
+            <div className="text-3xl opacity-50">📊</div>
           </div>
         </div>
 
