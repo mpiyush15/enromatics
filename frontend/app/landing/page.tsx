@@ -16,8 +16,8 @@ export default function LandingPage() {
   };
   return (
     <div className="w-full">
-      {/* Hero Section - Dark Blue Gradient with Dashboard */}
-      <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-r from-slate-900 via-blue-900 to-slate-800">
+      {/* Hero Section - Dark Blue Gradient with Dashboard - Full Screen No Scroll */}
+      <section className="relative w-full h-screen flex items-center justify-center overflow-hidden bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900">
         {/* Decorative Gradient Overlay */}
         <div className="absolute inset-0 -z-10 opacity-40">
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
@@ -25,47 +25,49 @@ export default function LandingPage() {
         </div>
 
         {/* Content Container - Fully Responsive */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+        <div className="w-full h-full flex items-center px-0 sm:px-0 lg:px-0">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 items-center w-full h-full">
             {/* Left Side - Text (White on Dark) */}
-            <div className="flex flex-col justify-center order-2 lg:order-1 relative z-10">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight">
-                Grow your<br />Coaching Institute<br />with Enro Matics
-              </h1>
-              
-              <p className="text-base sm:text-lg lg:text-xl text-gray-200 mb-8 sm:mb-10 font-light leading-relaxed">
-                Manage admissions, scholarship exams, social media, student reports, parents communication, daily attendance, fees reminders seamlessly with your own Brand Name
-              </p>
+            <div className="lg:col-span-2 flex flex-col justify-center order-2 lg:order-1 relative z-10 h-full px-4 sm:px-6 lg:px-8">
+              <div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight">
+                  Grow your<br />Coaching Institute<br />with Enro Matics
+                </h1>
+                
+                <p className="text-sm sm:text-base lg:text-lg text-gray-200 mb-6 sm:mb-8 font-light leading-relaxed">
+                  Manage admissions, scholarship exams, social media, student reports, parents communication, daily attendance, fees reminders seamlessly with your own Brand Name
+                </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <button 
-                  onClick={() => setShowDemoModal(true)}
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition text-base sm:text-lg shadow-lg w-full sm:w-auto"
-                >
-                  Book Demo
-                </button>
-                <Link 
-                  href="/login"
-                  className="px-6 sm:px-8 py-3 sm:py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-base sm:text-lg text-center w-full sm:w-auto"
-                >
-                  Visit Website
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <button 
+                    onClick={() => setShowDemoModal(true)}
+                    className="px-6 sm:px-8 py-3 sm:py-4 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition text-base sm:text-lg shadow-lg w-full sm:w-auto"
+                  >
+                    Book Demo
+                  </button>
+                  <Link 
+                    href="/login"
+                    className="px-6 sm:px-8 py-3 sm:py-4 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-base sm:text-lg text-center w-full sm:w-auto"
+                  >
+                    Visit Website
+                  </Link>
+                </div>
               </div>
             </div>
 
             {/* Right Side - Dashboard Image with 3D Effect */}
-            <div className="relative order-1 lg:order-2 perspective">
-              <div className="relative w-full h-auto" style={{
+            <div className="lg:col-span-3 relative order-1 lg:order-2 h-full flex items-center justify-end overflow-hidden">
+              <div className="relative w-full h-full mt-20 sm:mt-24 lg:mt-32" style={{
                 perspective: "1200px",
               }}>
                 <Image
                   src="https://ik.imagekit.io/a0ivf97jq/Admin%20Dashboard%20Light%20(1).png?updatedAt=1764163494512"
                   alt="Enromatics Dashboard"
-                  width={600}
-                  height={500}
-                  className="w-full h-auto drop-shadow-2xl"
+                  width={1000}
+                  height={900}
+                  className="w-full h-auto drop-shadow-2xl rounded-2xl"
                   style={{
-                    transform: "rotateY(-15deg) rotateX(5deg) translateZ(0)",
+                    transform: "rotateY(-15deg) rotateX(5deg) translateZ(0) scale(0.85)",
                     transformStyle: "preserve-3d",
                   }}
                   priority
