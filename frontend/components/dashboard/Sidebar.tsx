@@ -124,11 +124,25 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
   const isActiveExact = (href: string) => {
     if (href === "#") return false;
     const builtHref = buildHref(href);
-    if (builtHref.endsWith("/home")) {
+    
+    // Special handling for home pages - exact match only
+    if (builtHref.endsWith("/home") || builtHref.endsWith("/social")) {
       return pathname === builtHref;
     }
-    // More precise matching - only exact path or direct child path
-    return pathname === builtHref || pathname?.startsWith(builtHref + '/');
+    
+    // For other pages, check if it's an exact match or direct child
+    // But prevent parent sections from being active when child is active
+    if (pathname === builtHref) return true;
+    
+    // Only consider as active if it's a direct child, not if there's another active child
+    if (pathname?.startsWith(builtHref + '/')) {
+      // Make sure this is the most specific match
+      const remainingPath = pathname.substring(builtHref.length + 1);
+      // If there are more path segments, this is not the direct parent
+      return !remainingPath.includes('/');
+    }
+    
+    return false;
   };
 
   const hasActiveChild = (children: SidebarLink[]) => {
@@ -175,7 +189,8 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                   <button
                     onClick={() => toggleSection(link.label)}
                     className={`w-full flex items-center justify-between px-4 py-2 text-sm font-semibold transition-colors rounded ${
-                      hasActiveChild(link.children) 
+                      // Only highlight section if it has active children AND no specific child is directly active
+                      hasActiveChild(link.children) && !link.children.some(child => isActiveExact(child.href || "#"))
                         ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200" 
                         : "text-gray-300 hover:bg-gray-700/30"
                     }`}

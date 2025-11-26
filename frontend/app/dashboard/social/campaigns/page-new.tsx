@@ -1,6 +1,7 @@
 "use client";
 
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useSocialMediaContext } from '@/components/dashboard/SocialMediaWrapper';
 import Link from "next/link";
 import { useState } from "react";
 
@@ -14,16 +15,16 @@ interface CampaignTemplate {
 }
 
 export default function CampaignsPage() {
+  const { adAccounts, isConnected } = useSocialMediaContext();
+  
   const {
     campaigns,
     loading,
     error,
     selectedAccount,
     setSelectedAccount,
-    adAccounts,
-    refreshCampaigns,
-    isConnected
-  } = useCampaigns();
+    refreshCampaigns
+  } = useCampaigns(adAccounts, isConnected);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
 

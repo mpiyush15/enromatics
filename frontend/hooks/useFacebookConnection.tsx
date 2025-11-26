@@ -18,6 +18,11 @@ interface FacebookConnectionState {
   adAccounts: any[];
 }
 
+// Cache to prevent multiple API calls
+let connectionCache: FacebookConnectionState | null = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 30000; // 30 seconds
+
 export function useFacebookConnection() {
   const [user, setUser] = useState<any>(null);
   const [connectionState, setConnectionState] = useState<FacebookConnectionState>({
@@ -47,6 +52,14 @@ export function useFacebookConnection() {
     if (!user) {
       console.log('❌ No user found, skipping Facebook connection check');
       setConnectionState(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+
+    // Check cache first
+    const now = Date.now();
+    if (connectionCache && (now - cacheTimestamp) < CACHE_DURATION) {
+      console.log('✅ Using cached Facebook connection state');
+      setConnectionState(connectionCache);
       return;
     }
 
@@ -88,14 +101,18 @@ export function useFacebookConnection() {
       console.log('✅ Status response:', statusData);
 
       if (!statusData.connected) {
-        setConnectionState({
+        const newState = {
           isConnected: false,
           isLoading: false,
           userInfo: null,
           error: null,
           pages: [],
           adAccounts: []
-        });
+        };
+        setConnectionState(newState);
+        // Update cache
+        connectionCache = newState;
+        cacheTimestamp = Date.now();
         return;
       }
 
@@ -113,23 +130,31 @@ export function useFacebookConnection() {
         console.log('✅ Dashboard data received:', data);
         
         if (data.success && data.dashboard) {
-          setConnectionState({
+          const newState = {
             isConnected: true,
             isLoading: false,
             userInfo: data.userInfo || null,
             error: null,
             pages: data.dashboard.pages || [],
             adAccounts: data.dashboard.adAccounts || []
-          });
+          };
+          setConnectionState(newState);
+          // Update cache
+          connectionCache = newState;
+          cacheTimestamp = Date.now();
         } else {
-          setConnectionState({
+          const newState = {
             isConnected: false,
             isLoading: false,
             userInfo: null,
             error: data.message || 'Failed to fetch dashboard data',
             pages: [],
             adAccounts: []
-          });
+          };
+          setConnectionState(newState);
+          // Update cache
+          connectionCache = newState;
+          cacheTimestamp = Date.now();
         }
       } else {
         const errorData = await dashboardResponse.json().catch(() => ({ message: 'Unknown error' }));
@@ -170,14 +195,18 @@ export function useFacebookConnection() {
       });
 
       if (response.ok) {
-        setConnectionState({
+        const newState = {
           isConnected: false,
           isLoading: false,
           userInfo: null,
           error: null,
           pages: [],
           adAccounts: []
-        });
+        };
+        setConnectionState(newState);
+        // Clear cache after disconnect
+        connectionCache = newState;
+        cacheTimestamp = Date.now();
         return true;
       }
       return false;

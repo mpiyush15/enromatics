@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSocialMediaContext } from '@/components/dashboard/SocialMediaWrapper';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface Campaign {
@@ -32,8 +31,7 @@ interface AdAccount {
   spend_cap?: string;
 }
 
-export const useCampaigns = () => {
-  const { adAccounts, isConnected } = useSocialMediaContext();
+export const useCampaigns = (adAccounts: AdAccount[], isConnected: boolean) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,8 +93,6 @@ export const useCampaigns = () => {
     error,
     selectedAccount,
     setSelectedAccount,
-    adAccounts,
-    refreshCampaigns,
-    isConnected
+    refreshCampaigns
   };
 };

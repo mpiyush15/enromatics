@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useFacebookConnection } from '@/hooks/useFacebookConnection';
 
 // Context to share Facebook connection state across social media pages
@@ -32,8 +32,18 @@ interface SocialMediaWrapperProps {
 export default function SocialMediaWrapper({ children }: SocialMediaWrapperProps) {
   const facebookConnection = useFacebookConnection();
 
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => facebookConnection, [
+    facebookConnection.isConnected,
+    facebookConnection.userInfo,
+    facebookConnection.pages,
+    facebookConnection.adAccounts,
+    facebookConnection.loading,
+    facebookConnection.error
+  ]);
+
   return (
-    <SocialMediaContext.Provider value={facebookConnection}>
+    <SocialMediaContext.Provider value={contextValue}>
       <div className="social-media-section">
         {children}
       </div>
