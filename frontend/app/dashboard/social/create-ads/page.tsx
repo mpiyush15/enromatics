@@ -217,7 +217,7 @@ export default function SuperAdminCreateAdsPage() {
               { step: 1, title: 'Setup', icon: Settings },
               { step: 2, title: 'Campaign', icon: Target },
               { step: 3, title: 'Audience & Budget', icon: Users },
-              { step: 4, title: 'Creative & Launch', icon: Image }
+              { step: 4, title: 'Creative & Launch', icon: ImageIcon }
             ].map(({ step, title, icon: Icon }, index) => (
               <div key={step} className="flex items-center">
                 <div 

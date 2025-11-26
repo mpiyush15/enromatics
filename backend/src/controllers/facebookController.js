@@ -306,15 +306,33 @@ export const getAdAccounts = async (req, res) => {
 export const getCampaigns = async (req, res) => {
   try {
     const { adAccountId } = req.params;
-    const user = await User.findById(req.user._id);
     
-    if (!user.facebookBusiness?.connected || !user.facebookBusiness?.accessToken) {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Find Facebook connection based on user role
+    let facebookConnection;
+    if (req.user.role === 'SuperAdmin') {
+      facebookConnection = await FacebookConnection.findOne({ 
+        userId: req.user._id 
+      });
+    } else {
+      facebookConnection = await FacebookConnection.findOne({ 
+        tenantId: req.user.tenantId 
+      });
+    }
+
+    if (!facebookConnection || !facebookConnection.accessToken) {
       return res.status(401).json({ message: 'Facebook account not connected' });
     }
 
+    // Remove 'act_' prefix if it exists to avoid duplication
+    const cleanAdAccountId = adAccountId.startsWith('act_') ? adAccountId.slice(4) : adAccountId;
+
     const data = await facebookApiRequest(
-      `act_${adAccountId}/campaigns?fields=id,name,status,objective,created_time,updated_time,start_time,stop_time,budget_remaining,daily_budget,lifetime_budget`,
-      user.facebookBusiness.accessToken
+      `act_${cleanAdAccountId}/campaigns?fields=id,name,status,objective,created_time,updated_time,start_time,stop_time,budget_remaining,daily_budget,lifetime_budget,insights{spend,impressions,clicks,ctr,cpc,cpm}`,
+      facebookConnection.accessToken
     );
 
     res.json({
@@ -323,7 +341,10 @@ export const getCampaigns = async (req, res) => {
     });
   } catch (error) {
     console.error('Get campaigns error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to fetch campaigns' 
+    });
   }
 };
 
