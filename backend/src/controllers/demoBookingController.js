@@ -1,7 +1,7 @@
-const DemoBooking = require("../models/DemoBooking");
+import DemoBooking from "../models/DemoBooking.js";
 
 // Create demo booking
-exports.createDemoBooking = async (req, res) => {
+export const createDemoBooking = async (req, res) => {
   try {
     const { name, email, phone, message, demoDate, demoTime, timeSlot } = req.body;
 
@@ -56,7 +56,7 @@ exports.createDemoBooking = async (req, res) => {
 };
 
 // Get all demo bookings (SuperAdmin only)
-exports.getAllDemoBookings = async (req, res) => {
+export const getAllDemoBookings = async (req, res) => {
   try {
     const { status, sortBy } = req.query;
 
@@ -88,7 +88,7 @@ exports.getAllDemoBookings = async (req, res) => {
 };
 
 // Get demo booking by ID
-exports.getDemoBookingById = async (req, res) => {
+export const getDemoBookingById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -116,7 +116,7 @@ exports.getDemoBookingById = async (req, res) => {
 };
 
 // Update demo booking status
-exports.updateDemoBooking = async (req, res) => {
+export const updateDemoBooking = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, meetingLink } = req.body;
@@ -154,7 +154,7 @@ exports.updateDemoBooking = async (req, res) => {
 };
 
 // Delete demo booking
-exports.deleteDemoBooking = async (req, res) => {
+export const deleteDemoBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -182,7 +182,7 @@ exports.deleteDemoBooking = async (req, res) => {
 };
 
 // Get available time slots for a specific date
-exports.getAvailableTimeSlots = async (req, res) => {
+export const getAvailableTimeSlots = async (req, res) => {
   try {
     const { date } = req.query;
 

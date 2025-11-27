@@ -59,4 +59,4 @@ const DemoBookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("DemoBooking", DemoBookingSchema);
+export default mongoose.model("DemoBooking", DemoBookingSchema);

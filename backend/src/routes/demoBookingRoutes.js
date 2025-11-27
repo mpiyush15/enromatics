@@ -1,14 +1,15 @@
-const express = require("express");
-const router = express.Router();
-const {
+import express from "express";
+import {
   createDemoBooking,
   getAllDemoBookings,
   getDemoBookingById,
   updateDemoBooking,
   deleteDemoBooking,
   getAvailableTimeSlots,
-} = require("../controllers/demoBookingController");
-const { protectSuperAdmin } = require("../middleware/authMiddleware");
+} from "../controllers/demoBookingController.js";
+import { protectSuperAdmin } from "../middleware/authMiddleware.js";
+
+const router = express.Router();
 
 // Public route - Create demo booking
 router.post("/", createDemoBooking);
@@ -22,4 +23,4 @@ router.get("/:id", protectSuperAdmin, getDemoBookingById);
 router.put("/:id", protectSuperAdmin, updateDemoBooking);
 router.delete("/:id", protectSuperAdmin, deleteDemoBooking);
 
-module.exports = router;
+export default router;
