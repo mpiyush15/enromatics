@@ -4,6 +4,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Scrolling Icons Animation - Smooth Infinite Loop */
+@keyframes scroll-continuous {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-66.666%);
+  }
+}
+
+@layer utilities {
+  .scroll-icons-track {
+    display: flex;
+    gap: 4rem;
+    animation: scroll-continuous 120s linear infinite !important;
+    width: 300%;
+    opacity: 0.8;
+  }
+}
+
 /* Grid background pattern */
 @layer utilities {
   .bg-grid-white\/\[0\.05\] {

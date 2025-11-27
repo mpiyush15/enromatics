@@ -51,9 +51,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     (pathname?.startsWith("/dashboard") && !pathname?.startsWith("/dashboard/login")) ||
     (pathname?.startsWith("/student") && !pathname?.startsWith("/student/login"));
 
-  // Hide NavBar and Footer on login, dashboard area, exam registration pages, and results page
+  // Hide NavBar and Footer on login, landing, dashboard area, exam registration pages, and results page
   const hideNavAndFooter =
     pathname?.startsWith("/login") ||
+    pathname?.startsWith("/landing") ||
     pathname?.startsWith("/dashboard") ||
     pathname?.startsWith("/student") ||
     pathname?.startsWith("/exam/") ||

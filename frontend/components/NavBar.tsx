@@ -103,7 +103,7 @@ export default function Navbar() {
 
           {/* MAIN MENU (centered flex grow) */}
           <ul className="hidden md:flex justify-center flex-1 space-x-8 text-gray-700 dark:text-gray-200 font-medium">
-            <li><Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Home</Link></li>
+            <li><Link href="/home" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Home</Link></li>
             <li><Link href="/about" className="hover:text-blue-600 dark:hover:text-blue-400 transition">About Us</Link></li>
             <li ref={servicesRef} className="relative">
               <button
@@ -177,7 +177,7 @@ export default function Navbar() {
       {/* MOBILE MENU */}
       {isMenuOpen && (
         <div className="md:hidden px-4 py-3 space-y-2 bg-white dark:bg-gray-900 border-t dark:border-gray-800 text-gray-800 dark:text-white">
-          <Link href="/" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
+          <Link href="/home" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
           <Link href="/about" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>About Us</Link>
           
           <div>
