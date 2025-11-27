@@ -25,8 +25,8 @@ export default function AdminTenantsPage() {
   useEffect(() => {
     const fetchTenants = async () => {
       try {
-        
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || API_BASE_URL}/api/tenants`, {
+        // ✅ Use BFF route instead of direct backend call
+        const res = await fetch(`/api/tenants`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {
@@ -35,6 +35,7 @@ export default function AdminTenantsPage() {
         });
 
         console.log("📍 Tenants API response status:", res.status);
+        console.log("📍 Cache status:", res.headers.get('X-Cache'));
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
