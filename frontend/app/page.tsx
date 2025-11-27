@@ -47,7 +47,7 @@ export default function LandingPage() {
                     Book Demo
                   </button>
                   <Link 
-                    href="/home"
+                    href="/"
                     className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-sm sm:text-base lg:text-sm text-center w-full sm:w-auto lg:w-auto"
                   >
                     Visit Website
@@ -99,7 +99,7 @@ export default function LandingPage() {
         </div>
 
         {/* Feature Bar at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 bg-transparent py-1 sm:py-2 lg:py-3 px-3 sm:px-4 lg:px-8 -translate-y-2 sm:-translate-y-6 lg:-translate-y-20">
+        <div className="absolute bottom-0 left-0 right-0 bg-transparent py-1 sm:py-2 lg:py-3 px-3 sm:px-4 lg:px-8 -translate-y-10 sm:-translate-y-20 lg:-translate-y-10">
           {/* Heading */}
           <h2 className="text-center text-white text-xs sm:text-base lg:text-xl font-semibold mb-1 sm:mb-2 lg:mb-3">
             You will manage all this in Enro Matics

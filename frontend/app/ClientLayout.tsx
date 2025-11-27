@@ -53,6 +53,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // Hide NavBar and Footer on login, landing, dashboard area, exam registration pages, and results page
   const hideNavAndFooter =
+    pathname === "/" ||
     pathname?.startsWith("/login") ||
     pathname?.startsWith("/landing") ||
     pathname?.startsWith("/dashboard") ||
