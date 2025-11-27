@@ -12,9 +12,6 @@ interface InstituteStats {
   totalTests: number;
 }
 
-// ISR Configuration - Revalidate every 5 minutes
-export const revalidate = 300; // 5 minutes in seconds
-
 export default function InstituteOverviewPage() {
   const [stats, setStats] = useState<InstituteStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,18 +24,13 @@ export default function InstituteOverviewPage() {
         setLoading(true);
         setError(null);
 
-        // Use BFF route with aggressive caching
-        // This will hit the cache most of the time (< 50ms response)
+        // Use BFF route with caching
+        // BFF layer handles 5-minute cache
         const res = await fetch("/api/dashboard/overview", {
           method: "GET",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-          },
-          // Next.js cache configuration
-          cache: "force-cache", // Cache by default, revalidate on demand
-          next: {
-            revalidate: 300, // Revalidate every 5 minutes
           },
         });
 

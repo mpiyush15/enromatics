@@ -4,9 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-// ISR Configuration - Revalidate every 5 minutes
-export const revalidate = 300; // 5 minutes in seconds
-
 export default function AccountsOverviewPage() {
   const { tenantId } = useParams();
   const [overview, setOverview] = useState<any>(null);
@@ -28,17 +25,13 @@ export default function AccountsOverviewPage() {
       if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
       if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
 
-      // Use BFF route with aggressive caching
+      // Use BFF route with caching
+      // BFF layer handles 5-minute cache
       const res = await fetch(`/api/dashboard/overview?${params.toString()}`, {
         method: 'GET',
         credentials: "include",
         headers: {
           'Content-Type': 'application/json',
-        },
-        // Next.js cache configuration for fast loads
-        cache: "force-cache",
-        next: {
-          revalidate: 300, // Revalidate every 5 minutes
         },
       });
 
