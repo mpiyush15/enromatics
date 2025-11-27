@@ -24,9 +24,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if EXPRESS_BACKEND_URL is configured
+    const expressUrl = process.env['EXPRESS_BACKEND_URL'] || process.env.EXPRESS_BACKEND_URL;
+    if (!expressUrl) {
+      console.error('❌ EXPRESS_BACKEND_URL not configured in environment');
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Backend configuration error. Please contact support.',
+          error: 'EXPRESS_BACKEND_URL not set' 
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('📤 Calling Express backend:', `${expressUrl}/api/auth/login`);
+
     // Call Express backend
     const expressResponse = await fetch(
-      `${process.env.EXPRESS_BACKEND_URL}/api/auth/login`,
+      `${expressUrl}/api/auth/login`,
       {
         method: 'POST',
         headers: {
@@ -40,11 +56,14 @@ export async function POST(request: NextRequest) {
     const data = await expressResponse.json();
 
     if (!expressResponse.ok) {
+      console.error('❌ Express returned error:', expressResponse.status, data);
       return NextResponse.json(
         { success: false, message: data.message || 'Login failed' },
         { status: expressResponse.status }
       );
     }
+
+    console.log('✅ Express login successful');
 
     // Create BFF response with cleaned user data
     const bffResponse = NextResponse.json({
@@ -63,6 +82,7 @@ export async function POST(request: NextRequest) {
     // This is crucial - Express sets httpOnly JWT cookie
     const setCookieHeader = expressResponse.headers.get('set-cookie');
     if (setCookieHeader) {
+      console.log('🍪 Forwarding Set-Cookie header to browser');
       bffResponse.headers.set('set-cookie', setCookieHeader);
     }
 
@@ -70,7 +90,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ BFF Login error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Internal server error',
+        error: (error as Error).message 
+      },
       { status: 500 }
     );
   }

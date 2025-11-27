@@ -10,9 +10,19 @@ import { extractCookies } from '@/lib/bff-client';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if EXPRESS_BACKEND_URL is configured
+    const expressUrl = process.env['EXPRESS_BACKEND_URL'] || process.env.EXPRESS_BACKEND_URL;
+    if (!expressUrl) {
+      console.error('❌ EXPRESS_BACKEND_URL not configured');
+      return NextResponse.json(
+        { success: false, message: 'Backend configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Call Express backend to clear session
     const expressResponse = await fetch(
-      `${process.env.EXPRESS_BACKEND_URL}/api/auth/logout`,
+      `${expressUrl}/api/auth/logout`,
       {
         method: 'POST',
         headers: {
