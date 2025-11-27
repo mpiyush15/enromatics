@@ -1,22 +1,23 @@
-// Frontend Auth Service - Backend Only (No NextAuth)
-// All authentication is managed by backend JWT cookies
+// Frontend Auth Service - Now Using BFF Layer
+// All requests go through Next.js API routes (/api/auth/*)
+// which forward to backend with proper cookie handling
 
-import { API_BASE_URL } from './apiConfig';
 import { cache, CACHE_KEYS, CACHE_TTL } from './cache';
 
-const API_BASE = `${API_BASE_URL}/api/auth`;
+// BFF routes (same domain - no CORS needed!)
+const BFF_BASE = '/api/auth';
 
 // Prevent multiple simultaneous auth checks
 let authCheckPromise: Promise<any> | null = null;
 
 export const authService = {
-  // Login user
+  // Login user - Now through BFF layer
   async login(email: string, password: string) {
     try {
-      const res = await fetch(`${API_BASE}/login`, {
+      const res = await fetch(`${BFF_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // ✅ Send and receive cookies
+        credentials: "include", // ✅ BFF handles cookie forwarding
         body: JSON.stringify({ email, password }),
       });
 
@@ -36,7 +37,7 @@ export const authService = {
     }
   },
 
-  // Get current user from backend with caching
+  // Get current user from BFF with caching
   async getCurrentUser(skipCache = false) {
     // Return cached user if available and not skipping cache
     if (!skipCache) {
@@ -54,9 +55,9 @@ export const authService = {
     // Create new auth check promise
     authCheckPromise = (async () => {
       try {
-        const res = await fetch(`${API_BASE}/me`, {
+        const res = await fetch(`${BFF_BASE}/me`, {
           method: "GET",
-          credentials: "include", // ✅ Send cookies
+          credentials: "include", // ✅ Send cookies (BFF handles forwarding)
           headers: {
             "Content-Type": "application/json",
           },
@@ -86,12 +87,12 @@ export const authService = {
     return authCheckPromise;
   },
 
-  // Logout user
+  // Logout user - through BFF
   async logout() {
     try {
-      const res = await fetch(`${API_BASE}/logout`, {
+      const res = await fetch(`${BFF_BASE}/logout`, {
         method: "POST",
-        credentials: "include", // ✅ Send cookies
+        credentials: "include", // ✅ Send cookies (BFF handles forwarding)
       });
 
       // Clear all auth-related cache
@@ -108,7 +109,7 @@ export const authService = {
   // Register new user
   async register(name: string, email: string, password: string) {
     try {
-      const res = await fetch(`${API_BASE}/register`, {
+      const res = await fetch(`${BFF_BASE}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
