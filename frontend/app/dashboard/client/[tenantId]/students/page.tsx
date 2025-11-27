@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentsPage() {
   const { tenantId } = useParams();
@@ -20,6 +19,7 @@ export default function StudentsPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState<any>(null);
+  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -32,10 +32,20 @@ export default function StudentsPage() {
         if (rollFilter) params.set("rollNumber", rollFilter);
         if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
 
-        const res = await fetch(`${API_BASE_URL}/api/students?${params.toString()}`, {
+        // Use BFF route instead of direct Express call
+        const res = await fetch(`/api/students?${params.toString()}`, {
           method: "GET",
           credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
         });
+
+        // Check cache header from BFF
+        const cacheHit = res.headers.get('X-Cache');
+        if (cacheHit) {
+          setCacheStatus(cacheHit as 'HIT' | 'MISS');
+        }
 
         const data = await res.json();
         if (data.success) {
@@ -91,7 +101,8 @@ export default function StudentsPage() {
       const text = await uploadFile.text();
       const studentsData = parseCSV(text);
 
-      const res = await fetch(`${API_BASE_URL}/api/students/bulk-upload`, {
+      // Use BFF route for bulk upload
+      const res = await fetch(`/api/students/bulk-upload`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -102,12 +113,12 @@ export default function StudentsPage() {
       
       if (data.success) {
         setUploadResults(data.results);
-        // Refresh student list
+        // Refresh student list via BFF
         const params = new URLSearchParams();
         params.set("page", "1");
         params.set("limit", "10");
         
-        const refreshRes = await fetch(`${API_BASE_URL}/api/students?${params.toString()}`, {
+        const refreshRes = await fetch(`/api/students?${params.toString()}`, {
           method: "GET",
           credentials: "include",
         });

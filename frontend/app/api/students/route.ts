@@ -10,12 +10,32 @@
  * 1. Receives requests from frontend
  * 2. Forwards cookies to Express backend
  * 3. Calls Express /api/students endpoints
- * 4. Filters sensitive data
- * 5. Returns cleaned response
+ * 4. Caches GET responses (3 minute TTL)
+ * 5. Invalidates cache on POST/PUT/DELETE
+ * 6. Filters sensitive data
+ * 7. Returns cleaned response
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
+
+// In-memory cache
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+function getCacheKey(endpoint: string, search: string): string {
+  return `${endpoint}:${search}`;
+}
+
+function invalidateCache(): void {
+  cache.clear();
+  console.log('[BFF] Students cache cleared due to mutation');
+}
 
 // GET /api/students or /api/students/:id
 export async function GET(
@@ -36,6 +56,22 @@ export async function GET(
     const endpoint = studentId 
       ? `/api/students/${studentId}`
       : `/api/students${url.search}`; // Preserve query params (pagination, filters)
+
+    // Check cache for list requests (not single student by ID)
+    if (!studentId) {
+      const cacheKey = getCacheKey('students', url.search);
+      const cachedEntry = cache.get(cacheKey);
+      
+      if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
+        console.log('[BFF] Students Cache HIT (age:', Date.now() - cachedEntry.timestamp, 'ms)');
+        return NextResponse.json(cachedEntry.data, {
+          headers: {
+            'X-Cache': 'HIT',
+            'Cache-Control': 'public, max-age=180',
+          },
+        });
+      }
+    }
 
     console.log('📤 Calling Express:', `${EXPRESS_URL}${endpoint}`);
 
@@ -72,6 +108,33 @@ export async function GET(
       // If it's a single student
       student: data.student ? cleanStudent(data.student) : undefined,
     };
+
+    // Cache list requests only
+    if (!studentId) {
+      const cacheKey = getCacheKey('students', url.search);
+      cache.set(cacheKey, {
+        data: cleanData,
+        timestamp: Date.now(),
+      });
+
+      // Cleanup old entries
+      if (cache.size > 50) {
+        const now = Date.now();
+        for (const [key, entry] of cache.entries()) {
+          if (now - entry.timestamp > CACHE_TTL * 2) {
+            cache.delete(key);
+          }
+        }
+      }
+
+      console.log('[BFF] Students Cache MISS (fresh data)');
+      return NextResponse.json(cleanData, {
+        headers: {
+          'X-Cache': 'MISS',
+          'Cache-Control': 'public, max-age=180',
+        },
+      });
+    }
 
     return NextResponse.json(cleanData);
   } catch (error) {
@@ -118,6 +181,9 @@ export async function POST(request: NextRequest) {
         { status: expressResponse.status }
       );
     }
+
+    // Invalidate cache on create
+    invalidateCache();
 
     console.log('✅ Student created successfully');
 
@@ -183,6 +249,9 @@ export async function PUT(
       );
     }
 
+    // Invalidate cache on update
+    invalidateCache();
+
     console.log('✅ Student updated successfully');
 
     const cleanData = {
@@ -243,6 +312,9 @@ export async function DELETE(
         { status: expressResponse.status }
       );
     }
+
+    // Invalidate cache on delete
+    invalidateCache();
 
     console.log('✅ Student deleted successfully');
 
