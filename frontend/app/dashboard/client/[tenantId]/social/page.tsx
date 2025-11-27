@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
-const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
-
 interface AdAccount {
   id: string;
   name: string;
@@ -43,7 +41,7 @@ export default function SocialMediaDashboard() {
   const fetchDashboardData = async () => {
     setDataLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/dashboard`, {
+      const response = await fetch(`/api/social/dashboard`, {
         credentials: 'include',
       });
       const data = await response.json();

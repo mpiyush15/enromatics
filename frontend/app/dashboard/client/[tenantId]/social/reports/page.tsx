@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
-const API_BASE_URL = "https://endearing-blessing-production-c61f.up.railway.app";
-
 // ---------------- TYPES -------------------
 
 interface AdAccount {
@@ -70,7 +68,7 @@ export default function SocialReportsPage() {
 
   const checkConnection = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      const response = await fetch(`/api/social/status`, {
         credentials: "include",
       });
       const data = await response.json();
@@ -86,7 +84,7 @@ export default function SocialReportsPage() {
 
   const fetchAdAccounts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts`, {
+      const response = await fetch(`/api/social/ad-accounts`, {
         credentials: "include",
       });
 
@@ -109,7 +107,7 @@ export default function SocialReportsPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/facebook/ad-accounts/${selectedAccount}/campaigns`,
+        `/api/social/campaigns?adAccountId=${selectedAccount}`,
         { credentials: "include" }
       );
 
@@ -129,7 +127,7 @@ export default function SocialReportsPage() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/facebook/ad-accounts/${selectedAccount}/insights?dateRange=${dateRange}`,
+        `/api/social/insights?adAccountId=${selectedAccount}&dateRange=${dateRange}`,
         { credentials: "include" }
       );
 

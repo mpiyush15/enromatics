@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Search, Filter, Calendar, Users, Award, TrendingUp, Eye, Edit2, Trash2, ExternalLink, Copy, CheckCircle } from "lucide-react";
 import MobileAppBanner from "@/components/dashboard/MobileAppBanner";
@@ -66,8 +65,9 @@ export default function ScholarshipExamsPage() {
   const fetchExams = async () => {
     try {
       setLoading(true);
-      console.log("🔍 Fetching exams from:", `${API_URL}/api/scholarship-exams`);
-      const response = await fetch(`${API_URL}/api/scholarship-exams`, {
+      console.log("🔍 Fetching exams from:", `/api/scholarship-exams`);
+      // Use BFF route with caching
+      const response = await fetch(`/api/scholarship-exams`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -145,7 +145,8 @@ export default function ScholarshipExamsPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
+      // Use BFF route
+      const response = await fetch(`/api/scholarship-exams/${examId}`, {
         method: "DELETE",
         credentials: "include",
         headers: {

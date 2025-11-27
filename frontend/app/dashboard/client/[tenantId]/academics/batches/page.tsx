@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Batch {
   _id: string;
@@ -25,6 +24,7 @@ export default function BatchesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [message, setMessage] = useState("");
+  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -41,9 +41,17 @@ export default function BatchesPage() {
 
   const fetchBatches = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/batches`, {
+      // Use BFF route instead of direct Express call
+      const res = await fetch(`/api/academics/batches`, {
         credentials: "include",
       });
+      
+      // Check cache header from BFF
+      const cacheHit = res.headers.get('X-Cache');
+      if (cacheHit) {
+        setCacheStatus(cacheHit as 'HIT' | 'MISS');
+      }
+      
       const data = await res.json();
       if (data.success) {
         setBatches(data.batches);
@@ -65,9 +73,10 @@ export default function BatchesPage() {
     setMessage("Saving...");
 
     try {
+      // Use BFF route instead of direct Express call
       const url = editingBatch
-        ? `${API_BASE_URL}/api/batches/${editingBatch._id}`
-        : `${API_BASE_URL}/api/batches`;
+        ? `/api/academics/batches/${editingBatch._id}`
+        : `/api/academics/batches`;
       const method = editingBatch ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -113,7 +122,7 @@ export default function BatchesPage() {
     if (!confirm("Are you sure you want to delete this batch? This cannot be undone.")) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/batches/${id}`, {
+      const res = await fetch(`/api/academics/batches/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

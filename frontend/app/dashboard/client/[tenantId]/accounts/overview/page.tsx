@@ -27,7 +27,7 @@ export default function AccountsOverviewPage() {
 
       // Use BFF route with caching
       // BFF layer handles 5-minute cache
-      const res = await fetch(`/api/dashboard/overview?${params.toString()}`, {
+      const res = await fetch(`/api/accounts/overview?${params.toString()}`, {
         method: 'GET',
         credentials: "include",
         headers: {

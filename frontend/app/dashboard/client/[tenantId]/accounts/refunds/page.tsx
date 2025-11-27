@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function RefundsPage() {
   const { tenantId } = useParams();
@@ -26,7 +25,8 @@ export default function RefundsPage() {
       const params = new URLSearchParams();
       if (statusFilter) params.append("status", statusFilter);
 
-      const res = await fetch(`${API_BASE_URL}/api/accounts/refunds?${params.toString()}`, {
+      // Use BFF route with caching
+      const res = await fetch(`/api/accounts/refunds?${params.toString()}`, {
         credentials: "include"
       });
 
@@ -43,7 +43,8 @@ export default function RefundsPage() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/students?limit=1000`, {
+      // Use BFF route with caching
+      const res = await fetch(`/api/students?limit=1000`, {
         credentials: "include"
       });
       const data = await res.json();
@@ -63,7 +64,8 @@ export default function RefundsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE_URL}/api/accounts/refunds`, {
+      // Use BFF route
+      const res = await fetch(`/api/accounts/refunds`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -101,13 +103,14 @@ export default function RefundsPage() {
         ? prompt("Enter transaction ID (optional):") 
         : undefined;
 
-      const res = await fetch(`${API_BASE_URL}/api/accounts/refunds/${refundId}`, {
+      // Use BFF route
+      const res = await fetch(`/api/accounts/refunds/${refundId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: newStatus,
-          transactionId 
+          ...(transactionId && { transactionId })
         })
       });
 

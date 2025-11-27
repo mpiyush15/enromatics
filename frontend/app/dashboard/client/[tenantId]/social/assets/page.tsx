@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
@@ -81,7 +80,7 @@ export default function SocialMediaDashboard() {
 
   const fetchConnectionStatus = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      const response = await fetch(`/api/social/status`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -97,7 +96,7 @@ export default function SocialMediaDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/dashboard`, {
+      const response = await fetch(`/api/social/dashboard`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -121,7 +120,7 @@ export default function SocialMediaDashboard() {
   const fetchCampaigns = async (adAccountId: string) => {
     setLoadingCampaigns(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts/${adAccountId}/campaigns`, {
+      const response = await fetch(`/api/social/campaigns?adAccountId=${adAccountId}`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -153,7 +152,7 @@ export default function SocialMediaDashboard() {
   }, [connectionStatus]);
 
   const handleConnect = () => {
-    window.location.href = `${API_BASE_URL}/api/facebook/connect`;
+    window.location.href = `/api/facebook/connect`;
   };
 
   const formatCurrency = (amount: string, currency: string) => {

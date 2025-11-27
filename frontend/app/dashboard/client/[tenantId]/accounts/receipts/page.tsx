@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import FeeReceipt from "@/components/accounts/FeeReceipt";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function FeeReceiptsPage() {
   const { tenantId } = useParams();
@@ -36,7 +35,8 @@ export default function FeeReceiptsPage() {
       const params = new URLSearchParams();
       params.append(searchType, searchValue);
 
-      const res = await fetch(`${API_BASE_URL}/api/accounts/receipts/search?${params.toString()}`, {
+      // Use BFF route with caching
+      const res = await fetch(`/api/accounts/receipts/search?${params.toString()}`, {
         credentials: "include"
       });
 
@@ -59,7 +59,8 @@ export default function FeeReceiptsPage() {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/accounts/receipts/create`, {
+      // Use BFF route
+      const res = await fetch(`/api/accounts/receipts/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -93,7 +94,8 @@ export default function FeeReceiptsPage() {
 
   const handleGenerateReceipt = async (paymentId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/accounts/receipts/generate/${paymentId}`, {
+      // Use BFF route
+      const res = await fetch(`/api/accounts/receipts/generate/${paymentId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

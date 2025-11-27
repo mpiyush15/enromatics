@@ -79,7 +79,7 @@ export default function ResultsPage() {
     setResult(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/public/result/${registrationNumber}`, {
+      const response = await fetch(`/api/public/results?registrationNumber=${registrationNumber}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -105,7 +105,7 @@ export default function ResultsPage() {
     if (!result) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/public/admit-card/${result.registration.registrationNumber}`, {
+      const response = await fetch(`/api/public/results?registrationNumber=${result.registration.registrationNumber}&action=admit-card`, {
         method: "GET",
       });
 
@@ -131,7 +131,7 @@ export default function ResultsPage() {
 
     setEnrollmentSubmitting(true);
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/public/enrollment-interest`, {
+      const response = await fetch(`/api/public/results`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

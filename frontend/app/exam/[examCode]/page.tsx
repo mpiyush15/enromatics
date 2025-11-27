@@ -102,9 +102,8 @@ export default function ExamRegistrationPage() {
     try {
       setLoading(true);
       console.log("🔍 Fetching exam data for code:", examCode);
-      console.log("🔗 API URL:", `${API_URL}/api/scholarship-exams/public/${examCode}`);
       
-      const response = await fetch(`${API_URL}/api/scholarship-exams/public/${examCode}`, {
+      const response = await fetch(`/api/public/exams?examCode=${examCode}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -215,7 +214,7 @@ export default function ExamRegistrationPage() {
 
       console.log("🚀 Submitting registration:", registrationData);
 
-      const response = await fetch(`${API_URL}/api/scholarship-exams/public/${examCode}/register`, {
+      const response = await fetch(`/api/public/exams?examCode=${examCode}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

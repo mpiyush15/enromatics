@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function ExpensesPage() {
   const { tenantId } = useParams();
@@ -50,7 +49,8 @@ export default function ExpensesPage() {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.status) params.append("status", filters.status);
 
-      const res = await fetch(`${API_BASE_URL}/api/accounts/expenses?${params.toString()}`, {
+      // Use BFF route with caching
+      const res = await fetch(`/api/accounts/expenses?${params.toString()}`, {
         credentials: "include"
       });
 
@@ -72,7 +72,8 @@ export default function ExpensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE_URL}/api/accounts/expenses`, {
+      // Use BFF route
+      const res = await fetch(`/api/accounts/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

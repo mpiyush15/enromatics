@@ -18,7 +18,7 @@ export default function StudentLoginPage() {
     e.preventDefault();
     setStatus("Logging in...");
     try {
-      const res = await fetch(`${API_URL}/api/student-auth/login`, {
+      const res = await fetch(`/api/public/student-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

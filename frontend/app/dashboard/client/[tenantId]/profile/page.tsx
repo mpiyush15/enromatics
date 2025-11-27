@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface FormData {
   name: string;
@@ -56,7 +55,7 @@ export default function TenantProfilePage() {
 
   const fetchTenantProfile = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants/${tenantId}`, {
+      const res = await fetch(`/api/settings/tenant-profile?tenantId=${tenantId}`, {
         credentials: "include",
       });
       
@@ -89,7 +88,7 @@ export default function TenantProfilePage() {
 
   const fetchStaff = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/users?tenantId=${tenantId}`, {
+      const res = await fetch(`/api/settings/staff-list?tenantId=${tenantId}`, {
         credentials: "include",
       });
       
@@ -114,7 +113,7 @@ export default function TenantProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants/${tenantId}`, {
+      const res = await fetch(`/api/settings/tenant-profile?tenantId=${tenantId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -146,11 +145,11 @@ export default function TenantProfilePage() {
     e.preventDefault();
     setStatus("Adding staff...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const res = await fetch(`/api/settings/staff-list?tenantId=${tenantId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...staffForm, tenantId }),
+        body: JSON.stringify(staffForm),
       });
       
       const contentType = res.headers.get("content-type");
@@ -174,7 +173,7 @@ export default function TenantProfilePage() {
   const handleDeleteStaff = async (userId: string) => {
     if (!confirm("Remove this staff member?")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/users/${userId}`, {
+      const res = await fetch(`/api/auth/users/${userId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -204,7 +203,7 @@ export default function TenantProfilePage() {
   const handleUpdateStaff = async (userId: string) => {
     setStatus("Updating...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/users/${userId}`, {
+      const res = await fetch(`/api/auth/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
