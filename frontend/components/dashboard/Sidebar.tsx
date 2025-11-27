@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
       try {
         console.log("🔄 Fetching sidebar for user:", { role: user.role, tenantId: user.tenantId });
         
-        const res = await fetch(`${API_BASE_URL}/api/ui/sidebar`, {
+        const res = await fetch(`/api/ui/sidebar`, {
           method: "GET",
           credentials: "include", // ✅ Sends httpOnly cookie automatically
         });
