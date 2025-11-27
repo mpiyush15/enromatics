@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://enromatics.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
 // In-memory cache
 const cache = new Map<string, { data: any; timestamp: number }>();
