@@ -2,20 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { FaGraduationCap, FaFileInvoiceDollar, FaChartBar, FaBook, FaUsers as FaParents, FaCalendarAlt, FaFacebook, FaInstagram, FaWhatsapp } from "react-icons/fa";
-import DemoBookingModal from "@/components/DemoBookingModal";
 
 export default function LandingPage() {
-  const [showDemoModal, setShowDemoModal] = useState(false);
-  const [demoData, setDemoData] = useState({ name: "", email: "", phone: "", message: "" });
-
-  const handleDemoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Will integrate email and mobile OTP here
-    console.log("Demo booking:", demoData);
-    setShowDemoModal(false);
-  };
   return (
     <div className="w-full">
       {/* Hero Section - Dark Blue Gradient with Dashboard - Full Screen No Scroll */}
@@ -41,17 +30,17 @@ export default function LandingPage() {
                 </p>
 
                 <div className="flex flex-col sm:flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-2 justify-center lg:justify-start">
-                  <button 
-                    onClick={() => setShowDemoModal(true)}
+                  <Link 
+                    href="/home"
                     className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition text-sm sm:text-base lg:text-sm shadow-lg w-full sm:w-auto lg:w-auto"
                   >
-                    Book Demo
-                  </button>
+                    Explore Platform
+                  </Link>
                   <Link 
-                    href="/"
+                    href="/home"
                     className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-sm sm:text-base lg:text-sm text-center w-full sm:w-auto lg:w-auto"
                   >
-                    Visit Website
+                    Learn More
                   </Link>
                 </div>
 
@@ -154,11 +143,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Demo Modal */}
-      <DemoBookingModal isOpen={showDemoModal} onClose={() => setShowDemoModal(false)} />
-
-      {/* Old modal code removed - using DemoBookingModal component instead */}
     </div>
   );
 }
