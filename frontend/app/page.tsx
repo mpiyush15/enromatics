@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { FaGraduationCap, FaFileInvoiceDollar, FaChartBar, FaBook, FaUsers as FaParents, FaCalendarAlt, FaFacebook, FaInstagram, FaWhatsapp } from "react-icons/fa";
+import DemoBookingModal from "@/components/DemoBookingModal";
 
 export default function LandingPage() {
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -155,89 +156,9 @@ export default function LandingPage() {
       </section>
 
       {/* Demo Modal */}
-      {showDemoModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Book a Demo</h3>
-              <button 
-                onClick={() => setShowDemoModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
-              >
-                ×
-              </button>
-            </div>
+      <DemoBookingModal isOpen={showDemoModal} onClose={() => setShowDemoModal(false)} />
 
-            <form onSubmit={handleDemoSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={demoData.name}
-                  onChange={(e) => setDemoData({ ...demoData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={demoData.email}
-                  onChange={(e) => setDemoData({ ...demoData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={demoData.phone}
-                  onChange={(e) => setDemoData({ ...demoData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+91 XXXXX XXXXX"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Message
-                </label>
-                <textarea
-                  value={demoData.message}
-                  onChange={(e) => setDemoData({ ...demoData, message: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Tell us about your institute..."
-                  rows={3}
-                />
-              </div>
-
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                We'll send you OTP for verification before scheduling the demo.
-              </p>
-
-              <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition mt-6"
-              >
-                Request Demo
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Old modal code removed - using DemoBookingModal component instead */}
     </div>
   );
 }
