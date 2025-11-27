@@ -7,7 +7,8 @@ import {
   deleteDemoBooking,
   getAvailableTimeSlots,
 } from "../controllers/demoBookingController.js";
-import { protectSuperAdmin } from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
+import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
@@ -17,10 +18,10 @@ router.post("/", createDemoBooking);
 // Get available time slots for a date
 router.get("/available-slots", getAvailableTimeSlots);
 
-// SuperAdmin routes
-router.get("/", protectSuperAdmin, getAllDemoBookings);
-router.get("/:id", protectSuperAdmin, getDemoBookingById);
-router.put("/:id", protectSuperAdmin, updateDemoBooking);
-router.delete("/:id", protectSuperAdmin, deleteDemoBooking);
+// SuperAdmin routes (protected)
+router.get("/", protect, authorizeRoles("SuperAdmin"), getAllDemoBookings);
+router.get("/:id", protect, authorizeRoles("SuperAdmin"), getDemoBookingById);
+router.put("/:id", protect, authorizeRoles("SuperAdmin"), updateDemoBooking);
+router.delete("/:id", protect, authorizeRoles("SuperAdmin"), deleteDemoBooking);
 
 export default router;

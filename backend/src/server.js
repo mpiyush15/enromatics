@@ -44,6 +44,7 @@ app.use(
     origin: [
       "https://enromatics.com", 
       "https://enromatics.vercel.app",
+      "https://endearing-blessing-production-c61f.up.railway.app",
       "http://localhost:3000", 
       "http://127.0.0.1:3000",
       "http://localhost:3001"
