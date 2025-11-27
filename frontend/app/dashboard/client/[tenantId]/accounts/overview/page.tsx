@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+// ISR Configuration - Revalidate every 5 minutes
+export const revalidate = 300; // 5 minutes in seconds
+
 export default function AccountsOverviewPage() {
   const { tenantId } = useParams();
   const [overview, setOverview] = useState<any>(null);
@@ -11,6 +14,7 @@ export default function AccountsOverviewPage() {
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
   const [dateFilter, setDateFilter] = useState({
     startDate: "",
     endDate: ""
@@ -24,14 +28,25 @@ export default function AccountsOverviewPage() {
       if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
       if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
 
-      // Use BFF route instead of direct Express call
+      // Use BFF route with aggressive caching
       const res = await fetch(`/api/dashboard/overview?${params.toString()}`, {
         method: 'GET',
         credentials: "include",
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        // Next.js cache configuration for fast loads
+        cache: "force-cache",
+        next: {
+          revalidate: 300, // Revalidate every 5 minutes
+        },
       });
+
+      // Check cache header from BFF
+      const cacheHit = res.headers.get('X-Cache');
+      if (cacheHit) {
+        setCacheStatus(cacheHit as 'HIT' | 'MISS');
+      }
 
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.statusText}`);
