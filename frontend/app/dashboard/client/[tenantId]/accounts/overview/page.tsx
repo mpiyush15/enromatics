@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function AccountsOverviewPage() {
   const { tenantId } = useParams();
@@ -11,6 +10,7 @@ export default function AccountsOverviewPage() {
   const [expensesByCategory, setExpensesByCategory] = useState<any>({});
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState({
     startDate: "",
     endDate: ""
@@ -19,22 +19,35 @@ export default function AccountsOverviewPage() {
   const fetchOverview = async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
       if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
 
-      const res = await fetch(`${API_BASE_URL}/api/accounts/overview?${params.toString()}`, {
-        credentials: "include"
+      // Use BFF route instead of direct Express call
+      const res = await fetch(`/api/dashboard/overview?${params.toString()}`, {
+        method: 'GET',
+        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch: ${res.statusText}`);
+      }
 
       const data = await res.json();
       if (data.success) {
         setOverview(data.overview);
         setExpensesByCategory(data.expensesByCategory);
         setRecentPayments(data.recentPayments);
+      } else {
+        setError(data.message || 'Failed to load overview data');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch overview:", err);
+      setError(err.message || 'An error occurred while fetching data');
     } finally {
       setLoading(false);
     }
@@ -51,6 +64,25 @@ export default function AccountsOverviewPage() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400 font-medium">Loading accounts data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 dark:bg-red-900 rounded-2xl shadow-lg p-8 border-l-4 border-red-600">
+            <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">Error Loading Data</h2>
+            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
+            <button
+              onClick={() => fetchOverview()}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
