@@ -6,7 +6,7 @@
  * Used ONLY on server-side (BFF routes)
  */
 
-const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
+const EXPRESS_BACKEND_URL = (process as any).env?.EXPRESS_BACKEND_URL;
 
 if (!EXPRESS_BACKEND_URL) {
   throw new Error('EXPRESS_BACKEND_URL environment variable is required');

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "types": ["next-auth"],
+    "types": ["next-auth", "node"],
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -21,10 +21,17 @@
     ],
     "paths": {
       "@/*": ["./*"],
-       "@payload-config": ["./payload.config.ts"]
-
+      "@payload-config": ["./payload.config.ts"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "tailwind.config.js", "payload.config.", "next.config.mjs"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "tailwind.config.js",
+    "payload.config.",
+    "next.config.mjs"
+  ],
   "exclude": ["node_modules"]
 }

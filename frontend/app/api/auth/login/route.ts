@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if EXPRESS_BACKEND_URL is configured
-    const expressUrl = process.env['EXPRESS_BACKEND_URL'] || process.env.EXPRESS_BACKEND_URL;
+    const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL;
     if (!expressUrl) {
       console.error('❌ EXPRESS_BACKEND_URL not configured in environment');
       return NextResponse.json(

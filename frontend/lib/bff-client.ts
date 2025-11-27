@@ -26,7 +26,7 @@ export async function callExpressBackend(
     cookies = ''
   } = options;
 
-  const expressUrl = process.env.EXPRESS_BACKEND_URL;
+  const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL;
   if (!expressUrl) {
     throw new Error('EXPRESS_BACKEND_URL not configured');
   }
