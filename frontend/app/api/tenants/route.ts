@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const cache = new Map<string, { data: any; timestamp: number }>();
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes - tenants list changes infrequently
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     const cookieHeader = req.headers.get('cookie');
 
     // Fetch from backend
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = BACKEND_URL;
     const response = await fetch(`${backendUrl}/api/tenants`, {
       method: 'GET',
       headers: {
