@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface TenantDetail {
   _id: string;
@@ -61,9 +60,9 @@ export default function TenantDetailPage() {
   useEffect(() => {
     const fetchTenantDetail = async () => {
       try {
-        // Fetch tenant details
+        // ✅ Fetch tenant details using BFF route instead of backend directly
         const tenantRes = await fetch(
-          `${API_BASE_URL}/api/tenants/${tenantId}`,
+          `/api/tenants/${tenantId}`,
           {
             method: "GET",
             credentials: "include",
@@ -83,7 +82,7 @@ export default function TenantDetailPage() {
         // Fetch student stats
         try {
           const studentsRes = await fetch(
-            `${API_BASE_URL}/api/students?tenantId=${tenantId}&stats=true`,
+            `/api/students?tenantId=${tenantId}&stats=true`,
             {
               method: "GET",
               credentials: "include",
@@ -112,7 +111,7 @@ export default function TenantDetailPage() {
         // Fetch user stats
         try {
           const usersRes = await fetch(
-            `${API_BASE_URL}/api/user?tenantId=${tenantId}`,
+            `/api/user?tenantId=${tenantId}`,
             {
               method: "GET",
               credentials: "include",
