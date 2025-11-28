@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface AdInsight {
   impressions: string;
@@ -67,7 +66,8 @@ export default function SocialReportsPage() {
 
   const checkConnection = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/status`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -81,7 +81,8 @@ export default function SocialReportsPage() {
 
   const fetchAdAccounts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/ad-accounts`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -101,8 +102,9 @@ export default function SocialReportsPage() {
     if (!selectedAccount) return;
     
     try {
+      // ✅ Use BFF route instead of direct backend call
       const response = await fetch(
-        `${API_BASE_URL}/api/facebook/ad-accounts/${selectedAccount}/campaigns`,
+        `/api/social/ad-accounts/${selectedAccount}/campaigns`,
         { credentials: 'include' }
       );
       const data = await response.json();
@@ -119,8 +121,9 @@ export default function SocialReportsPage() {
     if (!selectedAccount) return;
     
     try {
+      // ✅ Use BFF route instead of direct backend call
       const response = await fetch(
-        `${API_BASE_URL}/api/facebook/ad-accounts/${selectedAccount}/insights?dateRange=${dateRange}`,
+        `/api/social/ad-accounts/${selectedAccount}/insights?dateRange=${dateRange}`,
         { credentials: 'include' }
       );
       const data = await response.json();

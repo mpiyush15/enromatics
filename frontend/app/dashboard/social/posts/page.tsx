@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface FacebookPage {
   id: string;
@@ -73,7 +72,8 @@ export default function SocialPostsPage() {
 
   const checkConnection = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/status`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -87,7 +87,8 @@ export default function SocialPostsPage() {
 
   const fetchPages = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/pages`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/pages`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -108,8 +109,9 @@ export default function SocialPostsPage() {
     
     setLoadingPosts(true);
     try {
+      // ✅ Use BFF route instead of direct backend call
       const response = await fetch(
-        `${API_BASE_URL}/api/facebook/pages/${selectedPage}/posts?limit=20`,
+        `/api/social/pages/${selectedPage}/posts?limit=20`,
         { credentials: 'include' }
       );
       const data = await response.json();

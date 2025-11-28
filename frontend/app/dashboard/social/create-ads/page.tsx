@@ -26,8 +26,6 @@ import {
   Send
 } from 'lucide-react';
 
-const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
-
 interface AdAccount {
   id: string;
   name: string;
@@ -107,7 +105,8 @@ export default function SuperAdminCreateAdsPage() {
   const fetchPaymentMethods = async () => {
     setLoadingPaymentMethods(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts/${selectedAdAccount}/payment-methods`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/ad-accounts/${selectedAdAccount}/payment-methods`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -123,7 +122,8 @@ export default function SuperAdminCreateAdsPage() {
 
   const fetchCampaignTemplates = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/campaign-templates`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/templates`, {
         credentials: 'include'
       });
       const data = await response.json();
@@ -145,7 +145,8 @@ export default function SuperAdminCreateAdsPage() {
         ad: adData
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/facebook/campaigns/create`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/social/campaigns/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
