@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 import MessageDetailsModal from "@/components/whatsapp/MessageDetailsModal";
 
 interface Stats {
@@ -57,7 +56,8 @@ export default function WhatsAppDashboardPage() {
 
   const checkConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -75,7 +75,8 @@ export default function WhatsAppDashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/stats`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -89,7 +90,8 @@ export default function WhatsAppDashboardPage() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/templates`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -105,7 +107,8 @@ export default function WhatsAppDashboardPage() {
     setSyncing(true);
     setSubmitStatus("Syncing templates from Meta...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/sync`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/templates/sync`, {
         method: "POST",
         credentials: "include",
       });
@@ -135,7 +138,8 @@ export default function WhatsAppDashboardPage() {
     setSubmitStatus("Submitting template to Meta for approval...");
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/submit`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/templates/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

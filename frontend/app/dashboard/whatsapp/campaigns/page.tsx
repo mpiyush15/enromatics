@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 import useAuth from "@/hooks/useAuth";
 
 interface Contact {
@@ -65,7 +64,8 @@ export default function WhatsappCampaignsPage() {
 
   const checkConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -78,7 +78,8 @@ export default function WhatsappCampaignsPage() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/contacts`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/contacts`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -94,7 +95,8 @@ export default function WhatsappCampaignsPage() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates?status=approved`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/templates?status=approved`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -109,8 +111,9 @@ export default function WhatsappCampaignsPage() {
   const syncContacts = async () => {
     setStatus("Syncing contacts from students database...");
     try {
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/sync-contacts`,
+        `/api/whatsapp/sync-contacts`,
         {
           method: "POST",
           credentials: "include",
@@ -130,8 +133,9 @@ export default function WhatsappCampaignsPage() {
   const syncTenantContacts = async () => {
     setStatus("Syncing contacts from tenants database...");
     try {
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/sync-tenant-contacts`,
+        `/api/whatsapp/sync-tenant-contacts`,
         {
           method: "POST",
           credentials: "include",
@@ -155,7 +159,8 @@ export default function WhatsappCampaignsPage() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/contacts`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/contacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -181,8 +186,9 @@ export default function WhatsappCampaignsPage() {
     if (!confirm("Are you sure you want to delete this contact?")) return;
 
     try {
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/contacts/${id}`,
+        `/api/whatsapp/contacts/${id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -240,8 +246,9 @@ export default function WhatsappCampaignsPage() {
       }
 
       // Send to backend
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/contacts/import`,
+        `/api/whatsapp/contacts/import`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -331,7 +338,8 @@ export default function WhatsappCampaignsPage() {
         
         if (messageType === "text") {
           // Send text message
-          res = await fetch(`${API_BASE_URL}/api/whatsapp/send`, {
+          // ✅ Use BFF route instead of direct backend call
+          res = await fetch(`/api/whatsapp/send`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -344,7 +352,8 @@ export default function WhatsappCampaignsPage() {
         } else {
           // Send template message
           const params = selectedTemplate!.variables.map(v => templateVariables[v]);
-          res = await fetch(`${API_BASE_URL}/api/whatsapp/send-template`, {
+          // ✅ Use BFF route instead of direct backend call
+          res = await fetch(`/api/whatsapp/send-template`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",

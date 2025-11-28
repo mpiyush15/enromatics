@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface MessageContent {
   text?: string;
@@ -51,8 +50,9 @@ export default function WhatsappReportsPage() {
       if (statusFilter) params.append("status", statusFilter);
       if (campaignFilter) params.append("campaign", campaignFilter);
 
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/messages?${params}`,
+        `/api/whatsapp/messages?${params}`,
         { credentials: "include" }
       );
       const data = await res.json();
@@ -70,7 +70,8 @@ export default function WhatsappReportsPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/stats`, {
         credentials: "include",
       });
       const data = await res.json();

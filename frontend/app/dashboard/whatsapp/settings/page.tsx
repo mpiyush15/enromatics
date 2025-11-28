@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 import useAuth from "@/hooks/useAuth";
 
 interface ConfigForm {
@@ -41,7 +40,8 @@ export default function WhatsappSettingsPage() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -68,7 +68,8 @@ export default function WhatsappSettingsPage() {
     setStatus("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -105,8 +106,9 @@ export default function WhatsappSettingsPage() {
     setStatus("Testing connection...");
 
     try {
+      // ✅ Use BFF route instead of direct backend call
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/test-connection`,
+        `/api/whatsapp/test-connection`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -138,7 +140,8 @@ export default function WhatsappSettingsPage() {
     setTemplateSyncStatus("Fetching templates from Meta...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/sync`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/templates/sync`, {
         method: "POST",
         credentials: "include",
       });
@@ -164,7 +167,8 @@ export default function WhatsappSettingsPage() {
     setStatus("Removing WhatsApp configuration...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      // ✅ Use BFF route instead of direct backend call
+      const res = await fetch(`/api/whatsapp/config`, {
         method: "DELETE",
         credentials: "include",
       });
