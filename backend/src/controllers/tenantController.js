@@ -234,3 +234,64 @@ export const deleteTenant = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/* ================================================================
+   🔹 CREATE NEW TENANT (for Superadmin to create demo accounts)
+================================================================ */
+export const createNewTenant = async (req, res) => {
+  try {
+    const { name, email, instituteName, phone, country } = req.body;
+
+    // Validation
+    if (!name || !email) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+
+    // Check if email already exists
+    const existingTenant = await Tenant.findOne({ email });
+    if (existingTenant) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    // Generate unique tenantId
+    const tenantId = crypto.randomBytes(4).toString("hex");
+
+    // Create new tenant
+    const newTenant = new Tenant({
+      tenantId,
+      name,
+      email,
+      instituteName: instituteName || null,
+      plan: "free", // Default to free plan for demos
+      active: true,
+      contact: {
+        phone: phone || null,
+        country: country || "India",
+      },
+      subscription: {
+        status: "inactive",
+        startDate: new Date(),
+        endDate: null,
+      },
+      whatsappOptIn: true,
+    });
+
+    await newTenant.save();
+
+    res.status(201).json({
+      message: "Tenant created successfully",
+      tenant: {
+        tenantId: newTenant.tenantId,
+        name: newTenant.name,
+        email: newTenant.email,
+        instituteName: newTenant.instituteName,
+        plan: newTenant.plan,
+        contact: newTenant.contact,
+        createdAt: newTenant.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error("Create Tenant Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -12,6 +12,7 @@ import {
   getAllTenants,
   deleteTenant,
   getSuperAdminTenantDetail,
+  createNewTenant,
 } from "../controllers/tenantController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -29,6 +30,18 @@ router.get(
   protect,
   authorizeRoles("SuperAdmin"),
   getAllTenants
+);
+
+/**
+ * @route   POST /api/tenants/create
+ * @desc    Create new tenant (superadmin creates demo accounts)
+ * @access  Private – superadmin only
+ */
+router.post(
+  "/create",
+  protect,
+  authorizeRoles("SuperAdmin"),
+  createNewTenant
 );
 
 /**

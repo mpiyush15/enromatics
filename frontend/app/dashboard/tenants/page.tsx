@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Power } from "lucide-react";
+import { Eye, Power, Plus, X } from "lucide-react";
 
 type Tenant = {
   _id: string;
@@ -42,6 +42,17 @@ export default function AdminTenantsPage() {
   const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro" | "enterprise" | "trial">("all");
   const [sortBy, setSortBy] = useState<"name" | "date" | "plan">("date");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Add tenant modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [creatingTenant, setCreatingTenant] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    instituteName: "",
+    phone: "",
+    country: "India",
+  });
 
   useEffect(() => {
     fetchTenants();
@@ -165,14 +176,81 @@ export default function AdminTenantsPage() {
     router.push(`/dashboard/tenants/${tenantId}`);
   };
 
+  const createNewTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.email) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setCreatingTenant(true);
+
+      // Call backend to create new tenant
+      const res = await fetch(`/api/tenants/create`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          instituteName: formData.instituteName,
+          phone: formData.phone,
+          country: formData.country,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create tenant");
+      }
+
+      const newTenant = await res.json();
+      
+      // Add to tenants list
+      setTenants([...tenants, newTenant.tenant || newTenant]);
+      
+      // Show success message with login details
+      alert(
+        `✅ Tenant created successfully!\n\nLogin Details:\nEmail: ${formData.email}\nTenant ID: ${newTenant.tenant?.tenantId || newTenant.tenantId}\n\nThey can now sign in and choose a plan!`
+      );
+
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        email: "",
+        instituteName: "",
+        phone: "",
+        country: "India",
+      });
+      setShowAddModal(false);
+    } catch (err: any) {
+      console.error("Error creating tenant:", err);
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setCreatingTenant(false);
+    }
+  };
+
   if (loading) return <p className="p-6 text-gray-500">Loading tenants...</p>;
   if (error) return <p className="p-6 text-red-600">Error: {error}</p>;
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        🏢 Manage Tenants
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          🏢 Manage Tenants
+        </h1>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+        >
+          <Plus size={18} /> Add New Tenant
+        </button>
+      </div>
 
       {/* Filters and Search Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 md:p-6 mb-6 shadow-sm">
@@ -366,6 +444,139 @@ export default function AdminTenantsPage() {
             ? "No tenants match your filters."
             : "No tenants found."}
         </p>
+      )}
+
+      {/* Add New Tenant Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                ➕ Add New Tenant
+              </h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={createNewTenant} className="p-6 space-y-4">
+              {/* Owner Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Owner Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., John Smith"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g., john@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Institute Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Institute/Organization Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., ABC Coaching Institute"
+                  value={formData.instituteName}
+                  onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g., +91 98765 43210"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Country */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Country
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., India"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-sm text-blue-700 dark:text-blue-400">
+                <p className="font-medium mb-1">📝 What happens next?</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Account created with free plan by default</li>
+                  <li>Tenant receives login credentials</li>
+                  <li>They can upgrade to Pro or Enterprise anytime</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  disabled={creatingTenant}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTenant}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {creatingTenant ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={18} /> Create Account
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
