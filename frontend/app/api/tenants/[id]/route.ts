@@ -67,3 +67,105 @@ export async function GET(
     );
   }
 }
+
+// ✅ UPDATE tenant
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
+    if (!id) {
+      return NextResponse.json(
+        { message: 'Tenant ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const cookieHeader = req.headers.get('cookie');
+    const body = await req.json();
+
+    console.log(`📍 Updating tenant: ${id}`, body);
+
+    const response = await fetch(`${BACKEND_URL}/api/tenants/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`❌ Backend tenant update error: ${response.status}`, errorData);
+      
+      return NextResponse.json(
+        errorData || { message: 'Failed to update tenant' },
+        { status: response.status }
+      );
+    }
+
+    const updated = await response.json();
+    console.log(`✅ Successfully updated tenant: ${updated.name || updated._id}`);
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    console.error('❌ Tenant Update BFF Error:', error.message);
+    return NextResponse.json(
+      { message: 'Failed to update tenant', error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// ✅ DELETE tenant (move to trash)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+
+    if (!id) {
+      return NextResponse.json(
+        { message: 'Tenant ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const cookieHeader = req.headers.get('cookie');
+
+    console.log(`📍 Moving tenant to trash: ${id}`);
+
+    const response = await fetch(`${BACKEND_URL}/api/tenants/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`❌ Backend tenant delete error: ${response.status}`, errorData);
+      
+      return NextResponse.json(
+        errorData || { message: 'Failed to move tenant to trash' },
+        { status: response.status }
+      );
+    }
+
+    const result = await response.json();
+    console.log(`✅ Successfully moved tenant to trash: ${id}`);
+    return NextResponse.json(result);
+  } catch (error: any) {
+    console.error('❌ Tenant Delete BFF Error:', error.message);
+    return NextResponse.json(
+      { message: 'Failed to move tenant to trash', error: error.message },
+      { status: 500 }
+    );
+  }
+}
