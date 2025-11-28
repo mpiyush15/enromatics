@@ -42,7 +42,7 @@ export const authService = {
     // Return cached user if available and not skipping cache
     if (!skipCache) {
       const cachedUser = cache.get(CACHE_KEYS.AUTH_USER);
-      if (cachedUser) {
+      if (cachedUser !== undefined) { // Check for explicit undefined, not falsy
         return cachedUser;
       }
     }
@@ -64,19 +64,27 @@ export const authService = {
         });
 
         if (!res.ok) {
-          cache.remove(CACHE_KEYS.AUTH_USER);
+          console.warn('⚠️ Auth check returned error status:', res.status);
+          cache.set(CACHE_KEYS.AUTH_USER, null, CACHE_TTL.SHORT); // Cache as null
           return null;
         }
 
-        const user = await res.json();
+        const data = await res.json();
+        const user = data.user || null; // Handle { user: null } response
         
-        // Cache the user data
+        // Cache the user data (including null)
         cache.set(CACHE_KEYS.AUTH_USER, user, CACHE_TTL.MEDIUM);
+        
+        if (user) {
+          console.log('✅ User authenticated:', user.email);
+        } else {
+          console.log('ℹ️ No authenticated user');
+        }
         
         return user;
       } catch (error) {
         console.error("❌ Error fetching user:", error);
-        cache.remove(CACHE_KEYS.AUTH_USER);
+        cache.set(CACHE_KEYS.AUTH_USER, null, CACHE_TTL.SHORT); // Cache as null on error
         return null;
       } finally {
         // Clear the promise after completion

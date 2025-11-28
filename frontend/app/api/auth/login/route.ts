@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
+          ...(extractCookies(request) && { 'Cookie': extractCookies(request) }), // Forward existing cookies
         },
+        credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
         body: JSON.stringify({ email, password }),
       }
     );
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
         name: data.user?.name,
         role: data.user?.role,
         tenantId: data.user?.tenantId,
+        tenant: data.user?.tenant, // Include tenant info
       },
       message: data.message || 'Login successful',
     });
@@ -82,10 +84,13 @@ export async function POST(request: NextRequest) {
     // This is crucial - Express sets httpOnly JWT cookie
     const setCookieHeader = expressResponse.headers.get('set-cookie');
     if (setCookieHeader) {
-      console.log('🍪 Forwarding Set-Cookie header to browser');
+      console.log('🍪 Forwarding Set-Cookie header to browser:', setCookieHeader.split(';')[0]); // Log header without full value
       bffResponse.headers.set('set-cookie', setCookieHeader);
+    } else {
+      console.warn('⚠️ No Set-Cookie header received from Express backend');
     }
 
+    console.log('📤 Returning login response with user:', data.user?.email);
     return bffResponse;
   } catch (error) {
     console.error('❌ BFF Login error:', error);

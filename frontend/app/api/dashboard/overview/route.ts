@@ -26,8 +26,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
 
 export async function GET(request: NextRequest) {
   try {
-    const EXPRESS_BACKEND_URL = (process as any).env?.EXPRESS_BACKEND_URL;
-    if (!EXPRESS_BACKEND_URL) {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+      "https://endearing-blessing-production-c61f.up.railway.app";
+    
+    if (!BACKEND_URL) {
       return NextResponse.json(
         { error: 'Backend URL not configured' },
         { status: 500 }
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the URL
-    const url = `${EXPRESS_BACKEND_URL}/api/dashboard/overview${queryString ? '?' + queryString : ''}`;
+    const url = `${BACKEND_URL}/api/dashboard/overview${queryString ? '?' + queryString : ''}`;
 
     // Call Express backend with cookies
     const response = await fetch(url, {

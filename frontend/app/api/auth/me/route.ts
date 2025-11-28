@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Extract cookies from incoming request
+    const cookies = extractCookies(request);
+    console.log('🔍 Auth Me - Extracted cookies:', cookies ? '✅ Present' : '❌ Missing');
+
     // Call Express backend with cookies for authentication
     const expressResponse = await fetch(
       `${expressUrl}/api/auth/me`,
@@ -28,16 +32,29 @@ export async function GET(request: NextRequest) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
+          ...(cookies && { 'Cookie': cookies }), // Only add if cookies exist
         },
+        // CRITICAL: This ensures cookies are sent by the browser to the backend
+        credentials: 'include',
       }
     );
 
     const data = await expressResponse.json();
 
     if (!expressResponse.ok) {
+      // If 401 (unauthorized), return null user instead of error status
+      // This prevents infinite redirects and lets frontend handle gracefully
+      if (expressResponse.status === 401) {
+        console.log('⚠️ Auth Me - User not authenticated (401)');
+        return NextResponse.json(
+          { success: true, user: null },
+          { status: 200 } // Return 200 with null user instead of 401
+        );
+      }
+      
+      console.error('❌ Auth Me - Backend error:', expressResponse.status, data.message);
       return NextResponse.json(
-        { success: false, message: data.message || 'Not authenticated' },
+        { success: false, message: data.message || 'Authentication failed' },
         { status: expressResponse.status }
       );
     }
@@ -52,9 +69,11 @@ export async function GET(request: NextRequest) {
         role: data.user?.role || data.role,
         tenantId: data.user?.tenantId || data.tenantId,
         profilePicture: data.user?.profilePicture || data.profilePicture,
+        tenant: data.user?.tenant || data.tenant, // Include tenant info
       },
     };
 
+    console.log('✅ Auth Me - User authenticated:', cleanUser.user.email);
     return NextResponse.json(cleanUser);
   } catch (error) {
     console.error('❌ BFF Get User error:', error);

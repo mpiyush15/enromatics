@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface DashboardStats {
   totalStudents: number;
@@ -47,8 +46,8 @@ export default function InstituteOverviewPage() {
     if (!user) return;
 
     try {
-      // Fetch overview stats
-      const statsRes = await fetch(`${API_BASE_URL}/api/dashboard/overview`, {
+      // Fetch overview stats from BFF
+      const statsRes = await fetch(`/api/dashboard/overview`, {
         credentials: "include",
       });
       const statsData = await statsRes.json();
