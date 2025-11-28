@@ -3,8 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FaGraduationCap, FaFileInvoiceDollar, FaChartBar, FaBook, FaUsers as FaParents, FaCalendarAlt, FaFacebook, FaInstagram, FaWhatsapp } from "react-icons/fa";
+import { useState } from "react";
+import BookDemoModal from "@/components/BookDemoModal";
 
 export default function LandingPage() {
+  const [showDemoModal, setShowDemoModal] = useState(false);
   return (
     <div className="w-full">
       {/* Hero Section - Dark Blue Gradient with Dashboard - Full Screen No Scroll */}
@@ -36,12 +39,12 @@ export default function LandingPage() {
                   >
                     Explore Platform
                   </Link>
-                  <Link 
-                    href="/home"
+                  <button 
+                    onClick={() => setShowDemoModal(true)}
                     className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition text-sm sm:text-base lg:text-sm text-center w-full sm:w-auto lg:w-auto"
                   >
-                    Learn More
-                  </Link>
+                    📅 Book Demo
+                  </button>
                 </div>
 
                 {/* Mobile Dashboard Image - Show on small devices */}
@@ -143,6 +146,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Book Demo Modal */}
+      {showDemoModal && <BookDemoModal onClose={() => setShowDemoModal(false)} />}
     </div>
   );
 }

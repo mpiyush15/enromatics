@@ -151,6 +151,12 @@ export const sidebarLinks = [
     roles: ["SuperAdmin", "Admin"],
   },
 
+  {
+    href: "/dashboard/demo-requests",
+    label: "📅 Demo Requests",
+    roles: ["SuperAdmin"],
+  },
+
   // === PRIORITY 6: User Settings ===
   {
     label: "⚙️ Settings",
