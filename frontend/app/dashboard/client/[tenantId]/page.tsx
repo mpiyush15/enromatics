@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function TenantDashboard() {
   const { tenantId } = useParams();
@@ -14,7 +13,8 @@ export default function TenantDashboard() {
     const fetchTenantInfo = async () => {
       try {
         console.log("🔵 Fetching tenant info for tenantId:", tenantId);
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${API_BASE_URL}`}/api/tenants/${tenantId}`, {
+        // ✅ Use BFF route instead of direct backend call
+        const res = await fetch(`/api/tenants/${tenantId}`, {
           method: "GET",
           credentials: "include", // ✅ Send httpOnly cookie with request
           headers: {
@@ -23,6 +23,7 @@ export default function TenantDashboard() {
         });
 
         console.log("📍 Tenant API response status:", res.status);
+        console.log("📍 Cache status:", res.headers.get('X-Cache'));
 
         if (!res.ok) {
           const errorData = await res.json();
