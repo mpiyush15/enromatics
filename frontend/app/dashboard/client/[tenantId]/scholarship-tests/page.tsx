@@ -84,8 +84,8 @@ export default function ScholarshipTestsPage() {
 
   const fetchExams = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-      const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/scholarship-exams`, {
         credentials: "include",
       });
 
@@ -101,8 +101,8 @@ export default function ScholarshipTestsPage() {
 
   const fetchRegistrations = async (examId: string) => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-      const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
 
@@ -134,10 +134,10 @@ export default function ScholarshipTestsPage() {
     }
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
+      // ✅ Use BFF route instead of direct backend call
       console.log("🔄 Updating attendance:", { registrationId, attended, selectedDate });
       
-      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registrationId}/attendance`, {
+      const response = await fetch(`/api/scholarship-exams/registration/${registrationId}/attendance`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -189,8 +189,8 @@ export default function ScholarshipTestsPage() {
 
     for (const registration of filteredRegistrations) {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-        const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registration._id}/attendance`, {
+        // ✅ Use BFF route instead of direct backend call
+        const response = await fetch(`/api/scholarship-exams/registration/${registration._id}/attendance`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

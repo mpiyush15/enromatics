@@ -86,8 +86,8 @@ export default function ScholarshipResultsPage() {
 
   const fetchExams = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-      const response = await fetch(`${API_URL}/api/scholarship-exams?tenantId=${tenantId}`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/scholarship-exams`, {
         credentials: "include",
       });
 
@@ -101,10 +101,10 @@ export default function ScholarshipResultsPage() {
 
   const fetchResults = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
+      // ✅ Use BFF route instead of direct backend call
       const url = selectedExam === "all" 
-        ? `${API_URL}/api/scholarship-results?tenantId=${tenantId}`
-        : `${API_URL}/api/scholarship-results?tenantId=${tenantId}&examId=${selectedExam}`;
+        ? `/api/scholarship-results`
+        : `/api/scholarship-results?examId=${selectedExam}`;
       
       const response = await fetch(url, {
         credentials: "include",
@@ -137,8 +137,8 @@ export default function ScholarshipResultsPage() {
       formData.append("file", uploadFile);
       formData.append("examId", selectedExam);
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-      const response = await fetch(`${API_URL}/api/scholarship-results/upload`, {
+      // ✅ Use BFF route instead of direct backend call
+      const response = await fetch(`/api/scholarship-results/upload`, {
         method: "POST",
         credentials: "include",
         body: formData,
