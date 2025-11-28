@@ -7,7 +7,7 @@ import {
   deleteDemoRequest,
   getDemoStats,
 } from "../controllers/demoController.js";
-import { authenticate } from "../middleware/auth.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -23,34 +23,34 @@ router.post("/", createDemoRequest);
  * @desc    Get all demo requests
  * @access  SuperAdmin only
  */
-router.get("/", authenticate, getAllDemoRequests);
+router.get("/", protect, getAllDemoRequests);
 
 /**
  * @route   GET /api/demo-requests/stats
  * @desc    Get demo stats
  * @access  SuperAdmin only
  */
-router.get("/stats", authenticate, getDemoStats);
+router.get("/stats", protect, getDemoStats);
 
 /**
  * @route   GET /api/demo-requests/:id
  * @desc    Get single demo request
  * @access  SuperAdmin only
  */
-router.get("/:id", authenticate, getDemoRequestById);
+router.get("/:id", protect, getDemoRequestById);
 
 /**
  * @route   PUT /api/demo-requests/:id
  * @desc    Update demo request status
  * @access  SuperAdmin only
  */
-router.put("/:id", authenticate, updateDemoRequestStatus);
+router.put("/:id", protect, updateDemoRequestStatus);
 
 /**
  * @route   DELETE /api/demo-requests/:id
  * @desc    Delete demo request
  * @access  SuperAdmin only
  */
-router.delete("/:id", authenticate, deleteDemoRequest);
+router.delete("/:id", protect, deleteDemoRequest);
 
 export default router;
