@@ -49,7 +49,7 @@ interface UserStats {
 export default function TenantDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string | undefined;
 
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -73,10 +73,16 @@ export default function TenantDetailPage() {
         );
 
         if (!tenantRes.ok) {
-          throw new Error("Failed to fetch tenant details");
+          const errorData = await tenantRes.json().catch(() => ({}));
+          console.error('❌ Tenant detail error:', tenantRes.status, errorData);
+          throw new Error(`Failed to fetch tenant details: ${tenantRes.status}`);
         }
 
         const tenantData = await tenantRes.json();
+        
+        if (!tenantData || typeof tenantData !== 'object') {
+          throw new Error("Invalid tenant data received");
+        }
         setTenant(tenantData);
 
         // Fetch student stats
@@ -151,10 +157,14 @@ export default function TenantDetailPage() {
     }
   }, [tenantId]);
 
-  if (loading) {
+  // Show loading while waiting for params or data
+  if (!tenantId || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading tenant details...</p>
+        </div>
       </div>
     );
   }
