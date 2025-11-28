@@ -11,6 +11,7 @@ import {
   updateTenantProfile,
   getAllTenants,
   deleteTenant,
+  getSuperAdminTenantDetail,
 } from "../controllers/tenantController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -28,6 +29,30 @@ router.get(
   protect,
   authorizeRoles("SuperAdmin"),
   getAllTenants
+);
+
+/**
+ * @route   GET /api/tenants/admin/:tenantId
+ * @desc    Fetch single tenant info for superadmin (NO tenantProtect)
+ * @access  Private – superadmin only
+ */
+router.get(
+  "/admin/:tenantId",
+  protect,
+  authorizeRoles("SuperAdmin"),
+  getSuperAdminTenantDetail
+);
+
+/**
+ * @route   PUT /api/tenants/admin/:tenantId
+ * @desc    Update tenant for superadmin (suspend/activate) - NO tenantProtect
+ * @access  Private – superadmin only
+ */
+router.put(
+  "/admin/:tenantId",
+  protect,
+  authorizeRoles("SuperAdmin"),
+  updateTenantProfile
 );
 
 /**

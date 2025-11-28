@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Power } from "lucide-react";
+import { ArrowLeft, Power, Loader } from "lucide-react";
 
-interface TenantDetail {
+type Tenant = {
   _id: string;
+  tenantId: string;
   name: string;
   email: string;
-  tenantId: string;
   instituteName?: string;
   plan: string;
   active: boolean;
@@ -21,40 +21,26 @@ interface TenantDetail {
   };
   subscription?: {
     status: string;
+    paymentId?: string;
     startDate: string;
     endDate: string;
-    paymentId?: string;
   };
   usage?: {
-    studentsCount: number;
-    staffCount: number;
-    adsCount: number;
+    studentsCount?: number;
+    staffCount?: number;
+    adsCount?: number;
   };
   whatsappOptIn?: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-interface StudentStats {
-  total: number;
-  active: number;
-  inactive: number;
-}
-
-interface UserStats {
-  total: number;
-  admins: number;
-  staff: number;
-}
+};
 
 export default function TenantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const tenantId = params?.tenantId as string | undefined;
 
-  const [tenant, setTenant] = useState<TenantDetail | null>(null);
-  const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [suspending, setSuspending] = useState(false);
@@ -62,9 +48,11 @@ export default function TenantDetailPage() {
   useEffect(() => {
     const fetchTenantDetail = async () => {
       try {
-        // ✅ Fetch tenant details using BFF route instead of backend directly
+        if (!tenantId) throw new Error("Tenant ID not found");
+
+        // ✅ Use superadmin-only route (no tenantProtect middleware)
         const tenantRes = await fetch(
-          `/api/tenants/${tenantId}`,
+          `/api/tenants/admin/${tenantId}`,
           {
             method: "GET",
             credentials: "include",
@@ -74,10 +62,12 @@ export default function TenantDetailPage() {
           }
         );
 
+        console.log("📍 Tenant Admin Detail API response status:", tenantRes.status);
+
         if (!tenantRes.ok) {
           const errorData = await tenantRes.json().catch(() => ({}));
           console.error('❌ Tenant detail error:', tenantRes.status, errorData);
-          throw new Error(`Failed to fetch tenant details: ${tenantRes.status}`);
+          throw new Error(errorData.message || `Failed to fetch tenant details: ${tenantRes.status}`);
         }
 
         const tenantData = await tenantRes.json();
@@ -85,67 +75,8 @@ export default function TenantDetailPage() {
         if (!tenantData || typeof tenantData !== 'object') {
           throw new Error("Invalid tenant data received");
         }
-        setTenant(tenantData);
 
-        // Fetch student stats
-        try {
-          const studentsRes = await fetch(
-            `/api/students?tenantId=${tenantId}&stats=true`,
-            {
-              method: "GET",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          if (studentsRes.ok) {
-            const studentsData = await studentsRes.json();
-            if (Array.isArray(studentsData)) {
-              const total = studentsData.length;
-              const active = studentsData.filter(s => s.isActive).length;
-              setStudentStats({
-                total,
-                active,
-                inactive: total - active
-              });
-            }
-          }
-        } catch (err) {
-          console.log("Could not fetch student stats:", err);
-        }
-
-        // Fetch user stats
-        try {
-          const usersRes = await fetch(
-            `/api/user?tenantId=${tenantId}`,
-            {
-              method: "GET",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            if (Array.isArray(usersData)) {
-              const total = usersData.length;
-              const admins = usersData.filter(u => u.role === 'tenantAdmin').length;
-              const staff = usersData.filter(u => u.role === 'staff').length;
-              setUserStats({
-                total,
-                admins,
-                staff
-              });
-            }
-          }
-        } catch (err) {
-          console.log("Could not fetch user stats:", err);
-        }
-
+        setTenant(tenantData.tenant || tenantData);
       } catch (err: any) {
         console.error("Error fetching tenant details:", err);
         setError(err.message);
@@ -165,8 +96,8 @@ export default function TenantDetailPage() {
     try {
       setSuspending(true);
 
-      // ✅ Toggle active status
-      const res = await fetch(`/api/tenants/${tenantId}`, {
+      // ✅ Toggle active status via superadmin route
+      const res = await fetch(`/api/tenants/admin/${tenantId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -201,10 +132,10 @@ export default function TenantDetailPage() {
   // Show loading while waiting for params or data
   if (!tenantId || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading tenant details...</p>
+          <Loader className="animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" size={40} />
+          <p className="text-gray-600 dark:text-gray-400">Loading tenant details...</p>
         </div>
       </div>
     );
@@ -212,14 +143,14 @@ export default function TenantDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <div className="text-6xl mb-4">❌</div>
-          <h2 className="text-2xl font-bold mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
           >
             Go Back
           </button>
@@ -230,14 +161,14 @@ export default function TenantDetailPage() {
 
   if (!tenant) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <div className="text-6xl mb-4">🏢</div>
-          <h2 className="text-2xl font-bold mb-2">Tenant Not Found</h2>
-          <p className="text-gray-600 mb-4">The tenant you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Tenant Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">The tenant you're looking for doesn't exist.</p>
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
           >
             Go Back
           </button>
@@ -246,43 +177,28 @@ export default function TenantDetailPage() {
     );
   }
 
-  const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case 'free':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'trial':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'pro':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'enterprise':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const getStatusColor = (active: boolean) => {
-    return active
-      ? 'bg-green-100 text-green-800 border-green-300'
-      : 'bg-red-100 text-red-800 border-red-300';
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.back()}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Go back"
               >
-                ← Back
+                <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
               </button>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                🏢 {tenant.instituteName || tenant.name}
-              </h1>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                  {tenant.instituteName || tenant.name}
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Tenant ID: <code className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{tenant.tenantId}</code>
+                </p>
+              </div>
             </div>
 
             {/* Suspend/Activate Button */}
@@ -303,205 +219,114 @@ export default function TenantDetailPage() {
                 : "Activate Account"}
             </button>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {tenant.plan && (
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getPlanColor(tenant.plan)}`}>
-                {tenant.plan.toUpperCase()} Plan
-              </span>
-            )}
-            {tenant.active !== undefined && (
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(tenant.active)}`}>
-                {tenant.active ? '✅ Active' : '❌ Inactive'}
-              </span>
-            )}
-            {tenant.whatsappOptIn && (
-              <span className="px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
-                📱 WhatsApp Enabled
-              </span>
-            )}
-          </div>
+
+          {/* Status Badge */}
+          {tenant.active ? (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full"></span>
+              ✅ Active
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></span>
+              ⏸️ Suspended
+            </div>
+          )}
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Basic Information */}
-          <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">📋 Basic Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column - SaaS Management Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Account Information Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                👤 Account Information
+              </h2>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Owner Name
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Account Owner Name
                   </label>
-                  <p className="text-gray-900 dark:text-white font-medium">{tenant.name}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Institute Name
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {tenant.instituteName || 'Not provided'}
+                  <p className="text-gray-900 dark:text-white mt-1 text-lg font-medium">
+                    {tenant.name}
                   </p>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Email
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Email Address
                   </label>
-                  <p className="text-gray-900 dark:text-white font-medium">{tenant.email}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Tenant ID
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                    {tenant.tenantId}
+                  <p className="text-gray-900 dark:text-white mt-1 font-mono text-sm">
+                    {tenant.email}
                   </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Created Date
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {new Date(tenant.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Last Updated
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {new Date(tenant.updatedAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
+                {tenant.instituteName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Institute/Organization Name
+                    </label>
+                    <p className="text-gray-900 dark:text-white mt-1">
+                      {tenant.instituteName}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Contact Information */}
-            {tenant.contact && (
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">📞 Contact Information</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Contact Information Card */}
+            {tenant.contact && (tenant.contact.phone || tenant.contact.address || tenant.contact.city || tenant.contact.state || tenant.contact.country) && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  📞 Contact Information
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tenant.contact.phone && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         Phone
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">{tenant.contact.phone}</p>
+                      <p className="text-gray-900 dark:text-white mt-1">
+                        {tenant.contact.phone}
+                      </p>
                     </div>
                   )}
-
                   {tenant.contact.address && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         Address
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">{tenant.contact.address}</p>
+                      <p className="text-gray-900 dark:text-white mt-1">
+                        {tenant.contact.address}
+                      </p>
                     </div>
                   )}
-
                   {tenant.contact.city && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         City
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">{tenant.contact.city}</p>
+                      <p className="text-gray-900 dark:text-white mt-1">
+                        {tenant.contact.city}
+                      </p>
                     </div>
                   )}
-
                   {tenant.contact.state && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         State
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">{tenant.contact.state}</p>
+                      <p className="text-gray-900 dark:text-white mt-1">
+                        {tenant.contact.state}
+                      </p>
                     </div>
                   )}
-
                   {tenant.contact.country && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         Country
                       </label>
-                      <p className="text-gray-900 dark:text-white font-medium">{tenant.contact.country}</p>
-                    </div>
-                  )}
-                </div>
-
-                {!tenant.contact.phone && !tenant.contact.address && !tenant.contact.city && (
-                  <p className="text-gray-500 italic">No contact information provided</p>
-                )}
-              </div>
-            )}
-
-            {/* Subscription Information */}
-            {tenant.subscription && (
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">💳 Subscription Details</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                      Status
-                    </label>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold border ${
-                      tenant.subscription.status === 'active' 
-                        ? 'bg-green-100 text-green-800 border-green-300'
-                        : tenant.subscription.status === 'inactive'
-                        ? 'bg-gray-100 text-gray-800 border-gray-300'
-                        : 'bg-red-100 text-red-800 border-red-300'
-                    }`}>
-                      {tenant.subscription.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  {tenant.subscription.startDate && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Start Date
-                      </label>
-                      <p className="text-gray-900 dark:text-white font-medium">
-                        {new Date(tenant.subscription.startDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-
-                  {tenant.subscription.endDate && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        End Date
-                      </label>
-                      <p className="text-gray-900 dark:text-white font-medium">
-                        {new Date(tenant.subscription.endDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-
-                  {tenant.subscription.paymentId && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Payment ID
-                      </label>
-                      <p className="text-gray-900 dark:text-white font-mono text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        {tenant.subscription.paymentId}
+                      <p className="text-gray-900 dark:text-white mt-1">
+                        {tenant.contact.country}
                       </p>
                     </div>
                   )}
@@ -510,84 +335,112 @@ export default function TenantDetailPage() {
             )}
           </div>
 
-          {/* Stats and Actions */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Usage Statistics */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">📊 Usage Statistics</h2>
-              
+          {/* Right Column - Plan & Subscription Info */}
+          <div className="space-y-6">
+            {/* Plan Information Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                💳 Plan Details
+              </h2>
               <div className="space-y-4">
-                {studentStats && (
-                  <div className="border-l-4 border-blue-500 pl-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">👨‍🎓 Students</h3>
-                    <p className="text-2xl font-bold text-blue-600">{studentStats.total}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {studentStats.active} active, {studentStats.inactive} inactive
-                    </p>
-                  </div>
-                )}
-
-                {userStats && (
-                  <div className="border-l-4 border-green-500 pl-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">👥 Users</h3>
-                    <p className="text-2xl font-bold text-green-600">{userStats.total}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {userStats.admins} admins, {userStats.staff} staff
-                    </p>
-                  </div>
-                )}
-
-                {tenant.usage && (
-                  <div className="border-l-4 border-purple-500 pl-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">📢 Ads Created</h3>
-                    <p className="text-2xl font-bold text-purple-600">{tenant.usage.adsCount}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total advertisements</p>
-                  </div>
-                )}
+                <div>
+                  <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Current Plan
+                  </label>
+                  <p className="mt-2">
+                    <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium capitalize">
+                      {tenant.plan || "free"}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">⚡ Quick Actions</h2>
-              
-              <div className="space-y-3">
-                <a
-                  href={`/dashboard/client/${tenant.tenantId}`}
-                  className="block w-full px-4 py-3 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                >
-                  🏢 Manage Tenant
-                </a>
+            {/* Subscription Card */}
+            {tenant.subscription && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  🔄 Subscription
+                </h2>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Status
+                    </label>
+                    <p className="mt-1">
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs font-medium capitalize ${
+                          tenant.subscription.status === "active"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400"
+                        }`}
+                      >
+                        {tenant.subscription.status || "N/A"}
+                      </span>
+                    </p>
+                  </div>
+                  {tenant.subscription.startDate && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Join Date
+                      </label>
+                      <p className="text-gray-900 dark:text-white mt-1 text-sm">
+                        {new Date(tenant.subscription.startDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  )}
+                  {tenant.subscription.endDate && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Renewal Date
+                      </label>
+                      <p className="text-gray-900 dark:text-white mt-1 text-sm">
+                        {new Date(tenant.subscription.endDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                <a
-                  href={`/dashboard/client/${tenant.tenantId}/students`}
-                  className="block w-full px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                >
-                  👨‍🎓 View Students
-                </a>
-
-                <a
-                  href={`/dashboard/client/${tenant.tenantId}/whatsapp/campaigns`}
-                  className="block w-full px-4 py-3 bg-purple-600 text-white text-center rounded-lg hover:bg-purple-700 transition-colors font-semibold"
-                >
-                  📱 WhatsApp Campaigns
-                </a>
-
-                {tenant.contact?.phone && (
-                  <a
-                    href={`tel:${tenant.contact.phone}`}
-                    className="block w-full px-4 py-3 bg-orange-600 text-white text-center rounded-lg hover:bg-orange-700 transition-colors font-semibold"
-                  >
-                    📞 Call {tenant.contact.phone}
-                  </a>
-                )}
-
-                <a
-                  href={`mailto:${tenant.email}`}
-                  className="block w-full px-4 py-3 bg-gray-600 text-white text-center rounded-lg hover:bg-gray-700 transition-colors font-semibold"
-                >
-                  ✉️ Send Email
-                </a>
+            {/* Account Metadata Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                📅 Timeline
+              </h2>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <label className="font-medium text-gray-600 dark:text-gray-400">
+                    Account Created
+                  </label>
+                  <p className="text-gray-900 dark:text-white mt-1">
+                    {new Date(tenant.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <label className="font-medium text-gray-600 dark:text-gray-400">
+                    Last Updated
+                  </label>
+                  <p className="text-gray-900 dark:text-white mt-1">
+                    {new Date(tenant.updatedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

@@ -109,6 +109,40 @@ export const getTenantInfo = async (req, res) => {
 };
 
 /* ================================================================
+   🔹 3.1. Get Single Tenant Info (SuperAdmin Only - No tenantProtect)
+================================================================ */
+export const getSuperAdminTenantDetail = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const tenant = await Tenant.findOne({ tenantId });
+
+    if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+    res.status(200).json({
+      success: true,
+      tenant: {
+        _id: tenant._id,
+        tenantId: tenant.tenantId,
+        name: tenant.name,
+        email: tenant.email,
+        instituteName: tenant.instituteName,
+        plan: tenant.plan,
+        subscription: tenant.subscription,
+        active: tenant.active,
+        contact: tenant.contact,
+        usage: tenant.usage,
+        whatsappOptIn: tenant.whatsappOptIn,
+        createdAt: tenant.createdAt,
+        updatedAt: tenant.updatedAt,
+      }
+    });
+  } catch (err) {
+    console.error("SuperAdmin Tenant Detail Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
    🔹 3.5. Update Tenant Profile
 ================================================================ */
 export const updateTenantProfile = async (req, res) => {
