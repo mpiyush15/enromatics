@@ -19,6 +19,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+
 // In-memory cache
 interface CacheEntry {
   data: any;
@@ -26,7 +28,7 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getCacheKey(endpoint: string, search: string): string {
   return `${endpoint}:${search}`;
@@ -43,13 +45,6 @@ export async function GET(
   { params }: { params: { id?: string } }
 ) {
   try {
-    const EXPRESS_URL = (process as any).env?.EXPRESS_BACKEND_URL;
-    if (!EXPRESS_URL) {
-      return NextResponse.json(
-        { success: false, message: 'Backend configuration error' },
-        { status: 500 }
-      );
-    }
 
     const url = new URL(request.url);
     const studentId = params?.id;
@@ -67,16 +62,16 @@ export async function GET(
         return NextResponse.json(cachedEntry.data, {
           headers: {
             'X-Cache': 'HIT',
-            'Cache-Control': 'public, max-age=180',
+            'Cache-Control': 'public, max-age=300',
           },
         });
       }
     }
 
-    console.log('📤 Calling Express:', `${EXPRESS_URL}${endpoint}`);
+    console.log('📤 Calling Backend:', `${BACKEND_URL}${endpoint}`);
 
-    const expressResponse = await fetch(
-      `${EXPRESS_URL}${endpoint}`,
+    const backendResponse = await fetch(
+      `${BACKEND_URL}${endpoint}`,
       {
         method: 'GET',
         headers: {
@@ -86,16 +81,17 @@ export async function GET(
       }
     );
 
-    const data = await expressResponse.json();
+    const data = await backendResponse.json();
 
-    if (!expressResponse.ok) {
+    if (!backendResponse.ok) {
+      console.error('❌ Backend error:', backendResponse.status, data);
       return NextResponse.json(
-        { success: false, message: data.message || 'Failed to fetch students' },
-        { status: expressResponse.status }
+        { success: false, message: data.message || 'Failed to fetch students', status: backendResponse.status },
+        { status: backendResponse.status }
       );
     }
 
-    console.log('✅ Express returned students data');
+    console.log('✅ Backend returned students data');
 
     // Clean response - remove sensitive fields
     const cleanData = {
@@ -131,7 +127,7 @@ export async function GET(
       return NextResponse.json(cleanData, {
         headers: {
           'X-Cache': 'MISS',
-          'Cache-Control': 'public, max-age=180',
+          'Cache-Control': 'public, max-age=300',
         },
       });
     }
@@ -149,20 +145,12 @@ export async function GET(
 // POST /api/students - Create student
 export async function POST(request: NextRequest) {
   try {
-    const EXPRESS_URL = (process as any).env?.EXPRESS_BACKEND_URL;
-    if (!EXPRESS_URL) {
-      return NextResponse.json(
-        { success: false, message: 'Backend configuration error' },
-        { status: 500 }
-      );
-    }
-
     const body = await request.json();
 
-    console.log('📤 Creating student via Express');
+    console.log('📤 Creating student via Backend');
 
-    const expressResponse = await fetch(
-      `${EXPRESS_URL}/api/students`,
+    const backendResponse = await fetch(
+      `${BACKEND_URL}/api/students`,
       {
         method: 'POST',
         headers: {
@@ -173,12 +161,13 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const data = await expressResponse.json();
+    const data = await backendResponse.json();
 
-    if (!expressResponse.ok) {
+    if (!backendResponse.ok) {
+      console.error('❌ Backend POST error:', backendResponse.status, data);
       return NextResponse.json(
         { success: false, message: data.message || 'Failed to create student' },
-        { status: expressResponse.status }
+        { status: backendResponse.status }
       );
     }
 
@@ -209,14 +198,6 @@ export async function PUT(
   { params }: { params: { id?: string } }
 ) {
   try {
-    const EXPRESS_URL = (process as any).env?.EXPRESS_BACKEND_URL;
-    if (!EXPRESS_URL) {
-      return NextResponse.json(
-        { success: false, message: 'Backend configuration error' },
-        { status: 500 }
-      );
-    }
-
     if (!params?.id) {
       return NextResponse.json(
         { success: false, message: 'Student ID required' },
@@ -226,10 +207,10 @@ export async function PUT(
 
     const body = await request.json();
 
-    console.log('📤 Updating student via Express');
+    console.log('📤 Updating student via Backend');
 
-    const expressResponse = await fetch(
-      `${EXPRESS_URL}/api/students/${params.id}`,
+    const backendResponse = await fetch(
+      `${BACKEND_URL}/api/students/${params.id}`,
       {
         method: 'PUT',
         headers: {
@@ -240,12 +221,13 @@ export async function PUT(
       }
     );
 
-    const data = await expressResponse.json();
+    const data = await backendResponse.json();
 
-    if (!expressResponse.ok) {
+    if (!backendResponse.ok) {
+      console.error('❌ Backend PUT error:', backendResponse.status, data);
       return NextResponse.json(
         { success: false, message: data.message || 'Failed to update student' },
-        { status: expressResponse.status }
+        { status: backendResponse.status }
       );
     }
 
@@ -276,14 +258,6 @@ export async function DELETE(
   { params }: { params: { id?: string } }
 ) {
   try {
-    const EXPRESS_URL = (process as any).env?.EXPRESS_BACKEND_URL;
-    if (!EXPRESS_URL) {
-      return NextResponse.json(
-        { success: false, message: 'Backend configuration error' },
-        { status: 500 }
-      );
-    }
-
     if (!params?.id) {
       return NextResponse.json(
         { success: false, message: 'Student ID required' },
@@ -291,10 +265,10 @@ export async function DELETE(
       );
     }
 
-    console.log('📤 Deleting student via Express');
+    console.log('📤 Deleting student via Backend');
 
-    const expressResponse = await fetch(
-      `${EXPRESS_URL}/api/students/${params.id}`,
+    const backendResponse = await fetch(
+      `${BACKEND_URL}/api/students/${params.id}`,
       {
         method: 'DELETE',
         headers: {
@@ -304,12 +278,13 @@ export async function DELETE(
       }
     );
 
-    const data = await expressResponse.json();
+    const data = await backendResponse.json();
 
-    if (!expressResponse.ok) {
+    if (!backendResponse.ok) {
+      console.error('❌ Backend DELETE error:', backendResponse.status, data);
       return NextResponse.json(
         { success: false, message: data.message || 'Failed to delete student' },
-        { status: expressResponse.status }
+        { status: backendResponse.status }
       );
     }
 

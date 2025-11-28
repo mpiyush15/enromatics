@@ -243,12 +243,16 @@ export default function TenantDetailPage() {
             </h1>
           </div>
           <div className="flex flex-wrap gap-3">
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getPlanColor(tenant.plan)}`}>
-              {tenant.plan.toUpperCase()} Plan
-            </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(tenant.active)}`}>
-              {tenant.active ? '✅ Active' : '❌ Inactive'}
-            </span>
+            {tenant.plan && (
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getPlanColor(tenant.plan)}`}>
+                {tenant.plan.toUpperCase()} Plan
+              </span>
+            )}
+            {tenant.active !== undefined && (
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(tenant.active)}`}>
+                {tenant.active ? '✅ Active' : '❌ Inactive'}
+              </span>
+            )}
             {tenant.whatsappOptIn && (
               <span className="px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
                 📱 WhatsApp Enabled
