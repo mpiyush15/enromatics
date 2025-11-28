@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Power } from "lucide-react";
 
 interface TenantDetail {
   _id: string;
@@ -56,6 +57,7 @@ export default function TenantDetailPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [suspending, setSuspending] = useState(false);
 
   useEffect(() => {
     const fetchTenantDetail = async () => {
@@ -157,6 +159,45 @@ export default function TenantDetailPage() {
     }
   }, [tenantId]);
 
+  const toggleSuspend = async () => {
+    if (!tenant) return;
+
+    try {
+      setSuspending(true);
+
+      // ✅ Toggle active status
+      const res = await fetch(`/api/tenants/${tenantId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          active: !tenant.active,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to update tenant");
+      }
+
+      const updated = await res.json();
+      const updatedTenant = updated.tenant || updated;
+      setTenant(updatedTenant);
+      alert(
+        updatedTenant.active
+          ? "✅ Tenant account activated!"
+          : "✅ Tenant account suspended!"
+      );
+    } catch (err: any) {
+      console.error("Error updating tenant:", err);
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setSuspending(false);
+    }
+  };
+
   // Show loading while waiting for params or data
   if (!tenantId || loading) {
     return (
@@ -231,16 +272,36 @@ export default function TenantDetailPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ← Back
+              </button>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                🏢 {tenant.instituteName || tenant.name}
+              </h1>
+            </div>
+
+            {/* Suspend/Activate Button */}
             <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={toggleSuspend}
+              disabled={suspending}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                tenant.active
+                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                  : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              ← Back
+              <Power size={18} />
+              {suspending
+                ? "Updating..."
+                : tenant.active
+                ? "Suspend Account"
+                : "Activate Account"}
             </button>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              🏢 {tenant.instituteName || tenant.name}
-            </h1>
           </div>
           <div className="flex flex-wrap gap-3">
             {tenant.plan && (

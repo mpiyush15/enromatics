@@ -114,7 +114,7 @@ export const getTenantInfo = async (req, res) => {
 export const updateTenantProfile = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const { name, email, contact } = req.body;
+    const { name, email, contact, active } = req.body;
 
     const tenant = await Tenant.findOne({ tenantId });
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
@@ -130,6 +130,10 @@ export const updateTenantProfile = async (req, res) => {
         state: contact.state || tenant.contact?.state,
         country: contact.country || tenant.contact?.country || "India",
       };
+    }
+    // ✅ Support toggling active status (suspend/activate)
+    if (active !== undefined) {
+      tenant.active = active;
     }
 
     await tenant.save();
