@@ -31,14 +31,63 @@ type Tenant = {
 export default function AdminTenantsPage() {
   const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspending, setSuspending] = useState(false);
+  
+  // Filter and sort states
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+  const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro" | "enterprise" | "trial">("all");
+  const [sortBy, setSortBy] = useState<"name" | "date" | "plan">("date");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchTenants();
   }, []);
+
+  // Apply filters and sorting whenever data or filters change
+  useEffect(() => {
+    let result = [...tenants];
+
+    // Apply status filter
+    if (statusFilter === "active") {
+      result = result.filter(t => t.active);
+    } else if (statusFilter === "suspended") {
+      result = result.filter(t => !t.active);
+    }
+
+    // Apply plan filter
+    if (planFilter !== "all") {
+      result = result.filter(t => t.plan === planFilter);
+    }
+
+    // Apply search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        t =>
+          t.name.toLowerCase().includes(query) ||
+          t.email.toLowerCase().includes(query) ||
+          t.tenantId.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "plan") {
+        return a.plan.localeCompare(b.plan);
+      } else {
+        // Sort by date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+    setFilteredTenants(result);
+  }, [tenants, statusFilter, planFilter, sortBy, searchQuery]);
 
   const fetchTenants = async () => {
     try {
@@ -76,8 +125,8 @@ export default function AdminTenantsPage() {
       setSuspending(true);
       setSuspendingId(tenant.tenantId);
 
-      // ✅ Use BFF route to toggle active status
-      const res = await fetch(`/api/tenants/${tenant.tenantId}`, {
+      // ✅ Use superadmin BFF route to toggle active status
+      const res = await fetch(`/api/tenants/admin/${tenant.tenantId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -93,10 +142,13 @@ export default function AdminTenantsPage() {
         throw new Error(errorData.message || "Failed to update tenant");
       }
 
-      const updated = await res.json();
-      setTenants(tenants.map(t => t.tenantId === updated.tenantId ? updated : t));
+      const response = await res.json();
+      // Handle both response formats: { tenant: {...} } or direct tenant object
+      const updatedTenant = response.tenant || response;
+      
+      setTenants(tenants.map(t => t.tenantId === updatedTenant.tenantId ? updatedTenant : t));
       alert(
-        updated.active
+        updatedTenant.active
           ? "✅ Tenant account activated!"
           : "✅ Tenant account suspended!"
       );
@@ -118,9 +170,104 @@ export default function AdminTenantsPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">🏢 Manage Tenants</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+        🏢 Manage Tenants
+      </h1>
 
-      {/* Mobile-friendly scrollable table wrapper */}
+      {/* Filters and Search Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 md:p-6 mb-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Search Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              🔍 Search
+            </label>
+            <input
+              type="text"
+              placeholder="Name, email, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All</option>
+              <option value="active">✅ Active</option>
+              <option value="suspended">⏸️ Suspended</option>
+            </select>
+          </div>
+
+          {/* Plan Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Plan
+            </label>
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Plans</option>
+              <option value="free">Free</option>
+              <option value="trial">Trial</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="date">Newest First</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="plan">Plan</option>
+            </select>
+          </div>
+
+          {/* Results Counter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Results
+            </label>
+            <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-semibold text-gray-900 dark:text-white">
+              {filteredTenants.length} / {tenants.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Clear Filters Button */}
+        {(statusFilter !== "all" || planFilter !== "all" || searchQuery) && (
+          <button
+            onClick={() => {
+              setStatusFilter("all");
+              setPlanFilter("all");
+              setSearchQuery("");
+            }}
+            className="mt-4 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            ✕ Clear Filters
+          </button>
+        )}
+      </div>
+
+      {/* Tenants Table */}
       <div className="overflow-x-auto -mx-4 md:mx-0 shadow-md rounded-lg">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden">
@@ -149,7 +296,7 @@ export default function AdminTenantsPage() {
               </thead>
 
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {tenants.map((tenant) => (
+                {filteredTenants.map((tenant) => (
                   <tr
                     key={tenant.tenantId}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -213,9 +360,11 @@ export default function AdminTenantsPage() {
         </div>
       </div>
 
-      {tenants.length === 0 && (
+      {filteredTenants.length === 0 && (
         <p className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-          No tenants found.
+          {searchQuery || statusFilter !== "all" || planFilter !== "all"
+            ? "No tenants match your filters."
+            : "No tenants found."}
         </p>
       )}
     </div>
