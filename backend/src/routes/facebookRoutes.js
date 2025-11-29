@@ -8,6 +8,7 @@ import {
   getCampaigns,
   getAdInsights,
   getPages,
+  getInstagramAccounts,
   getPagePosts,
   getDashboardData,
   getPaymentMethods,
@@ -34,6 +35,7 @@ router.get('/campaigns/:campaignId/insights', protect, getAdInsights);
 
 // Pages and posts
 router.get('/pages', protect, getPages);
+router.get('/instagram-accounts', protect, getInstagramAccounts);
 router.get('/pages/:pageId/posts', protect, getPagePosts);
 
 // Dashboard data
