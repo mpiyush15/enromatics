@@ -74,8 +74,8 @@ export function useFacebookConnection() {
 
       console.log('✅ Checking Facebook connection for user:', user.email, 'Role:', user.role);
 
-      // First check connection status
-      const statusResponse = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      // First check connection status (via BFF route)
+      const statusResponse = await fetch(`/api/social/status`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -116,8 +116,8 @@ export function useFacebookConnection() {
         return;
       }
 
-      // If connected, fetch dashboard data
-      const dashboardResponse = await fetch(`${API_BASE_URL}/api/facebook/dashboard`, {
+      // If connected, fetch dashboard data (via BFF route)
+      const dashboardResponse = await fetch(`/api/social/dashboard`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -185,11 +185,8 @@ export function useFacebookConnection() {
     if (!user?.tenantId && user?.role !== 'SuperAdmin') return false;
 
     try {
-      const disconnectUrl = user?.role === 'SuperAdmin'
-        ? `${API_BASE_URL}/api/facebook/disconnect`
-        : `${API_BASE_URL}/api/facebook/disconnect?tenantId=${user.tenantId}`;
-      
-      const response = await fetch(disconnectUrl, {
+      // Use BFF route for disconnect
+      const response = await fetch(`/api/social/disconnect`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -219,12 +216,25 @@ export function useFacebookConnection() {
   const connect = () => {
     if (!user?.tenantId && user?.role !== 'SuperAdmin') return;
     
-    // Use backend OAuth URL for both SuperAdmin and tenant users
-    const authUrl = user?.role === 'SuperAdmin' 
-      ? `${API_BASE_URL}/api/facebook/connect`  // SuperAdmin doesn't need tenantId
-      : `${API_BASE_URL}/api/facebook/connect?tenantId=${user.tenantId}`;
+    // Use BFF route for OAuth connection
+    const connectUrl = `/api/social/connect${user?.role === 'SuperAdmin' ? '' : `?tenantId=${user.tenantId}`}`;
     
-    window.location.href = authUrl;
+    // Fetch the auth URL from BFF and redirect
+    fetch(connectUrl, {
+      method: 'GET',
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        } else {
+          console.error('❌ No authUrl returned from connect endpoint');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Error initiating Facebook connection:', err);
+      });
   };
 
   useEffect(() => {
