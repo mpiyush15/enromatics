@@ -48,12 +48,23 @@ interface CampaignTemplate {
 }
 
 export default function SuperAdminCreateAdsPage() {
-  const { isConnected, adAccounts } = useSocialMediaContext();
+  const { isConnected, adAccounts, isLoading, error } = useSocialMediaContext();
   const [selectedAdAccount, setSelectedAdAccount] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [campaignTemplates, setCampaignTemplates] = useState<CampaignTemplate[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔵 Create-ads page - Context state:', {
+      isConnected,
+      isLoading,
+      error,
+      adAccountsCount: adAccounts?.length || 0,
+      adAccounts: adAccounts
+    });
+  }, [isConnected, isLoading, error, adAccounts]);
   
   // Campaign Form Data
   const [campaignData, setCampaignData] = useState({
@@ -192,7 +203,62 @@ export default function SuperAdminCreateAdsPage() {
               Connect your Facebook account to start creating ads
             </p>
             <Button variant="outline" asChild>
-              <a href="/dashboard/social/settings">Connect Facebook</a>
+              <a href="/dashboard/social">Connect Facebook</a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h1 className="text-2xl font-light text-gray-900 dark:text-white mb-2">Loading Ad Accounts</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please wait while we fetch your ad accounts...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-16">
+            <div className="text-red-500 mb-4">⚠️</div>
+            <h1 className="text-2xl font-light text-gray-900 dark:text-white mb-2">Error Loading Ad Accounts</h1>
+            <p className="text-red-600 dark:text-red-400 mb-6">
+              {error}
+            </p>
+            <Button variant="outline" asChild>
+              <a href="/dashboard/social">Back to Dashboard</a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!adAccounts || adAccounts.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-16">
+            <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h1 className="text-2xl font-light text-gray-900 dark:text-white mb-2">No Ad Accounts Found</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              You don't have any ad accounts connected to your Facebook account. 
+              Please add an ad account in your Facebook Business Manager and try again.
+            </p>
+            <Button variant="outline" asChild>
+              <a href="/dashboard/social">Back to Dashboard</a>
             </Button>
           </div>
         </div>
@@ -281,23 +347,32 @@ export default function SuperAdminCreateAdsPage() {
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                   Select Ad Account
                 </label>
-                <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose an ad account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {adAccounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{account.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {account.currency || 'USD'}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {adAccounts && adAccounts.length > 0 ? (
+                  <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose an ad account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {adAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{account.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {account.currency || 'USD'}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                    <p className="text-red-600 font-medium">❌ No Ad Accounts Available</p>
+                    <p className="text-sm text-red-500 mt-1">
+                      Please ensure you have added ad accounts to your Facebook Business Manager.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Payment Methods */}
