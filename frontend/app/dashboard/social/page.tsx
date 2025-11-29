@@ -10,6 +10,7 @@ export default function SuperAdminSocialMediaDashboard() {
     userInfo,
     pages,
     adAccounts,
+    instagramAccounts,
     connect,
     disconnect,
     isLoading,
@@ -183,6 +184,18 @@ export default function SuperAdminSocialMediaDashboard() {
               )}
             </div>
             <div>
+              <span className="text-yellow-400">instagramAccounts.length:</span> {instagramAccounts.length}
+              {instagramAccounts.length > 0 && (
+                <div className="ml-4 mt-1 bg-gray-800 p-2 rounded">
+                  {instagramAccounts.map((ig: any, i: number) => (
+                    <div key={i}>
+                      {i}: @{ig.username} (ID: {ig.id}) - {ig.followers_count} followers
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
               <span className="text-yellow-400">error:</span> {error ? <span className="text-red-400">{error}</span> : 'null'}
             </div>
             <div>
@@ -220,12 +233,12 @@ export default function SuperAdminSocialMediaDashboard() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Reach</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Instagram Accounts</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {pages.reduce((sum: number, page: any) => sum + (page.fan_count || 0), 0).toLocaleString()}
+                  {instagramAccounts.length}
                 </p>
               </div>
-              <div className="text-3xl">👥</div>
+              <div className="text-3xl">�</div>
             </div>
           </div>
 
@@ -300,6 +313,71 @@ export default function SuperAdminSocialMediaDashboard() {
                 <p className="text-gray-500 text-center py-8">No pages found</p>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Instagram Accounts */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">📸 Linked Instagram Accounts</h2>
+          </div>
+          <div className="p-6">
+            {instagramAccounts.length ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {instagramAccounts.map((ig: any) => (
+                  <div key={ig.id} className="border rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      {ig.profile_pic_url ? (
+                        <img 
+                          src={ig.profile_pic_url} 
+                          alt={ig.username}
+                          className="w-12 h-12 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-600 flex items-center justify-center text-white text-lg font-bold">
+                          {ig.username?.charAt(0)?.toUpperCase() || 'I'}
+                        </div>
+                      )}
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300">
+                        Instagram
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">@{ig.username}</h3>
+                      {ig.name && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{ig.name}</p>
+                      )}
+                      {ig.biography && (
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{ig.biography}</p>
+                      )}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-xs text-gray-500">Followers</p>
+                          <p className="font-bold text-gray-900 dark:text-white">{(ig.followers_count || 0).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Following</p>
+                          <p className="font-bold text-gray-900 dark:text-white">{(ig.following_count || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {ig.facebookPageName && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500">Linked to: <span className="text-gray-900 dark:text-gray-200">{ig.facebookPageName}</span></p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-3">📸</div>
+                <p className="text-gray-500 text-lg">No Instagram accounts linked</p>
+                <p className="text-sm text-gray-400 mt-2">Instagram accounts linked to your Facebook pages will appear here</p>
+              </div>
+            )}
           </div>
         </div>
 

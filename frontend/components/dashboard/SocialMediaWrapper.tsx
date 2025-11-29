@@ -9,6 +9,7 @@ interface SocialMediaContextType {
   userInfo: any;
   pages: any[];
   adAccounts: any[];
+  instagramAccounts: any[];
   connect: () => void;
   disconnect: () => Promise<boolean>;
   refresh: () => Promise<void>;

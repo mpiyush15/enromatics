@@ -16,6 +16,7 @@ interface FacebookConnectionState {
   error: string | null;
   pages: any[];
   adAccounts: any[];
+  instagramAccounts: any[];
 }
 
 // Cache to prevent multiple API calls
@@ -31,7 +32,8 @@ export function useFacebookConnection() {
     userInfo: null,
     error: null,
     pages: [],
-    adAccounts: []
+    adAccounts: [],
+    instagramAccounts: []
   });
 
   // Get current user
@@ -92,7 +94,8 @@ export function useFacebookConnection() {
           userInfo: null,
           error: errorData.message || 'Authentication failed',
           pages: [],
-          adAccounts: []
+          adAccounts: [],
+          instagramAccounts: []
         });
         return;
       }
@@ -107,7 +110,8 @@ export function useFacebookConnection() {
           userInfo: null,
           error: null,
           pages: [],
-          adAccounts: []
+          adAccounts: [],
+          instagramAccounts: []
         };
         setConnectionState(newState);
         // Update cache
@@ -136,7 +140,8 @@ export function useFacebookConnection() {
             userInfo: data.userInfo || null,
             error: null,
             pages: data.dashboard.pages || [],
-            adAccounts: data.dashboard.adAccounts || []
+            adAccounts: data.dashboard.adAccounts || [],
+            instagramAccounts: data.dashboard.instagramAccounts || []
           };
           setConnectionState(newState);
           // Update cache
@@ -146,13 +151,15 @@ export function useFacebookConnection() {
           // Fallback: try fetching ad-accounts and pages individually in case dashboard endpoint failed partially
           console.warn('⚠️ Dashboard returned no dashboard object, falling back to ad-accounts and pages endpoints');
           try {
-            const [adRes, pagesRes] = await Promise.all([
+            const [adRes, pagesRes, igRes] = await Promise.all([
               fetch('/api/social/ad-accounts', { method: 'GET', credentials: 'include' }),
-              fetch('/api/social/pages', { method: 'GET', credentials: 'include' })
+              fetch('/api/social/pages', { method: 'GET', credentials: 'include' }),
+              fetch('/api/social/instagram-accounts', { method: 'GET', credentials: 'include' })
             ]);
 
             const adData = adRes.ok ? await adRes.json().catch(() => ({})) : {};
             const pagesData = pagesRes.ok ? await pagesRes.json().catch(() => ({})) : {};
+            const igData = igRes.ok ? await igRes.json().catch(() => ({})) : {};
 
             const newState = {
               isConnected: true,
@@ -160,7 +167,8 @@ export function useFacebookConnection() {
               userInfo: data.userInfo || null,
               error: null,
               pages: pagesData.pages || [],
-              adAccounts: adData.adAccounts || []
+              adAccounts: adData.adAccounts || [],
+              instagramAccounts: igData.instagramAccounts || []
             };
             setConnectionState(newState);
             connectionCache = newState;
@@ -173,7 +181,8 @@ export function useFacebookConnection() {
               userInfo: null,
               error: data.message || 'Failed to fetch dashboard data',
               pages: [],
-              adAccounts: []
+              adAccounts: [],
+              instagramAccounts: []
             };
             setConnectionState(newState);
             connectionCache = newState;
@@ -185,13 +194,15 @@ export function useFacebookConnection() {
         console.error('❌ Dashboard fetch failed:', errorData);
         // Try fallback endpoints before giving up
         try {
-          const [adRes, pagesRes] = await Promise.all([
+          const [adRes, pagesRes, igRes] = await Promise.all([
             fetch('/api/social/ad-accounts', { method: 'GET', credentials: 'include' }),
-            fetch('/api/social/pages', { method: 'GET', credentials: 'include' })
+            fetch('/api/social/pages', { method: 'GET', credentials: 'include' }),
+            fetch('/api/social/instagram-accounts', { method: 'GET', credentials: 'include' })
           ]);
 
           const adData = adRes.ok ? await adRes.json().catch(() => ({})) : {};
           const pagesData = pagesRes.ok ? await pagesRes.json().catch(() => ({})) : {};
+          const igData = igRes.ok ? await igRes.json().catch(() => ({})) : {};
 
           const newState = {
             isConnected: true,
@@ -199,7 +210,8 @@ export function useFacebookConnection() {
             userInfo: null,
             error: null,
             pages: pagesData.pages || [],
-            adAccounts: adData.adAccounts || []
+            adAccounts: adData.adAccounts || [],
+            instagramAccounts: igData.instagramAccounts || []
           };
           setConnectionState(newState);
           connectionCache = newState;
@@ -212,7 +224,8 @@ export function useFacebookConnection() {
             userInfo: null,
             error: errorData.message || 'Failed to fetch dashboard data',
             pages: [],
-            adAccounts: []
+            adAccounts: [],
+            instagramAccounts: []
           });
         }
       }
@@ -224,7 +237,8 @@ export function useFacebookConnection() {
         userInfo: null,
         error: 'Network error occurred',
         pages: [],
-        adAccounts: []
+        adAccounts: [],
+        instagramAccounts: []
       });
     }
   };
@@ -246,7 +260,8 @@ export function useFacebookConnection() {
           userInfo: null,
           error: null,
           pages: [],
-          adAccounts: []
+          adAccounts: [],
+          instagramAccounts: []
         };
         setConnectionState(newState);
         // Clear cache after disconnect
