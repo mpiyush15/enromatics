@@ -148,6 +148,49 @@ export default function SuperAdminSocialMediaDashboard() {
           <FacebookConnectionCard />
         </div>
 
+        {/* Debug Panel - Remove after testing */}
+        <details className="bg-gray-900 text-white p-4 rounded-lg border border-gray-700 text-xs mb-6 font-mono">
+          <summary className="cursor-pointer font-bold">🔍 Debug Info (Click to expand)</summary>
+          <div className="mt-3 space-y-2 text-gray-300">
+            <div>
+              <span className="text-yellow-400">isConnected:</span> {isConnected ? '✅ true' : '❌ false'}
+            </div>
+            <div>
+              <span className="text-yellow-400">isLoading:</span> {isLoading ? '⏳ true' : '✅ false'}
+            </div>
+            <div>
+              <span className="text-yellow-400">adAccounts.length:</span> {adAccounts.length}
+              {adAccounts.length > 0 && (
+                <div className="ml-4 mt-1 bg-gray-800 p-2 rounded">
+                  {adAccounts.map((acc: any, i: number) => (
+                    <div key={i}>
+                      {i}: {acc.name} (ID: {acc.id})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-yellow-400">pages.length:</span> {pages.length}
+              {pages.length > 0 && (
+                <div className="ml-4 mt-1 bg-gray-800 p-2 rounded">
+                  {pages.map((page: any, i: number) => (
+                    <div key={i}>
+                      {i}: {page.name} (ID: {page.id})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-yellow-400">error:</span> {error ? <span className="text-red-400">{error}</span> : 'null'}
+            </div>
+            <div>
+              <span className="text-yellow-400">userInfo:</span> {userInfo?.name ? userInfo.name : 'null'}
+            </div>
+          </div>
+        </details>
+
         {/* Platform Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
