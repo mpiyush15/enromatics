@@ -510,13 +510,13 @@ export const getInstagramAccounts = async (req, res) => {
 
     const token = fb.accessToken;
 
-    console.log('🔍 Fetching Instagram accounts linked to Facebook pages...');
+    console.log('🔍 Fetching Instagram Business Accounts linked to Facebook pages...');
 
-    // First get all pages
+    // First get all pages with instagram_business_account
     let allPages = [];
     try {
       const personalRes = await facebookApiRequest(
-        'me/accounts?fields=id,name',
+        'me/accounts?fields=id,name,instagram_business_account',
         token
       );
       allPages = personalRes.data || [];
@@ -538,15 +538,15 @@ export const getInstagramAccounts = async (req, res) => {
       console.log('⚠️ Error fetching businesses:', err.message);
     }
 
-    // Get business pages
+    // Get business pages with instagram_business_account
     for (const biz of businesses) {
       try {
         const owned = await facebookApiRequest(
-          `${biz.id}/owned_pages?fields=id,name`,
+          `${biz.id}/owned_pages?fields=id,name,instagram_business_account`,
           token
         );
         const client = await facebookApiRequest(
-          `${biz.id}/client_pages?fields=id,name`,
+          `${biz.id}/client_pages?fields=id,name,instagram_business_account`,
           token
         );
         allPages.push(...(owned.data || []), ...(client.data || []));
@@ -557,26 +557,39 @@ export const getInstagramAccounts = async (req, res) => {
 
     console.log('🔍 Total pages to check for Instagram accounts:', allPages.length);
 
-    // Now fetch Instagram accounts for each page
+    // Now fetch Instagram Business Account details for each page
     let instagramAccounts = [];
     for (const page of allPages) {
       try {
-        console.log(`🔍 Fetching Instagram accounts for page ${page.id}...`);
-        const igRes = await facebookApiRequest(
-          `${page.id}/instagram_accounts?fields=id,username,name,biography,followers_count,follows_count,profile_pic_url`,
-          token
-        );
+        // If page has instagram_business_account field
+        if (page.instagram_business_account && page.instagram_business_account.id) {
+          console.log(`🔍 Fetching Instagram account details for ${page.instagram_business_account.id}...`);
+          
+          const igRes = await facebookApiRequest(
+            `${page.instagram_business_account.id}?fields=id,username,name,biography,followers_count,follows_count,profile_pic_url,ig_username,website`,
+            token
+          );
 
-        if (igRes.data && igRes.data.length > 0) {
-          console.log(`✅ Found ${igRes.data.length} Instagram account(s) for page ${page.name}`);
-          instagramAccounts.push(...igRes.data.map(ig => ({
-            ...ig,
-            facebookPageId: page.id,
-            facebookPageName: page.name
-          })));
+          if (igRes.id) {
+            console.log(`✅ Found Instagram account: @${igRes.username} for page ${page.name}`);
+            instagramAccounts.push({
+              id: igRes.id,
+              username: igRes.username || igRes.ig_username,
+              name: igRes.name,
+              biography: igRes.biography,
+              followers_count: igRes.followers_count,
+              follows_count: igRes.follows_count,
+              profile_pic_url: igRes.profile_pic_url,
+              website: igRes.website,
+              facebookPageId: page.id,
+              facebookPageName: page.name
+            });
+          }
+        } else {
+          console.log(`ℹ️ Page ${page.id} (${page.name}) has no linked Instagram account`);
         }
       } catch (err) {
-        console.log(`⚠️ Error fetching Instagram accounts for page ${page.id}:`, err.message);
+        console.log(`⚠️ Error fetching Instagram account for page ${page.id}:`, err.message);
       }
     }
 
@@ -585,7 +598,7 @@ export const getInstagramAccounts = async (req, res) => {
       new Map(instagramAccounts.map(ig => [ig.id, ig])).values()
     );
 
-    console.log('✅ Instagram accounts fetched successfully:', {
+    console.log('✅ Instagram Business Accounts fetched successfully:', {
       totalLinked: uniqueInstagramAccounts.length,
       accounts: uniqueInstagramAccounts.map(ig => ({ 
         id: ig.id, 
@@ -684,14 +697,14 @@ export const getDashboardData = async (req, res) => {
       facebookApiRequest('me/adaccounts?fields=id,name,account_status,balance,currency', token),
       facebookApiRequest('me/accounts?fields=id,name,followers_count,fan_count', token),
       (async () => {
-        // Fetch Instagram accounts for dashboard
-        console.log('🔍 Fetching Instagram accounts in dashboard...');
+        // Fetch Instagram Business Accounts for dashboard
+        console.log('🔍 Fetching Instagram Business Accounts in dashboard...');
         
-        // First get all pages
+        // First get all pages with instagram_business_account
         let allPages = [];
         try {
           const personalRes = await facebookApiRequest(
-            'me/accounts?fields=id,name',
+            'me/accounts?fields=id,name,instagram_business_account',
             token
           );
           allPages = personalRes.data || [];
@@ -711,15 +724,15 @@ export const getDashboardData = async (req, res) => {
           console.log('⚠️ Error fetching businesses for Instagram:', err.message);
         }
 
-        // Get business pages
+        // Get business pages with instagram_business_account
         for (const biz of businesses) {
           try {
             const owned = await facebookApiRequest(
-              `${biz.id}/owned_pages?fields=id,name`,
+              `${biz.id}/owned_pages?fields=id,name,instagram_business_account`,
               token
             );
             const client = await facebookApiRequest(
-              `${biz.id}/client_pages?fields=id,name`,
+              `${biz.id}/client_pages?fields=id,name,instagram_business_account`,
               token
             );
             allPages.push(...(owned.data || []), ...(client.data || []));
@@ -728,21 +741,31 @@ export const getDashboardData = async (req, res) => {
           }
         }
 
-        // Now fetch Instagram accounts for each page
+        // Now fetch Instagram Business Account details for each page
         let instagramAccounts = [];
         for (const page of allPages) {
           try {
-            const igRes = await facebookApiRequest(
-              `${page.id}/instagram_accounts?fields=id,username,name,biography,followers_count,follows_count,profile_pic_url`,
-              token
-            );
+            // If page has instagram_business_account field
+            if (page.instagram_business_account && page.instagram_business_account.id) {
+              const igRes = await facebookApiRequest(
+                `${page.instagram_business_account.id}?fields=id,username,name,biography,followers_count,follows_count,profile_pic_url,ig_username,website`,
+                token
+              );
 
-            if (igRes.data && igRes.data.length > 0) {
-              instagramAccounts.push(...igRes.data.map(ig => ({
-                ...ig,
-                facebookPageId: page.id,
-                facebookPageName: page.name
-              })));
+              if (igRes.id) {
+                instagramAccounts.push({
+                  id: igRes.id,
+                  username: igRes.username || igRes.ig_username,
+                  name: igRes.name,
+                  biography: igRes.biography,
+                  followers_count: igRes.followers_count,
+                  follows_count: igRes.follows_count,
+                  profile_pic_url: igRes.profile_pic_url,
+                  website: igRes.website,
+                  facebookPageId: page.id,
+                  facebookPageName: page.name
+                });
+              }
             }
           } catch (err) {
             // Silently skip - not all pages have Instagram accounts
