@@ -813,7 +813,7 @@ export const getDashboardData = async (req, res) => {
           name: page.name,
           followers: page.followers_count || page.fan_count || 0
         })),
-        instagramAccounts: instagramAccounts.map(ig => ({
+        instagramAccounts: (instagramAccounts || []).map(ig => ({
           id: ig.id,
           username: ig.username,
           name: ig.name,
@@ -832,9 +832,9 @@ export const getDashboardData = async (req, res) => {
         summary: {
           totalAdAccounts: adAccounts.length,
           totalPages: pages.length,
-          totalInstagramAccounts: instagramAccounts.length,
+          totalInstagramAccounts: (instagramAccounts || []).length,
           totalFollowers: pages.reduce((sum, page) => sum + (page.followers_count || page.fan_count || 0), 0),
-          totalInstagramFollowers: instagramAccounts.reduce((sum, ig) => sum + (ig.followers_count || 0), 0)
+          totalInstagramFollowers: (instagramAccounts || []).reduce((sum, ig) => sum + (ig.followers_count || 0), 0)
         }
       }
     });
