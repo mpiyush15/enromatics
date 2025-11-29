@@ -6,44 +6,70 @@ export async function GET(request: NextRequest) {
   try {
     // Get cookies from request
     const cookies = request.headers.get('cookie') || '';
-    const tenantId = request.nextUrl.searchParams.get('tenantId');
+    console.log('🔵 BFF Connect - Received cookies:', cookies ? 'yes' : 'no');
 
     // Build backend URL
-    let backendUrl = `${BACKEND_URL}/api/facebook/connect`;
-    if (tenantId) {
-      backendUrl += `?tenantId=${tenantId}`;
-    }
+    const backendUrl = `${BACKEND_URL}/api/facebook/connect`;
+    console.log('🔵 Calling backend:', backendUrl);
 
-    console.log('🔵 Facebook Connect - Redirecting to:', backendUrl);
-
-    // Fetch redirect URL from backend
+    // Fetch from backend (will return a redirect)
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Cookie': cookies,
+        'User-Agent': request.headers.get('user-agent') || 'axios',
       },
-      credentials: 'include',
+      redirect: 'manual',  // Don't follow redirects, we want to capture them
     });
 
+    console.log('🔵 Backend response status:', response.status);
+
+    // If backend returns a redirect (3xx), extract the Location header
+    if (response.status >= 300 && response.status < 400) {
+      const redirectUrl = response.headers.get('location');
+      console.log('🔵 Got redirect URL from backend');
+      if (redirectUrl) {
+        // Return the OAuth URL to frontend
+        return NextResponse.json({ 
+          authUrl: redirectUrl,
+          status: 'redirect'
+        }, { status: 200 });
+      }
+    }
+
+    // If we got a 401, it means auth failed
+    if (response.status === 401) {
+      console.error('🔴 Unauthorized - user not authenticated');
+      return NextResponse.json(
+        { error: 'Not authorized. Please log in first.' },
+        { status: 401 }
+      );
+    }
+
+    // Try to parse response as JSON
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = { message: 'Invalid response from backend' };
+    }
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      return NextResponse.json(error, { status: response.status });
+      console.error('🔴 Backend error:', data);
+      return NextResponse.json(data, { status: response.status });
     }
 
-    const data = await response.json();
-
-    // If backend returns a redirect URL, return it
+    // If response is OK and has authUrl, return it
     if (data.authUrl) {
-      return NextResponse.json({ authUrl: data.authUrl }, { status: 200 });
+      return NextResponse.json(data, { status: 200 });
     }
 
-    // Otherwise just return success
     return NextResponse.json(data, { status: 200 });
   } catch (error: any) {
-    console.error('🔴 Facebook Connect Error:', error);
+    console.error('🔴 Connect Error:', error.message);
     return NextResponse.json(
-      { error: error.message || 'Failed to initiate Facebook connection' },
+      { error: error.message || 'Failed to initiate connection' },
       { status: 500 }
     );
   }

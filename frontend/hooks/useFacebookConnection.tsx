@@ -214,26 +214,42 @@ export function useFacebookConnection() {
   };
 
   const connect = () => {
-    if (!user?.tenantId && user?.role !== 'SuperAdmin') return;
+    if (!user?.tenantId && user?.role !== 'SuperAdmin') {
+      console.error('❌ No user or tenantId found');
+      return;
+    }
     
     // Use BFF route for OAuth connection
     const connectUrl = `/api/social/connect${user?.role === 'SuperAdmin' ? '' : `?tenantId=${user.tenantId}`}`;
+    console.log('🔵 Initiating Facebook connect to:', connectUrl);
     
     // Fetch the auth URL from BFF and redirect
     fetch(connectUrl, {
       method: 'GET',
       credentials: 'include',
     })
-      .then(res => res.json())
+      .then(async res => {
+        console.log('🔵 BFF response status:', res.status);
+        const data = await res.json();
+        console.log('🔵 BFF response data:', data);
+        
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        
+        return data;
+      })
       .then(data => {
         if (data.authUrl) {
+          console.log('✅ Got authUrl, redirecting to Facebook');
           window.location.href = data.authUrl;
         } else {
-          console.error('❌ No authUrl returned from connect endpoint');
+          throw new Error('No authUrl in response');
         }
       })
       .catch(err => {
-        console.error('❌ Error initiating Facebook connection:', err);
+        console.error('❌ Error connecting Facebook:', err.message);
+        alert(`Failed to connect Facebook: ${err.message}`);
       });
   };
 
