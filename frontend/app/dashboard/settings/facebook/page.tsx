@@ -44,11 +44,29 @@ export default function FacebookBusinessSettings() {
   const handleConnect = async () => {
     setLoading(true);
     try {
-      // Redirect to backend route that starts Facebook OAuth
-      window.location.href = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/facebook/connect`;
+      // Use BFF route instead of calling backend directly
+      // This ensures cookies are properly forwarded for authentication
+      const response = await fetch(`/api/social/connect`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        console.log('✅ Got auth URL from BFF, redirecting to Facebook');
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('No authUrl in response from BFF');
+      }
     } catch (err: any) {
-      console.error("Failed to start Facebook connect:", err);
-      setError(err.message || "Failed to start connect");
+      console.error('❌ Failed to start Facebook connect:', err);
+      setError(err.message || 'Failed to start connect');
       setLoading(false);
     }
   };
