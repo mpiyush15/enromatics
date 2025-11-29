@@ -20,7 +20,7 @@ const router = express.Router();
 
 // OAuth routes
 router.get('/connect', protect, connectFacebook);
-router.get('/callback', protect, facebookCallback);
+router.get('/callback', facebookCallback); // No protect - Facebook calls this directly
 router.post('/disconnect', protect, disconnectFacebook);
 
 // Connection status
