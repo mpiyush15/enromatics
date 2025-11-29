@@ -18,9 +18,10 @@ export default function TestAuthPage() {
 
   const testEndpoint = async (endpoint: string, name: string) => {
     try {
-      console.log(`Testing ${name}: ${API_BASE_URL}${endpoint}`);
+      // Use BFF routes (Next.js API routes)
+      console.log(`Testing ${name}: ${endpoint}`);
       
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(endpoint, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -62,10 +63,10 @@ export default function TestAuthPage() {
     setLoading(true);
     setResults({});
     
+    // Note: These should map to BFF routes (/api/social/*)
     const tests = [
-      { endpoint: '/api/facebook/status', name: 'Facebook Status' },
-      { endpoint: '/api/facebook/dashboard', name: 'Facebook Dashboard' },
-      { endpoint: '/api/facebook/debug', name: 'Facebook Debug' },
+      { endpoint: '/api/social/status', name: 'Facebook Status' },
+      { endpoint: '/api/social/dashboard', name: 'Facebook Dashboard' },
     ];
 
     for (const test of tests) {
