@@ -86,7 +86,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 opacity-80 bg-white dark:bg-neutral-900 shadow-md border-b border-gray-200 dark:border-gray-700">
+    <nav className="sticky top-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md shadow-sm border-b border-gray-200/50 dark:border-gray-700/50">
       <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12">
         <div className="flex justify-between items-center h-16 relative z-50">
           {/* LOGO */}
@@ -176,7 +176,7 @@ export default function Navbar() {
 
       {/* MOBILE MENU */}
       {isMenuOpen && (
-        <div className="md:hidden px-4 py-3 space-y-2 bg-white dark:bg-gray-900 border-t dark:border-gray-800 text-gray-800 dark:text-white">
+        <div className="md:hidden px-4 py-3 space-y-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-800/50 text-gray-800 dark:text-white">
           <Link href="/home" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Home</Link>
           <Link href="/about" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>About Us</Link>
           
