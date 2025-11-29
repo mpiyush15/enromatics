@@ -407,35 +407,93 @@ export const getAdInsights = async (req, res) => {
   }
 };
 
-// Get Facebook Pages connected to the user
+// Get Facebook Pages (personal + business pages)
 export const getPages = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
-    // Get Facebook connection using dedicated model
-    const facebookConnection = await FacebookConnection.findByTenant(user.tenantId);
-    
-    if (!facebookConnection || !facebookConnection.connected || !facebookConnection.accessToken) {
+
+    const fb = await FacebookConnection.findByTenant(user.tenantId);
+    if (!fb || !fb.connected || !fb.accessToken) {
       return res.status(401).json({ message: 'Facebook account not connected' });
     }
 
-    console.log('🔍 Fetching Facebook pages...');
-    const data = await facebookApiRequest(
-      'me/accounts?fields=id,name,category,followers_count,fan_count,link,picture,access_token',
-      facebookConnection.accessToken
+    const token = fb.accessToken;
+
+    console.log('🔍 Fetching Facebook pages (personal + business)...');
+
+    // 1️⃣ Fetch personal pages
+    let personalPages = [];
+    try {
+      const personalRes = await facebookApiRequest(
+        'me/accounts?fields=id,name,fan_count,followers_count,access_token,picture',
+        token
+      );
+      personalPages = personalRes.data || [];
+      console.log('✅ Personal pages fetched:', personalPages.length);
+    } catch (err) {
+      console.log('⚠️ Error fetching personal pages:', err.message);
+    }
+
+    // 2️⃣ Fetch businesses
+    let businesses = [];
+    try {
+      const bizRes = await facebookApiRequest(
+        'me/businesses?fields=id,name',
+        token
+      );
+      businesses = bizRes.data || [];
+      console.log('✅ Businesses fetched:', businesses.length);
+    } catch (err) {
+      console.log('⚠️ Error fetching businesses:', err.message);
+    }
+
+    let businessPages = [];
+
+    // 3️⃣ Fetch business-owned & client pages
+    for (const biz of businesses) {
+      try {
+        console.log(`🔍 Fetching pages for business ${biz.id}...`);
+        
+        const owned = await facebookApiRequest(
+          `${biz.id}/owned_pages?fields=id,name,fan_count,followers_count,access_token,picture`,
+          token
+        );
+
+        const client = await facebookApiRequest(
+          `${biz.id}/client_pages?fields=id,name,fan_count,followers_count,access_token,picture`,
+          token
+        );
+
+        const bizPagesCount = (owned.data?.length || 0) + (client.data?.length || 0);
+        console.log(`✅ Business ${biz.id} pages fetched: ${bizPagesCount}`);
+
+        businessPages.push(...(owned.data || []), ...(client.data || []));
+      } catch (err) {
+        console.log(`⚠️ Error fetching pages for business ${biz.id}:`, err.message);
+      }
+    }
+
+    // 4️⃣ Merge + remove duplicates
+    const allPages = [...personalPages, ...businessPages];
+
+    const uniquePages = Array.from(
+      new Map(allPages.map(page => [page.id, page])).values()
     );
 
-    console.log('✅ Facebook pages response:', {
-      count: data.data?.length || 0,
-      pages: data.data?.map(p => ({ id: p.id, name: p.name }))
+    console.log('✅ Pages fetched successfully:', {
+      businessCount: businessPages.length,
+      personalCount: personalPages.length,
+      total: uniquePages.length,
+      pages: uniquePages.map(p => ({ id: p.id, name: p.name }))
     });
 
-    res.json({
+    return res.json({
       success: true,
-      pages: data.data || []
+      pages: uniquePages
     });
+
   } catch (error) {
-    console.error('Get pages error:', error);
+    console.error('❌ Get pages error:', error);
     res.status(500).json({ message: error.message });
   }
 };
