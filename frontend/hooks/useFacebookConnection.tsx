@@ -128,7 +128,7 @@ export function useFacebookConnection() {
       if (dashboardResponse.ok) {
         const data = await dashboardResponse.json();
         console.log('✅ Dashboard data received:', data);
-        
+
         if (data.success && data.dashboard) {
           const newState = {
             isConnected: true,
@@ -143,30 +143,78 @@ export function useFacebookConnection() {
           connectionCache = newState;
           cacheTimestamp = Date.now();
         } else {
-          const newState = {
-            isConnected: false,
-            isLoading: false,
-            userInfo: null,
-            error: data.message || 'Failed to fetch dashboard data',
-            pages: [],
-            adAccounts: []
-          };
-          setConnectionState(newState);
-          // Update cache
-          connectionCache = newState;
-          cacheTimestamp = Date.now();
+          // Fallback: try fetching ad-accounts and pages individually in case dashboard endpoint failed partially
+          console.warn('⚠️ Dashboard returned no dashboard object, falling back to ad-accounts and pages endpoints');
+          try {
+            const [adRes, pagesRes] = await Promise.all([
+              fetch('/api/social/ad-accounts', { method: 'GET', credentials: 'include' }),
+              fetch('/api/social/pages', { method: 'GET', credentials: 'include' })
+            ]);
+
+            const adData = adRes.ok ? await adRes.json().catch(() => ({})) : {};
+            const pagesData = pagesRes.ok ? await pagesRes.json().catch(() => ({})) : {};
+
+            const newState = {
+              isConnected: true,
+              isLoading: false,
+              userInfo: data.userInfo || null,
+              error: null,
+              pages: pagesData.pages || [],
+              adAccounts: adData.adAccounts || []
+            };
+            setConnectionState(newState);
+            connectionCache = newState;
+            cacheTimestamp = Date.now();
+          } catch (fallbackErr) {
+            console.error('❌ Fallback fetch failed:', fallbackErr);
+            const newState = {
+              isConnected: false,
+              isLoading: false,
+              userInfo: null,
+              error: data.message || 'Failed to fetch dashboard data',
+              pages: [],
+              adAccounts: []
+            };
+            setConnectionState(newState);
+            connectionCache = newState;
+            cacheTimestamp = Date.now();
+          }
         }
       } else {
         const errorData = await dashboardResponse.json().catch(() => ({ message: 'Unknown error' }));
         console.error('❌ Dashboard fetch failed:', errorData);
-        setConnectionState({
-          isConnected: false,
-          isLoading: false,
-          userInfo: null,
-          error: errorData.message || 'Failed to fetch dashboard data',
-          pages: [],
-          adAccounts: []
-        });
+        // Try fallback endpoints before giving up
+        try {
+          const [adRes, pagesRes] = await Promise.all([
+            fetch('/api/social/ad-accounts', { method: 'GET', credentials: 'include' }),
+            fetch('/api/social/pages', { method: 'GET', credentials: 'include' })
+          ]);
+
+          const adData = adRes.ok ? await adRes.json().catch(() => ({})) : {};
+          const pagesData = pagesRes.ok ? await pagesRes.json().catch(() => ({})) : {};
+
+          const newState = {
+            isConnected: true,
+            isLoading: false,
+            userInfo: null,
+            error: null,
+            pages: pagesData.pages || [],
+            adAccounts: adData.adAccounts || []
+          };
+          setConnectionState(newState);
+          connectionCache = newState;
+          cacheTimestamp = Date.now();
+        } catch (fallbackErr) {
+          console.error('❌ Dashboard and fallback fetches failed:', fallbackErr);
+          setConnectionState({
+            isConnected: false,
+            isLoading: false,
+            userInfo: null,
+            error: errorData.message || 'Failed to fetch dashboard data',
+            pages: [],
+            adAccounts: []
+          });
+        }
       }
     } catch (error) {
       console.error('❌ Error checking Facebook connection:', error);
