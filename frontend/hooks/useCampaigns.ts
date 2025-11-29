@@ -44,22 +44,24 @@ export const useCampaigns = (adAccounts: AdAccount[], isConnected: boolean) => {
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts/${accountId}/campaigns`, {
+      console.log('🔵 Fetching campaigns for account:', accountId);
+      const response = await fetch(`/api/social/ad-accounts/${accountId}/campaigns`, {
         method: 'GET',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch campaigns: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to fetch campaigns: ${response.statusText} - ${errorData.message || ''}`);
       }
 
       const data = await response.json();
+      console.log('✅ Campaigns fetched successfully:', data);
       setCampaigns(data.campaigns || []);
     } catch (err) {
-      console.error('Error fetching campaigns:', err);
+      console.error('🔴 Error fetching campaigns:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');
       setCampaigns([]);
     } finally {
