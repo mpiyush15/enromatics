@@ -115,7 +115,7 @@ export default function Home() {
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-10 justify-center lg:justify-start">
                 <motion.button
-                  onClick={() => router.push("/subscribe")}
+                  onClick={() => router.push("/subscribe/free_trial")}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold overflow-hidden shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300"
@@ -697,7 +697,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={() => router.push("/subscribe")}
+                onClick={() => router.push("/subscribe/free_trial")}
                 className="px-10 py-5 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-lg"
               >
                 Start Free Trial - No Credit Card Required
