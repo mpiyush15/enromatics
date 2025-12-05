@@ -4,25 +4,36 @@ dotenv.config();
 
 // Debug: Log email configuration
 console.log('📧 Email Configuration:');
-console.log('- API Token:', process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
-console.log('- From:', process.env.EMAIL_FROM || 'NOT SET');
+console.log('- API URL:', process.env.ZEPTO_API_URL || process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
+console.log('- API Token:', process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
+console.log('- From:', process.env.ZEPTO_FROM || process.env.EMAIL_FROM || 'NOT SET');
+console.log('- Agent:', process.env.ZEPTO_AGENT || 'NOT SET');
 
 /**
  * Send email using ZeptoMail API (works on serverless platforms)
  * Railway/Vercel block SMTP ports, so we use HTTP API instead
  */
-const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FROM }) => {
+const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FROM || process.env.EMAIL_FROM }) => {
     try {
         console.log(`📤 Attempting to send email to: ${to}`);
         console.log(`📧 Subject: ${subject}`);
         
-        if (!process.env.ZEPTOMAIL_API_TOKEN) {
-            throw new Error('ZEPTOMAIL_API_TOKEN not configured in environment variables');
+        // Get API token (support both variable names)
+        const apiToken = process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN;
+        const apiUrl = process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email';
+        
+        if (!apiToken) {
+            throw new Error('ZEPTO_API_TOKEN or ZEPTOMAIL_API_TOKEN not configured in environment variables');
         }
         
         if (!from) {
-            throw new Error('EMAIL_FROM not configured in environment variables');
+            throw new Error('ZEPTO_FROM or EMAIL_FROM not configured in environment variables');
         }
+
+        // Prepare authorization header - add "Zoho-enczapikey" prefix if not present
+        const authHeader = apiToken.startsWith('Zoho-enczapikey') 
+            ? apiToken 
+            : `Zoho-enczapikey ${apiToken}`;
 
         const payload = {
             from: {
@@ -42,13 +53,14 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FRO
         };
 
         console.log('📨 Sending to ZeptoMail API...');
+        console.log('🔗 API URL:', apiUrl);
 
-        const response = await fetch('https://api.zeptomail.in/v1.1/email', {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Authorization': process.env.ZEPTOMAIL_API_TOKEN
+                'Authorization': authHeader
             },
             body: JSON.stringify(payload)
         });
