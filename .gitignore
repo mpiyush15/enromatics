@@ -20,12 +20,47 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables - NEVER COMMIT THESE
 .env
+.env.*
+*.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+EnromaticsMobile/.env
+EnromaticsMobile/.env.*
+
+# Conversation logs and documentation with sensitive data
+*CONVERSATION*.md
+*conversation*.md
+*CONVO*.md
+*convo*.md
+*.convo
+*.conversation
+CHAT*.md
+chat*.md
+SESSION*.md
+session*.md
+
+# Sensitive configuration files
+*credentials*.json
+*secrets*.json
+config/secrets.js
+config/credentials.js
+
+# Backup files that might contain sensitive data
+*.backup
+*.bak
+*.old
+*backup*
 
 # Database
 *.db
