@@ -13,6 +13,36 @@ console.log('- From:', process.env.EMAIL_FROM || 'NOT SET');
  */
 const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FROM }) => {
     try {
+        console.log(`📤 Attempting to send email to: ${to}`);
+        console.log(`📧 Subject: ${subject}`);
+        
+        if (!process.env.ZEPTOMAIL_API_TOKEN) {
+            throw new Error('ZEPTOMAIL_API_TOKEN not configured in environment variables');
+        }
+        
+        if (!from) {
+            throw new Error('EMAIL_FROM not configured in environment variables');
+        }
+
+        const payload = {
+            from: {
+                address: from,
+                name: 'Enromatics'
+            },
+            to: [
+                {
+                    email_address: {
+                        address: to,
+                        name: to.split('@')[0]
+                    }
+                }
+            ],
+            subject: subject,
+            htmlbody: html
+        };
+
+        console.log('📨 Sending to ZeptoMail API...');
+
         const response = await fetch('https://api.zeptomail.in/v1.1/email', {
             method: 'POST',
             headers: {
@@ -20,30 +50,17 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FRO
                 'Content-Type': 'application/json',
                 'Authorization': process.env.ZEPTOMAIL_API_TOKEN
             },
-            body: JSON.stringify({
-                from: {
-                    address: from,
-                    name: 'Enromatics'
-                },
-                to: [
-                    {
-                        email_address: {
-                            address: to,
-                            name: to.split('@')[0]
-                        }
-                    }
-                ],
-                subject: subject,
-                htmlbody: html
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
 
         if (!response.ok) {
+            console.error('❌ ZeptoMail API Error Response:', data);
             throw new Error(data.message || `API Error: ${response.status}`);
         }
 
+        console.log('✅ Email sent successfully to:', to);
         return {
             success: true,
             messageId: data.request_id || data.message,
@@ -52,6 +69,7 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FRO
 
     } catch (error) {
         console.error('❌ ZeptoMail API Error:', error.message);
+        console.error('❌ Full error:', error);
         throw error;
     }
 };
