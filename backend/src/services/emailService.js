@@ -3,10 +3,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Debug: Log SMTP configuration (without password)
+console.log('📧 SMTP Configuration:');
+console.log('- Host:', process.env.SMTP_HOST || 'NOT SET');
+console.log('- Port:', process.env.SMTP_PORT || 'NOT SET');
+console.log('- User:', process.env.SMTP_USER || 'NOT SET');
+console.log('- From:', process.env.EMAIL_FROM || 'NOT SET');
+
 // Create reusable transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT),
+    host: process.env.SMTP_HOST || 'smtp.zeptomail.in',
+    port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false, // Use TLS
     auth: {
         user: process.env.SMTP_USER,

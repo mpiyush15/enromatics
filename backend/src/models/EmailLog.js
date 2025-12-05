@@ -33,6 +33,9 @@ const emailLogSchema = new mongoose.Schema({
             'student-registration',
             'payment-confirmation',
             'subscription',
+            'demo-request',
+            'demo-status',
+            'admin-notification',
             'general'
         ],
         default: 'general',
