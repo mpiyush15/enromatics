@@ -29,6 +29,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import mobileAuthRoutes from './routes/mobileAuthRoutes.js';
 import mobileScholarshipRoutes from './routes/mobileScholarshipRoutes.js';
 import demoRoutes from './routes/demoRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
 
 
 
@@ -84,6 +85,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
 app.use('/api/mobile-scholarship', mobileScholarshipRoutes);
 app.use('/api/demo-requests', demoRoutes);
+app.use('/api/email', emailRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
 app.use("/api/auth", authRoutes);
