@@ -1,54 +1,75 @@
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Debug: Log SMTP configuration (without password)
-console.log('📧 SMTP Configuration:');
-console.log('- Host:', process.env.SMTP_HOST || 'NOT SET');
-console.log('- Port:', process.env.SMTP_PORT || 'NOT SET');
-console.log('- User:', process.env.SMTP_USER || 'NOT SET');
+// Debug: Log email configuration
+console.log('📧 Email Configuration:');
+console.log('- API Token:', process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
 console.log('- From:', process.env.EMAIL_FROM || 'NOT SET');
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.zeptomail.in',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // Use TLS
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+/**
+ * Send email using ZeptoMail API (works on serverless platforms)
+ * Railway/Vercel block SMTP ports, so we use HTTP API instead
+ */
+const sendEmailViaAPI = async ({ to, subject, html, from = process.env.EMAIL_FROM }) => {
+    try {
+        const response = await fetch('https://api.zeptomail.in/v1.1/email', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': process.env.ZEPTOMAIL_API_TOKEN
+            },
+            body: JSON.stringify({
+                from: {
+                    address: from,
+                    name: 'Enromatics'
+                },
+                to: [
+                    {
+                        email_address: {
+                            address: to,
+                            name: to.split('@')[0]
+                        }
+                    }
+                ],
+                subject: subject,
+                htmlbody: html
+            })
+        });
 
-// Verify transporter configuration
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email service configuration error:', error);
-    } else {
-        console.log('✅ Email service is ready to send emails');
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `API Error: ${response.status}`);
+        }
+
+        return {
+            success: true,
+            messageId: data.request_id || data.message,
+            message: 'Email sent successfully'
+        };
+
+    } catch (error) {
+        console.error('❌ ZeptoMail API Error:', error.message);
+        throw error;
     }
-});
+};
 
 /**
- * Base email sending function
+ * Base email sending function (uses ZeptoMail API)
  */
 export const sendEmail = async ({ to, subject, html, text, tenantId = null, userId = null, type = 'general' }) => {
     try {
-        const mailOptions = {
-            from: `"Enromatics" <${process.env.EMAIL_FROM}>`,
+        // Send via ZeptoMail API (works on Railway/Vercel)
+        const result = await sendEmailViaAPI({
             to,
             subject,
             html,
-            text: text || html.replace(/<[^>]*>/g, '') // Strip HTML for text version
-        };
+            from: process.env.EMAIL_FROM
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-
-        // Log email (we'll create this model next)
+        // Log email
         const emailLog = {
             tenantId,
             userId,
@@ -56,11 +77,11 @@ export const sendEmail = async ({ to, subject, html, text, tenantId = null, user
             subject,
             type,
             status: 'sent',
-            messageId: info.messageId,
+            messageId: result.messageId,
             sentAt: new Date()
         };
 
-        // Import and save log (will implement after creating model)
+        // Save log to database
         try {
             const EmailLog = (await import('../models/EmailLog.js')).default;
             await EmailLog.create(emailLog);
@@ -68,11 +89,7 @@ export const sendEmail = async ({ to, subject, html, text, tenantId = null, user
             console.warn('Email log not saved:', err.message);
         }
 
-        return {
-            success: true,
-            messageId: info.messageId,
-            message: 'Email sent successfully'
-        };
+        return result;
 
     } catch (error) {
         console.error('❌ Email sending failed:', error);
