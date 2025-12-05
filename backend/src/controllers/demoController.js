@@ -45,8 +45,8 @@ export const createDemoRequest = async (req, res) => {
 
     console.log("✅ Demo request created:", demoRequest._id);
 
-    // Send confirmation email to requester
-    await sendEmail({
+    // Send confirmation email to requester (non-blocking)
+    sendEmail({
       to: email,
       subject: "Demo Request Received - Enromatics",
       html: `
@@ -99,11 +99,11 @@ export const createDemoRequest = async (req, res) => {
         </html>
       `,
       type: 'demo-request'
-    });
+    }).catch(err => console.error('❌ Failed to send demo confirmation email:', err.message));
 
-    // Notify super admin about new demo request
+    // Notify super admin about new demo request (non-blocking)
     if (process.env.SUPER_ADMIN_EMAIL) {
-      await sendEmail({
+      sendEmail({
         to: process.env.SUPER_ADMIN_EMAIL,
         subject: `🎯 New Demo Request: ${company}`,
         html: `
@@ -122,7 +122,7 @@ export const createDemoRequest = async (req, res) => {
           </div>
         `,
         type: 'admin-notification'
-      });
+      }).catch(err => console.error('❌ Failed to send admin notification email:', err.message));
     }
 
     res.status(201).json({
@@ -399,14 +399,14 @@ export const updateDemoRequestStatus = async (req, res) => {
       `;
     }
 
-    // Send email if status changed to confirmed, cancelled, or completed
+    // Send email if status changed to confirmed, cancelled, or completed (non-blocking)
     if (emailSubject && emailHtml) {
-      await sendEmail({
+      sendEmail({
         to: demoRequest.email,
         subject: emailSubject,
         html: emailHtml,
         type: 'demo-status'
-      });
+      }).catch(err => console.error('❌ Failed to send demo status email:', err.message));
     }
 
     res.status(200).json({

@@ -21,17 +21,17 @@ export const registerSubscriber = async (req, res) => {
       businessName,
     });
 
-    // Send welcome email to new subscriber
-    await sendWelcomeEmail({
+    // Send welcome email to new subscriber (non-blocking)
+    sendWelcomeEmail({
       to: email,
       name,
       tenantId: subscriber._id,
       userId: subscriber._id
-    });
+    }).catch(err => console.error('❌ Failed to send welcome email:', err.message));
 
-    // Notify super admin about new subscriber
+    // Notify super admin about new subscriber (non-blocking)
     if (process.env.SUPER_ADMIN_EMAIL) {
-      await sendEmail({
+      sendEmail({
         to: process.env.SUPER_ADMIN_EMAIL,
         subject: `🎉 New Subscriber: ${businessName}`,
         html: `
@@ -47,7 +47,7 @@ export const registerSubscriber = async (req, res) => {
           </div>
         `,
         type: 'admin-notification'
-      });
+      }).catch(err => console.error('❌ Failed to send admin notification:', err.message));
     }
 
     res.status(201).json({
