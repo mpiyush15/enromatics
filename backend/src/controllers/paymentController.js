@@ -76,10 +76,8 @@ export const initiateSubscriptionPayment = async (req, res) => {
 
     // Determine price based on billing cycle
     let orderAmount = plan.priceMonthly;
-    let cycle = 'monthly';
-    if (billingCycle === 'annual') {
+    if (cycle === 'annual') {
       orderAmount = plan.priceAnnual;
-      cycle = 'annual';
     }
 
     // Create order in Cashfree
