@@ -51,6 +51,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
         headers: {
           'x-client-id': CASHFREE_CLIENT_ID,
           'x-client-secret': CASHFREE_CLIENT_SECRET,
+          'x-api-version': '2023-08-01',
           'Content-Type': 'application/json'
         }
       }
@@ -87,7 +88,8 @@ export const verifySubscriptionPayment = async (req, res) => {
       {
         headers: {
           'x-client-id': CASHFREE_CLIENT_ID,
-          'x-client-secret': CASHFREE_CLIENT_SECRET
+          'x-client-secret': CASHFREE_CLIENT_SECRET,
+          'x-api-version': '2023-08-01'
         }
       }
     );
