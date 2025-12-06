@@ -105,7 +105,7 @@ export default function PlansPage() {
 
                 {/* CTA Button */}
                 <Link
-                  href={`/subscription/checkout?plan=${plan.id}&cycle=${billingCycle}`}
+                  href={`/subscription/checkout?planId=${plan.id}&cycle=${billingCycle}`}
                   className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all mb-8 ${
                     plan.popular
                       ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
