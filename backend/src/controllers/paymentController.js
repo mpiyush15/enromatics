@@ -44,7 +44,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
           country: 'India'
         },
         subscription: {
-          status: 'pending',
+          status: 'inactive',
           paymentId: null,
           startDate: null,
           endDate: null

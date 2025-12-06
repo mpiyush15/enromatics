@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { planId, name, instituteName, email, phone, isNewTenant, tenantId } = body;
 
+    console.log("Checkout request body:", JSON.stringify(body, null, 2));
+
     if (!planId || !email || !name) {
       return NextResponse.json(
         { error: "Plan ID, email, and name are required" },
@@ -32,6 +34,7 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
+    console.log("Backend response:", response.status, JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       return NextResponse.json(
