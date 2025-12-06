@@ -64,9 +64,16 @@ export const initiateSubscriptionPayment = async (req, res) => {
       html: `<p>Your payment of ₹${orderAmount} for the ${plan.name} (${cycle}) plan has been initiated. Please complete the payment to activate your subscription.</p>`
     });
 
+    // Cashfree returns payment_session_id for creating checkout
+    const paymentSessionId = response.data.payment_session_id;
+    const paymentLink = response.data.payment_link;
+    
+    console.log('Cashfree Response:', JSON.stringify(response.data, null, 2));
+
     res.status(200).json({
       success: true,
-      paymentSessionId: response.data.payment_session_id,
+      paymentSessionId: paymentSessionId,
+      paymentLink: paymentLink,
       orderId: response.data.order_id,
       plan,
       billingCycle: cycle

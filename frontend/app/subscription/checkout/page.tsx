@@ -50,11 +50,15 @@ function CheckoutContent() {
       });
       const data = await res.json();
       if (data.success) {
-        setPaymentUrl(`https://payments.cashfree.com/checkout/${data.paymentSessionId}`);
+        // Use payment link if available, otherwise use session-based checkout
+        const checkoutUrl = data.paymentLink || 
+          `https://payments.cashfree.com/pgbillpay/order/${data.orderId}/${data.paymentSessionId}`;
+        
+        setPaymentUrl(checkoutUrl);
         setStatus('Payment initiated. Redirecting to payment gateway...');
         // Auto-redirect after 2 seconds
         setTimeout(() => {
-          window.location.href = `https://payments.cashfree.com/checkout/${data.paymentSessionId}`;
+          window.location.href = checkoutUrl;
         }, 2000);
       } else {
         setStatus('Failed to initiate payment. Please try again.');
