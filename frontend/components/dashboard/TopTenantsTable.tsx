@@ -56,7 +56,9 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       // Get token from localStorage (client-side only)
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
-        throw new Error('No authentication token found');
+        setError('Authentication required');
+        setLoading(false);
+        return;
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
@@ -73,7 +75,8 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
-          router.push('/login');
+          setError('Authentication expired. Please refresh the page.');
+          setLoading(false);
           return;
         }
         throw new Error('Failed to fetch top tenants');
@@ -82,7 +85,6 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       const data = await response.json();
       setTenants(data.topTenants || []);
     } catch (err) {
-      console.error('Top tenants error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load top tenants');
     } finally {
       setLoading(false);

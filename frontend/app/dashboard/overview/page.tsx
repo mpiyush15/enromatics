@@ -50,8 +50,12 @@ export default function OverviewPage() {
       // Get token from localStorage (client-side only)
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
-        console.warn('No authentication token found, redirecting to login...');
-        router.push('/login');
+        setError('Authentication required. Please log in.');
+        setLoading(false);
+        // Redirect after a short delay to allow user to see the page
+        setTimeout(() => {
+          router.push('/login');
+        }, 1000);
         return;
       }
 
@@ -70,7 +74,11 @@ export default function OverviewPage() {
         if (response.status === 401) {
           // Token expired or invalid
           localStorage.removeItem('token');
-          router.push('/login');
+          setError('Authentication expired. Please log in again.');
+          setLoading(false);
+          setTimeout(() => {
+            router.push('/login');
+          }, 1000);
           return;
         }
         throw new Error('Failed to fetch analytics');

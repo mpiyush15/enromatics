@@ -36,7 +36,9 @@ export default function RevenueBreakdownCard() {
       // Get token from localStorage (client-side only)
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
-        throw new Error('No authentication token found');
+        setError('Authentication required');
+        setLoading(false);
+        return;
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
@@ -53,7 +55,8 @@ export default function RevenueBreakdownCard() {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
-          router.push('/login');
+          setError('Authentication expired. Please refresh the page.');
+          setLoading(false);
           return;
         }
         throw new Error('Failed to fetch revenue breakdown');
@@ -62,7 +65,6 @@ export default function RevenueBreakdownCard() {
       const data = await response.json();
       setBreakdown(data.breakdown || []);
     } catch (err) {
-      console.error('Revenue breakdown error:', err);
       setError(err instanceof Error ? err.message : 'Failed to load breakdown');
     } finally {
       setLoading(false);
