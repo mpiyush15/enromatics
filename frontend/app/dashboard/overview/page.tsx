@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { TrendingUp, Users, CreditCard, BarChart3, Loader } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
+import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
+import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
 
 interface AnalyticsData {
   kpis: {
@@ -183,6 +185,11 @@ export default function OverviewPage() {
           />
         </div>
 
+        {/* Revenue Breakdown */}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <RevenueBreakdown />
+        </div>
+
         {/* Subscription Status */}
         <div className="grid grid-cols-1 gap-6 mb-8">
           <PieChartComponent
@@ -190,6 +197,11 @@ export default function OverviewPage() {
             title="Subscription Status Distribution"
             height={300}
           />
+        </div>
+
+        {/* Top Tenants Table */}
+        <div className="mb-8">
+          <TopTenantsTable limit={15} />
         </div>
 
         {/* Footer */}
