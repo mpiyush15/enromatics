@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const response = await fetch(`${EXPRESS_BACKEND_URL}/api/payment/admin/subscribers`, {
+    const response = await fetch(`${EXPRESS_BACKEND_URL}/api/payments/admin/subscribers`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
