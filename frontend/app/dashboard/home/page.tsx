@@ -1,101 +1,235 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
-import { cache, CACHE_KEYS, CACHE_TTL } from "@/lib/cache";
-import { DashboardSkeleton } from "@/components/ui/Skeleton";
-import TrialNote from "@/components/roles/user/TrialNote";
+import { useEffect, useState } from 'react';
+import { TrendingUp, Users, CreditCard, BarChart3, Loader } from 'lucide-react';
+import StatCard from '@/components/dashboard/StatCard';
+import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
+import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
+import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
+import { useRouter } from 'next/navigation';
 
-export default function HomeDashboardPage() {
+interface AnalyticsData {
+  kpis: {
+    totalRevenue: number;
+    activeSubscriptions: number;
+    totalTenants: number;
+    activeUsers: number;
+    growthRate: number;
+  };
+  charts: {
+    tenantsByPlan: any[];
+    subscriptionStatus: any[];
+    revenueTrend: any[];
+    websiteVisitors: any[];
+    monthlyRevenue: any[];
+  };
+}
+
+export default function DashboardHomePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        // Check cache first
-        const cachedUser = cache.get(CACHE_KEYS.AUTH_USER) as any;
-        if (cachedUser) {
-          setUser(cachedUser);
-          setLoading(false);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchAnalytics();
+    }
+  }, [mounted]);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get token from localStorage (client-side only)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+      const response = await fetch(
+        `${apiUrl}/api/analytics/dashboard`,
+        {
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          router.push('/login');
           return;
         }
-
-        const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-          method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) {
-          throw new Error("Unauthorized");
-        }
-
-        const data = await res.json();
-        setUser(data);
-        
-        // Cache the user data
-        cache.set(CACHE_KEYS.AUTH_USER, data, CACHE_TTL.MEDIUM);
-      } catch (err: any) {
-        cache.remove(CACHE_KEYS.AUTH_USER);
-        router.push("/login");
-      } finally {
-        setLoading(false);
+        throw new Error('Failed to fetch analytics');
       }
-    };
 
-    fetchUser();
-  }, [router]);
+      const data = await response.json();
+      setAnalytics(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (loading) return <DashboardSkeleton />;
-  if (!user) return null;
-
-  // ✅ Extract role and plan
-  const role = user.role || "user";
-  const plan = user.plan || "free";
-  const planExpiry = user.planExpiry
-    ? new Date(user.planExpiry).toLocaleDateString()
-    : "N/A";
-
-  // ✅ Role-based rendering
-  return (
-    <div className="space-y-6 p-10">
-      <h1 className="text-3xl font-bold text-blue-600">
-        👋 Welcome, {user.name || "User"}
-      </h1>
-      <p className="text-gray-600 dark:text-gray-300">
-        You are logged in as <b>{role}</b>
-      </p>
-
-      {role === "SuperAdmin" ? (
-        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded">
-          <h2 className="text-xl font-semibold text-blue-500 mb-2">Admin Overview</h2>
-          <p>Manage tenants, monitor activity, and control global settings.</p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      ) : role === "tenantAdmin" ? (
-        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded">
-          <h2 className="text-xl font-semibold text-blue-500 mb-2">
-            Tenant Dashboard
-          </h2>
-          <p>
-            Manage your staff, students, and ads campaign performance here.
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800 font-medium">Error loading dashboard</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
+          <button
+            onClick={fetchAnalytics}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="p-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800">No data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const kpis = analytics.kpis;
+  const charts = analytics.charts;
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Analytics & Business Metrics
           </p>
         </div>
-      ) : (
-        <div>
-          <h2 className="text-xl font-semibold">Trial Access</h2>
-          <TrialNote />
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total Revenue"
+            value={`₹${kpis.totalRevenue.toLocaleString()}`}
+            icon={<CreditCard />}
+            color="blue"
+            change={kpis.growthRate}
+            changeLabel="this month"
+          />
+          <StatCard
+            title="Active Subscriptions"
+            value={kpis.activeSubscriptions}
+            icon={<TrendingUp />}
+            color="green"
+          />
+          <StatCard
+            title="Total Tenants"
+            value={kpis.totalTenants}
+            icon={<Users />}
+            color="purple"
+          />
+          <StatCard
+            title="Active Users"
+            value={kpis.activeUsers}
+            icon={<BarChart3 />}
+            color="orange"
+          />
         </div>
-      )}
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-4">
-        <p><strong>Plan:</strong> {plan}</p>
-        <p><strong>Expiry:</strong> {planExpiry}</p>
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Revenue Trend */}
+          <RevenueChart
+            data={charts.revenueTrend}
+            title="Revenue Trend (Last 30 Days)"
+            height={300}
+          />
+
+          {/* Tenants by Plan */}
+          <PieChartComponent
+            data={charts.tenantsByPlan}
+            title="Subscribers by Plan"
+            height={300}
+          />
+        </div>
+
+        {/* More Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Monthly Revenue */}
+          <BarChartComponent
+            data={charts.monthlyRevenue}
+            title="Monthly Revenue (Last 12 Months)"
+            dataKey="revenue"
+            height={300}
+          />
+
+          {/* Website Visitors */}
+          <AreaChart
+            data={charts.websiteVisitors}
+            title="New Tenants Sign-ups (Last 30 Days)"
+            height={300}
+          />
+        </div>
+
+        {/* Revenue Breakdown */}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <RevenueBreakdown />
+        </div>
+
+        {/* Subscription Status */}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <PieChartComponent
+            data={charts.subscriptionStatus}
+            title="Subscription Status Distribution"
+            height={300}
+          />
+        </div>
+
+        {/* Top Tenants Table */}
+        <div className="mb-8">
+          <TopTenantsTable limit={15} />
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            Last updated: {new Date().toLocaleString('en-IN')}
+          </p>
+          <button
+            onClick={fetchAnalytics}
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            Refresh Data
+          </button>
+        </div>
       </div>
-
-      
     </div>
   );
 }
