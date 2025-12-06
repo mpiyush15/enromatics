@@ -5,8 +5,11 @@ import {
   getReceipt,
   initiateSubscriptionPayment,
   verifySubscriptionPayment,
-  cashfreeSubscriptionWebhook
-  , devMarkOrderPaid
+  cashfreeSubscriptionWebhook,
+  devMarkOrderPaid,
+  getAllSubscriptionPayments,
+  getAllSubscribers,
+  getSubscriptionStats
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -25,6 +28,14 @@ router.post("/webhook/cashfree", cashfreeSubscriptionWebhook);
 
 // Dev-only: mark an order as PAID for testing (requires DEV_TEST_VERIFY env var)
 router.post('/dev/mark-paid', devMarkOrderPaid);
+
+// ============== SUPERADMIN SUBSCRIPTION MANAGEMENT ==============
+// Get all subscription payments (invoices) - SuperAdmin only
+router.get("/admin/subscriptions", protect, authorizeRoles("SuperAdmin"), getAllSubscriptionPayments);
+// Get all active subscribers - SuperAdmin only
+router.get("/admin/subscribers", protect, authorizeRoles("SuperAdmin"), getAllSubscribers);
+// Get subscription stats - SuperAdmin only
+router.get("/admin/stats", protect, authorizeRoles("SuperAdmin"), getSubscriptionStats);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

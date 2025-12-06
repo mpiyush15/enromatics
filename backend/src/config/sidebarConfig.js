@@ -152,6 +152,17 @@ export const sidebarLinks = [
   },
 
   {
+    label: "💳 Billing",
+    href: "#",
+    roles: ["SuperAdmin"],
+    children: [
+      { label: "📄 Invoices", href: "/dashboard/invoices", roles: ["SuperAdmin"] },
+      { label: "💰 Payments", href: "/dashboard/payments", roles: ["SuperAdmin"] },
+      { label: "📊 Subscribers", href: "/dashboard/subscribers", roles: ["SuperAdmin"] },
+    ],
+  },
+
+  {
     href: "/dashboard/demo-requests",
     label: "📅 Demo Requests",
     roles: ["SuperAdmin"],

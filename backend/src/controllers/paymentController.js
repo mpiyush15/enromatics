@@ -237,6 +237,95 @@ export const devMarkOrderPaid = async (req, res) => {
   }
 };
 
+/**
+ * SuperAdmin: Get all subscription payments (invoices)
+ */
+export const getAllSubscriptionPayments = async (req, res) => {
+  try {
+    // Get all tenants with subscription data
+    const tenants = await Tenant.find({
+      'subscription.paymentId': { $exists: true, $ne: null }
+    }).sort({ 'subscription.startDate': -1 });
+
+    const payments = tenants.map(tenant => ({
+      id: tenant.subscription.paymentId,
+      tenantId: tenant.tenantId,
+      tenantName: tenant.name,
+      instituteName: tenant.instituteName,
+      email: tenant.email,
+      plan: tenant.plan,
+      status: tenant.subscription.status,
+      billingCycle: tenant.subscription.billingCycle || 'monthly',
+      startDate: tenant.subscription.startDate,
+      endDate: tenant.subscription.endDate,
+      createdAt: tenant.subscription.startDate
+    }));
+
+    res.status(200).json({ success: true, payments });
+  } catch (err) {
+    console.error('Get all subscription payments error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * SuperAdmin: Get all subscribers (tenants with active subscriptions)
+ */
+export const getAllSubscribers = async (req, res) => {
+  try {
+    const subscribers = await Tenant.find({
+      'subscription.status': 'active'
+    }).sort({ 'subscription.startDate': -1 });
+
+    res.status(200).json({ success: true, subscribers });
+  } catch (err) {
+    console.error('Get all subscribers error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * SuperAdmin: Get subscription stats
+ */
+export const getSubscriptionStats = async (req, res) => {
+  try {
+    const totalTenants = await Tenant.countDocuments();
+    const activeSubscriptions = await Tenant.countDocuments({ 'subscription.status': 'active' });
+    const expiredSubscriptions = await Tenant.countDocuments({ 
+      'subscription.endDate': { $lt: new Date() }
+    });
+    
+    // Get plan distribution
+    const planCounts = await Tenant.aggregate([
+      { $match: { 'subscription.status': 'active' } },
+      { $group: { _id: '$plan', count: { $sum: 1 } } }
+    ]);
+
+    // Get recent payments (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentPayments = await Tenant.countDocuments({
+      'subscription.startDate': { $gte: thirtyDaysAgo }
+    });
+
+    res.status(200).json({
+      success: true,
+      stats: {
+        totalTenants,
+        activeSubscriptions,
+        expiredSubscriptions,
+        recentPayments,
+        planDistribution: planCounts.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {})
+      }
+    });
+  } catch (err) {
+    console.error('Get subscription stats error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const addPayment = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
