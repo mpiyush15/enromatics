@@ -59,14 +59,40 @@ function CheckoutContent() {
       if (data.success && data.paymentSessionId) {
         setStatus('Payment initiated. Opening payment gateway...');
         
+        // Check if Cashfree SDK is loaded
+        if (typeof window.Cashfree === 'undefined') {
+          // SDK not loaded, show manual link
+          const manualUrl = `https://payments.cashfree.com/order/#${data.orderId}`;
+          setPaymentUrl(manualUrl);
+          setStatus('SDK loading... Click the link below if not redirected.');
+          
+          // Wait for SDK to load and retry
+          let retries = 0;
+          const waitForSDK = setInterval(() => {
+            retries++;
+            if (typeof window.Cashfree !== 'undefined') {
+              clearInterval(waitForSDK);
+              const cashfree = window.Cashfree({ mode: 'production' });
+              cashfree.checkout({
+                paymentSessionId: data.paymentSessionId,
+                redirectTarget: '_self',
+              });
+            } else if (retries > 10) {
+              clearInterval(waitForSDK);
+              setStatus('Please click the link below to complete payment.');
+            }
+          }, 500);
+          return;
+        }
+        
         // Use Cashfree JS SDK to open checkout
         const cashfree = window.Cashfree({
-          mode: 'production' // use 'sandbox' for testing
+          mode: 'production'
         });
         
         cashfree.checkout({
           paymentSessionId: data.paymentSessionId,
-          redirectTarget: '_self', // redirect in same tab
+          redirectTarget: '_self',
         });
       } else {
         setStatus(data.message || 'Failed to initiate payment. Please try again.');
@@ -340,10 +366,11 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <>
-      {/* Load Cashfree JS SDK */}
+      {/* Load Cashfree JS SDK - using afterInteractive for client components */}
       <Script 
         src="https://sdk.cashfree.com/js/v3/cashfree.js"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
+        onLoad={() => console.log('Cashfree SDK loaded')}
       />
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
         <CheckoutContent />
