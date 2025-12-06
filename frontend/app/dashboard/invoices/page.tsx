@@ -16,10 +16,20 @@ interface Invoice {
   billingCycle: string;
   amount: number;
   currency: string;
+  invoiceNumber: number | null;
   startDate: string;
   endDate: string;
   createdAt: string;
 }
+
+// Format invoice number to clean format like INV-0001
+const formatInvoiceNumber = (invoiceNumber: number | null, tenantId: string) => {
+  if (invoiceNumber) {
+    return `INV-${String(invoiceNumber).padStart(4, '0')}`;
+  }
+  // Fallback for legacy data without invoice number
+  return `INV-${tenantId.slice(-6).toUpperCase()}`;
+};
 
 const PLAN_NAMES: Record<string, string> = {
   free: 'Free',
@@ -336,8 +346,8 @@ export default function InvoicesPage() {
               
               <div className="space-y-4">
                 <div className="flex justify-between py-2 border-b dark:border-gray-700">
-                  <span className="text-gray-500">Invoice ID</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{selectedInvoice.id}</span>
+                  <span className="text-gray-500">Invoice #</span>
+                  <span className="font-medium text-blue-600">{formatInvoiceNumber(selectedInvoice.invoiceNumber, selectedInvoice.tenantId)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b dark:border-gray-700">
                   <span className="text-gray-500">Institute</span>

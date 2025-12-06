@@ -29,6 +29,9 @@ export const initiateSubscriptionPayment = async (req, res) => {
     // Generate a unique tenantId if not provided
     const finalTenantId = tenantId || `tenant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // Determine billing cycle
+    const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+
     // Check if tenant exists, if not create one
     let tenant = await Tenant.findOne({ 
       $or: [
@@ -44,20 +47,28 @@ export const initiateSubscriptionPayment = async (req, res) => {
         name: name || instituteName || email.split('@')[0],
         instituteName: instituteName || null,
         email: email,
-        plan: 'free', // Will be updated after payment
+        plan: planId, // Save the selected plan UPFRONT
         active: true,
         contact: {
           phone: phone,
           country: 'India'
         },
         subscription: {
-          status: 'inactive',
+          status: 'pending', // Pending until payment confirmed
           paymentId: null,
           startDate: null,
-          endDate: null
+          endDate: null,
+          billingCycle: cycle // Save billing cycle upfront
         }
       });
-      console.log('Created new tenant:', tenant.tenantId);
+      console.log('Created new tenant:', tenant.tenantId, 'Plan:', planId);
+    } else {
+      // Update existing tenant with selected plan (in case they're upgrading/changing)
+      tenant.plan = planId;
+      tenant.subscription.billingCycle = cycle;
+      tenant.subscription.status = 'pending';
+      await tenant.save();
+      console.log('Updated tenant plan:', tenant.tenantId, 'Plan:', planId);
     }
 
     // Use the tenant's actual tenantId
@@ -165,8 +176,10 @@ export const verifySubscriptionPayment = async (req, res) => {
       if (tenant) {
         // Safely get plan_id from order_meta (Cashfree may not return it)
         const orderMeta = order.order_meta || {};
-        const planId = orderMeta.plan_id || 'professional'; // Default to professional if not found
-        const billingCycle = orderMeta.billing_cycle || 'monthly';
+        // If plan_id not in order_meta, check if tenant already has a plan set during initiation
+        const planId = orderMeta.plan_id || tenant.plan || 'free';
+        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        const orderAmount = order.order_amount || 0;
         
         console.log('Order meta:', JSON.stringify(orderMeta));
         console.log('Setting plan to:', planId);
@@ -181,15 +194,24 @@ export const verifySubscriptionPayment = async (req, res) => {
         const startDate = new Date();
         const endDate = new Date(Date.now() + duration);
         
+        // Generate invoice number (find max and increment)
+        const maxInvoice = await Tenant.findOne({ 'subscription.invoiceNumber': { $exists: true, $ne: null } })
+          .sort({ 'subscription.invoiceNumber': -1 })
+          .select('subscription.invoiceNumber');
+        const nextInvoiceNumber = (maxInvoice?.subscription?.invoiceNumber || 0) + 1;
+        
         tenant.subscription = {
           status: 'active',
           paymentId: order.order_id,
           startDate: startDate,
           endDate: endDate,
-          billingCycle: billingCycle
+          billingCycle: billingCycle,
+          amount: orderAmount,
+          currency: 'INR',
+          invoiceNumber: nextInvoiceNumber
         };
         await tenant.save();
-        console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan);
+        console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan, 'Invoice:', nextInvoiceNumber);
 
         // Check if user account exists, if not create one
         let user = await User.findOne({ email: tenant.email });
@@ -279,9 +301,8 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
       const orderId = orderData.order_id;
       const tenantId = orderData.customer_details.customer_id;
       const customerEmail = orderData.customer_details.customer_email;
-      const planId = orderData.order_meta.plan_id;
-      const billingCycle = orderData.order_meta.billing_cycle;
-      const orderAmount = orderData.order_amount;
+      const orderMeta = orderData.order_meta || {};
+      const orderAmount = orderData.order_amount || 0;
       
       // Find tenant by tenantId or email
       let tenant = await Tenant.findOne({ 
@@ -292,6 +313,10 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
       });
       
       if (tenant) {
+        // Get plan from order_meta, or use tenant's existing plan
+        const planId = orderMeta.plan_id || tenant.plan || 'free';
+        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        
         const plan = PLANS.find(p => p.id === planId) || { name: planId };
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
         if (billingCycle === 'annual') {
@@ -300,16 +325,25 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
         const startDate = new Date();
         const endDate = new Date(Date.now() + duration);
         
+        // Generate invoice number (find max and increment)
+        const maxInvoice = await Tenant.findOne({ 'subscription.invoiceNumber': { $exists: true, $ne: null } })
+          .sort({ 'subscription.invoiceNumber': -1 })
+          .select('subscription.invoiceNumber');
+        const nextInvoiceNumber = (maxInvoice?.subscription?.invoiceNumber || 0) + 1;
+        
         tenant.plan = planId;
         tenant.subscription = {
           status: 'active',
           paymentId: orderId,
           startDate: startDate,
           endDate: endDate,
-          billingCycle
+          billingCycle,
+          amount: orderAmount,
+          currency: 'INR',
+          invoiceNumber: nextInvoiceNumber
         };
         await tenant.save();
-        console.log('Webhook: Updated tenant subscription:', tenant.tenantId);
+        console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber);
 
         // Check if user account exists, if not create one
         let user = await User.findOne({ email: tenant.email });
@@ -448,6 +482,7 @@ export const getAllSubscriptionPayments = async (req, res) => {
       billingCycle: tenant.subscription?.billingCycle || 'monthly',
       amount: tenant.subscription?.amount || 0,
       currency: tenant.subscription?.currency || 'INR',
+      invoiceNumber: tenant.subscription?.invoiceNumber || null,
       startDate: tenant.subscription?.startDate || tenant.createdAt,
       endDate: tenant.subscription?.endDate || null,
       createdAt: tenant.subscription?.startDate || tenant.createdAt
@@ -714,6 +749,11 @@ export const downloadInvoice = async (req, res) => {
     const amount = tenant.subscription?.amount || PLAN_PRICES[plan]?.[billingCycle] || 0;
     const startDate = tenant.subscription?.startDate || tenant.createdAt;
     const endDate = tenant.subscription?.endDate;
+    
+    // Format invoice number - clean format like INV-0001
+    const invoiceNumber = tenant.subscription?.invoiceNumber 
+      ? `INV-${String(tenant.subscription.invoiceNumber).padStart(4, '0')}`
+      : `INV-${tenantId.slice(-6).toUpperCase()}`;
 
     // Generate invoice HTML (will be converted to PDF in future with proper library)
     const invoiceHtml = `
@@ -753,7 +793,7 @@ export const downloadInvoice = async (req, res) => {
           <div class="logo">Enromatics</div>
           <div class="invoice-title">
             <h1>INVOICE</h1>
-            <p>#INV-${tenantId.slice(-8).toUpperCase()}</p>
+            <p>#${invoiceNumber}</p>
           </div>
         </div>
 
@@ -832,6 +872,11 @@ export const sendInvoiceEmail = async (req, res) => {
     const amount = tenant.subscription?.amount || PLAN_PRICES[plan]?.[billingCycle] || 0;
     const startDate = tenant.subscription?.startDate || tenant.createdAt;
     const endDate = tenant.subscription?.endDate;
+    
+    // Format invoice number - clean format like INV-0001
+    const invoiceNumber = tenant.subscription?.invoiceNumber 
+      ? `INV-${String(tenant.subscription.invoiceNumber).padStart(4, '0')}`
+      : `INV-${tenantId.slice(-6).toUpperCase()}`;
 
     const emailHtml = `
     <!DOCTYPE html>
@@ -861,7 +906,7 @@ export const sendInvoiceEmail = async (req, res) => {
           <div class="invoice-box">
             <div class="invoice-row">
               <span>Invoice #:</span>
-              <span>INV-${tenantId.slice(-8).toUpperCase()}</span>
+              <span>${invoiceNumber}</span>
             </div>
             <div class="invoice-row">
               <span>Plan:</span>
@@ -895,7 +940,7 @@ export const sendInvoiceEmail = async (req, res) => {
 
     await sendEmail({
       to: tenant.email,
-      subject: `Your Enromatics Invoice - INV-${tenantId.slice(-8).toUpperCase()}`,
+      subject: `Your Enromatics Invoice - ${invoiceNumber}`,
       html: emailHtml,
       tenantId: tenant.tenantId,
       type: 'invoice'

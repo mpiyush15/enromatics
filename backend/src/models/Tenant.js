@@ -80,6 +80,11 @@ const tenantSchema = new mongoose.Schema(
         type: String,
         default: "INR",
       },
+      // Invoice number (auto-generated sequential)
+      invoiceNumber: {
+        type: Number,
+        default: null,
+      },
     },
 
     // Whether tenant account is active or suspended
