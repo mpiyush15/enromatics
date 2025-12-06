@@ -10,6 +10,7 @@ function SuccessContent() {
   const orderId = searchParams?.get('order_id') || '';
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -25,6 +26,102 @@ function SuccessContent() {
       setLoading(false);
     }
   }, [orderId]);
+
+  const downloadInvoice = () => {
+    if (!orderDetails) return;
+    setDownloading(true);
+    
+    // Generate invoice HTML
+    const invoiceHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Invoice - ${orderId}</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; }
+          .logo { font-size: 24px; font-weight: bold; color: #3b82f6; }
+          .invoice-title { font-size: 32px; color: #1f2937; }
+          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+          .section { background: #f9fafb; padding: 20px; border-radius: 8px; }
+          .section h3 { margin: 0 0 15px 0; color: #374151; font-size: 14px; text-transform: uppercase; }
+          .section p { margin: 5px 0; color: #6b7280; }
+          .table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+          .table th { background: #3b82f6; color: white; padding: 12px; text-align: left; }
+          .table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+          .total-row { font-weight: bold; background: #f0f9ff; }
+          .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+          .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+          .status-paid { background: #dcfce7; color: #166534; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">Enromatics</div>
+          <div style="text-align: right;">
+            <div class="invoice-title">INVOICE</div>
+            <p style="color: #6b7280; margin: 5px 0;">Date: ${new Date().toLocaleDateString('en-IN')}</p>
+          </div>
+        </div>
+        
+        <div class="details">
+          <div class="section">
+            <h3>Invoice Details</h3>
+            <p><strong>Invoice ID:</strong> ${orderId}</p>
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
+            <p><strong>Status:</strong> <span class="status status-paid">PAID</span></p>
+          </div>
+          <div class="section">
+            <h3>Customer Details</h3>
+            <p><strong>Customer ID:</strong> ${orderDetails?.customer_details?.customer_id || 'N/A'}</p>
+            <p><strong>Email:</strong> ${orderDetails?.customer_details?.customer_email || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${orderDetails?.customer_details?.customer_phone || 'N/A'}</p>
+          </div>
+        </div>
+        
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Billing Cycle</th>
+              <th style="text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${(orderDetails?.order_meta?.plan_id || 'Subscription').charAt(0).toUpperCase() + (orderDetails?.order_meta?.plan_id || 'subscription').slice(1)} Plan</td>
+              <td>${(orderDetails?.order_meta?.billing_cycle || 'Monthly').charAt(0).toUpperCase() + (orderDetails?.order_meta?.billing_cycle || 'monthly').slice(1)}</td>
+              <td style="text-align: right;">₹${orderDetails?.order_amount?.toLocaleString('en-IN') || '0'}</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="2">Total</td>
+              <td style="text-align: right;">₹${orderDetails?.order_amount?.toLocaleString('en-IN') || '0'}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p>Enromatics - Educational Institute Management Platform</p>
+          <p>support@enromatics.com | www.enromatics.com</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    // Create blob and download
+    const blob = new Blob([invoiceHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${orderId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setDownloading(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
@@ -92,9 +189,13 @@ function SuccessContent() {
               <ArrowRight className="w-5 h-5" />
             </Link>
 
-            <button className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2">
+            <button 
+              onClick={downloadInvoice}
+              disabled={downloading || !orderDetails}
+              className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
               <Download className="w-5 h-5" />
-              Download Invoice
+              {downloading ? 'Downloading...' : 'Download Invoice'}
             </button>
           </div>
 
