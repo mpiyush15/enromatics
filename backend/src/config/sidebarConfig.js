@@ -5,7 +5,14 @@ export const sidebarLinks = [
   {
     href: "/dashboard/home",
     label: "🏠 Dashboard",
-    roles: ["SuperAdmin", "Admin", "employee", "student", "adsManager", "tenantAdmin", "teacher", "staff"],
+    roles: ["SuperAdmin", "Admin", "employee", "adsManager", "student", "adsManager", "tenantAdmin", "teacher", "staff"],
+  },
+
+  // === PRIORITY 1.5: Analytics Overview (SuperAdmin) ===
+  {
+    href: "/dashboard/overview",
+    label: "📊 Analytics",
+    roles: ["SuperAdmin"],
   },
   
   // === PRIORITY 2: Institute Overview (Tenant Admins) ===
