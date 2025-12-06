@@ -6,6 +6,7 @@ import {
   initiateSubscriptionPayment,
   verifySubscriptionPayment,
   cashfreeSubscriptionWebhook
+  , devMarkOrderPaid
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -21,6 +22,9 @@ router.post("/initiate-subscription", initiateSubscriptionPayment);
 router.get("/verify-subscription", verifySubscriptionPayment);
 // Cashfree webhook for payment status updates
 router.post("/webhook/cashfree", cashfreeSubscriptionWebhook);
+
+// Dev-only: mark an order as PAID for testing (requires DEV_TEST_VERIFY env var)
+router.post('/dev/mark-paid', devMarkOrderPaid);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

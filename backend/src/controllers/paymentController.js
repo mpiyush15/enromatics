@@ -197,6 +197,46 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
   }
 };
 
+/**
+ * Dev helper: Mark an order as PAID (only when DEV_TEST_VERIFY env var is set)
+ * This lets us simulate a successful PG payment during QA without calling Cashfree.
+ */
+export const devMarkOrderPaid = async (req, res) => {
+  try {
+    if (!process.env.DEV_TEST_VERIFY) return res.status(403).json({ message: 'Dev verify disabled' });
+    const { orderId, tenantId, planId, billingCycle = 'monthly' } = req.body;
+    if (!orderId || !tenantId || !planId) return res.status(400).json({ message: 'orderId, tenantId and planId required' });
+
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
+
+    let duration = 30 * 24 * 60 * 60 * 1000; // monthly
+    if (billingCycle === 'annual') duration = 365 * 24 * 60 * 60 * 1000;
+
+    tenant.plan = planId;
+    tenant.subscription = {
+      status: 'active',
+      paymentId: orderId,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + duration),
+      billingCycle
+    };
+    await tenant.save();
+
+    // send confirmation email (best-effort)
+    sendEmail({
+      to: tenant.email,
+      subject: `DEV: Payment recorded for ${tenant.plan}`,
+      html: `<p>DEV: Marked order ${orderId} as PAID for tenant ${tenant.name}.</p>`
+    }).catch(() => {});
+
+    return res.status(200).json({ success: true, tenantId: tenant.tenantId, subscription: tenant.subscription });
+  } catch (err) {
+    console.error('Dev mark paid error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const addPayment = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
