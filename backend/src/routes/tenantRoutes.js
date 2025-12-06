@@ -13,6 +13,7 @@ import {
   deleteTenant,
   getSuperAdminTenantDetail,
   createNewTenant,
+  sendTenantCredentials,
 } from "../controllers/tenantController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -66,6 +67,18 @@ router.put(
   protect,
   authorizeRoles("SuperAdmin"),
   updateTenantProfile
+);
+
+/**
+ * @route   POST /api/tenants/admin/:tenantId/send-credentials
+ * @desc    Send login credentials email to tenant (create user if needed)
+ * @access  Private – superadmin only
+ */
+router.post(
+  "/admin/:tenantId/send-credentials",
+  protect,
+  authorizeRoles("SuperAdmin"),
+  sendTenantCredentials
 );
 
 /**

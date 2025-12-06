@@ -423,12 +423,12 @@ export const devMarkOrderPaid = async (req, res) => {
  */
 export const getAllSubscriptionPayments = async (req, res) => {
   try {
-    // Get all tenants with any subscription data or paid plans
+    // Get all tenants with any subscription data or paid plans (non-free)
     const tenants = await Tenant.find({
       $or: [
         { 'subscription.paymentId': { $exists: true, $ne: null } },
         { 'subscription.status': 'active' },
-        { plan: { $in: ['pro', 'enterprise', 'trial', 'starter', 'professional', 'test'] } }
+        { plan: { $nin: ['free', null, ''] } } // Any plan that's not free
       ]
     }).sort({ createdAt: -1 });
 
@@ -458,11 +458,11 @@ export const getAllSubscriptionPayments = async (req, res) => {
  */
 export const getAllSubscribers = async (req, res) => {
   try {
-    // Get all tenants with active status or paid plans
+    // Get all tenants with active status or paid plans (non-free)
     const subscribers = await Tenant.find({
       $or: [
         { 'subscription.status': 'active' },
-        { plan: { $in: ['pro', 'enterprise', 'trial', 'starter', 'professional', 'test'] } },
+        { plan: { $nin: ['free', null, ''] } }, // Any plan that's not free
         { active: true }
       ]
     }).sort({ createdAt: -1 });

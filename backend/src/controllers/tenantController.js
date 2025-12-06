@@ -4,13 +4,20 @@
  */
 
 import Tenant from "../models/Tenant.js";
+import User from "../models/User.js";
 import crypto from "crypto";
 import {
   sendTenantRegistrationEmail,
   sendWelcomeEmail,
   sendEmail,
-  sendSubscriptionConfirmationEmail
+  sendSubscriptionConfirmationEmail,
+  sendCredentialsEmail
 } from "../services/emailService.js";
+
+// Generate random 6-digit password
+const generatePassword = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 /* ================================================================
    🔹 1. Upgrade Tenant Plan
@@ -376,6 +383,84 @@ export const createNewTenant = async (req, res) => {
     });
   } catch (err) {
     console.error("Create Tenant Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 9. Send Login Credentials to Tenant (SuperAdmin action)
+================================================================ */
+export const sendTenantCredentials = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { resetPassword } = req.body; // Optional: whether to reset password
+
+    // Find tenant
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Find or create user for this tenant
+    let user = await User.findOne({ email: tenant.email });
+    let generatedPassword = null;
+    let isNewUser = false;
+
+    if (!user) {
+      // Create new user
+      isNewUser = true;
+      generatedPassword = generatePassword();
+      
+      user = await User.create({
+        name: tenant.name,
+        email: tenant.email,
+        password: generatedPassword,
+        phone: tenant.contact?.phone || null,
+        tenantId: tenant.tenantId,
+        role: 'tenantAdmin',
+        status: 'active',
+        plan: tenant.plan || 'free',
+        subscriptionStatus: tenant.subscription?.status || 'inactive',
+        subscriptionEndDate: tenant.subscription?.endDate || null,
+        requirePasswordReset: true,
+      });
+      console.log('Created new user for tenant:', tenant.email);
+    } else if (resetPassword) {
+      // Reset password for existing user
+      generatedPassword = generatePassword();
+      user.password = generatedPassword;
+      user.requirePasswordReset = true;
+      await user.save();
+      console.log('Reset password for existing user:', tenant.email);
+    } else {
+      // User exists and no password reset requested
+      return res.status(400).json({ 
+        message: "User already exists. Check 'Reset Password' to send new credentials.",
+        userExists: true
+      });
+    }
+
+    // Send credentials email
+    await sendCredentialsEmail({
+      to: tenant.email,
+      name: tenant.name,
+      instituteName: tenant.instituteName || tenant.name,
+      email: tenant.email,
+      password: generatedPassword,
+      loginUrl: `${process.env.FRONTEND_URL}/login`,
+      tenantId: tenant.tenantId,
+      userId: user._id
+    });
+
+    res.status(200).json({
+      success: true,
+      message: isNewUser 
+        ? "New user created and credentials sent successfully" 
+        : "Password reset and credentials sent successfully",
+      email: tenant.email
+    });
+  } catch (err) {
+    console.error("Send Credentials Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

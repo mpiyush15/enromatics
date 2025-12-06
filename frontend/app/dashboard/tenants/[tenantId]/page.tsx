@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Power, Loader } from "lucide-react";
+import { ArrowLeft, Power, Loader, Mail, KeyRound } from "lucide-react";
+
+// Plan name mapping
+const PLAN_NAMES: Record<string, string> = {
+  free: "Free",
+  trial: "Trial",
+  test: "Test Plan",
+  starter: "Starter",
+  professional: "Professional",
+  enterprise: "Enterprise",
+  pro: "Pro",
+};
 
 type Tenant = {
   _id: string;
@@ -44,6 +55,7 @@ export default function TenantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [suspending, setSuspending] = useState(false);
+  const [sendingCredentials, setSendingCredentials] = useState(false);
 
   useEffect(() => {
     const fetchTenantDetail = async () => {
@@ -129,6 +141,41 @@ export default function TenantDetailPage() {
     }
   };
 
+  // Send login credentials to tenant
+  const sendCredentials = async () => {
+    if (!tenant || !tenantId) return;
+    
+    const confirmed = confirm(
+      `Send login credentials to ${tenant.email}?\n\nThis will generate a new password and email it to the tenant owner.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setSendingCredentials(true);
+      
+      const res = await fetch(`/api/tenants/admin/${tenantId}/send-credentials`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to send credentials");
+      }
+
+      alert(`✅ Login credentials sent successfully to ${tenant.email}`);
+    } catch (err: any) {
+      console.error("Error sending credentials:", err);
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setSendingCredentials(false);
+    }
+  };
+
   // Show loading while waiting for params or data
   if (!tenantId || loading) {
     return (
@@ -201,23 +248,41 @@ export default function TenantDetailPage() {
               </div>
             </div>
 
-            {/* Suspend/Activate Button */}
-            <button
-              onClick={toggleSuspend}
-              disabled={suspending}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                tenant.active
-                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
-                  : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <Power size={18} />
-              {suspending
-                ? "Updating..."
-                : tenant.active
-                ? "Suspend Account"
-                : "Activate Account"}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Send Credentials Button */}
+              <button
+                onClick={sendCredentials}
+                disabled={sendingCredentials}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send login credentials to tenant"
+              >
+                {sendingCredentials ? (
+                  <Loader className="animate-spin" size={18} />
+                ) : (
+                  <KeyRound size={18} />
+                )}
+                {sendingCredentials ? "Sending..." : "Send Credentials"}
+              </button>
+
+              {/* Suspend/Activate Button */}
+              <button
+                onClick={toggleSuspend}
+                disabled={suspending}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  tenant.active
+                    ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                    : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Power size={18} />
+                {suspending
+                  ? "Updating..."
+                  : tenant.active
+                  ? "Suspend Account"
+                  : "Activate Account"}
+              </button>
+            </div>
           </div>
 
           {/* Status Badge */}
@@ -348,8 +413,8 @@ export default function TenantDetailPage() {
                     Current Plan
                   </label>
                   <p className="mt-2">
-                    <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium capitalize">
-                      {tenant.plan || "free"}
+                    <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium">
+                      {PLAN_NAMES[tenant.plan?.toLowerCase() || "free"] || tenant.plan || "Free"}
                     </span>
                   </p>
                 </div>
