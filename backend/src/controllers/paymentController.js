@@ -17,6 +17,18 @@ const generatePassword = () => {
 };
 const CASHFREE_MODE = process.env.CASHFREE_MODE || 'production';
 
+// Helper: Detect plan from payment amount (fallback when order_meta is missing)
+const detectPlanFromAmount = (amount) => {
+  // Check exact matches first (monthly prices)
+  for (const plan of PLANS) {
+    if (plan.priceMonthly === amount || plan.priceAnnual === amount) {
+      return plan.id;
+    }
+  }
+  // If no exact match, return null
+  return null;
+};
+
 /**
  * Initiate payment for a subscription plan
  */
@@ -174,13 +186,31 @@ export const verifySubscriptionPayment = async (req, res) => {
       if (tenant) {
         // Safely get plan_id from order_meta (Cashfree may not return it)
         const orderMeta = order.order_meta || {};
-        // If plan_id not in order_meta, check if tenant already has a plan set during initiation
-        const planId = orderMeta.plan_id || tenant.plan || 'free';
-        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
         const orderAmount = order.order_amount || 0;
         
+        // Priority for plan detection:
+        // 1. order_meta.plan_id (from Cashfree - often missing)
+        // 2. Detect from payment amount (most reliable!)
+        // 3. Tenant's existing plan (set during order initiation)
+        // 4. Default to 'free'
+        let planId = orderMeta.plan_id;
+        if (!planId) {
+          planId = detectPlanFromAmount(orderAmount);
+        }
+        if (!planId) {
+          planId = tenant.plan;
+        }
+        if (!planId || planId === 'professional') {
+          // If still professional (old default), try to detect from amount
+          const detected = detectPlanFromAmount(orderAmount);
+          if (detected) planId = detected;
+        }
+        planId = planId || 'free';
+        
+        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        
         console.log('Order meta:', JSON.stringify(orderMeta));
-        console.log('Setting plan to:', planId);
+        console.log('Order amount:', orderAmount, 'Detected plan:', planId);
         
         const plan = PLANS.find(p => p.id === planId) || { id: planId, name: planId };
         tenant.plan = planId;
@@ -311,9 +341,28 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
       });
       
       if (tenant) {
-        // Get plan from order_meta, or use tenant's existing plan
-        const planId = orderMeta.plan_id || tenant.plan || 'free';
+        // Priority for plan detection:
+        // 1. order_meta.plan_id (from Cashfree - often missing)
+        // 2. Detect from payment amount (most reliable!)
+        // 3. Tenant's existing plan (set during order initiation)
+        // 4. Default to 'free'
+        let planId = orderMeta.plan_id;
+        if (!planId) {
+          planId = detectPlanFromAmount(orderAmount);
+        }
+        if (!planId) {
+          planId = tenant.plan;
+        }
+        if (!planId || planId === 'professional') {
+          // If still professional (old default), try to detect from amount
+          const detected = detectPlanFromAmount(orderAmount);
+          if (detected) planId = detected;
+        }
+        planId = planId || 'free';
+        
         const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        
+        console.log('Webhook: Order amount:', orderAmount, 'Detected plan:', planId);
         
         const plan = PLANS.find(p => p.id === planId) || { name: planId };
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
