@@ -574,6 +574,90 @@ export const sendPaymentConfirmationEmail = async ({
 };
 
 /**
+ * Send Login Credentials Email (after subscription payment)
+ */
+export const sendCredentialsEmail = async ({ 
+    to, 
+    name,
+    instituteName,
+    email,
+    password,
+    loginUrl,
+    tenantId, 
+    userId = null 
+}) => {
+    const subject = `Your Enromatics Login Credentials`;
+    
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+                .credentials-box { background: #f8fafc; border: 2px dashed #3b82f6; border-radius: 8px; padding: 25px; margin: 20px 0; }
+                .credential-item { background: white; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #3b82f6; }
+                .warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 5px; padding: 15px; margin: 20px 0; }
+                .cta-button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                .footer { background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 12px; border-radius: 0 0 10px 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0;">🔐 Your Login Credentials</h1>
+                </div>
+                <div class="content">
+                    <p>Hello ${name},</p>
+                    <p>Welcome to <strong>Enromatics</strong>! Your account for <strong>${instituteName}</strong> has been created successfully.</p>
+                    
+                    <div class="credentials-box">
+                        <h3 style="margin-top: 0; color: #1d4ed8;">📧 Your Login Details:</h3>
+                        <div class="credential-item">
+                            <strong>Email (Username):</strong><br/>
+                            <code style="font-size: 16px; color: #1d4ed8;">${email}</code>
+                        </div>
+                        <div class="credential-item">
+                            <strong>Temporary Password:</strong><br/>
+                            <code style="font-size: 20px; letter-spacing: 2px; color: #dc2626; font-weight: bold;">${password}</code>
+                        </div>
+                    </div>
+
+                    <div class="warning">
+                        ⚠️ <strong>Important:</strong> For security reasons, you will be required to change your password on your first login. Please choose a strong, unique password.
+                    </div>
+
+                    <center>
+                        <a href="${loginUrl}" class="cta-button">Login to Your Dashboard →</a>
+                    </center>
+
+                    <h3>🚀 What's Next?</h3>
+                    <ol>
+                        <li>Click the login button above</li>
+                        <li>Enter your email and temporary password</li>
+                        <li>Set your new password when prompted</li>
+                        <li>Start managing your institute!</li>
+                    </ol>
+
+                    <p style="background: #eff6ff; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
+                        💡 <strong>Tip:</strong> Save your login URL: <a href="${loginUrl}">${loginUrl}</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Questions? Contact us at support@enromatics.com</p>
+                    <p>&copy; ${new Date().getFullYear()} Enromatics. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({ to, subject, html, tenantId, userId, type: 'credentials' });
+};
+
+/**
  * Send Subscription/Plan Confirmation Email
  */
 export const sendSubscriptionConfirmationEmail = async ({ 
@@ -647,5 +731,6 @@ export default {
     sendTenantRegistrationEmail,
     sendStudentRegistrationEmail,
     sendPaymentConfirmationEmail,
+    sendCredentialsEmail,
     sendSubscriptionConfirmationEmail
 };

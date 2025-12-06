@@ -1,13 +1,20 @@
 import Payment from "../models/Payment.js";
 import Student from "../models/Student.js";
+import User from "../models/User.js";
 import { PLANS } from '../config/plans.js';
 import axios from 'axios';
 import Tenant from '../models/Tenant.js';
-import { sendEmail } from '../services/emailService.js';
+import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
+
 // Cashfree config from .env
 const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
 const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
 const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+
+// Generate random 6-digit password
+const generatePassword = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 const CASHFREE_MODE = process.env.CASHFREE_MODE || 'production';
 
 /**
@@ -156,27 +163,83 @@ export const verifySubscriptionPayment = async (req, res) => {
       });
       
       if (tenant) {
+        const plan = PLANS.find(p => p.id === order.order_meta.plan_id) || { name: order.order_meta.plan_id };
         tenant.plan = order.order_meta.plan_id;
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
         if (order.order_meta.billing_cycle === 'annual') {
           duration = 365 * 24 * 60 * 60 * 1000;
         }
+        const startDate = new Date();
+        const endDate = new Date(Date.now() + duration);
+        
         tenant.subscription = {
           status: 'active',
           paymentId: order.order_id,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + duration),
+          startDate: startDate,
+          endDate: endDate,
           billingCycle: order.order_meta.billing_cycle
         };
         await tenant.save();
         console.log('Updated tenant subscription:', tenant.tenantId);
 
-        // Send email for successful payment
-        await sendEmail({
+        // Check if user account exists, if not create one
+        let user = await User.findOne({ email: tenant.email });
+        let generatedPassword = null;
+        
+        if (!user) {
+          // Generate random 6-digit password
+          generatedPassword = generatePassword();
+          
+          user = await User.create({
+            name: tenant.name,
+            email: tenant.email,
+            password: generatedPassword, // Will be hashed by pre-save hook
+            phone: tenant.contact?.phone || null,
+            tenantId: tenant.tenantId,
+            role: 'tenantAdmin',
+            status: 'active',
+            plan: tenant.plan,
+            subscriptionStatus: 'active',
+            subscriptionEndDate: endDate,
+            requirePasswordReset: true, // Force password reset on first login
+          });
+          console.log('Created new user account:', user.email);
+          
+          // Send credentials email
+          await sendCredentialsEmail({
+            to: tenant.email,
+            name: tenant.name,
+            instituteName: tenant.instituteName || tenant.name,
+            email: tenant.email,
+            password: generatedPassword,
+            loginUrl: `${process.env.FRONTEND_URL}/login`,
+            tenantId: tenant.tenantId,
+            userId: user._id
+          });
+          console.log('Sent credentials email to:', tenant.email);
+        } else {
+          // User exists, just update subscription status
+          user.plan = tenant.plan;
+          user.subscriptionStatus = 'active';
+          user.subscriptionEndDate = endDate;
+          await user.save();
+        }
+
+        // Send subscription confirmation email with receipt
+        await sendSubscriptionConfirmationEmail({
           to: tenant.email,
-          subject: `Payment Successful for ${tenant.plan} (${order.order_meta.billing_cycle})`,
-          html: `<p>Your payment for the ${tenant.plan} (${order.order_meta.billing_cycle}) plan was successful. Subscription is now active.</p>`
+          subscriptionDetails: {
+            planName: plan.name,
+            amount: order.order_amount,
+            billingCycle: order.order_meta.billing_cycle,
+            startDate: startDate,
+            endDate: endDate,
+            instituteName: tenant.instituteName || tenant.name
+          },
+          tenantId: tenant.tenantId,
+          userId: user?._id
         });
+        console.log('Sent subscription confirmation email to:', tenant.email);
       }
     } else {
       // Send email for failed payment
@@ -203,31 +266,97 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
   try {
     const event = req.body.event;
     if (event === 'order.paid') {
-      const orderId = req.body.data.order.order_id;
-      const tenantId = req.body.data.order.customer_details.customer_id;
-      const planId = req.body.data.order.order_meta.plan_id;
-      const billingCycle = req.body.data.order.order_meta.billing_cycle;
-      const tenant = await Tenant.findOne({ tenantId });
+      const orderData = req.body.data.order;
+      const orderId = orderData.order_id;
+      const tenantId = orderData.customer_details.customer_id;
+      const customerEmail = orderData.customer_details.customer_email;
+      const planId = orderData.order_meta.plan_id;
+      const billingCycle = orderData.order_meta.billing_cycle;
+      const orderAmount = orderData.order_amount;
+      
+      // Find tenant by tenantId or email
+      let tenant = await Tenant.findOne({ 
+        $or: [
+          { tenantId },
+          { email: customerEmail }
+        ]
+      });
+      
       if (tenant) {
+        const plan = PLANS.find(p => p.id === planId) || { name: planId };
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
         if (billingCycle === 'annual') {
           duration = 365 * 24 * 60 * 60 * 1000;
         }
+        const startDate = new Date();
+        const endDate = new Date(Date.now() + duration);
+        
         tenant.plan = planId;
         tenant.subscription = {
           status: 'active',
           paymentId: orderId,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + duration),
+          startDate: startDate,
+          endDate: endDate,
           billingCycle
         };
         await tenant.save();
+        console.log('Webhook: Updated tenant subscription:', tenant.tenantId);
 
-        // Send email for successful payment
-        await sendEmail({
+        // Check if user account exists, if not create one
+        let user = await User.findOne({ email: tenant.email });
+        let generatedPassword = null;
+        
+        if (!user) {
+          // Generate random 6-digit password
+          generatedPassword = generatePassword();
+          
+          user = await User.create({
+            name: tenant.name,
+            email: tenant.email,
+            password: generatedPassword,
+            phone: tenant.contact?.phone || null,
+            tenantId: tenant.tenantId,
+            role: 'tenantAdmin',
+            status: 'active',
+            plan: tenant.plan,
+            subscriptionStatus: 'active',
+            subscriptionEndDate: endDate,
+            requirePasswordReset: true,
+          });
+          console.log('Webhook: Created new user account:', user.email);
+          
+          // Send credentials email
+          await sendCredentialsEmail({
+            to: tenant.email,
+            name: tenant.name,
+            instituteName: tenant.instituteName || tenant.name,
+            email: tenant.email,
+            password: generatedPassword,
+            loginUrl: `${process.env.FRONTEND_URL}/login`,
+            tenantId: tenant.tenantId,
+            userId: user._id
+          });
+        } else {
+          // Update existing user
+          user.plan = tenant.plan;
+          user.subscriptionStatus = 'active';
+          user.subscriptionEndDate = endDate;
+          await user.save();
+        }
+
+        // Send subscription confirmation email
+        await sendSubscriptionConfirmationEmail({
           to: tenant.email,
-          subject: `Payment Successful for ${tenant.plan} (${billingCycle})`,
-          html: `<p>Your payment for the ${tenant.plan} (${billingCycle}) plan was successful. Subscription is now active.</p>`
+          subscriptionDetails: {
+            planName: plan.name,
+            amount: orderAmount,
+            billingCycle: billingCycle,
+            startDate: startDate,
+            endDate: endDate,
+            instituteName: tenant.instituteName || tenant.name
+          },
+          tenantId: tenant.tenantId,
+          userId: user?._id
         });
       }
     } else if (event === 'order.failed') {

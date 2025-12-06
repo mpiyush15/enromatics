@@ -78,6 +78,12 @@ const userSchema = new mongoose.Schema(
       default: Date.now,
     },
 
+    // Force password reset on first login (for auto-generated passwords)
+    requirePasswordReset: {
+      type: Boolean,
+      default: false,
+    },
+
     // Facebook Business Integration
     facebookBusiness: {
       connected: { type: Boolean, default: false },
