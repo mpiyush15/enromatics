@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
 export async function POST(
   request: NextRequest,
@@ -16,13 +16,14 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => ({}));
+    // Get request body
+    const body = await request.json().catch(() => ({ resetPassword: true }));
 
-    const response = await fetch(`${BACKEND_URL}/api/tenants/admin/${tenantId}/send-credentials`, {
+    const response = await fetch(`${BACKEND_URL}/api/tenants/${tenantId}/send-credentials`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
+        "Cookie": `token=${token}`,
       },
       body: JSON.stringify(body),
     });

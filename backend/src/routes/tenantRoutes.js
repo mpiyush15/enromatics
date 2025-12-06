@@ -70,12 +70,12 @@ router.put(
 );
 
 /**
- * @route   POST /api/tenants/admin/:tenantId/send-credentials
+ * @route   POST /api/tenants/:tenantId/send-credentials
  * @desc    Send login credentials email to tenant (create user if needed)
  * @access  Private – superadmin only
  */
 router.post(
-  "/admin/:tenantId/send-credentials",
+  "/:tenantId/send-credentials",
   protect,
   authorizeRoles("SuperAdmin"),
   sendTenantCredentials

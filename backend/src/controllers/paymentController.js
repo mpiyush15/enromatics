@@ -163,10 +163,19 @@ export const verifySubscriptionPayment = async (req, res) => {
       });
       
       if (tenant) {
-        const plan = PLANS.find(p => p.id === order.order_meta.plan_id) || { name: order.order_meta.plan_id };
-        tenant.plan = order.order_meta.plan_id;
+        // Safely get plan_id from order_meta (Cashfree may not return it)
+        const orderMeta = order.order_meta || {};
+        const planId = orderMeta.plan_id || 'professional'; // Default to professional if not found
+        const billingCycle = orderMeta.billing_cycle || 'monthly';
+        
+        console.log('Order meta:', JSON.stringify(orderMeta));
+        console.log('Setting plan to:', planId);
+        
+        const plan = PLANS.find(p => p.id === planId) || { id: planId, name: planId };
+        tenant.plan = planId;
+        
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
-        if (order.order_meta.billing_cycle === 'annual') {
+        if (billingCycle === 'annual') {
           duration = 365 * 24 * 60 * 60 * 1000;
         }
         const startDate = new Date();
@@ -177,10 +186,10 @@ export const verifySubscriptionPayment = async (req, res) => {
           paymentId: order.order_id,
           startDate: startDate,
           endDate: endDate,
-          billingCycle: order.order_meta.billing_cycle
+          billingCycle: billingCycle
         };
         await tenant.save();
-        console.log('Updated tenant subscription:', tenant.tenantId);
+        console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan);
 
         // Check if user account exists, if not create one
         let user = await User.findOne({ email: tenant.email });
@@ -229,9 +238,9 @@ export const verifySubscriptionPayment = async (req, res) => {
         await sendSubscriptionConfirmationEmail({
           to: tenant.email,
           subscriptionDetails: {
-            planName: plan.name,
+            planName: plan.name || planId,
             amount: order.order_amount,
-            billingCycle: order.order_meta.billing_cycle,
+            billingCycle: billingCycle,
             startDate: startDate,
             endDate: endDate,
             instituteName: tenant.instituteName || tenant.name
@@ -423,22 +432,18 @@ export const devMarkOrderPaid = async (req, res) => {
  */
 export const getAllSubscriptionPayments = async (req, res) => {
   try {
-    // Get all tenants with any subscription data or paid plans (non-free)
-    const tenants = await Tenant.find({
-      $or: [
-        { 'subscription.paymentId': { $exists: true, $ne: null } },
-        { 'subscription.status': 'active' },
-        { plan: { $nin: ['free', null, ''] } } // Any plan that's not free
-      ]
-    }).sort({ createdAt: -1 });
+    // Get ALL tenants for billing/invoices
+    const tenants = await Tenant.find({}).sort({ createdAt: -1 });
+
+    console.log(`Found ${tenants.length} tenants for invoices`);
 
     const payments = tenants.map(tenant => ({
-      id: tenant.subscription?.paymentId || `legacy_${tenant.tenantId}`,
+      id: tenant.subscription?.paymentId || `tenant_${tenant.tenantId}`,
       tenantId: tenant.tenantId,
       tenantName: tenant.name,
-      instituteName: tenant.instituteName,
+      instituteName: tenant.instituteName || tenant.name,
       email: tenant.email,
-      plan: tenant.plan,
+      plan: tenant.plan || 'free',
       status: tenant.subscription?.status || (tenant.active ? 'active' : 'inactive'),
       billingCycle: tenant.subscription?.billingCycle || 'monthly',
       startDate: tenant.subscription?.startDate || tenant.createdAt,
@@ -449,40 +454,44 @@ export const getAllSubscriptionPayments = async (req, res) => {
     res.status(200).json({ success: true, payments });
   } catch (err) {
     console.error('Get all subscription payments error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 
 /**
- * SuperAdmin: Get all subscribers (tenants with active subscriptions)
+ * SuperAdmin: Get all subscribers (all tenants for billing purposes)
  */
 export const getAllSubscribers = async (req, res) => {
   try {
-    // Get all tenants with active status or paid plans (non-free)
-    const subscribers = await Tenant.find({
-      $or: [
-        { 'subscription.status': 'active' },
-        { plan: { $nin: ['free', null, ''] } }, // Any plan that's not free
-        { active: true }
-      ]
-    }).sort({ createdAt: -1 });
+    // Get ALL tenants for billing module
+    const subscribers = await Tenant.find({}).sort({ createdAt: -1 });
+
+    console.log(`Found ${subscribers.length} tenants for billing`);
 
     // Transform to ensure consistent structure
     const transformedSubscribers = subscribers.map(sub => ({
-      ...sub.toObject(),
+      _id: sub._id,
+      tenantId: sub.tenantId,
+      name: sub.name,
+      instituteName: sub.instituteName || sub.name,
+      email: sub.email,
+      plan: sub.plan || 'free',
+      active: sub.active,
+      contact: sub.contact || {},
       subscription: {
         status: sub.subscription?.status || (sub.active ? 'active' : 'inactive'),
         paymentId: sub.subscription?.paymentId || null,
         startDate: sub.subscription?.startDate || sub.createdAt,
         endDate: sub.subscription?.endDate || null,
         billingCycle: sub.subscription?.billingCycle || 'monthly'
-      }
+      },
+      createdAt: sub.createdAt
     }));
 
     res.status(200).json({ success: true, subscribers: transformedSubscribers });
   } catch (err) {
     console.error('Get all subscribers error:', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
 

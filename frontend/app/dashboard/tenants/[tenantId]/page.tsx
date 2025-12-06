@@ -159,12 +159,13 @@ export default function TenantDetailPage() {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ resetPassword: true }), // Always reset password when sending
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to send credentials");
+        throw new Error(data.error || data.message || "Failed to send credentials");
       }
 
       alert(`✅ Login credentials sent successfully to ${tenant.email}`);
