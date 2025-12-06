@@ -5,6 +5,7 @@ import { PLANS } from '../config/plans.js';
 import axios from 'axios';
 import Tenant from '../models/Tenant.js';
 import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
+import { generateInvoicePdf } from '../services/pdfService.js';
 
 // Cashfree config from .env
 const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
@@ -791,111 +792,21 @@ export const downloadInvoice = async (req, res) => {
       return res.status(404).json({ message: 'Tenant not found' });
     }
 
-    const plan = tenant.plan || 'free';
-    const billingCycle = tenant.subscription?.billingCycle || 'monthly';
-    const amount = tenant.subscription?.amount || PLAN_PRICES[plan]?.[billingCycle] || 0;
-    const startDate = tenant.subscription?.startDate || tenant.createdAt;
-    const endDate = tenant.subscription?.endDate;
+    // Generate PDF and upload to S3
+    const { pdfBuffer, s3Url, invoiceNumber } = await generateInvoicePdf(tenant);
     
-    // Format invoice number - clean format like INV-0001
-    const invoiceNumber = tenant.subscription?.invoiceNumber 
-      ? `INV-${String(tenant.subscription.invoiceNumber).padStart(4, '0')}`
-      : `INV-${tenantId.slice(-6).toUpperCase()}`;
-
-    // Generate invoice HTML (will be converted to PDF in future with proper library)
-    const invoiceHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Invoice - ${tenant.instituteName || tenant.name}</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; background: #f5f5f5; }
-        .invoice-container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; }
-        .logo { font-size: 28px; font-weight: bold; color: #3b82f6; }
-        .invoice-title { text-align: right; }
-        .invoice-title h1 { color: #333; font-size: 32px; }
-        .invoice-title p { color: #666; margin-top: 5px; }
-        .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
-        .bill-to, .invoice-info { width: 48%; }
-        .bill-to h3, .invoice-info h3 { color: #3b82f6; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
-        .bill-to p, .invoice-info p { color: #333; margin: 5px 0; }
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        .items-table th { background: #3b82f6; color: white; padding: 12px; text-align: left; }
-        .items-table td { padding: 12px; border-bottom: 1px solid #eee; }
-        .items-table tr:hover { background: #f9fafb; }
-        .total-row { background: #f0f9ff !important; font-weight: bold; }
-        .total-row td { border-top: 2px solid #3b82f6; }
-        .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-inactive { background: #fee2e2; color: #991b1b; }
-      </style>
-    </head>
-    <body>
-      <div class="invoice-container">
-        <div class="header">
-          <div class="logo">Enromatics</div>
-          <div class="invoice-title">
-            <h1>INVOICE</h1>
-            <p>#${invoiceNumber}</p>
-          </div>
-        </div>
-
-        <div class="details">
-          <div class="bill-to">
-            <h3>Bill To</h3>
-            <p><strong>${tenant.instituteName || tenant.name}</strong></p>
-            <p>${tenant.name}</p>
-            <p>${tenant.email}</p>
-            ${tenant.contact?.phone ? `<p>${tenant.contact.phone}</p>` : ''}
-            ${tenant.contact?.city ? `<p>${tenant.contact.city}, ${tenant.contact.state || ''}</p>` : ''}
-          </div>
-          <div class="invoice-info">
-            <h3>Invoice Details</h3>
-            <p><strong>Invoice Date:</strong> ${new Date(startDate).toLocaleDateString('en-IN')}</p>
-            <p><strong>Due Date:</strong> ${endDate ? new Date(endDate).toLocaleDateString('en-IN') : 'N/A'}</p>
-            <p><strong>Status:</strong> <span class="status-badge ${tenant.subscription?.status === 'active' ? 'status-active' : 'status-inactive'}">${tenant.subscription?.status || 'inactive'}</span></p>
-          </div>
-        </div>
-
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th>Plan</th>
-              <th>Billing Cycle</th>
-              <th style="text-align: right;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Enromatics Subscription</td>
-              <td>${PLAN_NAMES[plan] || plan}</td>
-              <td style="text-transform: capitalize;">${billingCycle}</td>
-              <td style="text-align: right;">₹${amount.toLocaleString()}</td>
-            </tr>
-            <tr class="total-row">
-              <td colspan="3" style="text-align: right;"><strong>Total</strong></td>
-              <td style="text-align: right;"><strong>₹${amount.toLocaleString()}</strong></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="footer">
-          <p>Thank you for choosing Enromatics!</p>
-          <p>For any queries, contact us at support@enromatics.com</p>
-          <p style="margin-top: 10px;">© ${new Date().getFullYear()} Enromatics. All rights reserved.</p>
-        </div>
-      </div>
-    </body>
-    </html>`;
-
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${tenantId}.html`);
-    res.send(invoiceHtml);
+    // Update tenant with S3 URL if successfully uploaded
+    if (s3Url && tenant.subscription) {
+      tenant.subscription.invoicePdfUrl = s3Url;
+      await tenant.save();
+      console.log(`Invoice PDF uploaded to S3: ${s3Url}`);
+    }
+    
+    // Send PDF as download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceNumber || tenantId}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
   } catch (err) {
     console.error('Download invoice error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -903,7 +814,7 @@ export const downloadInvoice = async (req, res) => {
 };
 
 /**
- * SuperAdmin: Send invoice to tenant via email
+ * SuperAdmin: Send invoice to tenant via email (with PDF attachment)
  */
 export const sendInvoiceEmail = async (req, res) => {
   try {
@@ -914,6 +825,15 @@ export const sendInvoiceEmail = async (req, res) => {
       return res.status(404).json({ message: 'Tenant not found' });
     }
 
+    // Generate PDF and upload to S3
+    const { pdfBuffer, s3Url, invoiceNumber: generatedInvoiceNumber } = await generateInvoicePdf(tenant);
+    
+    // Update tenant with S3 URL if successfully uploaded
+    if (s3Url && tenant.subscription) {
+      tenant.subscription.invoicePdfUrl = s3Url;
+      await tenant.save();
+    }
+
     const plan = tenant.plan || 'free';
     const billingCycle = tenant.subscription?.billingCycle || 'monthly';
     const amount = tenant.subscription?.amount || PLAN_PRICES[plan]?.[billingCycle] || 0;
@@ -921,9 +841,9 @@ export const sendInvoiceEmail = async (req, res) => {
     const endDate = tenant.subscription?.endDate;
     
     // Format invoice number - clean format like INV-0001
-    const invoiceNumber = tenant.subscription?.invoiceNumber 
+    const invoiceNumber = generatedInvoiceNumber || (tenant.subscription?.invoiceNumber 
       ? `INV-${String(tenant.subscription.invoiceNumber).padStart(4, '0')}`
-      : `INV-${tenantId.slice(-6).toUpperCase()}`;
+      : `INV-${tenantId.slice(-6).toUpperCase()}`);
 
     const emailHtml = `
     <!DOCTYPE html>
@@ -939,6 +859,7 @@ export const sendInvoiceEmail = async (req, res) => {
         .invoice-row:last-child { border-bottom: none; font-weight: bold; color: #3b82f6; }
         .footer { background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 12px; border-radius: 0 0 10px 10px; }
         .cta-button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+        .attachment-note { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin: 15px 0; text-align: center; }
       </style>
     </head>
     <body>
@@ -973,6 +894,10 @@ export const sendInvoiceEmail = async (req, res) => {
             </div>
           </div>
 
+          <div class="attachment-note">
+            📎 <strong>Invoice PDF attached</strong> - Please find your detailed invoice attached to this email.
+          </div>
+
           <center>
             <a href="https://enromatics.com/dashboard" class="cta-button">Go to Dashboard</a>
           </center>
@@ -990,10 +915,17 @@ export const sendInvoiceEmail = async (req, res) => {
       subject: `Your Enromatics Invoice - ${invoiceNumber}`,
       html: emailHtml,
       tenantId: tenant.tenantId,
-      type: 'invoice'
+      type: 'invoice',
+      attachments: [
+        {
+          filename: `invoice-${invoiceNumber}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }
+      ]
     });
 
-    res.status(200).json({ success: true, message: 'Invoice sent successfully' });
+    res.status(200).json({ success: true, message: 'Invoice sent successfully with PDF attachment' });
   } catch (err) {
     console.error('Send invoice error:', err);
     res.status(500).json({ message: 'Server error' });

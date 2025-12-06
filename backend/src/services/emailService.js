@@ -13,7 +13,7 @@ console.log('- Agent:', process.env.ZEPTO_AGENT || 'NOT SET');
  * Send email using ZeptoMail API (works on serverless platforms)
  * Railway/Vercel block SMTP ports, so we use HTTP API instead
  */
-const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FROM || process.env.EMAIL_FROM }) => {
+const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FROM || process.env.EMAIL_FROM, attachments = [] }) => {
     try {
         console.log(`📤 Attempting to send email to: ${to}`);
         console.log(`📧 Subject: ${subject}`);
@@ -52,6 +52,16 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FRO
             htmlbody: html
         };
 
+        // Add attachments if provided (ZeptoMail format)
+        if (attachments && attachments.length > 0) {
+            payload.attachments = attachments.map(att => ({
+                name: att.filename,
+                content: att.content.toString('base64'),
+                mime_type: att.contentType || 'application/pdf'
+            }));
+            console.log(`📎 Attaching ${attachments.length} file(s)`);
+        }
+
         console.log('📨 Sending to ZeptoMail API...');
         console.log('🔗 API URL:', apiUrl);
 
@@ -89,14 +99,15 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FRO
 /**
  * Base email sending function (uses ZeptoMail API)
  */
-export const sendEmail = async ({ to, subject, html, text, tenantId = null, userId = null, type = 'general' }) => {
+export const sendEmail = async ({ to, subject, html, text, tenantId = null, userId = null, type = 'general', attachments = [] }) => {
     try {
         // Send via ZeptoMail API (works on Railway/Vercel)
         const result = await sendEmailViaAPI({
             to,
             subject,
             html,
-            from: process.env.EMAIL_FROM
+            from: process.env.EMAIL_FROM,
+            attachments
         });
 
         // Log email

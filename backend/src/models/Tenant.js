@@ -85,6 +85,11 @@ const tenantSchema = new mongoose.Schema(
         type: Number,
         default: null,
       },
+      // S3 URL for the invoice PDF
+      invoicePdfUrl: {
+        type: String,
+        default: null,
+      },
     },
 
     // Whether tenant account is active or suspended
