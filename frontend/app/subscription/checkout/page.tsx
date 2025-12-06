@@ -3,12 +3,19 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 import { subscriptionPlans } from '@/data/plans';
 import { CheckCircle, Shield, CreditCard, ArrowLeft } from 'lucide-react';
 
+declare global {
+  interface Window {
+    Cashfree: any;
+  }
+}
+
 function CheckoutContent() {
   const searchParams = useSearchParams();
-  const planId = searchParams?.get('plan') || 'starter';
+  const planId = searchParams?.get('plan') || 'test';
   const cycleParam = searchParams?.get('cycle') || 'monthly';
 
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
@@ -49,19 +56,20 @@ function CheckoutContent() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        // Use payment link if available, otherwise use session-based checkout
-        const checkoutUrl = data.paymentLink || 
-          `https://payments.cashfree.com/pgbillpay/order/${data.orderId}/${data.paymentSessionId}`;
+      if (data.success && data.paymentSessionId) {
+        setStatus('Payment initiated. Opening payment gateway...');
         
-        setPaymentUrl(checkoutUrl);
-        setStatus('Payment initiated. Redirecting to payment gateway...');
-        // Auto-redirect after 2 seconds
-        setTimeout(() => {
-          window.location.href = checkoutUrl;
-        }, 2000);
+        // Use Cashfree JS SDK to open checkout
+        const cashfree = window.Cashfree({
+          mode: 'production' // use 'sandbox' for testing
+        });
+        
+        cashfree.checkout({
+          paymentSessionId: data.paymentSessionId,
+          redirectTarget: '_self', // redirect in same tab
+        });
       } else {
-        setStatus('Failed to initiate payment. Please try again.');
+        setStatus(data.message || 'Failed to initiate payment. Please try again.');
       }
     } catch (err) {
       setStatus('Error initiating payment. Please try again.');
@@ -331,8 +339,15 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <CheckoutContent />
-    </Suspense>
+    <>
+      {/* Load Cashfree JS SDK */}
+      <Script 
+        src="https://sdk.cashfree.com/js/v3/cashfree.js"
+        strategy="beforeInteractive"
+      />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+        <CheckoutContent />
+      </Suspense>
+    </>
   );
 }

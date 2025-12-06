@@ -3,6 +3,13 @@
 // Each plan has monthly and annual pricing (annual = 30% discount)
 export const PLANS = [
   {
+    id: 'test',
+    name: 'Test Plan',
+    priceMonthly: 10,
+    priceAnnual: 10,
+    description: 'Test plan for QA - ₹10 only',
+  },
+  {
     id: 'starter',
     name: 'Starter',
     priceMonthly: 1999,

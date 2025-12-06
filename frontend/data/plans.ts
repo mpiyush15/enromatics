@@ -2,6 +2,20 @@
 
 export const subscriptionPlans = [
   {
+    id: "test",
+    name: "Test Plan",
+    monthlyPrice: 10,
+    annualPrice: 10,
+    description: "QA test plan - ₹10 only",
+    features: [
+      "✓ Test feature 1",
+      "✓ Test feature 2",
+    ],
+    highlightFeatures: ["QA Testing"],
+    buttonLabel: "Buy Test Plan",
+    popular: false,
+  },
+  {
     id: "starter",
     name: "Starter",
     monthlyPrice: 1999,
