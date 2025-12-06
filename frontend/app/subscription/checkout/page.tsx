@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,7 +123,7 @@ function StepIndicator({ currentStep, isNewTenant }: { currentStep: Step; isNewT
 }
 
 // --- Main Component ---
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams?.get("planId") ?? null;
@@ -812,5 +812,23 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// --- Loading Fallback ---
+function CheckoutLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    </div>
+  );
+}
+
+// --- Exported Page with Suspense ---
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<CheckoutLoading />}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
