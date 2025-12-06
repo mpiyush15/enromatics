@@ -1,5 +1,192 @@
 import Payment from "../models/Payment.js";
 import Student from "../models/Student.js";
+import { PLANS } from '../config/plans.js';
+import axios from 'axios';
+import Tenant from '../models/Tenant.js';
+import { sendEmail } from '../services/emailService.js';
+// Cashfree config from .env
+const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+const CASHFREE_MODE = process.env.CASHFREE_MODE || 'production';
+
+/**
+ * Initiate payment for a subscription plan
+ */
+export const initiateSubscriptionPayment = async (req, res) => {
+  try {
+    const { tenantId, planId, email, phone, billingCycle } = req.body;
+    const plan = PLANS.find(p => p.id === planId);
+    if (!plan) return res.status(400).json({ message: 'Invalid plan selected' });
+
+    // Determine price based on billing cycle
+    let orderAmount = plan.priceMonthly;
+    let cycle = 'monthly';
+    if (billingCycle === 'annual') {
+      orderAmount = plan.priceAnnual;
+      cycle = 'annual';
+    }
+
+    // Create order in Cashfree
+    const orderPayload = {
+      order_id: `sub_${tenantId}_${Date.now()}`,
+      order_amount: orderAmount,
+      order_currency: 'INR',
+      customer_details: {
+        customer_id: tenantId,
+        customer_email: email,
+        customer_phone: phone
+      },
+      order_meta: {
+        return_url: `${process.env.FRONTEND_URL}/payment/success?order_id={order_id}`,
+        plan_id: plan.id,
+        billing_cycle: cycle
+      }
+    };
+
+    const response = await axios.post(
+      `${CASHFREE_BASE_URL}/orders`,
+      orderPayload,
+      {
+        headers: {
+          'x-client-id': CASHFREE_CLIENT_ID,
+          'x-client-secret': CASHFREE_CLIENT_SECRET,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    // Send email to tenant for payment initiation
+    await sendEmail({
+      to: email,
+      subject: `Payment Initiated for ${plan.name} (${cycle})`,
+      html: `<p>Your payment of ₹${orderAmount} for the ${plan.name} (${cycle}) plan has been initiated. Please complete the payment to activate your subscription.</p>`
+    });
+
+    res.status(200).json({
+      success: true,
+      paymentSessionId: response.data.payment_session_id,
+      orderId: response.data.order_id,
+      plan,
+      billingCycle: cycle
+    });
+  } catch (err) {
+    console.error('Initiate Subscription Payment Error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Verify subscription payment status
+ */
+export const verifySubscriptionPayment = async (req, res) => {
+  try {
+    const { orderId } = req.query;
+    const response = await axios.get(
+      `${CASHFREE_BASE_URL}/orders/${orderId}`,
+      {
+        headers: {
+          'x-client-id': CASHFREE_CLIENT_ID,
+          'x-client-secret': CASHFREE_CLIENT_SECRET
+        }
+      }
+    );
+    const order = response.data;
+    if (order.order_status === 'PAID') {
+      // Activate subscription for tenant
+      const tenant = await Tenant.findOne({ tenantId: order.customer_details.customer_id });
+      if (tenant) {
+        tenant.plan = order.order_meta.plan_id;
+        let duration = 30 * 24 * 60 * 60 * 1000; // monthly
+        if (order.order_meta.billing_cycle === 'annual') {
+          duration = 365 * 24 * 60 * 60 * 1000;
+        }
+        tenant.subscription = {
+          status: 'active',
+          paymentId: order.order_id,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + duration),
+          billingCycle: order.order_meta.billing_cycle
+        };
+        await tenant.save();
+
+        // Send email for successful payment
+        await sendEmail({
+          to: tenant.email,
+          subject: `Payment Successful for ${tenant.plan} (${order.order_meta.billing_cycle})`,
+          html: `<p>Your payment for the ${tenant.plan} (${order.order_meta.billing_cycle}) plan was successful. Subscription is now active.</p>`
+        });
+      }
+    } else {
+      // Send email for failed payment
+      const tenant = await Tenant.findOne({ tenantId: order.customer_details.customer_id });
+      if (tenant) {
+        await sendEmail({
+          to: tenant.email,
+          subject: `Payment Failed for ${tenant.plan}`,
+          html: `<p>Your payment for the ${tenant.plan} plan was not successful. Please try again.</p>`
+        });
+      }
+    }
+    res.status(200).json({ success: true, order });
+  } catch (err) {
+    console.error('Verify Subscription Payment Error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Cashfree webhook for subscription payment status updates
+ */
+export const cashfreeSubscriptionWebhook = async (req, res) => {
+  try {
+    const event = req.body.event;
+    if (event === 'order.paid') {
+      const orderId = req.body.data.order.order_id;
+      const tenantId = req.body.data.order.customer_details.customer_id;
+      const planId = req.body.data.order.order_meta.plan_id;
+      const billingCycle = req.body.data.order.order_meta.billing_cycle;
+      const tenant = await Tenant.findOne({ tenantId });
+      if (tenant) {
+        let duration = 30 * 24 * 60 * 60 * 1000; // monthly
+        if (billingCycle === 'annual') {
+          duration = 365 * 24 * 60 * 60 * 1000;
+        }
+        tenant.plan = planId;
+        tenant.subscription = {
+          status: 'active',
+          paymentId: orderId,
+          startDate: new Date(),
+          endDate: new Date(Date.now() + duration),
+          billingCycle
+        };
+        await tenant.save();
+
+        // Send email for successful payment
+        await sendEmail({
+          to: tenant.email,
+          subject: `Payment Successful for ${tenant.plan} (${billingCycle})`,
+          html: `<p>Your payment for the ${tenant.plan} (${billingCycle}) plan was successful. Subscription is now active.</p>`
+        });
+      }
+    } else if (event === 'order.failed') {
+      const orderId = req.body.data.order.order_id;
+      const tenantId = req.body.data.order.customer_details.customer_id;
+      const tenant = await Tenant.findOne({ tenantId });
+      if (tenant) {
+        await sendEmail({
+          to: tenant.email,
+          subject: `Payment Failed for ${tenant.plan}`,
+          html: `<p>Your payment for the ${tenant.plan} plan was not successful. Please try again.</p>`
+        });
+      }
+    }
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('Cashfree Subscription Webhook Error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 export const addPayment = async (req, res) => {
   try {

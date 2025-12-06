@@ -5,6 +5,12 @@
 
 import Tenant from "../models/Tenant.js";
 import crypto from "crypto";
+import {
+  sendTenantRegistrationEmail,
+  sendWelcomeEmail,
+  sendEmail,
+  sendSubscriptionConfirmationEmail
+} from "../services/emailService.js";
 
 /* ================================================================
    🔹 1. Upgrade Tenant Plan
@@ -38,6 +44,29 @@ export const upgradeTenantPlan = async (req, res) => {
     };
 
     await tenant.save();
+
+    // Send plan upgrade email to tenant
+    sendSubscriptionConfirmationEmail({
+      to: tenant.email,
+      subscriptionDetails: {
+        planName: tenant.plan,
+        amount: tenant.subscription?.amount || 'N/A',
+        billingCycle: 'monthly',
+        startDate: tenant.subscription?.startDate,
+        endDate: tenant.subscription?.endDate,
+        instituteName: tenant.instituteName || tenant.name
+      },
+      tenantId: tenant.tenantId
+    }).catch(err => console.error('❌ Failed to send plan upgrade email:', err.message));
+
+    // Notify superadmin
+    if (process.env.SUPER_ADMIN_EMAIL) {
+      sendEmail({
+        to: process.env.SUPER_ADMIN_EMAIL,
+        subject: `Tenant Plan Upgraded: ${tenant.name}`,
+        html: `<p>Tenant <strong>${tenant.name}</strong> upgraded to <strong>${tenant.plan}</strong> plan.</p>`
+      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+    }
 
     res.status(200).json({
       message: `Plan upgraded to ${newPlan} successfully.`,
@@ -172,6 +201,24 @@ export const updateTenantProfile = async (req, res) => {
 
     await tenant.save();
 
+    // Send profile update email to tenant
+    sendEmail({
+      to: tenant.email,
+      subject: 'Your Institute Profile Was Updated',
+      html: `<p>Hi ${tenant.name},<br>Your institute profile was updated. If you did not request this change, please contact support.</p>`,
+      tenantId: tenant.tenantId,
+      type: 'general'
+    }).catch(err => console.error('❌ Failed to send profile update email:', err.message));
+
+    // Notify superadmin
+    if (process.env.SUPER_ADMIN_EMAIL) {
+      sendEmail({
+        to: process.env.SUPER_ADMIN_EMAIL,
+        subject: `Tenant Profile Updated: ${tenant.name}`,
+        html: `<p>Tenant <strong>${tenant.name}</strong> updated their profile.</p>`
+      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+    }
+
     console.log("✅ Tenant profile updated:", tenant.name);
 
     res.status(200).json({
@@ -228,6 +275,26 @@ export const deleteTenant = async (req, res) => {
     const tenant = await Tenant.findOneAndDelete({ tenantId });
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
+    // Send account deletion email to tenant
+    if (tenant?.email) {
+      sendEmail({
+        to: tenant.email,
+        subject: 'Your Institute Account Was Deleted',
+        html: `<p>Hi ${tenant.name},<br>Your institute account has been deleted from Enromatics. If you have questions, contact support.</p>`,
+        tenantId: tenant.tenantId,
+        type: 'general'
+      }).catch(err => console.error('❌ Failed to send account deletion email:', err.message));
+    }
+
+    // Notify superadmin
+    if (process.env.SUPER_ADMIN_EMAIL) {
+      sendEmail({
+        to: process.env.SUPER_ADMIN_EMAIL,
+        subject: `Tenant Deleted: ${tenant?.name}`,
+        html: `<p>Tenant <strong>${tenant?.name}</strong> was deleted.</p>`
+      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+    }
+
     res.status(200).json({ message: "Tenant deleted successfully" });
   } catch (err) {
     console.error("Delete Tenant Error:", err);
@@ -277,6 +344,23 @@ export const createNewTenant = async (req, res) => {
     });
 
     await newTenant.save();
+
+    // Send welcome email to tenant
+    sendTenantRegistrationEmail({
+      to: newTenant.email,
+      tenantName: newTenant.instituteName || newTenant.name,
+      loginUrl: `${process.env.FRONTEND_URL}/login`,
+      tenantId: newTenant.tenantId
+    }).catch(err => console.error('❌ Failed to send tenant registration email:', err.message));
+
+    // Notify superadmin
+    if (process.env.SUPER_ADMIN_EMAIL) {
+      sendEmail({
+        to: process.env.SUPER_ADMIN_EMAIL,
+        subject: `New Tenant Registered: ${newTenant.name}`,
+        html: `<p>Tenant <strong>${newTenant.name}</strong> was registered.<br>Email: ${newTenant.email}</p>`
+      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+    }
 
     res.status(201).json({
       message: "Tenant created successfully",
