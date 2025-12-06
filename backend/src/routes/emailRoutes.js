@@ -1,6 +1,7 @@
 import express from 'express';
 import OTP from '../models/OTP.js';
 import EmailLog from '../models/EmailLog.js';
+import Tenant from '../models/Tenant.js';
 import { protect as authMiddleware, checkSuperAdmin } from '../middleware/authMiddleware.js';
 import * as emailService from '../services/emailService.js';
 
@@ -99,6 +100,37 @@ router.post('/resend-otp', async (req, res) => {
         res.status(500).json({ 
             success: false,
             message: 'Failed to resend OTP', 
+            error: error.message 
+        });
+    }
+});
+
+/**
+ * @route   POST /api/email/check-email
+ * @desc    Check if email is already registered as a tenant
+ * @access  Public
+ */
+router.post('/check-email', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: 'Email is required' });
+        }
+
+        // Check if tenant exists with this email
+        const tenant = await Tenant.findOne({ email: email.toLowerCase() });
+
+        res.status(200).json({
+            exists: !!tenant,
+            instituteName: tenant?.instituteName || null
+        });
+
+    } catch (error) {
+        console.error('Check email error:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to check email', 
             error: error.message 
         });
     }

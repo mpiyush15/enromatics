@@ -15,9 +15,46 @@ const CASHFREE_MODE = process.env.CASHFREE_MODE || 'production';
  */
 export const initiateSubscriptionPayment = async (req, res) => {
   try {
-    const { tenantId, planId, email, phone, billingCycle } = req.body;
+    const { tenantId, planId, email, phone, billingCycle, instituteName, name } = req.body;
     const plan = PLANS.find(p => p.id === planId);
     if (!plan) return res.status(400).json({ message: 'Invalid plan selected' });
+
+    // Generate a unique tenantId if not provided
+    const finalTenantId = tenantId || `tenant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Check if tenant exists, if not create one
+    let tenant = await Tenant.findOne({ 
+      $or: [
+        { tenantId: finalTenantId },
+        { email: email }
+      ]
+    });
+
+    if (!tenant) {
+      // Create new tenant record
+      tenant = await Tenant.create({
+        tenantId: finalTenantId,
+        name: name || instituteName || email.split('@')[0],
+        instituteName: instituteName || null,
+        email: email,
+        plan: 'free', // Will be updated after payment
+        active: true,
+        contact: {
+          phone: phone,
+          country: 'India'
+        },
+        subscription: {
+          status: 'pending',
+          paymentId: null,
+          startDate: null,
+          endDate: null
+        }
+      });
+      console.log('Created new tenant:', tenant.tenantId);
+    }
+
+    // Use the tenant's actual tenantId
+    const customerTenantId = tenant.tenantId;
 
     // Determine price based on billing cycle
     let orderAmount = plan.priceMonthly;
@@ -29,11 +66,11 @@ export const initiateSubscriptionPayment = async (req, res) => {
 
     // Create order in Cashfree
     const orderPayload = {
-      order_id: `sub_${tenantId}_${Date.now()}`,
+      order_id: `sub_${customerTenantId}_${Date.now()}`,
       order_amount: orderAmount,
       order_currency: 'INR',
       customer_details: {
-        customer_id: tenantId,
+        customer_id: customerTenantId,
         customer_email: email,
         customer_phone: phone
       },
@@ -57,6 +94,10 @@ export const initiateSubscriptionPayment = async (req, res) => {
       }
     );
 
+    // Store the order ID in tenant for tracking
+    tenant.subscription.paymentId = response.data.order_id;
+    await tenant.save();
+
     // Send email to tenant for payment initiation
     await sendEmail({
       to: email,
@@ -75,6 +116,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
       paymentSessionId: paymentSessionId,
       paymentLink: paymentLink,
       orderId: response.data.order_id,
+      tenantId: customerTenantId,
       plan,
       billingCycle: cycle
     });
@@ -101,9 +143,18 @@ export const verifySubscriptionPayment = async (req, res) => {
       }
     );
     const order = response.data;
+    console.log('Verify order response:', JSON.stringify(order, null, 2));
+
     if (order.order_status === 'PAID') {
-      // Activate subscription for tenant
-      const tenant = await Tenant.findOne({ tenantId: order.customer_details.customer_id });
+      // Find tenant by tenantId OR by email OR by paymentId
+      let tenant = await Tenant.findOne({ 
+        $or: [
+          { tenantId: order.customer_details.customer_id },
+          { email: order.customer_details.customer_email },
+          { 'subscription.paymentId': order.order_id }
+        ]
+      });
+      
       if (tenant) {
         tenant.plan = order.order_meta.plan_id;
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
@@ -118,6 +169,7 @@ export const verifySubscriptionPayment = async (req, res) => {
           billingCycle: order.order_meta.billing_cycle
         };
         await tenant.save();
+        console.log('Updated tenant subscription:', tenant.tenantId);
 
         // Send email for successful payment
         await sendEmail({
@@ -242,23 +294,27 @@ export const devMarkOrderPaid = async (req, res) => {
  */
 export const getAllSubscriptionPayments = async (req, res) => {
   try {
-    // Get all tenants with subscription data
+    // Get all tenants with any subscription data or paid plans
     const tenants = await Tenant.find({
-      'subscription.paymentId': { $exists: true, $ne: null }
-    }).sort({ 'subscription.startDate': -1 });
+      $or: [
+        { 'subscription.paymentId': { $exists: true, $ne: null } },
+        { 'subscription.status': 'active' },
+        { plan: { $in: ['pro', 'enterprise', 'trial', 'starter', 'professional', 'test'] } }
+      ]
+    }).sort({ createdAt: -1 });
 
     const payments = tenants.map(tenant => ({
-      id: tenant.subscription.paymentId,
+      id: tenant.subscription?.paymentId || `legacy_${tenant.tenantId}`,
       tenantId: tenant.tenantId,
       tenantName: tenant.name,
       instituteName: tenant.instituteName,
       email: tenant.email,
       plan: tenant.plan,
-      status: tenant.subscription.status,
-      billingCycle: tenant.subscription.billingCycle || 'monthly',
-      startDate: tenant.subscription.startDate,
-      endDate: tenant.subscription.endDate,
-      createdAt: tenant.subscription.startDate
+      status: tenant.subscription?.status || (tenant.active ? 'active' : 'inactive'),
+      billingCycle: tenant.subscription?.billingCycle || 'monthly',
+      startDate: tenant.subscription?.startDate || tenant.createdAt,
+      endDate: tenant.subscription?.endDate || null,
+      createdAt: tenant.subscription?.startDate || tenant.createdAt
     }));
 
     res.status(200).json({ success: true, payments });
@@ -273,11 +329,28 @@ export const getAllSubscriptionPayments = async (req, res) => {
  */
 export const getAllSubscribers = async (req, res) => {
   try {
+    // Get all tenants with active status or paid plans
     const subscribers = await Tenant.find({
-      'subscription.status': 'active'
-    }).sort({ 'subscription.startDate': -1 });
+      $or: [
+        { 'subscription.status': 'active' },
+        { plan: { $in: ['pro', 'enterprise', 'trial', 'starter', 'professional', 'test'] } },
+        { active: true }
+      ]
+    }).sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, subscribers });
+    // Transform to ensure consistent structure
+    const transformedSubscribers = subscribers.map(sub => ({
+      ...sub.toObject(),
+      subscription: {
+        status: sub.subscription?.status || (sub.active ? 'active' : 'inactive'),
+        paymentId: sub.subscription?.paymentId || null,
+        startDate: sub.subscription?.startDate || sub.createdAt,
+        endDate: sub.subscription?.endDate || null,
+        billingCycle: sub.subscription?.billingCycle || 'monthly'
+      }
+    }));
+
+    res.status(200).json({ success: true, subscribers: transformedSubscribers });
   } catch (err) {
     console.error('Get all subscribers error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -290,21 +363,35 @@ export const getAllSubscribers = async (req, res) => {
 export const getSubscriptionStats = async (req, res) => {
   try {
     const totalTenants = await Tenant.countDocuments();
-    const activeSubscriptions = await Tenant.countDocuments({ 'subscription.status': 'active' });
-    const expiredSubscriptions = await Tenant.countDocuments({ 
-      'subscription.endDate': { $lt: new Date() }
+    
+    // Count active subscriptions (either explicit status or just active tenants)
+    const activeSubscriptions = await Tenant.countDocuments({
+      $or: [
+        { 'subscription.status': 'active' },
+        { active: true }
+      ]
     });
     
-    // Get plan distribution
+    // Count expired (endDate in past) or inactive tenants
+    const expiredSubscriptions = await Tenant.countDocuments({ 
+      $or: [
+        { 'subscription.endDate': { $lt: new Date(), $ne: null } },
+        { active: false }
+      ]
+    });
+    
+    // Get plan distribution - count all plans
     const planCounts = await Tenant.aggregate([
-      { $match: { 'subscription.status': 'active' } },
       { $group: { _id: '$plan', count: { $sum: 1 } } }
     ]);
 
-    // Get recent payments (last 30 days)
+    // Get recent signups (last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentPayments = await Tenant.countDocuments({
-      'subscription.startDate': { $gte: thirtyDaysAgo }
+      $or: [
+        { 'subscription.startDate': { $gte: thirtyDaysAgo } },
+        { createdAt: { $gte: thirtyDaysAgo } }
+      ]
     });
 
     res.status(200).json({
@@ -315,7 +402,7 @@ export const getSubscriptionStats = async (req, res) => {
         expiredSubscriptions,
         recentPayments,
         planDistribution: planCounts.reduce((acc, item) => {
-          acc[item._id] = item.count;
+          acc[item._id || 'free'] = item.count;
           return acc;
         }, {})
       }

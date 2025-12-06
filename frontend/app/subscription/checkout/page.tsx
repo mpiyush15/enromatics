@@ -1,380 +1,816 @@
-'use client';
+"use client";
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import Script from 'next/script';
-import { subscriptionPlans } from '@/data/plans';
-import { CheckCircle, Shield, CreditCard, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { toast } from "sonner";
+import { ArrowLeft, Check, Loader2, Mail, Lock, Building2, Phone, User, Shield, CreditCard } from "lucide-react";
+import Link from "next/link";
 
-declare global {
-  interface Window {
-    Cashfree: any;
-  }
+// --- Types ---
+type SubscriptionPlan = {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  billingCycle: "monthly" | "quarterly" | "yearly";
+  features: string[];
+  maxStudents: number;
+  maxStaff: number;
+};
+
+type Step = "choose-type" | "verify-otp" | "login" | "payment" | "processing";
+
+type FormData = {
+  name: string;
+  instituteName: string;
+  email: string;
+  phone: string;
+  password: string;
+  otp: string;
+};
+
+// --- Label Component ---
+function Label({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="text-sm font-medium text-gray-700">
+      {children}
+    </label>
+  );
 }
 
-function CheckoutContent() {
-  const searchParams = useSearchParams();
-  const planId = searchParams?.get('plan') || 'test';
-  const cycleParam = searchParams?.get('cycle') || 'monthly';
+// --- OTP Input Component ---
+function OtpInput({ value, onChange, disabled }: { value: string; onChange: (val: string) => void; disabled: boolean }) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
-    cycleParam === 'annual' ? 'annual' : 'monthly'
-  );
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('');
-  const [paymentUrl, setPaymentUrl] = useState('');
-  const [formData, setFormData] = useState({
-    email: '',
-    phone: '',
-    instituteName: '',
-    tenantId: '',
-  });
-
-  const selectedPlan = subscriptionPlans.find((p) => p.id === planId) || subscriptionPlans[0];
-  const price = billingCycle === 'monthly' ? selectedPlan.monthlyPrice : selectedPlan.annualPrice;
-  const savings = billingCycle === 'annual' ? selectedPlan.monthlyPrice * 12 - selectedPlan.annualPrice : 0;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (index: number, char: string) => {
+    if (!/^\d*$/.test(char)) return;
+    const newOtp = value.split("");
+    newOtp[index] = char;
+    onChange(newOtp.join(""));
+    if (char && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
   };
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus('');
-    try {
-      const res = await fetch('/api/payment/initiate-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: formData.tenantId || formData.email.split('@')[0],
-          planId: selectedPlan.id,
-          email: formData.email,
-          phone: formData.phone,
-          billingCycle,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.paymentSessionId) {
-        setStatus('Payment initiated. Opening payment gateway...');
-        
-        // Check if Cashfree SDK is loaded
-        if (typeof window.Cashfree === 'undefined') {
-          // SDK not loaded, show manual link
-          const manualUrl = `https://payments.cashfree.com/order/#${data.orderId}`;
-          setPaymentUrl(manualUrl);
-          setStatus('SDK loading... Click the link below if not redirected.');
-          
-          // Wait for SDK to load and retry
-          let retries = 0;
-          const waitForSDK = setInterval(() => {
-            retries++;
-            if (typeof window.Cashfree !== 'undefined') {
-              clearInterval(waitForSDK);
-              const cashfree = window.Cashfree({ mode: 'production' });
-              cashfree.checkout({
-                paymentSessionId: data.paymentSessionId,
-                redirectTarget: '_self',
-              });
-            } else if (retries > 10) {
-              clearInterval(waitForSDK);
-              setStatus('Please click the link below to complete payment.');
-            }
-          }, 500);
-          return;
-        }
-        
-        // Use Cashfree JS SDK to open checkout
-        const cashfree = window.Cashfree({
-          mode: 'production'
-        });
-        
-        cashfree.checkout({
-          paymentSessionId: data.paymentSessionId,
-          redirectTarget: '_self',
-        });
-      } else {
-        setStatus(data.message || 'Failed to initiate payment. Please try again.');
-      }
-    } catch (err) {
-      setStatus('Error initiating payment. Please try again.');
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !value[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
     }
-    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-950">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Back Button */}
-        <Link
-          href="/plans"
-          className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-8"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Plans
-        </Link>
-
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Left: Order Summary */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              Order Summary
-            </h2>
-
-            {/* Plan Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Select Plan
-              </label>
-              <div className="space-y-3">
-                {subscriptionPlans.map((plan) => (
-                  <button
-                    key={plan.id}
-                    onClick={() => {
-                      const url = new URL(window.location.href);
-                      url.searchParams.set('plan', plan.id);
-                      window.history.pushState({}, '', url);
-                      window.location.reload();
-                    }}
-                    className={`w-full p-4 rounded-lg border transition-all text-left ${
-                      plan.id === planId
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {plan.name}
-                        </span>
-                        {plan.popular && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                            Popular
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        ₹{plan.monthlyPrice}/mo
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Billing Cycle */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Billing Cycle
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`p-4 rounded-lg border transition-all ${
-                    billingCycle === 'monthly'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900 dark:text-white">Monthly</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    ₹{selectedPlan.monthlyPrice}/month
-                  </div>
-                </button>
-                <button
-                  onClick={() => setBillingCycle('annual')}
-                  className={`p-4 rounded-lg border transition-all relative ${
-                    billingCycle === 'annual'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700'
-                  }`}
-                >
-                  <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    Save 30%
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-white">Annual</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    ₹{Math.round(selectedPlan.annualPrice / 12)}/month
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-3">
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>{selectedPlan.name} Plan</span>
-                <span>₹{price.toLocaleString('en-IN')}</span>
-              </div>
-              {billingCycle === 'annual' && (
-                <div className="flex justify-between text-green-600">
-                  <span>Annual Discount (30%)</span>
-                  <span>-₹{savings.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex justify-between text-xl font-bold text-gray-900 dark:text-white">
-                <span>Total</span>
-                <span>₹{price.toLocaleString('en-IN')}</span>
-              </div>
-              <p className="text-sm text-gray-500">
-                Billed {billingCycle === 'monthly' ? 'monthly' : 'annually'}
-              </p>
-            </div>
-
-            {/* Features */}
-            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
-                What's included:
-              </h3>
-              <div className="space-y-2">
-                {selectedPlan.features.slice(0, 5).map((feature, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Payment Form */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              Payment Details
-            </h2>
-
-            <form onSubmit={handlePayment} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Institute Name
-                </label>
-                <input
-                  type="text"
-                  name="instituteName"
-                  value={formData.instituteName}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Your Institute Name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="admin@yourschool.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="+91 9876543210"
-                />
-              </div>
-
-              {/* Security Badge */}
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                <Shield className="w-5 h-5 text-green-500" />
-                <span>Your payment is secured with 256-bit SSL encryption</span>
-              </div>
-
-              {/* Pay Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-6 rounded-lg font-semibold text-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-5 h-5" />
-                {loading ? 'Processing...' : `Pay ₹${price.toLocaleString('en-IN')}`}
-              </button>
-
-              {/* Status Message */}
-              {status && (
-                <div className={`p-4 rounded-lg text-center ${
-                  status.includes('Error') || status.includes('Failed')
-                    ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                    : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                }`}>
-                  {status}
-                </div>
-              )}
-
-              {/* Manual Payment Link */}
-              {paymentUrl && (
-                <div className="text-center">
-                  <a
-                    href={paymentUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 underline"
-                  >
-                    Click here if not redirected automatically
-                  </a>
-                </div>
-              )}
-
-              {/* Terms */}
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                By completing this purchase, you agree to our{' '}
-                <Link href="/terms-of-service" className="text-blue-600 hover:underline">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy-policy" className="text-blue-600 hover:underline">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </form>
-
-            {/* Payment Methods */}
-            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
-                Powered by Cashfree • All major payment methods accepted
-              </p>
-              <div className="flex justify-center gap-4 text-gray-400">
-                <span className="text-2xl">💳</span>
-                <span className="text-2xl">📱</span>
-                <span className="text-2xl">🏦</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="flex gap-2 justify-center">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <Input
+          key={i}
+          ref={(el) => { inputRefs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] || ""}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          disabled={disabled}
+          className="w-12 h-14 text-center text-xl font-bold"
+        />
+      ))}
     </div>
   );
 }
 
-export default function CheckoutPage() {
+// --- Step Indicator ---
+function StepIndicator({ currentStep, isNewTenant }: { currentStep: Step; isNewTenant: boolean }) {
+  const steps = isNewTenant
+    ? [
+        { key: "choose-type", label: "Account Type" },
+        { key: "verify-otp", label: "Verify Email" },
+        { key: "payment", label: "Payment" },
+      ]
+    : [
+        { key: "choose-type", label: "Account Type" },
+        { key: "login", label: "Login" },
+        { key: "payment", label: "Payment" },
+      ];
+
+  const currentIndex = steps.findIndex((s) => s.key === currentStep);
+
   return (
-    <>
-      {/* Load Cashfree JS SDK - using afterInteractive for client components */}
-      <Script 
-        src="https://sdk.cashfree.com/js/v3/cashfree.js"
-        strategy="afterInteractive"
-        onLoad={() => console.log('Cashfree SDK loaded')}
-      />
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-        <CheckoutContent />
-      </Suspense>
-    </>
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, index) => (
+        <div key={step.key} className="flex items-center">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              index <= currentIndex
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-500"
+            }`}
+          >
+            {index < currentIndex ? <Check className="h-4 w-4" /> : index + 1}
+          </div>
+          <span className={`ml-2 text-sm ${index <= currentIndex ? "text-blue-600 font-medium" : "text-gray-500"}`}>
+            {step.label}
+          </span>
+          {index < steps.length - 1 && (
+            <div className={`w-12 h-0.5 mx-2 ${index < currentIndex ? "bg-blue-600" : "bg-gray-200"}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Main Component ---
+export default function CheckoutPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const planId = searchParams?.get("planId") ?? null;
+
+  const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<Step>("choose-type");
+  const [isNewTenant, setIsNewTenant] = useState(true);
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    instituteName: "",
+    email: "",
+    phone: "",
+    password: "",
+    otp: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  // Fetch plan details
+  useEffect(() => {
+    if (!planId) {
+      router.push("/subscription/plans");
+      return;
+    }
+
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch(`/api/subscription/plans/${planId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPlan(data.plan);
+        } else {
+          toast.error("Plan not found");
+          router.push("/subscription/plans");
+        }
+      } catch {
+        toast.error("Failed to fetch plan");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlan();
+  }, [planId, router]);
+
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+
+  // Initialize Cashfree SDK
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  // --- Handlers ---
+
+  const handleSendOtp = async () => {
+    if (!formData.email || !formData.name || !formData.instituteName || !formData.phone) {
+      toast.error("Please fill all fields");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    // Validate phone
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // First check if email is already registered
+      const checkRes = await fetch("/api/email/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists) {
+          toast.error("This email is already registered. Please login instead.");
+          setIsNewTenant(false);
+          setStep("login");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Send OTP
+      const res = await fetch("/api/email/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          purpose: "subscription-verification",
+          name: formData.name,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("OTP sent to your email");
+        setOtpSent(true);
+        setResendTimer(60);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to send OTP");
+      }
+    } catch {
+      toast.error("Failed to send OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (formData.otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/email/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: formData.otp,
+          purpose: "subscription-verification",
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Email verified successfully");
+        setVerifiedEmail(formData.email);
+        setStep("payment");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Invalid OTP");
+      }
+    } catch {
+      toast.error("Failed to verify OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/email/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          purpose: "subscription-verification",
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("OTP resent");
+        setResendTimer(60);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to resend OTP");
+      }
+    } catch {
+      toast.error("Failed to resend OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      toast.error("Please enter email and password");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast.success("Login successful");
+        setVerifiedEmail(formData.email);
+        setTenantId(data.tenant?._id || data.tenantId);
+        setFormData(prev => ({
+          ...prev,
+          name: data.tenant?.adminName || data.user?.name || prev.name,
+          instituteName: data.tenant?.instituteName || prev.instituteName,
+          phone: data.tenant?.phone || data.user?.phone || prev.phone,
+        }));
+        setStep("payment");
+      } else {
+        toast.error(data.error || "Invalid credentials");
+      }
+    } catch {
+      toast.error("Login failed");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!plan || !verifiedEmail) return;
+
+    setIsSubmitting(true);
+    setStep("processing");
+
+    try {
+      // Initiate payment
+      const payload = {
+        planId: plan._id,
+        name: formData.name,
+        instituteName: formData.instituteName,
+        email: verifiedEmail,
+        phone: formData.phone,
+        isNewTenant,
+        tenantId: tenantId || undefined,
+      };
+
+      const res = await fetch("/api/subscription/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to initiate payment");
+      }
+
+      // Open Cashfree checkout
+      const cashfree = await (window as any).Cashfree({
+        mode: "production",
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_self",
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Payment failed");
+      setStep("payment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Render ---
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Plan not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <Link href="/subscription/plans" className="inline-flex items-center text-blue-600 hover:underline mb-6">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Plans
+        </Link>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Plan Summary */}
+          <Card className="md:col-span-1 h-fit">
+            <CardHeader>
+              <CardTitle className="text-lg">{plan.name}</CardTitle>
+              <CardDescription>{plan.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600 mb-4">
+                ₹{plan.price}
+                <span className="text-sm font-normal text-gray-500">/{plan.billingCycle}</span>
+              </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>✓ Up to {plan.maxStudents} students</p>
+                <p>✓ Up to {plan.maxStaff} staff</p>
+                {plan.features?.slice(0, 3).map((feature, i) => (
+                  <p key={i}>✓ {feature}</p>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Checkout Form */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Complete Your Purchase</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StepIndicator currentStep={step} isNewTenant={isNewTenant} />
+
+              {/* Step 1: Choose Account Type */}
+              {step === "choose-type" && (
+                <div className="space-y-6">
+                  <p className="text-center text-gray-600 mb-6">
+                    Are you a new institute or an existing customer?
+                  </p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        setIsNewTenant(true);
+                        setStep("verify-otp");
+                      }}
+                      className="p-6 border-2 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                          <Building2 className="h-5 w-5" />
+                        </div>
+                        <h3 className="font-semibold">New Institute</h3>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Create a new account and subscribe to start using our platform
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsNewTenant(false);
+                        setStep("login");
+                      }}
+                      className="p-6 border-2 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-all">
+                          <Shield className="h-5 w-5" />
+                        </div>
+                        <h3 className="font-semibold">Existing Customer</h3>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Login to renew or upgrade your existing subscription
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2a: OTP Verification (New Tenant) */}
+              {step === "verify-otp" && (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => {
+                      setStep("choose-type");
+                      setOtpSent(false);
+                      setFormData(prev => ({ ...prev, otp: "" }));
+                    }}
+                    className="text-sm text-blue-600 hover:underline flex items-center"
+                  >
+                    <ArrowLeft className="h-3 w-3 mr-1" /> Back
+                  </button>
+
+                  {!otpSent ? (
+                    <>
+                      <div className="text-center mb-6">
+                        <Mail className="h-12 w-12 mx-auto text-blue-600 mb-3" />
+                        <h3 className="font-semibold text-lg">Verify Your Email</h3>
+                        <p className="text-sm text-gray-500">
+                          We&apos;ll send a verification code to your email
+                        </p>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="name">Your Name *</Label>
+                          <div className="relative mt-1">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="name"
+                              placeholder="John Doe"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="instituteName">Institute Name *</Label>
+                          <div className="relative mt-1">
+                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="instituteName"
+                              placeholder="ABC Academy"
+                              value={formData.instituteName}
+                              onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="email">Email Address *</Label>
+                          <div className="relative mt-1">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="you@example.com"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="phone">Phone Number *</Label>
+                          <div className="relative mt-1">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="phone"
+                              type="tel"
+                              placeholder="9876543210"
+                              value={formData.phone}
+                              onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleSendOtp}
+                        disabled={isSubmitting}
+                        className="w-full"
+                      >
+                        {isSubmitting ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending OTP...</>
+                        ) : (
+                          "Send Verification Code"
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                          <Mail className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <h3 className="font-semibold text-lg">Enter Verification Code</h3>
+                        <p className="text-sm text-gray-500">
+                          We sent a 6-digit code to <strong>{formData.email}</strong>
+                        </p>
+                      </div>
+
+                      <OtpInput
+                        value={formData.otp}
+                        onChange={(otp) => setFormData({ ...formData, otp })}
+                        disabled={isSubmitting}
+                      />
+
+                      <div className="text-center mt-4">
+                        {resendTimer > 0 ? (
+                          <p className="text-sm text-gray-500">
+                            Resend code in {resendTimer}s
+                          </p>
+                        ) : (
+                          <button
+                            onClick={handleResendOtp}
+                            disabled={isSubmitting}
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            Didn&apos;t receive code? Resend
+                          </button>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={handleVerifyOtp}
+                        disabled={isSubmitting || formData.otp.length !== 6}
+                        className="w-full mt-6"
+                      >
+                        {isSubmitting ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying...</>
+                        ) : (
+                          "Verify & Continue"
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2b: Login (Existing Tenant) */}
+              {step === "login" && (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => setStep("choose-type")}
+                    className="text-sm text-blue-600 hover:underline flex items-center"
+                  >
+                    <ArrowLeft className="h-3 w-3 mr-1" /> Back
+                  </button>
+
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                      <Shield className="h-8 w-8 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Welcome Back!</h3>
+                    <p className="text-sm text-gray-500">
+                      Login to your account to renew subscription
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 max-w-sm mx-auto">
+                    <div>
+                      <Label htmlFor="login-email">Email Address</Label>
+                      <div className="relative mt-1">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative mt-1">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleLogin}
+                      disabled={isSubmitting}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      {isSubmitting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging in...</>
+                      ) : (
+                        "Login & Continue"
+                      )}
+                    </Button>
+
+                    <p className="text-center text-sm text-gray-500">
+                      <Link href="/forgot-password" className="text-blue-600 hover:underline">
+                        Forgot password?
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Payment */}
+              {step === "payment" && (
+                <div className="space-y-6">
+                  <button
+                    onClick={() => setStep(isNewTenant ? "verify-otp" : "login")}
+                    className="text-sm text-blue-600 hover:underline flex items-center"
+                  >
+                    <ArrowLeft className="h-3 w-3 mr-1" /> Back
+                  </button>
+
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                      <CreditCard className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <h3 className="font-semibold text-lg">Complete Payment</h3>
+                    <p className="text-sm text-gray-500">
+                      {isNewTenant
+                        ? "Your account will be created after successful payment"
+                        : "Your subscription will be renewed after payment"}
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 className="font-medium mb-3">Order Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium">{verifiedEmail}</span>
+                      </div>
+                      {formData.instituteName && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Institute:</span>
+                          <span className="font-medium">{formData.instituteName}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Plan:</span>
+                        <span className="font-medium">{plan.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Billing:</span>
+                        <span className="font-medium capitalize">{plan.billingCycle}</span>
+                      </div>
+                      <hr className="my-2" />
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total:</span>
+                        <span className="text-blue-600">₹{plan.price}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handlePayment}
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+                    ) : (
+                      <>Pay ₹{plan.price} <CreditCard className="h-4 w-4 ml-2" /></>
+                    )}
+                  </Button>
+
+                  <p className="text-center text-xs text-gray-500 mt-4">
+                    Secure payment powered by Cashfree. Your payment information is encrypted and secure.
+                  </p>
+                </div>
+              )}
+
+              {/* Processing State */}
+              {step === "processing" && (
+                <div className="text-center py-12">
+                  <Loader2 className="h-16 w-16 mx-auto animate-spin text-blue-600 mb-4" />
+                  <h3 className="font-semibold text-lg">Processing Payment...</h3>
+                  <p className="text-sm text-gray-500">
+                    Please wait while we redirect you to the payment gateway
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
