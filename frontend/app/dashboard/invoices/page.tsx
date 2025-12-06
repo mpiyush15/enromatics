@@ -85,6 +85,7 @@ export default function InvoicesPage() {
         return;
       }
       
+      // Call BFF endpoint which forwards to backend
       const res = await fetch('/api/admin/subscriptions', {
         method: 'GET',
         headers: {

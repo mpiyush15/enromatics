@@ -71,6 +71,7 @@ export default function SubscribersPage() {
         return;
       }
       
+      // Call BFF endpoint which forwards to backend
       const res = await fetch('/api/admin/subscribers', {
         method: 'GET',
         headers: {

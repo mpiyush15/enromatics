@@ -514,10 +514,21 @@ export const devMarkOrderPaid = async (req, res) => {
  */
 export const getAllSubscriptionPayments = async (req, res) => {
   try {
+    console.log('📋 getAllSubscriptionPayments called by user:', req.user?.id);
+    
     // Get ALL tenants for billing/invoices
     const tenants = await Tenant.find({}).sort({ createdAt: -1 });
 
-    console.log(`Found ${tenants.length} tenants for invoices`);
+    console.log(`✅ Found ${tenants.length} tenants for invoices`);
+
+    if (tenants.length > 0) {
+      console.log('📊 Sample tenant data:', {
+        tenantId: tenants[0].tenantId,
+        name: tenants[0].name,
+        plan: tenants[0].plan,
+        subscription: tenants[0].subscription
+      });
+    }
 
     const payments = tenants.map(tenant => ({
       id: tenant.subscription?.paymentId || `tenant_${tenant.tenantId}`,
@@ -536,9 +547,10 @@ export const getAllSubscriptionPayments = async (req, res) => {
       createdAt: tenant.subscription?.startDate || tenant.createdAt
     }));
 
+    console.log(`✅ Returning ${payments.length} formatted payments`);
     res.status(200).json({ success: true, payments });
   } catch (err) {
-    console.error('Get all subscription payments error:', err);
+    console.error('❌ Get all subscription payments error:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
@@ -548,10 +560,22 @@ export const getAllSubscriptionPayments = async (req, res) => {
  */
 export const getAllSubscribers = async (req, res) => {
   try {
+    console.log('👥 getAllSubscribers called by user:', req.user?.id);
+    
     // Get ALL tenants for billing module
     const subscribers = await Tenant.find({}).sort({ createdAt: -1 });
 
-    console.log(`Found ${subscribers.length} tenants for billing`);
+    console.log(`✅ Found ${subscribers.length} tenants for billing`);
+
+    if (subscribers.length > 0) {
+      console.log('📊 Sample subscriber data:', {
+        tenantId: subscribers[0].tenantId,
+        name: subscribers[0].name,
+        plan: subscribers[0].plan,
+        email: subscribers[0].email,
+        createdAt: subscribers[0].createdAt
+      });
+    }
 
     // Transform to ensure consistent structure
     const transformedSubscribers = subscribers.map(sub => ({
@@ -575,9 +599,10 @@ export const getAllSubscribers = async (req, res) => {
       createdAt: sub.createdAt
     }));
 
+    console.log(`✅ Returning ${transformedSubscribers.length} formatted subscribers`);
     res.status(200).json({ success: true, subscribers: transformedSubscribers });
   } catch (err) {
-    console.error('Get all subscribers error:', err);
+    console.error('❌ Get all subscribers error:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };
