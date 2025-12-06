@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { TrendingUp, Loader } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface TopTenant {
   _id: string;
@@ -31,26 +32,36 @@ const planColors: Record<string, string> = {
 };
 
 export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
+  const router = useRouter();
   const [tenants, setTenants] = useState<TopTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchTopTenants();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchTopTenants();
+    }
+  }, [mounted]);
 
   const fetchTopTenants = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
+      // Get token from localStorage (client-side only)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         throw new Error('No authentication token found');
       }
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app'}/api/analytics/top-tenants?limit=${limit}`,
+        `${apiUrl}/api/analytics/top-tenants?limit=${limit}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -60,6 +71,11 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
         throw new Error('Failed to fetch top tenants');
       }
 

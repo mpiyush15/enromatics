@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface RevenueBreakdown {
   cycle: string;
@@ -11,26 +12,36 @@ interface RevenueBreakdown {
 }
 
 export default function RevenueBreakdownCard() {
+  const router = useRouter();
   const [breakdown, setBreakdown] = useState<RevenueBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchRevenueBreakdown();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchRevenueBreakdown();
+    }
+  }, [mounted]);
 
   const fetchRevenueBreakdown = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
+      // Get token from localStorage (client-side only)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         throw new Error('No authentication token found');
       }
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app'}/api/analytics/revenue-breakdown`,
+        `${apiUrl}/api/analytics/revenue-breakdown`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -40,6 +51,11 @@ export default function RevenueBreakdownCard() {
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
         throw new Error('Failed to fetch revenue breakdown');
       }
 

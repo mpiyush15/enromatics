@@ -6,6 +6,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
 import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
 import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
+import { useRouter } from 'next/navigation';
 
 interface AnalyticsData {
   kpis: {
@@ -25,26 +26,38 @@ interface AnalyticsData {
 }
 
 export default function OverviewPage() {
+  const router = useRouter();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    fetchAnalytics();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchAnalytics();
+    }
+  }, [mounted]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
+      // Get token from localStorage (client-side only)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
-        throw new Error('No authentication token found');
+        console.warn('No authentication token found, redirecting to login...');
+        router.push('/login');
+        return;
       }
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app'}/api/analytics/dashboard`,
+        `${apiUrl}/api/analytics/dashboard`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,6 +67,12 @@ export default function OverviewPage() {
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
         throw new Error('Failed to fetch analytics');
       }
 
