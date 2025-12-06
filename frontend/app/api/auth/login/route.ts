@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     // Create BFF response with cleaned user data
     const bffResponse = NextResponse.json({
       success: true,
+      token: data.token, // ✅ Include JWT token in response for client storage
       user: {
         id: data.user?.id,
         email: data.user?.email,
@@ -80,17 +81,14 @@ export async function POST(request: NextRequest) {
       message: data.message || 'Login successful',
     });
 
-    // Forward Set-Cookie header from Express to browser
-    // This is crucial - Express sets httpOnly JWT cookie
+    // Forward Set-Cookie header from Express to browser (for BFF routes)
     const setCookieHeader = expressResponse.headers.get('set-cookie');
     if (setCookieHeader) {
-      console.log('🍪 Forwarding Set-Cookie header to browser:', setCookieHeader.split(';')[0]); // Log header without full value
+      console.log('🍪 Forwarding Set-Cookie header to browser');
       bffResponse.headers.set('set-cookie', setCookieHeader);
-    } else {
-      console.warn('⚠️ No Set-Cookie header received from Express backend');
     }
 
-    console.log('📤 Returning login response with user:', data.user?.email);
+    console.log('📤 Returning login response with token and user:', data.user?.email);
     return bffResponse;
   } catch (error) {
     console.error('❌ BFF Login error:', error);

@@ -31,12 +31,20 @@ export default function RevenueBreakdownCard() {
       setLoading(true);
       setError(null);
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      if (!token) {
+        setError('Authentication required');
+        setLoading(false);
+        return;
+      }
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
         `${apiUrl}/api/analytics/revenue-breakdown`,
         {
-          credentials: 'include', // ✅ Send cookies (httpOnly JWT)
           headers: {
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -44,6 +52,7 @@ export default function RevenueBreakdownCard() {
 
       if (!response.ok) {
         if (response.status === 401) {
+          localStorage.removeItem('token');
           setError('Session expired. Please refresh.');
           setLoading(false);
           return;

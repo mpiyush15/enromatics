@@ -51,6 +51,12 @@ export default function LoginPage() {
     try {
       const response = await authService.login(form.email, form.password);
       
+      // Store token in localStorage for API calls (cross-domain support)
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        console.log('✅ Token stored in localStorage');
+      }
+      
       setErrors({ success: "✅ Welcome back! Redirecting..." });
 
       // Redirect based on role
