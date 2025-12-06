@@ -14,6 +14,8 @@ interface Invoice {
   plan: string;
   status: string;
   billingCycle: string;
+  amount: number;
+  currency: string;
   startDate: string;
   endDate: string;
   createdAt: string;
@@ -30,9 +32,12 @@ const PLAN_NAMES: Record<string, string> = {
 };
 
 const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
+  free: { monthly: 0, annual: 0 },
+  trial: { monthly: 0, annual: 0 },
   test: { monthly: 10, annual: 10 },
   starter: { monthly: 1999, annual: 16790 },
   professional: { monthly: 2999, annual: 25190 },
+  pro: { monthly: 2999, annual: 25190 },
   enterprise: { monthly: 4999, annual: 41990 },
 };
 
@@ -81,9 +86,15 @@ export default function InvoicesPage() {
     }
   };
 
-  const getAmount = (plan: string, billingCycle: string) => {
-    const prices = PLAN_PRICES[plan?.toLowerCase()] || { monthly: 0, annual: 0 };
-    return billingCycle === 'annual' ? prices.annual : prices.monthly;
+  // Get amount - use stored amount if available, otherwise calculate from plan
+  const getAmount = (invoice: Invoice) => {
+    // If amount is stored in database, use it
+    if (invoice.amount && invoice.amount > 0) {
+      return invoice.amount;
+    }
+    // Fallback: calculate from plan prices
+    const prices = PLAN_PRICES[invoice.plan?.toLowerCase()] || { monthly: 0, annual: 0 };
+    return invoice.billingCycle === 'annual' ? prices.annual : prices.monthly;
   };
 
   const formatDate = (dateStr: string) => {
@@ -131,7 +142,7 @@ export default function InvoicesPage() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
             <p className="text-3xl font-bold text-blue-600">
-              ₹{invoices.reduce((sum, inv) => sum + getAmount(inv.plan, inv.billingCycle), 0).toLocaleString()}
+              ₹{invoices.reduce((sum, inv) => sum + getAmount(inv), 0).toLocaleString()}
             </p>
           </div>
         </div>
@@ -184,7 +195,7 @@ export default function InvoicesPage() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-gray-900 dark:text-white">
-                          ₹{getAmount(invoice.plan, invoice.billingCycle).toLocaleString()}
+                          ₹{getAmount(invoice).toLocaleString()}
                         </p>
                       </td>
                       <td className="px-6 py-4">

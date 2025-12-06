@@ -64,6 +64,22 @@ const tenantSchema = new mongoose.Schema(
         type: Date,
         default: null,
       },
+      // Billing cycle - monthly or annual
+      billingCycle: {
+        type: String,
+        enum: ["monthly", "annual", "yearly"],
+        default: "monthly",
+      },
+      // Actual amount paid in INR
+      amount: {
+        type: Number,
+        default: 0,
+      },
+      // Currency (defaults to INR)
+      currency: {
+        type: String,
+        default: "INR",
+      },
     },
 
     // Whether tenant account is active or suspended

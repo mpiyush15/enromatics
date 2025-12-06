@@ -24,6 +24,8 @@ interface Subscriber {
     startDate: string;
     endDate: string;
     billingCycle?: string;
+    amount?: number;
+    currency?: string;
   };
   createdAt: string;
 }

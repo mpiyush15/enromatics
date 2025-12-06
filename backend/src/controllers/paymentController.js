@@ -446,6 +446,8 @@ export const getAllSubscriptionPayments = async (req, res) => {
       plan: tenant.plan || 'free',
       status: tenant.subscription?.status || (tenant.active ? 'active' : 'inactive'),
       billingCycle: tenant.subscription?.billingCycle || 'monthly',
+      amount: tenant.subscription?.amount || 0,
+      currency: tenant.subscription?.currency || 'INR',
       startDate: tenant.subscription?.startDate || tenant.createdAt,
       endDate: tenant.subscription?.endDate || null,
       createdAt: tenant.subscription?.startDate || tenant.createdAt
@@ -483,7 +485,9 @@ export const getAllSubscribers = async (req, res) => {
         paymentId: sub.subscription?.paymentId || null,
         startDate: sub.subscription?.startDate || sub.createdAt,
         endDate: sub.subscription?.endDate || null,
-        billingCycle: sub.subscription?.billingCycle || 'monthly'
+        billingCycle: sub.subscription?.billingCycle || 'monthly',
+        amount: sub.subscription?.amount || 0,
+        currency: sub.subscription?.currency || 'INR'
       },
       createdAt: sub.createdAt
     }));

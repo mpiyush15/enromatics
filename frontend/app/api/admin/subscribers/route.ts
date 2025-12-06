@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
+    // Get cookie header from request (same pattern as working routes)
+    const cookieHeader = request.headers.get('cookie');
 
-    if (!token) {
+    if (!cookieHeader || !cookieHeader.includes('token=')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `token=${token}`,
+        'Cookie': cookieHeader,
       },
     });
 
