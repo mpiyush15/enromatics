@@ -9,7 +9,9 @@ import {
   devMarkOrderPaid,
   getAllSubscriptionPayments,
   getAllSubscribers,
-  getSubscriptionStats
+  getSubscriptionStats,
+  downloadInvoice,
+  sendInvoiceEmail
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -36,6 +38,10 @@ router.get("/admin/subscriptions", protect, authorizeRoles("SuperAdmin"), getAll
 router.get("/admin/subscribers", protect, authorizeRoles("SuperAdmin"), getAllSubscribers);
 // Get subscription stats - SuperAdmin only
 router.get("/admin/stats", protect, authorizeRoles("SuperAdmin"), getSubscriptionStats);
+// Download invoice PDF - SuperAdmin only
+router.get("/admin/invoices/:tenantId/download", protect, authorizeRoles("SuperAdmin"), downloadInvoice);
+// Send invoice via email - SuperAdmin only
+router.post("/admin/invoices/:tenantId/send", protect, authorizeRoles("SuperAdmin"), sendInvoiceEmail);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

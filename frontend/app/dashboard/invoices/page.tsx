@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, Building2, Calendar, Loader2 } from 'lucide-react';
+import { FileText, Download, Building2, Calendar, Loader2, Eye, Send, MoreHorizontal } from 'lucide-react';
 
 interface Invoice {
   id: string;
@@ -47,6 +47,9 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'SuperAdmin') {
@@ -104,6 +107,69 @@ export default function InvoicesPage() {
       month: 'short',
       year: 'numeric'
     });
+  };
+
+  // View invoice details
+  const viewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setShowModal(true);
+  };
+
+  // Download invoice PDF
+  const downloadInvoice = async (invoice: Invoice) => {
+    try {
+      setActionLoading(`download-${invoice.id}`);
+      const res = await fetch(`/api/admin/invoices/${invoice.tenantId}/download`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${invoice.tenantId}-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to download invoice');
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download invoice');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Send invoice to tenant via email
+  const sendInvoice = async (invoice: Invoice) => {
+    if (!confirm(`Send invoice to ${invoice.email}?`)) return;
+    
+    try {
+      setActionLoading(`send-${invoice.id}`);
+      const res = await fetch(`/api/admin/invoices/${invoice.tenantId}/send`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        alert('Invoice sent successfully!');
+      } else {
+        alert(data.message || 'Failed to send invoice');
+      }
+    } catch (err) {
+      console.error('Send error:', err);
+      alert('Failed to send invoice');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   if (authLoading || loading) {
@@ -166,12 +232,13 @@ export default function InvoicesPage() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Amount</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                       No invoices found
                     </td>
                   </tr>
@@ -213,6 +280,41 @@ export default function InvoicesPage() {
                           {formatDate(invoice.startDate || invoice.createdAt)}
                         </div>
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => viewInvoice(invoice)}
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                            title="View Invoice"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => downloadInvoice(invoice)}
+                            disabled={actionLoading === `download-${invoice.id}`}
+                            className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition disabled:opacity-50"
+                            title="Download PDF"
+                          >
+                            {actionLoading === `download-${invoice.id}` ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Download size={16} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => sendInvoice(invoice)}
+                            disabled={actionLoading === `send-${invoice.id}`}
+                            className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition disabled:opacity-50"
+                            title="Send to Tenant"
+                          >
+                            {actionLoading === `send-${invoice.id}` ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Send size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -220,6 +322,82 @@ export default function InvoicesPage() {
             </table>
           </div>
         </div>
+
+        {/* Invoice Modal */}
+        {showModal && selectedInvoice && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Invoice Details</h2>
+                <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Invoice ID</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{selectedInvoice.id}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Institute</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{selectedInvoice.instituteName || selectedInvoice.tenantName}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Email</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{selectedInvoice.email}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Plan</span>
+                  <span className="font-medium text-blue-600">{PLAN_NAMES[selectedInvoice.plan?.toLowerCase()] || selectedInvoice.plan}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Billing Cycle</span>
+                  <span className="font-medium text-gray-900 dark:text-white capitalize">{selectedInvoice.billingCycle || 'monthly'}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Amount</span>
+                  <span className="font-bold text-green-600 text-lg">₹{getAmount(selectedInvoice).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Status</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedInvoice.status === 'active' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {selectedInvoice.status}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b dark:border-gray-700">
+                  <span className="text-gray-500">Start Date</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedInvoice.startDate)}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-500">End Date</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{formatDate(selectedInvoice.endDate)}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => downloadInvoice(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Download size={16} />
+                  Download PDF
+                </button>
+                <button
+                  onClick={() => sendInvoice(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <Send size={16} />
+                  Send to Tenant
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
