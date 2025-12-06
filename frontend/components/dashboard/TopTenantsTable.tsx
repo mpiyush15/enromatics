@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { TrendingUp, Loader } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface TopTenant {
   _id: string;
@@ -32,7 +31,6 @@ const planColors: Record<string, string> = {
 };
 
 export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
-  const router = useRouter();
   const [tenants, setTenants] = useState<TopTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +51,7 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       setLoading(true);
       setError(null);
 
-      // Get token from localStorage (client-side only)
+      // Get token from localStorage
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         setError('Authentication required');
@@ -75,7 +73,7 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
-          setError('Authentication expired. Please refresh the page.');
+          setError('Session expired. Please refresh.');
           setLoading(false);
           return;
         }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Loader } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface RevenueBreakdown {
   cycle: string;
@@ -12,7 +11,6 @@ interface RevenueBreakdown {
 }
 
 export default function RevenueBreakdownCard() {
-  const router = useRouter();
   const [breakdown, setBreakdown] = useState<RevenueBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +31,7 @@ export default function RevenueBreakdownCard() {
       setLoading(true);
       setError(null);
 
-      // Get token from localStorage (client-side only)
+      // Get token from localStorage
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         setError('Authentication required');
@@ -55,7 +53,7 @@ export default function RevenueBreakdownCard() {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
-          setError('Authentication expired. Please refresh the page.');
+          setError('Session expired. Please refresh.');
           setLoading(false);
           return;
         }

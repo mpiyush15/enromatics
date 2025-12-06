@@ -33,8 +33,14 @@ export default function OverviewPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Check if token exists on mount - if not, redirect
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     setMounted(true);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (mounted) {
@@ -52,10 +58,6 @@ export default function OverviewPage() {
       if (!token) {
         setError('Authentication required. Please log in.');
         setLoading(false);
-        // Redirect after a short delay to allow user to see the page
-        setTimeout(() => {
-          router.push('/login');
-        }, 1000);
         return;
       }
 
@@ -74,11 +76,8 @@ export default function OverviewPage() {
         if (response.status === 401) {
           // Token expired or invalid
           localStorage.removeItem('token');
-          setError('Authentication expired. Please log in again.');
+          setError('Session expired. Please log in again.');
           setLoading(false);
-          setTimeout(() => {
-            router.push('/login');
-          }, 1000);
           return;
         }
         throw new Error('Failed to fetch analytics');
