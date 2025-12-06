@@ -3,20 +3,7 @@
 import { useState, useEffect } from 'react';
 import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { 
-  Users,
-  Search,
-  Building2,
-  Mail,
-  Phone,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  MapPin
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Users, Building2, Calendar, Loader2, Eye, Mail, KeyRound } from 'lucide-react';
 
 interface Subscriber {
   _id: string;
@@ -30,7 +17,6 @@ interface Subscriber {
     phone?: string;
     city?: string;
     state?: string;
-    country?: string;
   };
   subscription: {
     status: string;
@@ -42,14 +28,22 @@ interface Subscriber {
   createdAt: string;
 }
 
-export default function SuperAdminSubscribersPage() {
+const PLAN_NAMES: Record<string, string> = {
+  free: 'Free',
+  trial: 'Trial',
+  test: 'Test Plan',
+  starter: 'Starter',
+  professional: 'Professional',
+  enterprise: 'Enterprise',
+  pro: 'Pro',
+};
+
+export default function SubscribersPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
-  const [filteredSubscribers, setFilteredSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!authLoading && user?.role !== 'SuperAdmin') {
@@ -59,246 +53,189 @@ export default function SuperAdminSubscribersPage() {
     if (!authLoading && user?.role === 'SuperAdmin') {
       fetchSubscribers();
     }
-  }, [user, authLoading]);
-
-  useEffect(() => {
-    let result = [...subscribers];
-
-    // Apply plan filter
-    if (planFilter !== 'all') {
-      result = result.filter(s => s.plan === planFilter);
-    }
-
-    // Apply search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(s => 
-        s.name.toLowerCase().includes(query) ||
-        s.instituteName?.toLowerCase().includes(query) ||
-        s.email.toLowerCase().includes(query) ||
-        s.tenantId.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredSubscribers(result);
-  }, [subscribers, searchQuery, planFilter]);
+  }, [user, authLoading, router]);
 
   const fetchSubscribers = async () => {
     try {
+      setLoading(true);
+      setError('');
+      
       const res = await fetch('/api/admin/subscribers', {
-        credentials: 'include'
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
+      
+      console.log('Subscribers API response status:', res.status);
       const data = await res.json();
-      if (data.success) {
-        setSubscribers(data.subscribers || []);
+      console.log('Subscribers API response:', data);
+      
+      if (data.success && data.subscribers) {
+        setSubscribers(data.subscribers);
       } else {
-        toast.error('Failed to load subscribers');
+        setError(data.message || 'Failed to load subscribers');
       }
-    } catch (error) {
-      console.error('Error fetching subscribers:', error);
-      toast.error('Error loading subscribers');
+    } catch (err: any) {
+      console.error('Error fetching subscribers:', err);
+      setError(err.message || 'Failed to load subscribers');
     } finally {
       setLoading(false);
     }
   };
 
-  const getDaysRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
-  const getStatusBadge = (daysRemaining: number) => {
-    if (daysRemaining < 0) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200">
-          <XCircle className="w-3 h-3" />
-          Expired
-        </span>
-      );
-    } else if (daysRemaining <= 7) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-          <Clock className="w-3 h-3" />
-          Expiring Soon
-        </span>
-      );
-    } else {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
-          <CheckCircle className="w-3 h-3" />
-          Active
-        </span>
-      );
-    }
+  const getDaysRemaining = (endDate: string) => {
+    if (!endDate) return 0;
+    const end = new Date(endDate);
+    const now = new Date();
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   if (authLoading || loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={40} />
+          <p className="text-gray-600 dark:text-gray-400">Loading subscribers...</p>
         </div>
       </div>
     );
   }
 
-  if (user?.role !== 'SuperAdmin') {
-    return null;
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Users className="w-7 h-7 text-indigo-600" />
-            Subscribers
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            All tenants with active subscriptions
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full font-medium">
-            {subscribers.length} Active Subscribers
-          </span>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by name, institute, email, or tenant ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Users className="text-blue-600" size={32} />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscribers</h1>
           </div>
-          <select
-            value={planFilter}
-            onChange={(e) => setPlanFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="all">All Plans</option>
-            <option value="test">Test</option>
-            <option value="starter">Starter</option>
-            <option value="professional">Professional</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
+          <p className="text-gray-600 dark:text-gray-400">All registered tenants and their subscription status</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Total Tenants</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{subscribers.length}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
+            <p className="text-3xl font-bold text-green-600">{subscribers.filter(s => s.subscription?.status === 'active').length}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Expiring Soon</p>
+            <p className="text-3xl font-bold text-yellow-600">
+              {subscribers.filter(s => {
+                const days = getDaysRemaining(s.subscription?.endDate);
+                return days > 0 && days <= 7;
+              }).length}
+            </p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Expired</p>
+            <p className="text-3xl font-bold text-red-600">
+              {subscribers.filter(s => getDaysRemaining(s.subscription?.endDate) < 0).length}
+            </p>
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-4 rounded-lg mb-6">
+            {error}
+            <button onClick={fetchSubscribers} className="ml-4 underline">Retry</button>
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Institute</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Plan</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Expires</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {subscribers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                      No subscribers found
+                    </td>
+                  </tr>
+                ) : (
+                  subscribers.map((sub) => {
+                    const daysRemaining = getDaysRemaining(sub.subscription?.endDate);
+                    return (
+                      <tr key={sub._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Building2 className="text-gray-400" size={20} />
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-white">{sub.instituteName || sub.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{sub.email}</p>
+                              {sub.contact?.phone && (
+                                <p className="text-xs text-gray-400">{sub.contact.phone}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-sm font-medium">
+                            {PLAN_NAMES[sub.plan?.toLowerCase()] || sub.plan || 'Free'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            sub.subscription?.status === 'active' && daysRemaining > 7
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                              : daysRemaining > 0 && daysRemaining <= 7
+                              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                              : daysRemaining <= 0
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {daysRemaining > 7 ? 'Active' : daysRemaining > 0 ? `${daysRemaining} days left` : daysRemaining < 0 ? 'Expired' : sub.subscription?.status || 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={16} />
+                            {formatDate(sub.subscription?.endDate)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => router.push(`/dashboard/tenants/${sub.tenantId}`)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+                          >
+                            <Eye size={14} />
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-
-      {/* Subscribers Grid */}
-      {filteredSubscribers.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 p-12 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">
-            {subscribers.length === 0 ? 'No active subscribers yet' : 'No matching subscribers found'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSubscribers.map((subscriber) => {
-            const daysRemaining = getDaysRemaining(subscriber.subscription.endDate);
-            
-            return (
-              <div 
-                key={subscriber._id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="p-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                        <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {subscriber.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {subscriber.instituteName || 'No institute name'}
-                        </p>
-                      </div>
-                    </div>
-                    {getStatusBadge(daysRemaining)}
-                  </div>
-
-                  {/* Plan Badge */}
-                  <div className="mb-4">
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full capitalize ${
-                      subscriber.plan === 'enterprise' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200' :
-                      subscriber.plan === 'professional' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' :
-                      subscriber.plan === 'starter' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' :
-                      'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                    }`}>
-                      {subscriber.plan} Plan
-                    </span>
-                    {subscriber.subscription.billingCycle && (
-                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 capitalize">
-                        ({subscriber.subscription.billingCycle})
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Details */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Mail className="w-4 h-4" />
-                      <span className="truncate">{subscriber.email}</span>
-                    </div>
-                    {subscriber.contact?.phone && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <Phone className="w-4 h-4" />
-                        <span>{subscriber.contact.phone}</span>
-                      </div>
-                    )}
-                    {(subscriber.contact?.city || subscriber.contact?.state) && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <MapPin className="w-4 h-4" />
-                        <span>
-                          {[subscriber.contact.city, subscriber.contact.state].filter(Boolean).join(', ')}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        Expires: {new Date(subscriber.subscription.endDate).toLocaleDateString()}
-                        {daysRemaining > 0 && (
-                          <span className="ml-1 text-gray-500">({daysRemaining} days)</span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => router.push(`/dashboard/tenants/${subscriber.tenantId}`)}
-                    className="w-full flex items-center justify-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View Details
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
