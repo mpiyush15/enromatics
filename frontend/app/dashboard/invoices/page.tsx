@@ -76,15 +76,35 @@ export default function InvoicesPage() {
       setLoading(true);
       setError('');
       
+      // Get token from localStorage (stored at login)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      if (!token) {
+        setError('Authentication required. Please log in.');
+        setLoading(false);
+        return;
+      }
+      
       const res = await fetch('/api/admin/subscriptions', {
         method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       
       console.log('Invoice API response status:', res.status);
       const data = await res.json();
       console.log('Invoice API response:', data);
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        throw new Error(data.message || 'Failed to load invoices');
+      }
       
       if (data.success && data.payments) {
         setInvoices(data.payments);
