@@ -51,20 +51,12 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       setLoading(true);
       setError(null);
 
-      // Get token from localStorage
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) {
-        setError('Authentication required');
-        setLoading(false);
-        return;
-      }
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
         `${apiUrl}/api/analytics/top-tenants?limit=${limit}`,
         {
+          credentials: 'include', // ✅ Send cookies (httpOnly JWT)
           headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -72,7 +64,6 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token');
           setError('Session expired. Please refresh.');
           setLoading(false);
           return;

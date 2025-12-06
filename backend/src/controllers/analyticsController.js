@@ -7,6 +7,8 @@ import Payment from '../models/Payment.js';
  */
 export const getDashboardAnalytics = async (req, res) => {
   try {
+    console.log("📊 Analytics API called - User:", { email: req.user?.email, role: req.user?.role });
+    
     // Get total revenue (sum of all active subscription amounts)
     const totalRevenue = await Tenant.aggregate([
       {

@@ -10,40 +10,46 @@ export const protect = async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
+    console.log("✅ Token from Bearer header");
   } else if (req.cookies?.jwt) {
     token = req.cookies.jwt;
+    console.log("✅ Token from cookie");
+  } else {
+    console.warn("⚠️ No token found - Headers:", Object.keys(req.headers));
+    console.warn("⚠️ Cookies:", req.cookies);
   }
 
   if (!token) {
     return res.status(401).json({ message: "Not authorized, no token" });
   }
-try {
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  console.log("✅ Decoded token:", decoded);
-  
-  // Support both web (id) and mobile (userId) token formats
-  const userId = decoded.id || decoded.userId;
-  req.user = await User.findById(userId).select("-password");
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Decoded token:", { id: decoded.id, email: decoded.email, role: decoded.role });
+    
+    // Support both web (id) and mobile (userId) token formats
+    const userId = decoded.id || decoded.userId;
+    req.user = await User.findById(userId).select("-password");
 
-  if (!req.user) {
-    console.log("❌ No user found for decoded id:", userId);
-    return res.status(401).json({ message: "User not found" });
-  }
-  
-  // Add additional mobile-specific data to req.user for mobile endpoints
-  if (decoded.tenantId) {
-    req.user.tenantId = decoded.tenantId;
-  }
-  if (decoded.studentId) {
-    req.user.studentId = decoded.studentId;
-  }
+    if (!req.user) {
+      console.log("❌ No user found for decoded id:", userId);
+      return res.status(401).json({ message: "User not found" });
+    }
+    
+    console.log("✅ User authenticated:", { email: req.user.email, role: req.user.role });
+    
+    // Add additional mobile-specific data to req.user for mobile endpoints
+    if (decoded.tenantId) {
+      req.user.tenantId = decoded.tenantId;
+    }
+    if (decoded.studentId) {
+      req.user.studentId = decoded.studentId;
+    }
 
-  next();
-} catch (error) {
-  console.error("❌ Auth middleware error:", error.message);
-  return res.status(401).json({ message: "Not authorized, token invalid" });
-}
-   
+    next();
+  } catch (error) {
+    console.error("❌ Auth middleware error:", error.message);
+    return res.status(401).json({ message: "Not authorized, token invalid" });
+  }
 };
 
 /**

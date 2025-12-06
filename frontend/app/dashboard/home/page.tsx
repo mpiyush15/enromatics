@@ -46,16 +46,13 @@ export default function DashboardHomePage() {
     try {
       setLoading(true);
       setError(null);
-      
-      // Get token from localStorage (client-side only)
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
         `${apiUrl}/api/analytics/dashboard`,
         {
+          credentials: 'include', // ✅ Send cookies (httpOnly JWT)
           headers: {
-            ...(token && { Authorization: `Bearer ${token}` }),
             'Content-Type': 'application/json',
           },
         }
@@ -63,7 +60,6 @@ export default function DashboardHomePage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token');
           router.push('/login');
           return;
         }
