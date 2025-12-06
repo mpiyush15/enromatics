@@ -16,10 +16,15 @@ export default function HomeDashboardPage() {
     const fetchUser = async () => {
       try {
         // Check cache first
-        const cachedUser = cache.get(CACHE_KEYS.AUTH_USER);
+        const cachedUser = cache.get(CACHE_KEYS.AUTH_USER) as any;
         if (cachedUser) {
           setUser(cachedUser);
           setLoading(false);
+          
+          // Redirect SuperAdmin to overview page
+          if (cachedUser?.role === "SuperAdmin") {
+            router.push("/dashboard/overview");
+          }
           return;
         }
 
@@ -38,6 +43,11 @@ export default function HomeDashboardPage() {
         
         // Cache the user data
         cache.set(CACHE_KEYS.AUTH_USER, data, CACHE_TTL.MEDIUM);
+        
+        // Redirect SuperAdmin to overview page
+        if (data.role === "SuperAdmin") {
+          router.push("/dashboard/overview");
+        }
       } catch (err: any) {
         cache.remove(CACHE_KEYS.AUTH_USER);
         router.push("/login");
