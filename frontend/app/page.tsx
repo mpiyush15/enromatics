@@ -24,12 +24,12 @@ export default function LandingPage() {
             {/* Left Side - Text (White on Dark) */}
             <div className="lg:col-span-2 flex flex-col justify-center order-2 lg:order-1 relative z-10 h-full px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-20 lg:-mt-24 text-center lg:text-left">
               <div>
-                <h1 className="text-3xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold text-white mb-3 sm:mb-4 lg:mb-6 leading-tight">
-                  Grow your<br />Coaching Institute<br />with Enro Matics
+                <h1 className="text-3xl sm:text-3xl lg:text-5xl xl:text-5xl font-bold text-white mb-3 sm:mb-4 lg:mb-6 leading-tight">
+                  Manage admissions<br />Students, Fees, Attendance<br />in minutes
                 </h1>
                 
                 <p className="text-xs sm:text-sm lg:text-lg text-gray-200 mb-4 sm:mb-6 lg:mb-8 font-light leading-relaxed">
-                  Manage admissions, scholarship exams, social media, student reports, parents communication, daily attendance, fees reminders seamlessly with your own Brand Name
+                  Designed for Coaching Institutes, Schools to manage all operations smoothly
                 </p>
 
                 <div className="flex flex-col sm:flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-2 justify-center lg:justify-start">
@@ -37,7 +37,7 @@ export default function LandingPage() {
                     href="/home"
                     className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition text-sm sm:text-base lg:text-sm shadow-lg w-full sm:w-auto lg:w-auto"
                   >
-                    Explore Platform
+                    Start Free Trial
                   </Link>
                   <button 
                     onClick={() => setShowDemoModal(true)}
@@ -142,6 +142,57 @@ export default function LandingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section - High Impact Services */}
+      <section className="w-full bg-gradient-to-b from-slate-50 to-white py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-10 sm:mb-12 lg:mb-16">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-3 sm:mb-4">
+              How Enromatics Saves Your Time
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl mx-auto">
+              Automate repetitive tasks and focus on what matters most
+            </p>
+          </div>
+
+          {/* Benefits Grid - 3 Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            {/* Benefit 1 - Save Time */}
+            <div className="bg-white border-2 border-blue-200 rounded-xl p-6 sm:p-8 hover:shadow-lg hover:border-blue-400 transition-all duration-300">
+              <div className="text-4xl sm:text-5xl mb-4">💸</div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+                Save 5–10 Hours Per Week
+              </h3>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Eliminate manual data entry and repetitive admin tasks. Let Enromatics handle the work.
+              </p>
+            </div>
+
+            {/* Benefit 2 - Automate */}
+            <div className="bg-white border-2 border-green-200 rounded-xl p-6 sm:p-8 hover:shadow-lg hover:border-green-400 transition-all duration-300">
+              <div className="text-4xl sm:text-5xl mb-4">📅</div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+                Automate Fees & Reminders
+              </h3>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Automatically generate invoices, send payment reminders, and update student records for every enrollment.
+              </p>
+            </div>
+
+            {/* Benefit 3 - Track */}
+            <div className="bg-white border-2 border-purple-200 rounded-xl p-6 sm:p-8 hover:shadow-lg hover:border-purple-400 transition-all duration-300">
+              <div className="text-4xl sm:text-5xl mb-4">📊</div>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
+                Track Growth in One Place
+              </h3>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                Get real-time insights into admissions, revenue, and student performance with interactive analytics.
+              </p>
             </div>
           </div>
         </div>
