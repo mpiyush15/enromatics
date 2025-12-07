@@ -1,0 +1,98 @@
+{
+  "tiers": [
+    {
+      "key": "basic",
+      "name": "Basic",
+      "quotas": {
+        "students": 50,
+        "staff": 10,
+        "concurrentTests": 1,
+        "storageGB": 10,
+        "bandwidth": "fair-use"
+      },
+      "features": {
+        "subdomain": true,
+        "brandingBasic": true,
+        "rbac": true,
+        "onlineTestV1": true,
+        "studyMaterials": true,
+        "attendance": true,
+        "fees": true,
+        "notifications": true,
+        "secureVideo": true,
+        "aiGenerators": false,
+        "youtubeLive": false,
+        "whiteLabelApk": false,
+        "multiBranch": false
+      }
+    },
+    {
+      "key": "pro",
+      "name": "Pro",
+      "quotas": {
+        "students": 100,
+        "staff": 50,
+        "concurrentTests": 3,
+        "storageGB": 50,
+        "bandwidth": "increased"
+      },
+      "features": {
+        "subdomain": true,
+        "brandingBasic": true,
+        "rbac": true,
+        "onlineTestV1": true,
+        "studyMaterials": true,
+        "attendance": true,
+        "fees": true,
+        "notifications": "enhanced",
+        "secureVideo": true,
+        "aiGenerators": true,
+        "notesToQuestions": true,
+        "pyq": true,
+        "onlineTestV2": true,
+        "youtubeLive": false,
+        "whiteLabelApk": false,
+        "multiBranch": false
+      }
+    },
+    {
+      "key": "enterprise",
+      "name": "Enterprise",
+      "quotas": {
+        "students": null,
+        "staff": null,
+        "concurrentTests": 10,
+        "storageGB": null,
+        "bandwidth": "priority"
+      },
+      "features": {
+        "subdomain": true,
+        "brandingBasic": true,
+        "rbac": true,
+        "onlineTestV1": true,
+        "studyMaterials": true,
+        "attendance": true,
+        "fees": true,
+        "notifications": "enhanced",
+        "secureVideo": true,
+        "aiGenerators": true,
+        "notesToQuestions": true,
+        "pyq": true,
+        "onlineTestV2": true,
+        "youtubeLive": true,
+        "whiteLabelApk": true,
+        "multiBranch": true,
+        "marketingFunnel": true,
+        "teacherAnalytics": true,
+        "feePrediction": true,
+        "videoToNotes": true
+      }
+    }
+  ],
+  "trial": {
+    "days": 14
+  },
+  "billing": {
+    "provider": "cashfree"
+  }
+}

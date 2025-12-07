@@ -119,6 +119,18 @@ const tenantSchema = new mongoose.Schema(
       staffCount: { type: Number, default: 0 },
       adsCount: { type: Number, default: 0 },
     },
+
+    // Branding and subdomain configuration
+    subdomain: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    branding: {
+      logoUrl: { type: String, default: null },
+      themeColor: { type: String, default: "#2F6CE5" },
+      appName: { type: String, default: null },
+    },
   },
   { timestamps: true }
 );

@@ -6,6 +6,15 @@ import axios from 'axios';
 import Tenant from '../models/Tenant.js';
 import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
 import { generateInvoicePdf } from '../services/pdfService.js';
+import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Lazy-require CommonJS provisioning util
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { provisionTenant } = require(path.join(__dirname, '..', '..', 'lib', 'provisionTenant.js'));
 
 // Cashfree config from .env
 const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
@@ -242,6 +251,17 @@ export const verifySubscriptionPayment = async (req, res) => {
         await tenant.save();
         console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan, 'Invoice:', nextInvoiceNumber);
 
+        // Trigger provisioning after verify success as well
+        try {
+          await provisionTenant({
+            tenantId: tenant.tenantId,
+            instituteName: tenant.instituteName || tenant.name,
+            branding: tenant.branding || {},
+          });
+        } catch (e) {
+          console.error('Provisioning trigger (verify) failed:', e?.message || e);
+        }
+
         // Check if user account exists, if not create one
         let user = await User.findOne({ email: tenant.email });
         let generatedPassword = null;
@@ -300,6 +320,17 @@ export const verifySubscriptionPayment = async (req, res) => {
           userId: user?._id
         });
         console.log('Sent subscription confirmation email to:', tenant.email);
+
+        // Notify portal ready (post-provisioning)
+        try {
+          await sendEmail({
+            to: tenant.email,
+            subject: 'Your EnroMatics portal is ready',
+            html: `<p>Your portal is ready at <a href="https://${tenant.subdomain}">${tenant.subdomain}</a>. You can log in and start onboarding.</p>`
+          });
+        } catch (e) {
+          console.error('Portal ready email failed:', e?.message || e);
+        }
       }
     } else {
       // Send email for failed payment
@@ -321,6 +352,7 @@ export const verifySubscriptionPayment = async (req, res) => {
 
 /**
  * Cashfree webhook for subscription payment status updates
+ * Verifies order status via Cashfree API instead of signature
  */
 export const cashfreeSubscriptionWebhook = async (req, res) => {
   try {
@@ -332,6 +364,28 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
       const customerEmail = orderData.customer_details.customer_email;
       const orderMeta = orderData.order_meta || {};
       const orderAmount = orderData.order_amount || 0;
+      
+      // Verify order status via Cashfree API (instead of signature)
+      try {
+        const apiResponse = await axios.get(`${CASHFREE_BASE_URL}/orders/${orderId}`, {
+          headers: {
+            'x-client-id': CASHFREE_CLIENT_ID,
+            'x-client-secret': CASHFREE_CLIENT_SECRET,
+          }
+        });
+        
+        const apiOrder = apiResponse.data;
+        console.log('Webhook: API verification - Order status:', apiOrder.order_status);
+        
+        // Only process if API confirms PAID status
+        if (apiOrder.order_status !== 'PAID') {
+          console.warn('Webhook: API verification failed - Order not PAID, status:', apiOrder.order_status);
+          return res.status(200).json({ success: false, message: 'Order not verified as PAID' });
+        }
+      } catch (apiErr) {
+        console.error('Webhook: Cashfree API verification failed:', apiErr?.message || apiErr);
+        return res.status(200).json({ success: false, message: 'API verification failed' });
+      }
       
       // Find tenant by tenantId or email
       let tenant = await Tenant.findOne({ 
@@ -393,6 +447,18 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
         await tenant.save();
         console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber);
 
+        // Trigger post-payment provisioning (subdomain + branding seed)
+        try {
+          await provisionTenant({
+            tenantId: tenant.tenantId,
+            instituteName: tenant.instituteName || tenant.name,
+            branding: tenant.branding || {},
+          });
+          console.log('Provisioning queued for tenant:', tenant.tenantId);
+        } catch (e) {
+          console.error('Provisioning trigger failed:', e?.message || e);
+        }
+
         // Check if user account exists, if not create one
         let user = await User.findOne({ email: tenant.email });
         let generatedPassword = null;
@@ -449,6 +515,17 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           tenantId: tenant.tenantId,
           userId: user?._id
         });
+
+        // Notify portal ready (post-provisioning)
+        try {
+          await sendEmail({
+            to: tenant.email,
+            subject: 'Your EnroMatics portal is ready',
+            html: `<p>Your portal is ready at <a href="https://${tenant.subdomain}">${tenant.subdomain}</a>. You can log in and start onboarding.</p>`
+          });
+        } catch (e) {
+          console.error('Portal ready email (webhook) failed:', e?.message || e);
+        }
       }
     } else if (event === 'order.failed') {
       const orderId = req.body.data.order.order_id;

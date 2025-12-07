@@ -1,6 +1,16 @@
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
 import Batch from "../models/Batch.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Plan guard (CommonJS module) import via require
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Resolve to backend/lib/planGuard.js relative to this src folder
+// Assuming folder structure: backend/lib/planGuard.js
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const planGuard = require(path.join(__dirname, "..", "..", "lib", "planGuard.js"));
 
 export const addStudent = async (req, res) => {
   try {
@@ -11,6 +21,19 @@ export const addStudent = async (req, res) => {
 
     if (!tenantId) {
       return res.status(403).json({ message: "Tenant ID missing" });
+    }
+
+    // Enforce student cap per tenant tier
+    const tierKey = req.user?.subscriptionTier || "basic";
+    const currentCount = await Student.countDocuments({ tenantId });
+    const capCheck = planGuard.checkStudentCap({ tierKey, currentStudents: currentCount });
+    if (!capCheck.allowed) {
+      return res.status(402).json({
+        success: false,
+        code: "upgrade_required",
+        message: `Student limit reached for your plan (${capCheck.cap}). Please upgrade to ${capCheck.upgradeTo || "a higher plan"}.`,
+        details: capCheck,
+      });
     }
 
     // Get batch details to generate roll number
@@ -239,6 +262,19 @@ export const bulkUploadStudents = async (req, res) => {
       total: students.length
     };
 
+    // Pre-check overall cap before processing
+    const tierKey = req.user?.subscriptionTier || "basic";
+    const currentCount = await Student.countDocuments({ tenantId });
+    const capCheck = planGuard.checkStudentCap({ tierKey, currentStudents: currentCount });
+    if (!capCheck.allowed) {
+      return res.status(402).json({
+        success: false,
+        code: "upgrade_required",
+        message: `Student limit reached for your plan (${capCheck.cap}). Please upgrade to ${capCheck.upgradeTo || "a higher plan"}.`,
+        details: capCheck,
+      });
+    }
+
     // Process each student
     for (let i = 0; i < students.length; i++) {
       const studentData = students[i];
@@ -280,6 +316,18 @@ export const bulkUploadStudents = async (req, res) => {
         const seq = existingCount + 1;
         const seqStr = String(seq).padStart(3, "0");
         const rollNumber = `${batchKey}/${seqStr}`;
+
+        // Create student (check cap progressively)
+        const currentBeforeCreate = await Student.countDocuments({ tenantId });
+        const progressiveCheck = planGuard.checkStudentCap({ tierKey, currentStudents: currentBeforeCreate });
+        if (!progressiveCheck.allowed) {
+          results.failed.push({
+            row: i + 1,
+            data: studentData,
+            error: `Plan limit reached at ${progressiveCheck.cap}. Upgrade required`,
+          });
+          continue;
+        }
 
         // Create student
         const newStudent = await Student.create({
