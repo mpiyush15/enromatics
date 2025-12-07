@@ -11,47 +11,43 @@ export default function StorageUsagePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    checkSuperAdminAccess();
+    checkAccess();
   }, []);
 
-  const checkSuperAdminAccess = async () => {
+  const checkAccess = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('❌ No token found in localStorage');
+        console.log('❌ No token found');
         router.push('/login');
         return;
       }
 
-      const res = await fetch('/api/auth/me', {
+      // Try to access the storage report endpoint - if it fails, user doesn't have access
+      const res = await fetch('/api/storage/report', {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include', // Include cookies as fallback
       });
 
-      if (!res.ok) {
-        console.log('❌ Auth endpoint returned:', res.status);
-        router.push('/login');
-        return;
-      }
-
-      const user = await res.json();
-      console.log('👤 User data received:', { email: user.email, role: user.role });
-      
-      // Check if user is SuperAdmin (case-insensitive)
-      if (!user.role || user.role.toLowerCase() !== 'superadmin') {
-        console.log('❌ User role is:', user.role, '| Expected: SuperAdmin');
-        setError(`Access Denied: SuperAdmin privileges required. Your role: ${user.role}`);
+      if (res.status === 403) {
+        // User is authenticated but not SuperAdmin
+        setError('Access Denied: SuperAdmin privileges required');
         setLoading(false);
         return;
       }
 
-      console.log('✅ SuperAdmin access granted for:', user.email);
+      if (!res.ok) {
+        // Other auth errors - redirect to login
+        console.log('❌ Access check failed:', res.status);
+        router.push('/login');
+        return;
+      }
+
+      console.log('✅ SuperAdmin access granted');
       setIsAuthorized(true);
       setLoading(false);
     } catch (err) {
-      console.error('❌ Auth check failed:', err);
-      setError('Authentication failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setLoading(false);
+      console.error('❌ Access check failed:', err);
+      router.push('/login');
     }
   };
 
