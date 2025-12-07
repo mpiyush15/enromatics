@@ -10,6 +10,7 @@ export default function LandingPage() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [showTransitionScreen, setShowTransitionScreen] = useState(false);
   const [userInfo, setUserInfo] = useState({ name: "", coachingName: "", mobile: "" });
   const [questAnswers, setQuestAnswers] = useState({ students: "", coachingType: "", currentManagement: "" });
   const [showRecommendation, setShowRecommendation] = useState(false);
@@ -170,6 +171,17 @@ export default function LandingPage() {
           onQuestionnaireComplete={(answers) => {
             setQuestAnswers(answers);
             setShowQuestionnaireModal(false);
+            setShowTransitionScreen(true);
+          }}
+        />
+      )}
+
+      {/* Transition Screen - "We're Almost Done" */}
+      {showTransitionScreen && (
+        <TransitionScreen 
+          onClose={() => setShowTransitionScreen(false)} 
+          onContinue={() => {
+            setShowTransitionScreen(false);
             setShowSignUpModal(true);
           }}
         />
@@ -211,6 +223,99 @@ export default function LandingPage() {
           }} 
         />
       )}
+    </div>
+  );
+}
+
+// Transition Screen Component - "We're Almost Done"
+function TransitionScreen({ onClose, onContinue }: { onClose: () => void; onContinue: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .slide-up {
+          animation: slideUp 0.6s ease-out;
+        }
+        .bounce-animation {
+          animation: bounce 2s ease-in-out infinite;
+        }
+      `}</style>
+
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden slide-up">
+        {/* Colorful Header */}
+        <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 p-8 text-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-2xl"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-2xl"></div>
+          </div>
+
+          <div className="relative z-10">
+            <div className="text-6xl mb-4 bounce-animation">🎯</div>
+            <h2 className="text-3xl font-bold text-white mb-2">We're Almost Done!</h2>
+            <p className="text-white/90 text-lg font-medium">
+              Just tell us about your institute and get the best plan to make it automated.
+            </p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 text-center">
+          <div className="mb-8">
+            <div className="flex justify-center gap-2 mb-6">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+              <div className="w-3 h-3 bg-blue-300 rounded-full"></div>
+            </div>
+            <p className="text-slate-700 text-lg font-semibold leading-relaxed">
+              Your answers help us personalize the perfect solution for <span className="text-blue-600 font-bold">your coaching institute</span>.
+            </p>
+          </div>
+
+          <div className="space-y-3 mb-8 text-left bg-blue-50 p-6 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <span className="text-blue-600 text-xl">✓</span>
+              <span className="text-slate-700 font-medium">Get a plan tailored to your size</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-blue-600 text-xl">✓</span>
+              <span className="text-slate-700 font-medium">Save 15-20 hours every week</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-blue-600 text-xl">✓</span>
+              <span className="text-slate-700 font-medium">Automate student tracking & fees</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="bg-slate-50 px-8 py-6 flex gap-3 border-t flex-col sm:flex-row">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-900 font-semibold rounded-lg hover:bg-slate-100 transition"
+          >
+            Maybe Later
+          </button>
+          <button
+            onClick={onContinue}
+            className="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+          >
+            Continue <FaChevronRight className="text-sm" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
