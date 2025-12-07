@@ -6,7 +6,7 @@ import { useState } from "react";
 import { FaGraduationCap, FaFileInvoiceDollar, FaChartBar, FaBook, FaUsers as FaParents, FaCalendarAlt, FaFacebook, FaInstagram, FaWhatsapp, FaChevronRight } from "react-icons/fa";
 import BookDemoModal from "@/components/BookDemoModal";
 
-export default function LandingPage() {
+export default function TryPage() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
