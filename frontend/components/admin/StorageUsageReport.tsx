@@ -35,12 +35,22 @@ export default function StorageUsageReport() {
   const fetchStorageReport = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/storage/report');
-      if (!res.ok) throw new Error('Failed to fetch storage report');
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/storage/report', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to fetch storage report');
+      }
       const data = await res.json();
       setSummary(data.summary);
       setReport(data.report || []);
     } catch (err) {
+      console.error('Storage report error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);

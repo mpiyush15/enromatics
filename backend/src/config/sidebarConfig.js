@@ -160,6 +160,7 @@ export const sidebarLinks = [
       { label: "📄 Invoices", href: "/dashboard/invoices", roles: ["SuperAdmin"] },
       { label: "💰 Payments", href: "/dashboard/payments", roles: ["SuperAdmin"] },
       { label: "📊 Subscribers", href: "/dashboard/subscribers", roles: ["SuperAdmin"] },
+      { label: "💾 Storage Usage", href: "/dashboard/storage", roles: ["SuperAdmin"] },
     ],
   },
 
