@@ -69,13 +69,36 @@ export default function PaymentsPage() {
       setLoading(true);
       setError('');
       
+      // Get token from localStorage (stored at login)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      if (!token) {
+        setError('Authentication required. Please log in.');
+        setLoading(false);
+        return;
+      }
+      
+      // Call BFF endpoint with Bearer token
       const res = await fetch('/api/admin/subscriptions', {
         method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       
+      console.log('Payments API response status:', res.status);
       const data = await res.json();
+      console.log('Payments API response:', data);
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        throw new Error(data.message || 'Failed to load payments');
+      }
       
       if (data.success && data.payments) {
         // Filter only paid subscriptions (non-free)
