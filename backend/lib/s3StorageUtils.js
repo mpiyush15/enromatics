@@ -1,12 +1,15 @@
 // S3 storage computation utility
 // Computes current storage usage for a tenant by listing objects in S3
 
-import AWS from 'aws-sdk';
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+const s3 = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  }
 });
 
 const S3_BUCKET = process.env.AWS_S3_BUCKET || 'enromatics-materials';
@@ -24,13 +27,13 @@ export async function computeTenantStorageGB(tenantId) {
 
     // Paginate through objects (max 1000 per request)
     do {
-      const params = {
+      const command = new ListObjectsV2Command({
         Bucket: S3_BUCKET,
         Prefix: prefix,
         ContinuationToken: continuationToken,
-      };
+      });
 
-      const response = await s3.listObjectsV2(params).promise();
+      const response = await s3.send(command);
       
       if (response.Contents) {
         response.Contents.forEach(obj => {
@@ -57,14 +60,14 @@ export async function computeTenantStorageGB(tenantId) {
  * Get object URL for a material (for download/streaming)
  * Signs URL with 1-hour expiry
  */
-export function getMaterialSignedUrl(tenantId, materialKey, expirySeconds = 3600) {
+export async function getMaterialSignedUrl(tenantId, materialKey, expirySeconds = 3600) {
   try {
     const key = `tenants/${tenantId}/materials/${materialKey}`;
-    const url = s3.getSignedUrl('getObject', {
+    const command = new GetObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
-      Expires: expirySeconds,
     });
+    const url = await getSignedUrl(s3, command, { expiresIn: expirySeconds });
     return url;
   } catch (err) {
     console.error('Error generating signed URL:', err);
@@ -80,14 +83,14 @@ export async function uploadMaterialToS3(tenantId, fileName, fileBuffer, content
   try {
     const key = `tenants/${tenantId}/materials/${Date.now()}_${fileName}`;
     
-    const params = {
+    const command = new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
       Body: fileBuffer,
       ContentType: contentType,
-    };
+    });
 
-    await s3.upload(params).promise();
+    await s3.send(command);
     console.log(`Uploaded material: ${key}`);
     
     return key;
