@@ -373,4 +373,133 @@ router.post('/test', authMiddleware, checkSuperAdmin, async (req, res) => {
     }
 });
 
+/**
+ * @route   POST /api/email/send-plan-details
+ * @desc    Send personalized plan details to user email
+ * @access  Public
+ */
+router.post('/send-plan-details', async (req, res) => {
+    try {
+        const { email, name, coachingName, plan, questionnaire } = req.body;
+
+        if (!email || !name || !plan) {
+            return res.status(400).json({ message: 'Email, name, and plan are required' });
+        }
+
+        // Plan details
+        const planDetails = {
+            starter: {
+                price: '₹999',
+                description: 'Perfect for small to medium coaching institutes',
+                features: [
+                    'Up to 50 students',
+                    'Fee tracking & reminders',
+                    'Attendance management',
+                    'WhatsApp notifications',
+                    'Student performance tracking',
+                    'Email support'
+                ]
+            },
+            pro: {
+                price: '₹1,999',
+                description: 'For growing institutes with advanced needs',
+                features: [
+                    'Up to 500+ students',
+                    'Everything in Starter',
+                    'Online tests & exams',
+                    'Advanced analytics',
+                    'Unlimited staff access',
+                    'Priority support',
+                    'Custom integrations'
+                ]
+            }
+        };
+
+        const selectedPlan = planDetails[plan] || planDetails.starter;
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .plan-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+                    .features { list-style: none; padding: 0; }
+                    .features li { padding: 10px 0; border-bottom: 1px solid #eee; }
+                    .features li:before { content: "✓ "; color: #28a745; font-weight: bold; margin-right: 10px; }
+                    .cta-button { background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+                    .footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Your Personalized Plan</h1>
+                        <p>Based on your institute's needs</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi ${name},</p>
+                        <p>Thank you for sharing details about <strong>${coachingName}</strong>! 🎉</p>
+                        
+                        <p>Based on your questionnaire responses, we recommend:</p>
+                        
+                        <div class="plan-box">
+                            <h2>${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</h2>
+                            <p><strong>${selectedPlan.price}/month</strong></p>
+                            <p>${selectedPlan.description}</p>
+                            
+                            <h3>Features Included:</h3>
+                            <ul class="features">
+                                ${selectedPlan.features.map(feature => `<li>${feature}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <p><strong>Your Institute Profile:</strong></p>
+                        <ul>
+                            <li>Student Count: ${questionnaire.students}</li>
+                            <li>Coaching Type: ${questionnaire.coachingType}</li>
+                            <li>Current Management: ${questionnaire.currentManagement}</li>
+                        </ul>
+
+                        <p>This plan will help you save 15-20 hours every week and automate your entire institute operations! 📊</p>
+
+                        <center>
+                            <a href="https://enromatics.com/home?plan=${plan}" class="cta-button">Start Your Free Trial</a>
+                        </center>
+
+                        <p>Have questions? Our team is here to help!</p>
+                        
+                        <div class="footer">
+                            <p>© 2025 Enromatics. All rights reserved.</p>
+                            <p>This email was sent to you because you filled our questionnaire on our website.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const result = await emailService.sendEmail({
+            to: email,
+            subject: `Your ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan - ${coachingName}`,
+            html: htmlContent,
+            type: 'plan_details'
+        });
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Send plan details email error:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to send plan details email', 
+            error: error.message 
+        });
+    }
+});
+
 export default router;

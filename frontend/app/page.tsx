@@ -340,11 +340,16 @@ function SignUpModal({ onClose, onSuccess, questAnswers, recommendedPlan }: { on
   const sendOtpEmail = async (email: string) => {
     try {
       // Call backend to send OTP email
-      await fetch("/api/send-otp", {
+      const response = await fetch("/api/email/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otpCode: "123456" }) // Use real OTP in production
+        body: JSON.stringify({ email, purpose: "landing_page_verification" })
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Failed to send OTP email:", error);
+      }
     } catch (error) {
       console.error("Failed to send OTP email:", error);
     }
@@ -366,15 +371,15 @@ function SignUpModal({ onClose, onSuccess, questAnswers, recommendedPlan }: { on
           createdAt: new Date().toISOString()
         };
 
-        // Create lead
-        await fetch("/api/leads", {
+        // Create lead using form submission endpoint
+        await fetch("/api/form/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(leadData)
         });
 
         // Send personalized plan email
-        await fetch("/api/send-plan-email", {
+        await fetch("/api/email/send-plan-details", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
