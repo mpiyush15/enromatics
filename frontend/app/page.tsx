@@ -24,12 +24,13 @@ export default function LandingPage() {
             {/* Left Side - Text (White on Dark) */}
             <div className="lg:col-span-2 flex flex-col justify-center order-2 lg:order-1 relative z-10 h-full px-4 sm:px-6 lg:px-8 -mt-6 sm:-mt-20 lg:-mt-24 text-center lg:text-left">
               <div>
-                <h1 className="text-3xl sm:text-3xl lg:text-5xl xl:text-5xl font-bold text-white mb-3 sm:mb-4 lg:mb-6 leading-tight">
-                  Manage admissions<br />Students, Fees, Attendance<br />in minutes
+                <h1 className="text-3xl sm:text-3xl lg:text-4xl xl:text-4xl font-bold text-white mb-3 sm:mb-4 lg:mb-6 leading-tight">
+                  Stop Manual Admin Work<br />Run Your Institute Smoothly<br />No Spreadsheets Needed
                 </h1>
                 
+                
                 <p className="text-xs sm:text-sm lg:text-lg text-gray-200 mb-4 sm:mb-6 lg:mb-8 font-light leading-relaxed">
-                  Designed for Coaching Institutes, Schools to manage all operations smoothly
+                  Designed for Coaching Institutes,Schools to automate student tracking, fee reminders, attendance, and parent communication — all in one simple dashboard
                 </p>
 
                 <div className="flex flex-col sm:flex-col lg:flex-row gap-2 sm:gap-3 lg:gap-2 justify-center lg:justify-start">
