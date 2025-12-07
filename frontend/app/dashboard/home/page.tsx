@@ -6,6 +6,8 @@ import StatCard from '@/components/dashboard/StatCard';
 import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
 import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
 import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
+import { TrialBadge } from '@/components/PlanGating';
+import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 interface AnalyticsData {
@@ -27,6 +29,7 @@ interface AnalyticsData {
 
 export default function DashboardHomePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,14 +132,19 @@ export default function DashboardHomePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Analytics & Business Metrics
-          </p>
+        {/* Header with Trial Badge */}
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              Dashboard
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Analytics & Business Metrics
+            </p>
+          </div>
+          {user && user.role !== 'SuperAdmin' && user.createdAt && (
+            <TrialBadge trialStartISO={user.createdAt} />
+          )}
         </div>
 
         {/* KPI Cards */}

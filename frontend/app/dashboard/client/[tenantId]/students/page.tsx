@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { UpsellModal } from "@/components/PlanGating";
+import useAuth from "@/hooks/useAuth";
 
 export default function StudentsPage() {
   const { tenantId } = useParams();
+  const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
   const [batchFilter, setBatchFilter] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
@@ -20,6 +23,8 @@ export default function StudentsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState<any>(null);
   const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [studentCapReached, setStudentCapReached] = useState(false);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -164,7 +169,17 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
+    <>
+      {/* Upsell Modal for Student Cap */}
+      <UpsellModal
+        isOpen={showUpsellModal}
+        featureName="adding more students"
+        currentTier={user?.subscriptionTier || 'basic'}
+        suggestedTier="pro"
+        onClose={() => setShowUpsellModal(false)}
+      />
+
+      <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -185,7 +200,26 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
               Upload CSV
             </button>
             <Link href={`/dashboard/client/${tenantId}/students/add`}>
-              <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2">
+              <button 
+                onClick={(e) => {
+                  // Check if student cap reached (50 for basic, 100 for pro, unlimited for enterprise)
+                  const planLimits: Record<string, number | null> = {
+                    'basic': 50,
+                    'pro': 100,
+                    'enterprise': null
+                  };
+                  const plan = user?.subscriptionTier || 'basic';
+                  const limit = planLimits[plan];
+                  
+                  if (limit !== null && students.length >= limit) {
+                    e.preventDefault();
+                    setStudentCapReached(true);
+                    setShowUpsellModal(true);
+                  }
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={studentCapReached}
+              >
                 <span className="text-xl">➕</span>
                 Add Student
               </button>
@@ -504,5 +538,6 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
         )}
       </div>
     </div>
+    </>
   );
 }
