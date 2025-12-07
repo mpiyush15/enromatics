@@ -18,33 +18,40 @@ export default function StorageUsagePage() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.log('❌ No token found in localStorage');
         router.push('/login');
         return;
       }
 
       const res = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include', // Include cookies as fallback
       });
 
       if (!res.ok) {
+        console.log('❌ Auth endpoint returned:', res.status);
         router.push('/login');
         return;
       }
 
       const user = await res.json();
+      console.log('👤 User data received:', { email: user.email, role: user.role });
       
-      // Check if user is SuperAdmin
-      if (user.role !== 'SuperAdmin') {
-        setError('Access Denied: SuperAdmin privileges required');
+      // Check if user is SuperAdmin (case-insensitive)
+      if (!user.role || user.role.toLowerCase() !== 'superadmin') {
+        console.log('❌ User role is:', user.role, '| Expected: SuperAdmin');
+        setError(`Access Denied: SuperAdmin privileges required. Your role: ${user.role}`);
         setLoading(false);
         return;
       }
 
+      console.log('✅ SuperAdmin access granted for:', user.email);
       setIsAuthorized(true);
       setLoading(false);
     } catch (err) {
-      console.error('Auth check failed:', err);
-      router.push('/login');
+      console.error('❌ Auth check failed:', err);
+      setError('Authentication failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setLoading(false);
     }
   };
 
