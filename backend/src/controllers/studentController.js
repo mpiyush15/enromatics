@@ -1,16 +1,7 @@
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
 import Batch from "../models/Batch.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-// Plan guard (CommonJS module) import via require
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// Resolve to backend/lib/planGuard.js relative to this src folder
-// Assuming folder structure: backend/lib/planGuard.js
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const planGuard = require(path.join(__dirname, "..", "..", "lib", "planGuard.js"));
+import * as planGuard from "../../lib/planGuard.js";
 
 export const addStudent = async (req, res) => {
   try {

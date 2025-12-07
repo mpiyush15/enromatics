@@ -1,8 +1,12 @@
 // Central plan/limit guard utilities
 // Non-breaking stub to be wired into route handlers/middleware
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const matrixPath = path.join(__dirname, '..', 'config', 'planMatrix.json');
 const planMatrix = JSON.parse(fs.readFileSync(matrixPath, 'utf8'));
@@ -72,7 +76,7 @@ function isTrialExpired({ trialStartISO }) {
   return now - start > ms;
 }
 
-module.exports = {
+export {
   getTierConfig,
   checkStudentCap,
   checkStorageCap,

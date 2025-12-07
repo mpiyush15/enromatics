@@ -1,7 +1,8 @@
 // Simple provisioning stub: create subdomain slug, seed branding/settings
 // Integrate with DNS/SSL automation and Next.js routing later.
 
-const crypto = require('crypto');
+import crypto from 'crypto';
+import Tenant from '../src/models/Tenant.js';
 
 function slugify(name) {
   return (name || '')
@@ -16,7 +17,6 @@ async function provisionTenant({ tenantId, instituteName, branding = {} }) {
   const subdomain = `${slug}.enromatics.com`;
 
   // Persist into Tenant model
-  const Tenant = require('../src/models/Tenant.js').default || require('../src/models/Tenant.js');
   const tenant = await Tenant.findOne({ tenantId });
   if (tenant) {
     tenant.subdomain = subdomain;
@@ -32,4 +32,4 @@ async function provisionTenant({ tenantId, instituteName, branding = {} }) {
   return { tenantId, subdomain, brandingApplied: true };
 }
 
-module.exports = { provisionTenant };
+export { provisionTenant };

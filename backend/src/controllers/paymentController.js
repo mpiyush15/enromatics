@@ -7,14 +7,7 @@ import Tenant from '../models/Tenant.js';
 import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
 import { generateInvoicePdf } from '../services/pdfService.js';
 import crypto from 'crypto';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Lazy-require CommonJS provisioning util
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { provisionTenant } = require(path.join(__dirname, '..', '..', 'lib', 'provisionTenant.js'));
+import { provisionTenant } from '../../lib/provisionTenant.js';
 
 // Cashfree config from .env
 const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
