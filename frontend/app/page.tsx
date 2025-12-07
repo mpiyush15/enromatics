@@ -191,6 +191,8 @@ export default function LandingPage() {
       {showSignUpModal && (
         <SignUpModal 
           onClose={() => setShowSignUpModal(false)} 
+          questAnswers={questAnswers}
+          recommendedPlan={recommendedPlan || "starter"}
           onSuccess={(info) => {
             setUserInfo(info);
             setShowSignUpModal(false);
@@ -321,27 +323,77 @@ function TransitionScreen({ onClose, onContinue }: { onClose: () => void; onCont
 }
 
 // Sign Up Modal Component
-function SignUpModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (info: { name: string; coachingName: string; mobile: string }) => void }) {
+function SignUpModal({ onClose, onSuccess, questAnswers, recommendedPlan }: { onClose: () => void; onSuccess: (info: { name: string; coachingName: string; mobile: string; email: string }) => void; questAnswers: { students: string; coachingType: string; currentManagement: string }; recommendedPlan: "starter" | "pro" }) {
   const [step, setStep] = useState<"form" | "otp">("form");
-  const [formData, setFormData] = useState({ name: "", coachingName: "", mobile: "" });
+  const [formData, setFormData] = useState({ name: "", coachingName: "", mobile: "", email: "" });
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleSubmitForm = () => {
-    if (formData.name && formData.coachingName && formData.mobile) {
+    if (formData.name && formData.coachingName && formData.mobile && formData.email) {
       setStep("otp");
-      // In real app, you'd send OTP to the mobile number
+      // Send OTP email (only once)
+      sendOtpEmail(formData.email);
     }
   };
 
-  const handleVerifyOtp = () => {
+  const sendOtpEmail = async (email: string) => {
+    try {
+      // Call backend to send OTP email
+      await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otpCode: "123456" }) // Use real OTP in production
+      });
+    } catch (error) {
+      console.error("Failed to send OTP email:", error);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
     if (otp.length === 6) {
       setIsVerifying(true);
-      // Simulate OTP verification
-      setTimeout(() => {
+      try {
+        // Create lead in superadmin with source and plan details
+        const leadData = {
+          name: formData.name,
+          email: formData.email,
+          mobile: formData.mobile,
+          coachingName: formData.coachingName,
+          source: "landing_page_questionnaire", // Track source
+          questionnaire: questAnswers,
+          recommendedPlan: recommendedPlan,
+          createdAt: new Date().toISOString()
+        };
+
+        // Create lead
+        await fetch("/api/leads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(leadData)
+        });
+
+        // Send personalized plan email
+        await fetch("/api/send-plan-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email,
+            name: formData.name,
+            coachingName: formData.coachingName,
+            plan: recommendedPlan,
+            questionnaire: questAnswers
+          })
+        });
+
+        setTimeout(() => {
+          setIsVerifying(false);
+          onSuccess(formData);
+        }, 1500);
+      } catch (error) {
+        console.error("Failed to create lead or send email:", error);
         setIsVerifying(false);
-        onSuccess(formData);
-      }, 1500);
+      }
     }
   };
 
@@ -409,6 +461,17 @@ function SignUpModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 transition"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Email Address *</label>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 transition"
+              />
+            </div>
           </div>
 
           {/* Footer */}
@@ -421,7 +484,7 @@ function SignUpModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             </button>
             <button
               onClick={handleSubmitForm}
-              disabled={!formData.name || !formData.coachingName || !formData.mobile || formData.mobile.length !== 10}
+              disabled={!formData.name || !formData.coachingName || !formData.mobile || formData.mobile.length !== 10 || !formData.email}
               className="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               Send OTP <FaChevronRight className="text-sm" />
@@ -457,7 +520,7 @@ function SignUpModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             <h2 className="text-2xl font-bold">Verify OTP</h2>
             <button onClick={onClose} className="text-white/70 hover:text-white text-2xl">✕</button>
           </div>
-          <p className="text-white/80 text-sm">Enter the 6-digit OTP sent to {formData.mobile}</p>
+          <p className="text-white/80 text-sm">Enter the 6-digit OTP sent to your email: <strong>{formData.email}</strong></p>
         </div>
 
         {/* OTP Content */}
