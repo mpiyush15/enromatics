@@ -304,12 +304,12 @@ function TransitionScreen({ onClose, onContinue }: { onClose: () => void; onCont
 
         {/* Footer */}
         <div className="bg-slate-50 px-8 py-6 flex gap-3 border-t flex-col sm:flex-row">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-900 font-semibold rounded-lg hover:bg-slate-100 transition"
+          <Link
+            href="/pricing"
+            className="flex-1 px-4 py-3 border-2 border-slate-300 text-slate-900 font-semibold rounded-lg hover:bg-slate-100 transition text-center"
           >
-            Maybe Later
-          </button>
+            Explore Plans
+          </Link>
           <button
             onClick={onContinue}
             className="flex-1 px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
@@ -343,7 +343,7 @@ function SignUpModal({ onClose, onSuccess, questAnswers, recommendedPlan }: { on
       const response = await fetch("/api/email/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, purpose: "landing_page_verification" })
+        body: JSON.stringify({ email, purpose: "verification" })
       });
       
       if (!response.ok) {
