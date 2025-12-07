@@ -1,13 +1,5 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { computeTenantStorageGB } from '../../lib/s3StorageUtils.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Lazy-require planGuard
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const planGuard = require(path.join(__dirname, '..', '..', 'lib', 'planGuard.js'));
+import * as planGuard from '../../lib/planGuard.js';
 
 /**
  * Storage cap enforcement middleware for study materials

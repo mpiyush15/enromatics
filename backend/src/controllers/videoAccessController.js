@@ -2,15 +2,8 @@
 // Mints signed URLs + one-time tokens + watermark params for HLS playback
 
 import crypto from 'crypto';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { getMaterialSignedUrl } from '../../lib/s3StorageUtils.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Lazy-require planGuard for feature gating
-const planGuard = require(path.join(__dirname, '..', '..', 'lib', 'planGuard.js'));
+import * as planGuard from '../../lib/planGuard.js';
 
 /**
  * Generate a one-time video access token

@@ -2,15 +2,8 @@
 // Tracks storage usage per tenant for billing and resource planning
 
 import Tenant from '../models/Tenant.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { computeTenantStorageGB } from '../../lib/s3StorageUtils.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Lazy-require planGuard for tier info
-const planGuard = require(path.join(__dirname, '..', '..', 'lib', 'planGuard.js'));
+import * as planGuard from '../../lib/planGuard.js';
 
 /**
  * Get S3 storage usage report for all tenants
