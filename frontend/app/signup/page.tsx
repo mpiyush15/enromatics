@@ -161,6 +161,10 @@ function SignupPageContent() {
     try {
       console.log('📝 Starting final signup with data:', { email: formData.email, planId: selectedPlan });
       
+      // Create a fetch controller with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
       // Call signup API with trial plan
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -173,8 +177,10 @@ function SignupPageContent() {
           isTrial: true,
           otpVerified: true, // Mark as OTP verified
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       console.log('📡 Signup response status:', response.status);
       
       const data = await response.json();
@@ -184,6 +190,7 @@ function SignupPageContent() {
       if (!response.ok) {
         console.error('❌ Signup failed:', data.message);
         setErrors({ submit: data.message || 'Signup failed' });
+        setStep('verify');
         return;
       }
 
@@ -198,7 +205,12 @@ function SignupPageContent() {
       router.push('/onboarding');
     } catch (error: any) {
       console.error('❌ Signup error:', error);
-      setErrors({ submit: error.message || 'An error occurred' });
+      if (error.name === 'AbortError') {
+        setErrors({ submit: 'Request timeout. Please try again.' });
+      } else {
+        setErrors({ submit: error.message || 'An error occurred' });
+      }
+      setStep('verify');
     } finally {
       setLoading(false);
     }
