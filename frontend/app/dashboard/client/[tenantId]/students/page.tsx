@@ -7,7 +7,8 @@ import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
 
 export default function StudentsPage() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
   const [batchFilter, setBatchFilter] = useState("");

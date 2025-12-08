@@ -5,8 +5,8 @@ export const subscriptionPlans = [
   {
     id: "basic",
     name: "Basic",
-    monthlyPrice: 0, // Pricing to be finalized
-    annualPrice: 0,
+    monthlyPrice: 10, // Trial price ₹10
+    annualPrice: 10,
     description: "Perfect for small coaching institutes",
     features: [
       "✓ Up to 50 students",
@@ -32,8 +32,8 @@ export const subscriptionPlans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 0, // Pricing to be finalized
-    annualPrice: 0,
+    monthlyPrice: 10, // Trial price ₹10
+    annualPrice: 10,
     description: "For growing educational institutions",
     features: [
       "✓ Up to 100 students",
@@ -62,8 +62,8 @@ export const subscriptionPlans = [
   {
     id: "enterprise",
     name: "Enterprise",
-    monthlyPrice: 0, // Custom pricing
-    annualPrice: 0,
+    monthlyPrice: 10, // Trial price ₹10
+    annualPrice: 10,
     description: "For large-scale operations with advanced needs",
     features: [
       "✓ Unlimited students",

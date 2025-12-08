@@ -49,7 +49,7 @@ const tenantSchema = new mongoose.Schema(
     subscription: {
       status: {
         type: String,
-        enum: ["active", "inactive", "cancelled"],
+        enum: ["active", "trial", "inactive", "cancelled"],
         default: "inactive",
       },
       paymentId: {
@@ -61,6 +61,10 @@ const tenantSchema = new mongoose.Schema(
         default: null,
       },
       endDate: {
+        type: Date,
+        default: null,
+      },
+      trialStartDate: {
         type: Date,
         default: null,
       },

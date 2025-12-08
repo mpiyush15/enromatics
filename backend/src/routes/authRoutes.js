@@ -5,8 +5,11 @@ import User from "../models/User.js";
 
 const router = express.Router();
 
-// 🔹 Register
+// 🔹 Register (main endpoint)
 router.post("/register", registerUser);
+
+// 🔹 Signup (alias for trial signup flow)
+router.post("/signup", registerUser);
 
 // 🔹 Login
 router.post("/login", loginUser);

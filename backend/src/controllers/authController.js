@@ -8,10 +8,11 @@ const generateToken = (id, role, tenantId) =>
 
 /**
  * Register Tenant + User (or add staff to existing tenant)
+ * Supports trial signup with planId and isTrial flag
  */
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, tenantId, role, instituteName, phone, whatsappOptIn } = req.body;
+    const { name, email, password, tenantId, role, instituteName, phone, whatsappOptIn, planId, isTrial } = req.body;
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: "User already exists" });
@@ -50,13 +51,22 @@ export const registerUser = async (req, res) => {
     // Otherwise, create new tenant and tenantAdmin
     const newTenantId = crypto.randomBytes(4).toString("hex");
 
+    // Determine subscription based on trial vs regular signup
+    const subscriptionTier = isTrial ? (planId || 'basic') : 'free';
+    const subscriptionStatus = isTrial ? 'trial' : 'active';
+    const trialStartDate = isTrial ? new Date() : null;
+
     const tenant = await Tenant.create({
       tenantId: newTenantId,
       name: name, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
-      plan: "free",
-      subscription: { status: "active", startDate: new Date() },
+      plan: subscriptionTier, // 'basic', 'pro', 'enterprise', or 'free'
+      subscription: { 
+        status: subscriptionStatus, // 'trial', 'active', or 'inactive'
+        startDate: new Date(),
+        trialStartDate: trialStartDate, // When trial started (for 14-day countdown)
+      },
       contact: {
         phone: phone || null, // Store phone in tenant contact for WhatsApp sync
       },
@@ -73,15 +83,24 @@ export const registerUser = async (req, res) => {
       role: "tenantAdmin",
     });
 
-    // No cookie needed at registration; only at login
+    // Generate token for immediate auth (especially important for trial signup)
+    const token = generateToken(user._id, user.role, newTenantId);
+
     res.status(201).json({
       message: "User registered successfully ✅",
+      token, // Include token for trial signup flow
       user: {
         name: user.name,
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        createdAt: user.createdAt,
       },
+      trial: isTrial ? {
+        planId: subscriptionTier,
+        planName: planId === 'pro' ? 'Pro' : planId === 'enterprise' ? 'Enterprise' : 'Basic',
+        daysRemaining: 14,
+      } : null,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -5,11 +5,12 @@ import React, { useState, useEffect } from 'react';
 
 /**
  * Hook: useTrialStatus
- * Returns trial days remaining, isExpired, upgradeUrl
+ * Returns trial days remaining, expiry date, isExpired, upgradeUrl
  */
 export function useTrialStatus(trialStartISO?: string) {
   const [status, setStatus] = useState({
     daysRemaining: 0,
+    expiryDate: '',
     isExpired: false,
     upgradeUrl: '/pricing',
   });
@@ -23,8 +24,16 @@ export function useTrialStatus(trialStartISO?: string) {
     const ms = trialDays * 24 * 60 * 60 * 1000;
     const remaining = Math.max(0, Math.ceil((ms - (now - start)) / (24 * 60 * 60 * 1000)));
     const isExpired = now - start > ms;
+    
+    // Calculate expiry date
+    const expiryTime = start + ms;
+    const expiryDate = new Date(expiryTime).toLocaleDateString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
 
-    setStatus({ daysRemaining: remaining, isExpired, upgradeUrl: '/pricing' });
+    setStatus({ daysRemaining: remaining, expiryDate, isExpired, upgradeUrl: '/pricing' });
   }, [trialStartISO]);
 
   return status;
@@ -32,10 +41,10 @@ export function useTrialStatus(trialStartISO?: string) {
 
 /**
  * Component: TrialBadge
- * Shows countdown badge on dashboard
+ * Shows countdown badge on dashboard with expiry date
  */
 export function TrialBadge({ trialStartISO }: { trialStartISO?: string }) {
-  const { daysRemaining, isExpired } = useTrialStatus(trialStartISO);
+  const { daysRemaining, expiryDate, isExpired } = useTrialStatus(trialStartISO);
 
   if (!trialStartISO || daysRemaining === 0 && !isExpired) return null;
 
@@ -43,12 +52,19 @@ export function TrialBadge({ trialStartISO }: { trialStartISO?: string }) {
     <div style={{
       background: isExpired ? '#dc2626' : '#fbbf24',
       color: isExpired ? 'white' : 'black',
-      padding: '8px 12px',
+      padding: '10px 14px',
       borderRadius: '4px',
       fontSize: '14px',
       fontWeight: 'bold',
     }}>
-      {isExpired ? 'Trial expired – upgrade now' : `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left`}
+      {isExpired ? (
+        <div>Trial expired – upgrade now</div>
+      ) : (
+        <div>
+          <div>⏰ Trial expires on {expiryDate}</div>
+          <div style={{ fontSize: '12px', marginTop: '2px' }}>({daysRemaining} day{daysRemaining !== 1 ? 's' : ''} remaining)</div>
+        </div>
+      )}
     </div>
   );
 }

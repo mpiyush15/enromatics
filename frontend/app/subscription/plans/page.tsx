@@ -103,17 +103,25 @@ function PlansContent() {
                   )}
                 </div>
 
-                {/* CTA Button */}
-                <Link
-                  href={`/subscription/checkout?planId=${plan.id}&cycle=${billingCycle}`}
-                  className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all mb-8 ${
-                    plan.popular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
-                      : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white'
-                  }`}
-                >
-                  {plan.buttonLabel}
-                </Link>
+                {/* CTA Button - Try Now (Free Trial) or Subscribe */}
+                <div className="space-y-3 mb-8">
+                  <Link
+                    href={`/signup?plan=${plan.id}`}
+                    className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all ${
+                      plan.popular
+                        ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    🎉 Try Now - Free (14 Days)
+                  </Link>
+                  <Link
+                    href={`/subscription/checkout?planId=${plan.id}&cycle=${billingCycle}`}
+                    className="block w-full text-center py-2 px-6 rounded-lg font-semibold transition-all text-sm bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white"
+                  >
+                    → Or subscribe now at ₹{price}
+                  </Link>
+                </div>
 
                 {/* Features */}
                 <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-8">
