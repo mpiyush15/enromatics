@@ -64,7 +64,7 @@ export default function UpgradeRequired({
 
         {/* Upgrade Button */}
         <Link
-          href="/subscription/plans"
+          href={`/dashboard/client/${tenantId}/my-subscription#upgrade-section`}
           className="inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl mb-4"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

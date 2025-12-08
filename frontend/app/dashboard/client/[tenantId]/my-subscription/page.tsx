@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,10 @@ import {
   Calendar,
   Loader2,
   XCircle,
-  Sparkles
+  Sparkles,
+  ArrowUpCircle,
+  Zap,
+  Star
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +40,17 @@ interface TenantInfo {
   subscription: SubscriptionInfo;
 }
 
+interface UpgradePlan {
+  _id: string;
+  planId: string;
+  name: string;
+  description: string;
+  price: number;
+  annualPrice?: number;
+  features: string[];
+  popular?: boolean;
+}
+
 export default function MySubscriptionPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
@@ -45,14 +59,11 @@ export default function MySubscriptionPage() {
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [upgradePlans, setUpgradePlans] = useState<UpgradePlan[]>([]);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (tenantId) {
-      fetchSubscription();
-    }
-  }, [tenantId]);
-
-  const fetchSubscription = async () => {
+  const fetchSubscription = useCallback(async () => {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/subscription`, {
         credentials: "include",
@@ -70,7 +81,29 @@ export default function MySubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
+
+  const fetchUpgradePlans = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/upgrade-plans`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (data.success && data.upgradePlans) {
+        setUpgradePlans(data.upgradePlans);
+      }
+    } catch (error) {
+      console.error("Error fetching upgrade plans:", error);
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (tenantId) {
+      fetchSubscription();
+      fetchUpgradePlans();
+    }
+  }, [tenantId, fetchSubscription, fetchUpgradePlans]);
 
   const handleCancelSubscription = async () => {
     setCancelling(true);
@@ -95,6 +128,58 @@ export default function MySubscriptionPage() {
       toast.error("Failed to cancel subscription");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // Load Cashfree SDK
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  const handleUpgrade = async (planId: string) => {
+    setUpgradingPlan(planId);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ planId, billingCycle }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to initiate upgrade");
+      }
+
+      if (data.isFree) {
+        toast.success("Plan upgraded successfully!");
+        fetchSubscription();
+        fetchUpgradePlans();
+        return;
+      }
+
+      // Open Cashfree checkout for paid plans
+      const cashfree = await (window as any).Cashfree({
+        mode: "production",
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_self",
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upgrade plan");
+    } finally {
+      setUpgradingPlan(null);
     }
   };
 
@@ -241,7 +326,10 @@ export default function MySubscriptionPage() {
                   Upgrade now to continue using all features without interruption.
                 </p>
               </div>
-              <Button className="ml-auto bg-yellow-600 hover:bg-yellow-700">
+              <Button 
+                className="ml-auto bg-yellow-600 hover:bg-yellow-700"
+                onClick={() => document.getElementById("upgrade-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
                 Upgrade Now
               </Button>
             </div>
@@ -259,7 +347,10 @@ export default function MySubscriptionPage() {
                   Upgrade to a paid plan to regain full access.
                 </p>
               </div>
-              <Button className="ml-auto bg-red-600 hover:bg-red-700">
+              <Button 
+                className="ml-auto bg-red-600 hover:bg-red-700"
+                onClick={() => document.getElementById("upgrade-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
                 Upgrade Now
               </Button>
             </div>
@@ -297,11 +388,7 @@ export default function MySubscriptionPage() {
         </CardContent>
 
         <CardFooter className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between">
-          <Button variant="outline" asChild>
-            <a href="/subscription/plans">View All Plans</a>
-          </Button>
-          
-          {subscription?.status !== "cancelled" && (
+          {subscription?.status !== "cancelled" && !isTrialOrFree && (
             <Button 
               variant="destructive" 
               onClick={() => setShowCancelConfirm(true)}
@@ -309,8 +396,139 @@ export default function MySubscriptionPage() {
               Cancel Subscription
             </Button>
           )}
+          {(isTrialOrFree || subscription?.status === "cancelled") && <div />}
         </CardFooter>
       </Card>
+
+      {/* Upgrade Plans Section */}
+      {upgradePlans.length > 0 && (
+        <div id="upgrade-section" className="space-y-4 scroll-mt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <ArrowUpCircle className="h-6 w-6 text-blue-600" />
+                Upgrade Your Plan
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Unlock more features by upgrading to a higher plan
+              </p>
+            </div>
+            {/* Billing Cycle Toggle */}
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <button
+                onClick={() => setBillingCycle("monthly")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle("yearly")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  billingCycle === "yearly"
+                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Yearly
+                <Badge className="ml-2 bg-green-500 text-white text-xs">Save 20%</Badge>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upgradePlans.map((plan) => {
+              const planId = plan.planId || plan._id;
+              const price = billingCycle === "yearly" && plan.annualPrice 
+                ? plan.annualPrice 
+                : plan.price;
+              const isUpgrading = upgradingPlan === planId;
+
+              return (
+                <Card 
+                  key={planId} 
+                  className={`relative overflow-hidden transition-all hover:shadow-lg ${
+                    plan.popular 
+                      ? "border-2 border-blue-500 dark:border-blue-400" 
+                      : "border border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  {plan.popular && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                      <Star className="h-3 w-3 inline mr-1" />
+                      POPULAR
+                    </div>
+                  )}
+                  
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                      <Zap className={`h-5 w-5 ${plan.popular ? "text-blue-500" : "text-gray-400"}`} />
+                      {plan.name}
+                    </CardTitle>
+                    <CardDescription className="dark:text-gray-400">
+                      {plan.description}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {typeof price === "number" ? `₹${price.toLocaleString("en-IN")}` : price}
+                      </span>
+                      {typeof price === "number" && (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          /{billingCycle === "yearly" ? "year" : "month"}
+                        </span>
+                      )}
+                    </div>
+
+                    <ul className="space-y-2">
+                      {plan.features?.slice(0, 5).map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                      {plan.features && plan.features.length > 5 && (
+                        <li className="text-sm text-gray-500 dark:text-gray-400 pl-6">
+                          +{plan.features.length - 5} more features
+                        </li>
+                      )}
+                    </ul>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button 
+                      className={`w-full ${
+                        plan.popular 
+                          ? "bg-blue-600 hover:bg-blue-700" 
+                          : "bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                      }`}
+                      onClick={() => handleUpgrade(planId)}
+                      disabled={isUpgrading}
+                    >
+                      {isUpgrading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpCircle className="h-4 w-4 mr-2" />
+                          Upgrade to {plan.name}
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
