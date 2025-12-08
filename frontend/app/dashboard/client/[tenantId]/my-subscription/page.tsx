@@ -19,6 +19,10 @@ import {
   Star
 } from "lucide-react";
 import { toast } from "sonner";
+import { subscriptionPlans } from "@/data/plans";
+
+// Plan hierarchy for filtering
+const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
 
 interface SubscriptionInfo {
   plan: string;
@@ -63,6 +67,29 @@ export default function MySubscriptionPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
+  // Get upgrade plans based on current plan (using local data)
+  const getUpgradePlansForPlan = useCallback((currentPlan: string) => {
+    const planLower = (currentPlan || "trial").toLowerCase();
+    const currentPlanIndex = PLAN_HIERARCHY.indexOf(planLower);
+    
+    return subscriptionPlans
+      .filter((plan) => {
+        const planIndex = PLAN_HIERARCHY.indexOf(plan.id.toLowerCase());
+        // Show plans that are higher in hierarchy and are not trial/free
+        return planIndex > currentPlanIndex && plan.id !== "trial";
+      })
+      .map((plan) => ({
+        _id: plan.id,
+        planId: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: typeof plan.monthlyPrice === "number" ? plan.monthlyPrice : 0,
+        annualPrice: typeof plan.annualPrice === "number" ? plan.annualPrice : 0,
+        features: plan.features,
+        popular: plan.popular || false,
+      }));
+  }, []);
+
   const fetchSubscription = useCallback(async () => {
     try {
       const response = await fetch(`/api/tenants/${tenantId}/subscription`, {
@@ -72,38 +99,29 @@ export default function MySubscriptionPage() {
 
       if (data.success) {
         setTenant(data.tenant);
+        // Set upgrade plans based on fetched tenant plan
+        const plans = getUpgradePlansForPlan(data.tenant?.plan || "trial");
+        setUpgradePlans(plans);
       } else {
         toast.error("Failed to load subscription details");
+        // Still set default upgrade plans for trial
+        setUpgradePlans(getUpgradePlansForPlan("trial"));
       }
     } catch (error) {
       console.error("Error fetching subscription:", error);
       toast.error("Failed to load subscription details");
+      // Still set default upgrade plans for trial
+      setUpgradePlans(getUpgradePlansForPlan("trial"));
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
-
-  const fetchUpgradePlans = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/tenants/${tenantId}/upgrade-plans`, {
-        credentials: "include",
-      });
-      const data = await response.json();
-
-      if (data.success && data.upgradePlans) {
-        setUpgradePlans(data.upgradePlans);
-      }
-    } catch (error) {
-      console.error("Error fetching upgrade plans:", error);
-    }
-  }, [tenantId]);
+  }, [tenantId, getUpgradePlansForPlan]);
 
   useEffect(() => {
     if (tenantId) {
       fetchSubscription();
-      fetchUpgradePlans();
     }
-  }, [tenantId, fetchSubscription, fetchUpgradePlans]);
+  }, [tenantId, fetchSubscription]);
 
   const handleCancelSubscription = async () => {
     setCancelling(true);
@@ -163,7 +181,6 @@ export default function MySubscriptionPage() {
       if (data.isFree) {
         toast.success("Plan upgraded successfully!");
         fetchSubscription();
-        fetchUpgradePlans();
         return;
       }
 

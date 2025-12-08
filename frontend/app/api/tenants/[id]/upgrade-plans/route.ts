@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { subscriptionPlans } from "@/data/plans";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
 // Plan hierarchy for upgrade logic
-const PLAN_HIERARCHY = ["trial", "basic", "pro", "enterprise"];
+const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
 
 export async function GET(
   request: NextRequest,
@@ -35,33 +36,29 @@ export async function GET(
     }
 
     const tenantData = await tenantResponse.json();
-    const currentPlan = tenantData.tenant?.plan || "trial";
+    const currentPlan = (tenantData.tenant?.plan || "trial").toLowerCase();
 
-    // Get all available plans
-    const plansResponse = await fetch(`${BACKEND_URL}/api/subscription/plans`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!plansResponse.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch plans" },
-        { status: plansResponse.status }
-      );
-    }
-
-    const plansData = await plansResponse.json();
-    const allPlans = plansData.plans || [];
-
-    // Filter to show only plans higher than current plan
-    const currentPlanIndex = PLAN_HIERARCHY.indexOf(currentPlan.toLowerCase());
+    // Get current plan index
+    const currentPlanIndex = PLAN_HIERARCHY.indexOf(currentPlan);
     
-    const upgradePlans = allPlans.filter((plan: any) => {
-      const planId = plan.planId || plan.id || plan.name?.toLowerCase();
-      const planIndex = PLAN_HIERARCHY.indexOf(planId?.toLowerCase());
-      return planIndex > currentPlanIndex;
-    });
+    // Filter to show only plans higher than current plan (exclude trial, only paid plans)
+    const upgradePlans = subscriptionPlans
+      .filter((plan) => {
+        const planIndex = PLAN_HIERARCHY.indexOf(plan.id.toLowerCase());
+        // Show plans that are higher in hierarchy and are not trial/free
+        return planIndex > currentPlanIndex && plan.id !== "trial";
+      })
+      .map((plan) => ({
+        _id: plan.id,
+        planId: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: typeof plan.monthlyPrice === "number" ? plan.monthlyPrice : 0,
+        annualPrice: typeof plan.annualPrice === "number" ? plan.annualPrice : 0,
+        features: plan.features,
+        popular: plan.popular || false,
+        quotas: plan.quotas,
+      }));
 
     return NextResponse.json({
       success: true,
