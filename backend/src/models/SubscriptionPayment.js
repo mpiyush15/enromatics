@@ -48,7 +48,7 @@ const subscriptionPaymentSchema = new mongoose.Schema({
   
   planKey: {
     type: String,
-    enum: ["basic", "pro", "enterprise", "trial"],
+    enum: ["free", "trial", "test", "basic", "starter", "professional", "pro", "enterprise"],
     required: true
   },
   

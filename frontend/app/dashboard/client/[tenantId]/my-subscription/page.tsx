@@ -68,15 +68,24 @@ export default function MySubscriptionPage() {
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
   // Get upgrade plans based on current plan (using local data)
-  const getUpgradePlansForPlan = useCallback((currentPlan: string) => {
-    const planLower = (currentPlan || "trial").toLowerCase();
+  const getUpgradePlansForPlan = useCallback((currentPlan: string, subscriptionStatus?: string) => {
+    // If subscription status is pending, treat as previous active plan (trial)
+    // Don't use the pending plan for filtering
+    let planLower = (currentPlan || "trial").toLowerCase();
+    
+    // If status is pending or inactive, user is still on trial
+    if (subscriptionStatus === "pending" || subscriptionStatus === "inactive") {
+      planLower = "trial";
+    }
+    
     const currentPlanIndex = PLAN_HIERARCHY.indexOf(planLower);
     
     return subscriptionPlans
       .filter((plan) => {
         const planIndex = PLAN_HIERARCHY.indexOf(plan.id.toLowerCase());
         // Show plans that are higher in hierarchy and are not trial/free
-        return planIndex > currentPlanIndex && plan.id !== "trial";
+        // Also exclude enterprise (Custom pricing - Contact Sales)
+        return planIndex > currentPlanIndex && plan.id !== "trial" && plan.id !== "enterprise";
       })
       .map((plan) => ({
         _id: plan.id,
@@ -87,6 +96,7 @@ export default function MySubscriptionPage() {
         annualPrice: typeof plan.annualPrice === "number" ? plan.annualPrice : 0,
         features: plan.features,
         popular: plan.popular || false,
+        isContactSales: plan.monthlyPrice === "Custom",
       }));
   }, []);
 
@@ -99,9 +109,11 @@ export default function MySubscriptionPage() {
 
       if (data.success) {
         setTenant(data.tenant);
-        // Set upgrade plans based on fetched tenant plan
-        const plans = getUpgradePlansForPlan(data.tenant?.plan || "trial");
+        // Set upgrade plans based on fetched tenant plan AND subscription status
+        const subscriptionStatus = data.tenant?.subscription?.status;
+        const plans = getUpgradePlansForPlan(data.tenant?.plan || "trial", subscriptionStatus);
         setUpgradePlans(plans);
+        console.log("Current plan:", data.tenant?.plan, "Status:", subscriptionStatus, "Upgrade plans:", plans.length);
       } else {
         toast.error("Failed to load subscription details");
         // Still set default upgrade plans for trial
@@ -561,6 +573,87 @@ export default function MySubscriptionPage() {
               );
             })}
           </div>
+
+          {/* Enterprise Contact Sales Card */}
+          {tenant?.plan !== "enterprise" && (
+            <div className="mt-8">
+              <Card className="border-2 border-purple-500 dark:border-purple-400 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  <Sparkles className="h-3 w-3 inline mr-1" />
+                  ENTERPRISE
+                </div>
+                
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Zap className="h-5 w-5 text-purple-500" />
+                    Enterprise Plan
+                  </CardTitle>
+                  <CardDescription className="dark:text-gray-400">
+                    For large-scale operations with advanced needs
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="flex items-baseline gap-1 mb-4">
+                    <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      Custom Pricing
+                    </span>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Unlimited students & staff</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Unlimited storage</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>White-label APK</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Multi-branch support</span>
+                      </li>
+                    </ul>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>All AI features</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>YouTube Live streaming</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>24/7 priority support</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Custom integrations</span>
+                      </li>
+                    </ul>
+                  </div>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    onClick={() => {
+                      window.open("mailto:support@enromatics.com?subject=Enterprise Plan Inquiry&body=Hi, I'm interested in the Enterprise plan for my institution.", "_blank");
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Contact Sales
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import Payment from "../models/Payment.js";
+import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import Student from "../models/Student.js";
 import User from "../models/User.js";
 import { PLANS } from '../config/plans.js';
@@ -56,16 +57,16 @@ export const initiateSubscriptionPayment = async (req, res) => {
     });
 
     if (!tenant) {
-      // Create new tenant record
+      // Create new tenant record - this is a new signup
       tenant = await Tenant.create({
         tenantId: finalTenantId,
         name: name || instituteName || email.split('@')[0],
         instituteName: instituteName || null,
         email: email,
-        plan: planId, // Save the selected plan UPFRONT
+        plan: 'trial', // Start with trial, upgrade after payment success
         active: true,
         contact: {
-          phone: phone,
+          phone: reqPhone,
           country: 'India'
         },
         subscription: {
@@ -73,17 +74,22 @@ export const initiateSubscriptionPayment = async (req, res) => {
           paymentId: null,
           startDate: null,
           endDate: null,
-          billingCycle: cycle // Save billing cycle upfront
+          billingCycle: cycle,
+          pendingPlan: planId // Store the plan they're trying to upgrade to
         }
       });
-      console.log('Created new tenant:', tenant.tenantId, 'Plan:', planId);
+      console.log('Created new tenant:', tenant.tenantId, 'Pending plan:', planId);
     } else {
-      // Update existing tenant with selected plan (in case they're upgrading/changing)
-      tenant.plan = planId;
+      // Existing tenant - DON'T change plan yet, just mark as pending upgrade
+      // Store the pending plan in subscription metadata
       tenant.subscription.billingCycle = cycle;
-      tenant.subscription.status = 'pending';
+      tenant.subscription.pendingPlan = planId; // Store pending plan, don't change current plan
+      // Only set to pending if not already active
+      if (tenant.subscription.status !== 'active') {
+        tenant.subscription.status = 'pending';
+      }
       await tenant.save();
-      console.log('Updated tenant plan:', tenant.tenantId, 'Plan:', planId);
+      console.log('Tenant upgrade initiated:', tenant.tenantId, 'Current:', tenant.plan, 'Pending:', planId);
     }
 
     // Use the tenant's actual tenantId
@@ -524,15 +530,62 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           console.error('Portal ready email (webhook) failed:', e?.message || e);
         }
       }
-    } else if (event === 'order.failed') {
-      const orderId = req.body.data.order.order_id;
-      const tenantId = req.body.data.order.customer_details.customer_id;
+    } else if (event === 'order.failed' || event === 'order.cancelled') {
+      const orderData = req.body.data.order;
+      const orderId = orderData.order_id;
+      const tenantId = orderData.customer_details.customer_id;
+      const orderAmount = orderData.order_amount || 0;
+      const orderMeta = orderData.order_meta || {};
+      
       const tenant = await Tenant.findOne({ tenantId });
       if (tenant) {
+        // Log the failed/cancelled payment
+        try {
+          const pendingPlan = tenant.subscription?.pendingPlan || orderMeta.plan_id || tenant.plan;
+          const plan = PLANS.find(p => p.id === pendingPlan) || { name: pendingPlan, id: pendingPlan };
+          
+          await SubscriptionPayment.create({
+            tenantId: tenant.tenantId,
+            amount: orderAmount,
+            totalAmount: orderAmount,
+            planName: plan.name || 'Unknown',
+            planKey: ['free', 'trial', 'test', 'basic', 'starter', 'professional', 'pro', 'enterprise'].includes(pendingPlan) ? pendingPlan : 'trial',
+            billingCycle: orderMeta.billing_cycle || 'monthly',
+            periodStart: new Date(),
+            periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            paymentMethod: 'cashfree',
+            gatewayOrderId: orderId,
+            status: 'failed',
+            notes: `Payment ${event === 'order.cancelled' ? 'cancelled' : 'failed'} - ${new Date().toISOString()}`,
+            tenantSnapshot: {
+              instituteName: tenant.instituteName || tenant.name,
+              email: tenant.email,
+              phone: tenant.contact?.phone,
+            }
+          });
+          console.log('Webhook: Logged failed payment for tenant:', tenantId);
+        } catch (logErr) {
+          console.error('Failed to log failed payment:', logErr?.message || logErr);
+        }
+        
+        // Reset tenant's pending status if they were trying to upgrade
+        if (tenant.subscription?.pendingPlan) {
+          tenant.subscription.pendingPlan = null;
+          // Only reset status if it was set to pending for this upgrade
+          if (tenant.subscription.status === 'pending') {
+            // Restore to previous active status if they had an active subscription
+            // Otherwise keep trial status
+            tenant.subscription.status = tenant.subscription.startDate ? 'active' : 'trial';
+          }
+          await tenant.save();
+          console.log('Webhook: Reset pending upgrade for tenant:', tenantId);
+        }
+        
+        // Send notification email
         await sendEmail({
           to: tenant.email,
-          subject: `Payment Failed for ${tenant.plan}`,
-          html: `<p>Your payment for the ${tenant.plan} plan was not successful. Please try again.</p>`
+          subject: `Payment ${event === 'order.cancelled' ? 'Cancelled' : 'Failed'}`,
+          html: `<p>Your payment for the upgrade was not successful. Your current subscription remains unchanged. Please try again when you're ready.</p>`
         });
       }
     }
@@ -1031,3 +1084,78 @@ export const sendInvoiceEmail = async (req, res) => {
   }
 };
 
+/**
+ * Auto-cancel stale pending payments after timeout (default 30 minutes)
+ * This can be called by a cron job or on app startup
+ */
+export const autoCancelStalePendingPayments = async (timeoutMinutes = 30) => {
+  try {
+    const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+    
+    // Find tenants with pending upgrades older than the timeout
+    const staleTenants = await Tenant.find({
+      'subscription.pendingPlan': { $ne: null },
+      'subscription.status': 'pending',
+      updatedAt: { $lt: cutoffTime }
+    });
+    
+    let cancelledCount = 0;
+    
+    for (const tenant of staleTenants) {
+      try {
+        // Log the auto-cancelled payment
+        const pendingPlan = tenant.subscription?.pendingPlan;
+        const plan = PLANS.find(p => p.id === pendingPlan) || { name: pendingPlan, id: pendingPlan };
+        
+        await SubscriptionPayment.create({
+          tenantId: tenant.tenantId,
+          amount: 0,
+          totalAmount: 0,
+          planName: plan.name || 'Unknown',
+          planKey: ['free', 'trial', 'test', 'basic', 'starter', 'professional', 'pro', 'enterprise'].includes(pendingPlan) ? pendingPlan : 'trial',
+          billingCycle: tenant.subscription?.billingCycle || 'monthly',
+          periodStart: new Date(),
+          periodEnd: new Date(),
+          paymentMethod: 'cashfree',
+          status: 'failed',
+          notes: `Auto-cancelled after ${timeoutMinutes} minutes timeout - ${new Date().toISOString()}`,
+          tenantSnapshot: {
+            instituteName: tenant.instituteName || tenant.name,
+            email: tenant.email,
+            phone: tenant.contact?.phone,
+          }
+        });
+        
+        // Reset tenant's pending status
+        tenant.subscription.pendingPlan = null;
+        tenant.subscription.status = tenant.subscription.startDate ? 'active' : 'trial';
+        await tenant.save();
+        
+        cancelledCount++;
+        console.log('Auto-cancelled stale pending payment for tenant:', tenant.tenantId);
+      } catch (err) {
+        console.error('Error auto-cancelling tenant:', tenant.tenantId, err?.message || err);
+      }
+    }
+    
+    console.log(`Auto-cancel job completed: ${cancelledCount} stale pending payments cancelled`);
+    return { success: true, cancelledCount };
+  } catch (err) {
+    console.error('Auto-cancel stale payments error:', err);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Admin endpoint to manually trigger auto-cancel of stale pending payments
+ */
+export const triggerAutoCancelPendingPayments = async (req, res) => {
+  try {
+    const { timeoutMinutes = 30 } = req.query;
+    const result = await autoCancelStalePendingPayments(parseInt(timeoutMinutes));
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Trigger auto-cancel error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

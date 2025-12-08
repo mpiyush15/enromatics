@@ -94,6 +94,11 @@ const tenantSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
+      // Pending plan for upgrade (set during payment initiation, cleared on success/failure)
+      pendingPlan: {
+        type: String,
+        default: null,
+      },
     },
 
     // Whether tenant account is active or suspended
