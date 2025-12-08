@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
+import UpgradeRequired from "@/components/UpgradeRequired";
 
 interface AdAccount {
   id: string;
@@ -26,8 +28,9 @@ interface DashboardData {
 
 export default function SocialMediaDashboard() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string || "";
   const { isConnected, connect, disconnect, refresh, isLoading, error } = useFacebookConnection();
+  const { hasFeature, loading: featureLoading } = useFeatureGate();
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -55,6 +58,29 @@ export default function SocialMediaDashboard() {
       setDataLoading(false);
     }
   };
+
+  // Check feature access
+  if (featureLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3"></div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show upgrade prompt if feature not available
+  if (!hasFeature("socialMedia")) {
+    return (
+      <UpgradeRequired 
+        featureName="Social Media Analytics" 
+        description="Connect your Facebook and Instagram accounts to manage ads, track performance, and grow your reach. This feature is available in Basic plan and above."
+        requiredPlan="Basic"
+      />
+    );
+  }
 
   if (isLoading) {
     return (

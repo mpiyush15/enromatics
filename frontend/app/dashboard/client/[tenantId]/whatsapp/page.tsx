@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/apiConfig";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
+import UpgradeRequired from "@/components/UpgradeRequired";
 
 interface Stats {
   total: number;
@@ -26,8 +28,11 @@ interface Template {
 }
 
 export default function WhatsAppDashboardPage() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string || "";
   const router = useRouter();
+  const { hasFeature, loading: featureLoading } = useFeatureGate();
+  
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -47,8 +52,33 @@ export default function WhatsAppDashboardPage() {
   });
 
   useEffect(() => {
-    checkConfig();
-  }, []);
+    if (!featureLoading && hasFeature("waba")) {
+      checkConfig();
+    }
+  }, [featureLoading]);
+
+  // Check feature access
+  if (featureLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-600 border-t-transparent mx-auto mb-3"></div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show upgrade prompt if feature not available
+  if (!hasFeature("waba")) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business API" 
+        description="Send bulk messages, automated reminders, and manage WhatsApp campaigns directly from your dashboard. This feature is available in Basic plan and above."
+        requiredPlan="Basic"
+      />
+    );
+  }
 
   const checkConfig = async () => {
     try {
