@@ -96,7 +96,6 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
-app.use("/api/auth", authRoutes);
 
 app.get("/api/test-cookie", (req, res) => {
   console.log("Cookies:", req.cookies);
