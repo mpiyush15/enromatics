@@ -163,6 +163,10 @@ export default function MySubscriptionPage() {
   }, []);
 
   const handleUpgrade = async (planId: string) => {
+    console.log("handleUpgrade called with planId:", planId);
+    console.log("tenantId:", tenantId);
+    console.log("billingCycle:", billingCycle);
+    
     setUpgradingPlan(planId);
     try {
       const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
@@ -173,6 +177,7 @@ export default function MySubscriptionPage() {
       });
 
       const data = await response.json();
+      console.log("Upgrade response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to initiate upgrade");
@@ -185,6 +190,7 @@ export default function MySubscriptionPage() {
       }
 
       // Open Cashfree checkout for paid plans
+      console.log("Opening Cashfree checkout with sessionId:", data.paymentSessionId);
       const cashfree = await (window as any).Cashfree({
         mode: "production",
       });
@@ -194,6 +200,7 @@ export default function MySubscriptionPage() {
         redirectTarget: "_self",
       });
     } catch (error: any) {
+      console.error("Upgrade error:", error);
       toast.error(error.message || "Failed to upgrade plan");
     } finally {
       setUpgradingPlan(null);

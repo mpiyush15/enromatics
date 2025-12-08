@@ -1,6 +1,6 @@
 // ...existing code...
 // Subscription plans config
-// Each plan has monthly and annual pricing (annual = 30% discount)
+// Each plan has monthly and annual pricing (annual = ~15% discount for annual)
 export const PLANS = [
   {
     id: 'test',
@@ -10,24 +10,39 @@ export const PLANS = [
     description: 'Test plan for QA - ₹10 only',
   },
   {
-    id: 'starter',
-    name: 'Starter',
-    priceMonthly: 1999,
-    priceAnnual: Math.round(1999 * 12 * 0.7), // 30% discount
-    description: 'Basic features for small institutes',
+    id: 'basic',
+    name: 'Basic',
+    priceMonthly: 999,
+    priceAnnual: 9999, // ~15% discount
+    description: 'Perfect for small coaching institutes',
   },
   {
-    id: 'professional',
-    name: 'Professional',
-    priceMonthly: 2999,
-    priceAnnual: Math.round(2999 * 12 * 0.7),
-    description: 'Advanced features for growing institutes',
+    id: 'pro',
+    name: 'Pro',
+    priceMonthly: 1999,
+    priceAnnual: 19999, // ~15% discount
+    description: 'For growing educational institutions',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     priceMonthly: 4999,
-    priceAnnual: Math.round(4999 * 12 * 0.7),
-    description: 'Full suite for large organizations',
+    priceAnnual: 49999,
+    description: 'For large-scale operations with advanced needs',
+  },
+  // Keep old names as aliases for backward compatibility
+  {
+    id: 'starter',
+    name: 'Starter',
+    priceMonthly: 999,
+    priceAnnual: 9999,
+    description: 'Basic features for small institutes (legacy)',
+  },
+  {
+    id: 'professional',
+    name: 'Professional',
+    priceMonthly: 1999,
+    priceAnnual: 19999,
+    description: 'Advanced features for growing institutes (legacy)',
   }
 ];
