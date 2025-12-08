@@ -111,17 +111,17 @@ export default function MySubscriptionPage() {
     switch (plan) {
       case "trial":
       case "free":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
       case "starter":
       case "basic":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
       case "professional":
       case "pro":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
       case "enterprise":
-        return "bg-orange-100 text-orange-800";
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
   };
 
@@ -157,8 +157,8 @@ export default function MySubscriptionPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">My Subscription</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Subscription</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Manage your subscription plan and billing
         </p>
       </div>
@@ -186,8 +186,8 @@ export default function MySubscriptionPage() {
         <CardContent className="space-y-4">
           {/* Status and Trial Info */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <CheckCircle className="h-4 w-4" />
                 Status
               </div>
@@ -197,33 +197,33 @@ export default function MySubscriptionPage() {
             </div>
 
             {isTrialOrFree && (
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center gap-2 text-sm text-blue-600 mb-1">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-1">
                   <Clock className="h-4 w-4" />
                   Trial Days Remaining
                 </div>
-                <div className={`font-bold text-2xl ${daysRemaining <= 3 ? "text-red-600" : "text-blue-600"}`}>
+                <div className={`font-bold text-2xl ${daysRemaining <= 3 ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"}`}>
                   {daysRemaining > 0 ? daysRemaining : 0} days
                 </div>
               </div>
             )}
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <Calendar className="h-4 w-4" />
                 {isTrialOrFree ? "Trial Started" : "Start Date"}
               </div>
-              <div className="font-semibold">
+              <div className="font-semibold text-gray-900 dark:text-white">
                 {formatDate(subscription?.trialStartDate ?? subscription?.startDate ?? null)}
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
                 <Calendar className="h-4 w-4" />
                 {isTrialOrFree ? "Trial Ends" : "Renewal Date"}
               </div>
-              <div className="font-semibold">
+              <div className="font-semibold text-gray-900 dark:text-white">
                 {formatDate(subscription?.endDate ?? null)}
               </div>
             </div>
@@ -231,13 +231,13 @@ export default function MySubscriptionPage() {
 
           {/* Trial Warning */}
           {isTrialOrFree && daysRemaining <= 5 && daysRemaining > 0 && (
-            <div className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
               <div>
-                <p className="font-medium text-yellow-800">
+                <p className="font-medium text-yellow-800 dark:text-yellow-300">
                   Your trial ends in {daysRemaining} days
                 </p>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
                   Upgrade now to continue using all features without interruption.
                 </p>
               </div>
@@ -249,13 +249,13 @@ export default function MySubscriptionPage() {
 
           {/* Trial Expired Warning */}
           {isTrialOrFree && daysRemaining <= 0 && (
-            <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
-              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
               <div>
-                <p className="font-medium text-red-800">
+                <p className="font-medium text-red-800 dark:text-red-300">
                   Your trial has expired
                 </p>
-                <p className="text-sm text-red-700">
+                <p className="text-sm text-red-700 dark:text-red-400">
                   Upgrade to a paid plan to regain full access.
                 </p>
               </div>
@@ -267,27 +267,27 @@ export default function MySubscriptionPage() {
 
           {/* Billing Info for Paid Plans */}
           {!isTrialOrFree && subscription?.amount && subscription.amount > 0 && (
-            <div className="border-t pt-4 mt-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
                 <CreditCard className="h-4 w-4" />
                 Billing Information
               </h3>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Amount</p>
-                  <p className="font-semibold">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
                     ₹{subscription.amount.toLocaleString("en-IN")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Billing Cycle</p>
-                  <p className="font-semibold capitalize">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Billing Cycle</p>
+                  <p className="font-semibold capitalize text-gray-900 dark:text-white">
                     {subscription.billingCycle || "Monthly"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Next Billing</p>
-                  <p className="font-semibold">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Next Billing</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
                     {formatDate(subscription.endDate)}
                   </p>
                 </div>
@@ -296,7 +296,7 @@ export default function MySubscriptionPage() {
           )}
         </CardContent>
 
-        <CardFooter className="border-t pt-4 flex justify-between">
+        <CardFooter className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between">
           <Button variant="outline" asChild>
             <a href="/subscription/plans">View All Plans</a>
           </Button>
@@ -314,14 +314,14 @@ export default function MySubscriptionPage() {
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 bg-white dark:bg-gray-800">
             <CardHeader>
-              <CardTitle className="text-red-600 flex items-center gap-2">
+              <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
                 Cancel Subscription?
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-gray-400">
                 Are you sure you want to cancel your subscription? You will lose access to all features at the end of your billing period.
               </CardDescription>
             </CardHeader>

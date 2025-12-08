@@ -178,8 +178,9 @@ export const sidebarLinks = [
     children: [
       { label: "👤 Profile", href: "/dashboard/profile" },
       { label: "👥 Staff Management", href: "/dashboard/client/[tenantId]/settings/staff", roles: ["tenantAdmin", "Admin"] },
-      { label: "� My Subscription", href: "/dashboard/my-subscription" },
-      { label: "📄 View Plan", href: "/dashboard/subscription/view" },
+      { label: "📄 My Subscription", href: "/dashboard/my-subscription", roles: ["tenantAdmin"] },
+      { label: "� Payment History", href: "/dashboard/payments", roles: ["tenantAdmin"] },
+      { label: "📋 View Plan", href: "/dashboard/subscription/view" },
       { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel" },
     ],
   },
