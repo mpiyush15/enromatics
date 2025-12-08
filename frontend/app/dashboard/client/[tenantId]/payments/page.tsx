@@ -22,6 +22,7 @@ interface Payment {
   paidAt: string;
   createdAt: string;
   invoiceGenerated: boolean;
+  notes?: string;
 }
 
 interface Pagination {
@@ -230,12 +231,20 @@ export default function PaymentHistoryPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(payment.status)}`}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full w-fit ${getStatusBadge(payment.status)}`}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </span>
+                          {payment.status === "failed" && payment.notes && (
+                            <span className="text-xs text-red-500 dark:text-red-400 mt-1 max-w-[150px] truncate" title={payment.notes}>
+                              {payment.notes.includes("cancelled") ? "Payment cancelled" : 
+                               payment.notes.includes("timeout") ? "Auto-cancelled (timeout)" : "Payment failed"}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {payment.status === "success" && (
+                        {payment.status === "success" ? (
                           <button
                             onClick={() => handleDownloadInvoice(payment._id, payment.invoiceNumber)}
                             disabled={downloading === payment._id}
@@ -258,6 +267,8 @@ export default function PaymentHistoryPage() {
                               </>
                             )}
                           </button>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
                         )}
                       </td>
                     </tr>

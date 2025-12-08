@@ -445,10 +445,39 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           billingCycle,
           amount: orderAmount,
           currency: 'INR',
-          invoiceNumber: nextInvoiceNumber
+          invoiceNumber: nextInvoiceNumber,
+          pendingPlan: null // Clear pending plan on success
         };
         await tenant.save();
         console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber);
+
+        // Log successful payment to SubscriptionPayment collection
+        try {
+          await SubscriptionPayment.create({
+            tenantId: tenant.tenantId,
+            invoiceDate: new Date(),
+            amount: orderAmount,
+            totalAmount: orderAmount,
+            planName: plan.name || planId,
+            planKey: planId,
+            billingCycle: billingCycle,
+            periodStart: startDate,
+            periodEnd: endDate,
+            paymentMethod: 'cashfree',
+            gatewayOrderId: orderId,
+            gatewayPaymentId: orderId,
+            status: 'success',
+            paidAt: new Date(),
+            tenantSnapshot: {
+              instituteName: tenant.instituteName || tenant.name,
+              email: tenant.email,
+              phone: tenant.contact?.phone,
+            }
+          });
+          console.log('Webhook: Logged successful payment for tenant:', tenant.tenantId);
+        } catch (paymentLogErr) {
+          console.error('Failed to log successful payment:', paymentLogErr?.message || paymentLogErr);
+        }
 
         // Trigger post-payment provisioning (subdomain + branding seed)
         try {

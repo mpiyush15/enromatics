@@ -9,20 +9,21 @@ import PDFDocument from "pdfkit";
 export const getPaymentHistory = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, status } = req.query;
 
-    const payments = await SubscriptionPayment.find({ 
-      tenantId,
-      status: { $in: ["success", "pending"] }
-    })
+    // Build query - include all statuses by default, or filter by specific status
+    const query = { tenantId };
+    if (status && ["success", "failed", "pending", "refunded"].includes(status)) {
+      query.status = status;
+    }
+    // By default show all payment attempts (success, failed, pending, refunded)
+
+    const payments = await SubscriptionPayment.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    const total = await SubscriptionPayment.countDocuments({ 
-      tenantId,
-      status: { $in: ["success", "pending"] }
-    });
+    const total = await SubscriptionPayment.countDocuments(query);
 
     res.json({
       success: true,
