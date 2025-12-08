@@ -41,15 +41,20 @@ export const checkEmail = async (req, res) => {
  */
 export const registerUser = async (req, res) => {
   try {
+    console.log('📝 [SIGNUP] Starting registerUser with body:', req.body);
+    
     const { name, email, password, tenantId, role, instituteName, phone, whatsappOptIn, planId, isTrial } = req.body;
     
     // For trial signup, use instituteName as the user's name if name is not provided
     const userName = name || instituteName || email.split('@')[0];
+    console.log('📝 [SIGNUP] userName:', userName, 'email:', email, 'isTrial:', isTrial);
     
     const existing = await User.findOne({ email });
     if (existing) {
+      console.log('❌ [SIGNUP] User already exists:', email);
       return res.status(400).json({ message: "User already exists" });
     }
+    console.log('✅ [SIGNUP] Email available, proceeding...');
 
     // If tenantId is provided, add user to existing tenant (staff member)
     if (tenantId) {
@@ -83,12 +88,15 @@ export const registerUser = async (req, res) => {
 
     // Otherwise, create new tenant and tenantAdmin
     const newTenantId = crypto.randomBytes(4).toString("hex");
+    console.log('📝 [SIGNUP] New tenantId:', newTenantId);
 
     // Determine subscription based on trial vs regular signup
     const subscriptionTier = isTrial ? (planId || 'basic') : 'free';
     const subscriptionStatus = isTrial ? 'trial' : 'active';
     const trialStartDate = isTrial ? new Date() : null;
+    console.log('📝 [SIGNUP] subscriptionTier:', subscriptionTier, 'status:', subscriptionStatus);
 
+    console.log('📝 [SIGNUP] Creating tenant...');
     const tenant = await Tenant.create({
       tenantId: newTenantId,
       name: userName, // Person's name
@@ -106,6 +114,9 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false, // Store WhatsApp consent
     });
 
+    console.log('✅ [SIGNUP] Tenant created:', tenant._id);
+
+    console.log('📝 [SIGNUP] Creating user...');
     const user = await User.create({
       name: userName,
       email,
@@ -115,9 +126,12 @@ export const registerUser = async (req, res) => {
       tenantId: newTenantId,
       role: "tenantAdmin",
     });
+    console.log('✅ [SIGNUP] User created:', user._id);
 
     // Generate token for immediate auth (especially important for trial signup)
+    console.log('📝 [SIGNUP] Generating token...');
     const token = generateToken(user._id, user.role, newTenantId);
+    console.log('✅ [SIGNUP] Token generated, sending response...');
 
     res.status(201).json({
       message: "User registered successfully ✅",
@@ -136,6 +150,8 @@ export const registerUser = async (req, res) => {
       } : null,
     });
   } catch (err) {
+    console.error('❌ [SIGNUP] ERROR:', err.message);
+    console.error('❌ [SIGNUP] Full error:', err);
     res.status(500).json({ message: err.message });
   }
 };
