@@ -160,3 +160,70 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Premium Sidebar Scrollbar - Dark Glassmorphism Style */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(100, 116, 139, 0.3) 0%,
+    rgba(71, 85, 105, 0.5) 50%,
+    rgba(100, 116, 139, 0.3) 100%
+  );
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.4) 0%,
+    rgba(100, 116, 139, 0.6) 50%,
+    rgba(148, 163, 184, 0.4) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Hide scrollbar when not scrolling (optional - shows on hover) */
+.sidebar-scroll-auto {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+.sidebar-scroll-auto:hover {
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+
+.sidebar-scroll-auto::-webkit-scrollbar-thumb {
+  background: transparent;
+  transition: background 0.3s ease;
+}
+
+.sidebar-scroll-auto:hover::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(100, 116, 139, 0.3) 0%,
+    rgba(71, 85, 105, 0.5) 50%,
+    rgba(100, 116, 139, 0.3) 100%
+  );
+}

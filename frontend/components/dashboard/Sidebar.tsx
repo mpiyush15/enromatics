@@ -174,7 +174,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
         <button onClick={onClose} className="text-xl">✕</button>
       </div>
 
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+      <div className="p-4 space-y-6 flex-1 overflow-y-auto sidebar-scroll">
         <h2 className="text-xl font-bold">Dashboard</h2>
         {links.length === 0 && !loadingSidebar && (
           <p className="text-gray-400 text-sm">❌ No links available for your role: {user?.role}</p>
