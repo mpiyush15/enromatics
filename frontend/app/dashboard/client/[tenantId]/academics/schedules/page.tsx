@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Test {
   _id: string;
@@ -56,7 +55,7 @@ export default function TestSchedulesPage() {
 
   const fetchTests = async () => {
     try {
-      let url = `${API_BASE_URL}/api/academics/tests`;
+      let url = `/api/academics/tests`;
       const params = new URLSearchParams();
       if (filterCourse) params.append("course", filterCourse);
       if (filterStatus) params.append("status", filterStatus);
@@ -82,8 +81,8 @@ export default function TestSchedulesPage() {
       console.log("Submitting test form:", form);
       
       const url = editingTest
-        ? `${API_BASE_URL}/api/academics/tests/${editingTest._id}`
-        : `${API_BASE_URL}/api/academics/tests`;
+        ? `/api/academics/tests/${editingTest._id}`
+        : `/api/academics/tests`;
       
       const res = await fetch(url, {
         method: editingTest ? "PUT" : "POST",
@@ -113,7 +112,7 @@ export default function TestSchedulesPage() {
     if (!confirm("Delete this test? All attendance and marks data will be removed.")) return;
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}`, {
+      const res = await fetch(`/api/academics/tests/${testId}`, {
         method: "DELETE",
         credentials: "include",
       });

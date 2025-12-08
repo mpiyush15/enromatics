@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
@@ -19,11 +18,19 @@ export default function StudentProfilePage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "payments">("overview");
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   const fetchStudent = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+      const res = await fetch(`/api/students/${studentId}`, {
         method: "GET",
-        credentials: "include",
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -63,10 +70,9 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+      const res = await fetch(`/api/students/${studentId}`, {
         method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -86,10 +92,9 @@ export default function StudentProfilePage() {
     if (!ok) return;
     setStatus("Resetting password...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/students/${studentId}/reset-password`, {
+      const res = await fetch(`/api/students/${studentId}/reset-password`, {
         method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
@@ -106,10 +111,9 @@ export default function StudentProfilePage() {
     if (!paymentAmount) return setStatus("❌ Enter amount");
     setStatus("Adding payment...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments`, {
+      const res = await fetch(`/api/payments`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: getHeaders(),
         body: JSON.stringify({ studentId, amount: Number(paymentAmount) }),
       });
       const data = await res.json();
@@ -128,9 +132,9 @@ export default function StudentProfilePage() {
     const ok = confirm("Are you sure you want to delete this payment receipt?");
     if (!ok) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}`, {
+      const res = await fetch(`/api/payments/${paymentId}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to delete");

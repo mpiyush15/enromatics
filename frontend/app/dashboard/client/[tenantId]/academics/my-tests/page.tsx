@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentMyTestsPage() {
   const router = useRouter();
@@ -17,9 +16,13 @@ export default function StudentMyTestsPage() {
 
   const fetchStudentTests = async () => {
     try {
-      // Get current student info
-      const studentRes = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
-        credentials: "include",
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Get current student info via BFF
+      const studentRes = await fetch(`/api/student-auth/me`, {
+        headers,
       });
       const studentData = await studentRes.json();
       
@@ -30,10 +33,10 @@ export default function StudentMyTestsPage() {
       
       setStudent(studentData.student);
 
-      // Fetch test marks for this student
+      // Fetch test marks for this student via BFF
       const testsRes = await fetch(
-        `${API_BASE_URL}/api/academics/students/${studentData.student._id}/tests`,
-        { credentials: "include" }
+        `/api/academics/students/${studentData.student._id}/tests`,
+        { headers }
       );
       const testsData = await testsRes.json();
       

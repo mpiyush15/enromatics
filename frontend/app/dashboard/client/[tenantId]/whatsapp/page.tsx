@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 import { useFeatureGate } from "@/hooks/useFeatureGate";
 import UpgradeRequired from "@/components/UpgradeRequired";
 
@@ -82,7 +81,7 @@ export default function WhatsAppDashboardPage() {
 
   const checkConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      const res = await fetch(`/api/whatsapp/config`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -100,7 +99,7 @@ export default function WhatsAppDashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
+      const res = await fetch(`/api/whatsapp/stats`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -114,7 +113,7 @@ export default function WhatsAppDashboardPage() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates`, {
+      const res = await fetch(`/api/whatsapp/templates`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -130,7 +129,7 @@ export default function WhatsAppDashboardPage() {
     setSyncing(true);
     setSubmitStatus("Syncing templates from Meta...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/sync`, {
+      const res = await fetch(`/api/whatsapp/templates/sync`, {
         method: "POST",
         credentials: "include",
       });
@@ -160,7 +159,7 @@ export default function WhatsAppDashboardPage() {
     setSubmitStatus("Submitting template to Meta for approval...");
     
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/submit`, {
+      const res = await fetch(`/api/whatsapp/templates/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

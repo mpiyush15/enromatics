@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Student {
   _id: string;
@@ -43,7 +42,7 @@ export default function TestAttendancePage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
   const searchParams = useSearchParams();
-  const testId = searchParams.get("testId");
+  const testId = searchParams?.get("testId");
 
   const [test, setTest] = useState<Test | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -54,27 +53,31 @@ export default function TestAttendancePage() {
 
   const fetchTestAndStudents = async () => {
     try {
-      // Fetch test details
-      const testRes = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}`, {
-        credentials: "include",
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Fetch test details via BFF
+      const testRes = await fetch(`/api/academics/tests?testId=${testId}`, {
+        headers,
       });
       const testData = await testRes.json();
       if (testRes.ok) {
         setTest(testData.test);
 
-        // Fetch students for this course/batch
+        // Fetch students for this course/batch via BFF
         const studentsRes = await fetch(
-          `${API_BASE_URL}/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
-          { credentials: "include" }
+          `/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
+          { headers }
         );
         const studentsData = await studentsRes.json();
         if (studentsRes.ok) {
           setStudents(studentsData.students || []);
 
-          // Fetch existing attendance
+          // Fetch existing attendance via BFF
           const attendanceRes = await fetch(
-            `${API_BASE_URL}/api/academics/tests/${testId}/attendance`,
-            { credentials: "include" }
+            `/api/academics/attendance?testId=${testId}`,
+            { headers }
           );
           const attendanceData = await attendanceRes.json();
           if (attendanceRes.ok) {
@@ -148,6 +151,10 @@ export default function TestAttendancePage() {
   const handleSubmit = async () => {
     setStatus("Saving attendance...");
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const attendanceData = students.map((student) => {
         const record = attendance.get(student._id);
         return {
@@ -157,10 +164,9 @@ export default function TestAttendancePage() {
         };
       });
 
-      const res = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}/attendance`, {
+      const res = await fetch(`/api/academics/attendance?testId=${testId}`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ attendanceData }),
       });
 

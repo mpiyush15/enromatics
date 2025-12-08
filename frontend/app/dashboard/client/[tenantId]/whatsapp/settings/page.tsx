@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface ConfigForm {
   phoneNumberId: string;
@@ -33,14 +32,22 @@ export default function WhatsappSettingsPage() {
   const [removing, setRemoving] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchConfig();
   }, []);
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
-        credentials: "include",
+      const res = await fetch(`/api/whatsapp/config`, {
+        headers: getHeaders(),
       });
       const data = await res.json();
 
@@ -66,10 +73,9 @@ export default function WhatsappSettingsPage() {
     setStatus("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      const res = await fetch(`/api/whatsapp/config`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify(form),
       });
 
@@ -104,11 +110,10 @@ export default function WhatsappSettingsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/test-connection`,
+        `/api/whatsapp/test-connection`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: getHeaders(),
           body: JSON.stringify({
             phoneNumberId: form.phoneNumberId,
             accessToken: form.accessToken,
@@ -136,9 +141,9 @@ export default function WhatsappSettingsPage() {
     setTemplateSyncStatus("Fetching templates from Meta...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/templates/sync`, {
+      const res = await fetch(`/api/whatsapp/templates/sync`, {
         method: "POST",
-        credentials: "include",
+        headers: getHeaders(),
       });
 
       const data = await res.json();
@@ -162,9 +167,9 @@ export default function WhatsappSettingsPage() {
     setStatus("Removing WhatsApp configuration...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/config`, {
+      const res = await fetch(`/api/whatsapp/config`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getHeaders(),
       });
 
       const data = await res.json();

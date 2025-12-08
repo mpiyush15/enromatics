@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Staff {
   _id: string;
@@ -79,6 +78,14 @@ export default function StaffManagementPage() {
     salary: { basic: 0, allowances: 0 },
   });
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchStaff();
   }, [filterRole, filterStatus, searchQuery]);
@@ -92,8 +99,8 @@ export default function StaffManagementPage() {
       if (searchQuery) params.append("search", searchQuery);
 
       const res = await fetch(
-        `${API_BASE_URL}/api/staff?${params.toString()}`,
-        { credentials: "include" }
+        `/api/staff?${params.toString()}`,
+        { headers: getHeaders() }
       );
       const data = await res.json();
       if (data.success) {
@@ -110,13 +117,12 @@ export default function StaffManagementPage() {
     e.preventDefault();
     try {
       const url = selectedStaff
-        ? `${API_BASE_URL}/api/staff/${selectedStaff._id}`
-        : `${API_BASE_URL}/api/staff`;
+        ? `/api/staff/${selectedStaff._id}`
+        : `/api/staff`;
 
       const res = await fetch(url, {
         method: selectedStaff ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify(formData),
       });
 
@@ -147,9 +153,9 @@ export default function StaffManagementPage() {
     if (!confirm("Are you sure you want to delete this staff member?")) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/staff/${id}`, {
+      const res = await fetch(`/api/staff/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data.success) {

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface InboxMessage {
   _id: string;
@@ -54,7 +53,8 @@ interface InboxStats {
 }
 
 export default function WhatsAppInboxPage() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -103,10 +103,10 @@ export default function WhatsAppInboxPage() {
       
       // Fetch conversations and stats in parallel
       const [conversationsRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/whatsapp/inbox/conversations?unreadOnly=${filter === 'unread'}`, {
+        fetch(`/api/whatsapp/inbox/conversations?unreadOnly=${filter === 'unread'}`, {
           credentials: 'include'
         }),
-        fetch(`${API_BASE_URL}/api/whatsapp/inbox/stats`, {
+        fetch(`/api/whatsapp/inbox/stats`, {
           credentials: 'include'
         })
       ]);
@@ -142,7 +142,7 @@ export default function WhatsAppInboxPage() {
       if (!silent) setMessagesLoading(true);
       
       const response = await fetch(
-        `${API_BASE_URL}/api/whatsapp/inbox/conversation/${conversationId}?limit=100`,
+        `/api/whatsapp/inbox/conversation/${conversationId}?limit=100`,
         { credentials: 'include' }
       );
       
@@ -190,7 +190,7 @@ export default function WhatsAppInboxPage() {
       };
 
       const response = await fetch(
-        `${API_BASE_URL}/api/whatsapp/inbox/conversation/${selectedConversation}/reply`,
+        `/api/whatsapp/inbox/conversation/${selectedConversation}/reply`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

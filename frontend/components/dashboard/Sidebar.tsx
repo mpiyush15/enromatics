@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import useOptionalAuth from "@/hooks/useOptionalAuth";
 import Logout_Button from "@/app/dashboard/LogoutButton";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface SidebarProps {
   isOpen: boolean;

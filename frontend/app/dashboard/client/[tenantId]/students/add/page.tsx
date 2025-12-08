@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Batch {
   _id: string;
@@ -44,6 +43,14 @@ export default function AddStudentPage() {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   useEffect(() => {
     fetchBatches();
     if (regId && fromScholarship) {
@@ -53,8 +60,8 @@ export default function AddStudentPage() {
 
   const fetchBatches = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/batches`, {
-        credentials: "include",
+      const res = await fetch(`/api/batches`, {
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data.success) {
@@ -83,8 +90,8 @@ export default function AddStudentPage() {
       }
       
       // Fetch all registrations for the exam and find the specific one
-      const res = await fetch(`${API_BASE_URL}/api/scholarship-exams/${examId}/registrations`, {
-        credentials: "include",
+      const res = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
+        headers: getHeaders(),
       });
       
       if (res.ok) {
@@ -134,12 +141,9 @@ export default function AddStudentPage() {
     setStatus("Adding student...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/students`, {
+      const res = await fetch(`/api/students`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify({
           ...form,
           name: form.studentName, // Map studentName to name for backend

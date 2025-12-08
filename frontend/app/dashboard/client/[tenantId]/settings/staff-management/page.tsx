@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Employee {
   _id: string;
@@ -54,10 +53,18 @@ export default function StaffManagementPage() {
     fetchEmployees();
   }, []);
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/employees`, {
-        credentials: "include",
+      const res = await fetch(`/api/employees`, {
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data.success) {
@@ -93,16 +100,13 @@ export default function StaffManagementPage() {
 
     try {
       const url = editingEmployee
-        ? `${API_BASE_URL}/api/employees/${editingEmployee._id}`
-        : `${API_BASE_URL}/api/employees`;
+        ? `/api/employees/${editingEmployee._id}`
+        : `/api/employees`;
       const method = editingEmployee ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify(form),
       });
 
@@ -145,9 +149,9 @@ export default function StaffManagementPage() {
     if (!confirm("Are you sure you want to delete this employee?")) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/employees/${id}`, {
+      const res = await fetch(`/api/employees/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: getHeaders(),
       });
 
       const data = await res.json();
@@ -215,9 +219,8 @@ export default function StaffManagementPage() {
     setMessage("⏳ Processing...");
 
     try {
-      const endpoint = selectedEmployee.hasLoginAccess
-        ? `${API_BASE_URL}/api/employees/${selectedEmployee._id}/reset-password`
-        : `${API_BASE_URL}/api/employees/${selectedEmployee._id}/create-login`;
+      const action = selectedEmployee.hasLoginAccess ? 'reset-password' : 'create-login';
+      const endpoint = `/api/employees/${selectedEmployee._id}?action=${action}`;
 
       const payload = selectedEmployee.hasLoginAccess 
         ? { newPassword: password } 
@@ -228,8 +231,7 @@ export default function StaffManagementPage() {
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getHeaders(),
         body: JSON.stringify(payload),
       });
 

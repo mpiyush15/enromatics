@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface Student {
   _id: string;
@@ -59,18 +58,22 @@ export default function MarksEntryPage() {
 
   const fetchTestAndStudents = async () => {
     try {
-      // Fetch test details
-      const testRes = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}`, {
-        credentials: "include",
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Fetch test details via BFF
+      const testRes = await fetch(`/api/academics/tests?testId=${testId}`, {
+        headers,
       });
       const testData = await testRes.json();
       if (testRes.ok) {
         setTest(testData.test);
 
-        // Fetch attendance first to get present students
+        // Fetch attendance via BFF
         const attendanceRes = await fetch(
-          `${API_BASE_URL}/api/academics/tests/${testId}/attendance`,
-          { credentials: "include" }
+          `/api/academics/attendance?testId=${testId}`,
+          { headers }
         );
         const attendanceData = await attendanceRes.json();
         
@@ -87,8 +90,8 @@ export default function MarksEntryPage() {
           // Only fetch students who were present
           if (presentStudentIds.size > 0) {
             const studentsRes = await fetch(
-              `${API_BASE_URL}/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
-              { credentials: "include" }
+              `/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
+              { headers }
             );
             const studentsData = await studentsRes.json();
             if (studentsRes.ok) {
@@ -98,10 +101,10 @@ export default function MarksEntryPage() {
               );
               setStudents(filteredStudents);
 
-              // Fetch existing marks
+              // Fetch existing marks via BFF
               const marksRes = await fetch(
-                `${API_BASE_URL}/api/academics/tests/${testId}/marks`,
-                { credentials: "include" }
+                `/api/academics/marks?testId=${testId}`,
+                { headers }
               );
               const marksData = await marksRes.json();
               if (marksRes.ok) {
@@ -190,6 +193,10 @@ export default function MarksEntryPage() {
   const handleSubmit = async () => {
     setStatus("Saving marks...");
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const marksData = students.map((student) => {
         const record = marks.get(student._id);
         return {
@@ -199,10 +206,9 @@ export default function MarksEntryPage() {
         };
       });
 
-      const res = await fetch(`${API_BASE_URL}/api/academics/tests/${testId}/marks`, {
+      const res = await fetch(`/api/academics/marks?testId=${testId}`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ marksData }),
       });
 

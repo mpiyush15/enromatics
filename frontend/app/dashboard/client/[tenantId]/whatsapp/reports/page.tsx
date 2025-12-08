@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface MessageContent {
   text?: string;
@@ -41,6 +40,14 @@ export default function WhatsappReportsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Helper to get auth headers
+  const getHeaders = (): HeadersInit => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers: HeadersInit = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
   const fetchMessages = async () => {
     setLoading(true);
     try {
@@ -52,8 +59,8 @@ export default function WhatsappReportsPage() {
       if (campaignFilter) params.append("campaign", campaignFilter);
 
       const res = await fetch(
-        `${API_BASE_URL}/api/whatsapp/messages?${params}`,
-        { credentials: "include" }
+        `/api/whatsapp/messages?${params}`,
+        { headers: getHeaders() }
       );
       const data = await res.json();
 
@@ -70,8 +77,8 @@ export default function WhatsappReportsPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
-        credentials: "include",
+      const res = await fetch(`/api/whatsapp/stats`, {
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data.success) {
