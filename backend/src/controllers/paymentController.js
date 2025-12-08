@@ -139,6 +139,36 @@ export const initiateSubscriptionPayment = async (req, res) => {
     tenant.subscription.paymentId = response.data.order_id;
     await tenant.save();
 
+    // Log the payment as pending in SubscriptionPayment
+    try {
+      let duration = 30 * 24 * 60 * 60 * 1000; // monthly
+      if (cycle === 'annual') {
+        duration = 365 * 24 * 60 * 60 * 1000;
+      }
+      await SubscriptionPayment.create({
+        tenantId: customerTenantId,
+        amount: orderAmount,
+        totalAmount: orderAmount,
+        planName: plan.name,
+        planKey: plan.id,
+        billingCycle: cycle,
+        periodStart: new Date(),
+        periodEnd: new Date(Date.now() + duration),
+        paymentMethod: 'cashfree',
+        gatewayOrderId: response.data.order_id,
+        status: 'pending',
+        notes: `Payment initiated - ${new Date().toISOString()}`,
+        tenantSnapshot: {
+          instituteName: tenant.instituteName || tenant.name,
+          email: tenant.email,
+          phone: phone,
+        }
+      });
+      console.log('Logged pending payment for order:', response.data.order_id);
+    } catch (logErr) {
+      console.error('Failed to log pending payment:', logErr?.message || logErr);
+    }
+
     // Send email to tenant for payment initiation
     await sendEmail({
       to: email,
@@ -451,30 +481,48 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
         await tenant.save();
         console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber);
 
-        // Log successful payment to SubscriptionPayment collection
+        // Update existing pending payment to success (or create if not found)
         try {
-          await SubscriptionPayment.create({
-            tenantId: tenant.tenantId,
-            invoiceDate: new Date(),
-            amount: orderAmount,
-            totalAmount: orderAmount,
-            planName: plan.name || planId,
-            planKey: planId,
-            billingCycle: billingCycle,
-            periodStart: startDate,
-            periodEnd: endDate,
-            paymentMethod: 'cashfree',
-            gatewayOrderId: orderId,
-            gatewayPaymentId: orderId,
-            status: 'success',
-            paidAt: new Date(),
-            tenantSnapshot: {
-              instituteName: tenant.instituteName || tenant.name,
-              email: tenant.email,
-              phone: tenant.contact?.phone,
-            }
+          const existingPayment = await SubscriptionPayment.findOne({ 
+            gatewayOrderId: orderId, 
+            status: 'pending' 
           });
-          console.log('Webhook: Logged successful payment for tenant:', tenant.tenantId);
+          
+          if (existingPayment) {
+            existingPayment.status = 'success';
+            existingPayment.paidAt = new Date();
+            existingPayment.periodStart = startDate;
+            existingPayment.periodEnd = endDate;
+            existingPayment.planKey = planId;
+            existingPayment.planName = plan.name || planId;
+            existingPayment.notes = `Payment successful - ${new Date().toISOString()}`;
+            await existingPayment.save();
+            console.log('Webhook: Updated pending payment to success:', orderId);
+          } else {
+            // Create new if pending record not found
+            await SubscriptionPayment.create({
+              tenantId: tenant.tenantId,
+              invoiceDate: new Date(),
+              amount: orderAmount,
+              totalAmount: orderAmount,
+              planName: plan.name || planId,
+              planKey: planId,
+              billingCycle: billingCycle,
+              periodStart: startDate,
+              periodEnd: endDate,
+              paymentMethod: 'cashfree',
+              gatewayOrderId: orderId,
+              gatewayPaymentId: orderId,
+              status: 'success',
+              paidAt: new Date(),
+              tenantSnapshot: {
+                instituteName: tenant.instituteName || tenant.name,
+                email: tenant.email,
+                phone: tenant.contact?.phone,
+              }
+            });
+            console.log('Webhook: Created new success payment record:', orderId);
+          }
         } catch (paymentLogErr) {
           console.error('Failed to log successful payment:', paymentLogErr?.message || paymentLogErr);
         }
@@ -573,26 +621,40 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           const pendingPlan = tenant.subscription?.pendingPlan || orderMeta.plan_id || tenant.plan;
           const plan = PLANS.find(p => p.id === pendingPlan) || { name: pendingPlan, id: pendingPlan };
           
-          await SubscriptionPayment.create({
-            tenantId: tenant.tenantId,
-            amount: orderAmount,
-            totalAmount: orderAmount,
-            planName: plan.name || 'Unknown',
-            planKey: ['free', 'trial', 'test', 'basic', 'starter', 'professional', 'pro', 'enterprise'].includes(pendingPlan) ? pendingPlan : 'trial',
-            billingCycle: orderMeta.billing_cycle || 'monthly',
-            periodStart: new Date(),
-            periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            paymentMethod: 'cashfree',
-            gatewayOrderId: orderId,
-            status: 'failed',
-            notes: `Payment ${event === 'order.cancelled' ? 'cancelled' : 'failed'} - ${new Date().toISOString()}`,
-            tenantSnapshot: {
-              instituteName: tenant.instituteName || tenant.name,
-              email: tenant.email,
-              phone: tenant.contact?.phone,
-            }
+          // Update existing pending payment to failed (or create if not found)
+          const existingPayment = await SubscriptionPayment.findOne({ 
+            gatewayOrderId: orderId, 
+            status: 'pending' 
           });
-          console.log('Webhook: Logged failed payment for tenant:', tenantId);
+          
+          if (existingPayment) {
+            existingPayment.status = 'failed';
+            existingPayment.notes = `Payment ${event === 'order.cancelled' ? 'cancelled' : 'failed'} - ${new Date().toISOString()}`;
+            await existingPayment.save();
+            console.log('Webhook: Updated pending payment to failed:', orderId);
+          } else {
+            // Create new failed record if pending not found
+            await SubscriptionPayment.create({
+              tenantId: tenant.tenantId,
+              amount: orderAmount,
+              totalAmount: orderAmount,
+              planName: plan.name || 'Unknown',
+              planKey: ['free', 'trial', 'test', 'basic', 'starter', 'professional', 'pro', 'enterprise'].includes(pendingPlan) ? pendingPlan : 'trial',
+              billingCycle: orderMeta.billing_cycle || 'monthly',
+              periodStart: new Date(),
+              periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              paymentMethod: 'cashfree',
+              gatewayOrderId: orderId,
+              status: 'failed',
+              notes: `Payment ${event === 'order.cancelled' ? 'cancelled' : 'failed'} - ${new Date().toISOString()}`,
+              tenantSnapshot: {
+                instituteName: tenant.instituteName || tenant.name,
+                email: tenant.email,
+                phone: tenant.contact?.phone,
+              }
+            });
+            console.log('Webhook: Created new failed payment record:', orderId);
+          }
         } catch (logErr) {
           console.error('Failed to log failed payment:', logErr?.message || logErr);
         }
