@@ -97,6 +97,12 @@ app.use('/api/onboarding', onboardingRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
 
+// Test endpoint for POST
+app.post("/api/test-post", (req, res) => {
+  console.log('✅ Test POST endpoint hit');
+  res.status(200).json({ message: "POST works fine", timestamp: new Date() });
+});
+
 app.get("/api/test-cookie", (req, res) => {
   console.log("Cookies:", req.cookies);
   res.json({ cookies: req.cookies });
