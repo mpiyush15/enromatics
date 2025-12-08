@@ -34,6 +34,7 @@ import emailRoutes from './routes/emailRoutes.js';
 import storageRoutes from './routes/storageRoutes.js';
 import videoRoutes from './routes/videoRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
+import subscriptionCheckoutRoutes from './routes/subscriptionCheckoutRoutes.js';
 
 
 
@@ -87,6 +88,7 @@ app.use('/api/scholarship-exams', scholarshipExamRoutes);
 app.use('/api/scholarship-results', scholarshipResultRoutes);
 app.use('/api/scholarship-rewards', scholarshipRewardRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/subscription', subscriptionCheckoutRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
 app.use('/api/mobile-scholarship', mobileScholarshipRoutes);
 app.use('/api/demo-requests', demoRoutes);

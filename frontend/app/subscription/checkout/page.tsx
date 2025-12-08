@@ -132,9 +132,9 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams?.get("planId") ?? null;
-  const isFree = searchParams?.get("isFree") === "true"; // Detect free plan
 
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+  const [isFree, setIsFree] = useState(false); // Detect from plan data
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>("choose-type");
   const [isNewTenant, setIsNewTenant] = useState(true);
@@ -165,6 +165,8 @@ function CheckoutPageContent() {
         if (res.ok) {
           const data = await res.json();
           setPlan(data.plan);
+          // Detect if plan is free (price = 0)
+          setIsFree(data.plan.price === 0 || data.plan.isFree === true);
         } else {
           toast.error("Plan not found");
           router.push("/subscription/plans");
@@ -203,6 +205,12 @@ function CheckoutPageContent() {
   const handleSendOtp = async () => {
     if (!formData.email || !formData.name || !formData.instituteName || !formData.phone) {
       toast.error("Please fill all fields");
+      return;
+    }
+
+    // For free plans, password is required
+    if (isFree && !formData.password) {
+      toast.error("Please create a password");
       return;
     }
 
