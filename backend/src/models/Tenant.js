@@ -41,7 +41,7 @@ const tenantSchema = new mongoose.Schema(
     // Plan type: free, pro, enterprise
     plan: {
       type: String,
-      enum: ["free", "trial", "test", "starter", "professional", "pro", "enterprise"],
+      enum: ["free", "trial", "test", "basic", "starter", "professional", "pro", "enterprise"],
       default: "free",
     },
 
@@ -49,7 +49,7 @@ const tenantSchema = new mongoose.Schema(
     subscription: {
       status: {
         type: String,
-        enum: ["active", "trial", "inactive", "cancelled"],
+        enum: ["active", "trial", "inactive", "cancelled", "pending"],
         default: "inactive",
       },
       paymentId: {
