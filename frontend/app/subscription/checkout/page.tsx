@@ -294,11 +294,12 @@ function CheckoutPageContent() {
 
       if (res.ok) {
         toast.success("Email verified successfully");
-        setVerifiedEmail(formData.email);
+        const verifiedEmailValue = formData.email;
+        setVerifiedEmail(verifiedEmailValue);
         
         // For free plans, skip payment and directly create account
         if (isFree) {
-          handleFreeAccountCreation();
+          handleFreeAccountCreation(verifiedEmailValue);
         } else {
           setStep("payment");
         }
@@ -313,8 +314,8 @@ function CheckoutPageContent() {
     }
   };
 
-  const handleFreeAccountCreation = async () => {
-    if (!plan || !verifiedEmail || !formData.password) return;
+  const handleFreeAccountCreation = async (email: string) => {
+    if (!plan || !formData.password) return;
 
     setIsSubmitting(true);
     setStep("processing");
@@ -324,7 +325,7 @@ function CheckoutPageContent() {
       const payload = {
         name: formData.name,
         instituteName: formData.instituteName,
-        email: verifiedEmail,
+        email: email,
         phone: formData.phone,
         password: formData.password,
         planId: planId,
@@ -460,7 +461,16 @@ function CheckoutPageContent() {
         throw new Error(data.error || "Failed to initiate payment");
       }
 
-      // Open Cashfree checkout
+      // Check if this is a free plan
+      if (data.isFree) {
+        toast.success("Plan activated! Redirecting to dashboard...");
+        setTimeout(() => {
+          router.push("/onboarding");
+        }, 1500);
+        return;
+      }
+
+      // Open Cashfree checkout for paid plans
       const cashfree = await (window as any).Cashfree({
         mode: "production",
       });
