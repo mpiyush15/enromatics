@@ -8,7 +8,7 @@ import { subscriptionPlans } from '@/data/plans';
 function SignupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const planId = searchParams?.get('plan') || 'basic';
+  const planId = searchParams?.get('plan') || 'trial';
   
   const [step, setStep] = useState<'form' | 'otp' | 'verify'>('form'); // form -> otp -> verify
   const [formData, setFormData] = useState({
@@ -67,6 +67,24 @@ function SignupPageContent() {
 
     setLoading(true);
     try {
+      // First, check if email already exists
+      console.log('🔍 Checking if email already registered...');
+      const checkResponse = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      const checkData = await checkResponse.json();
+      
+      if (!checkResponse.ok || checkData.exists) {
+        console.log('❌ Email already registered:', formData.email);
+        setErrors({ submit: checkData.message || 'Email already registered. Please login or use a different email.' });
+        return;
+      }
+
+      console.log('✓ Email available, sending OTP...');
+      
       // Send OTP to email
       const response = await fetch('/api/email/send-otp', {
         method: 'POST',
@@ -141,6 +159,8 @@ function SignupPageContent() {
   const handleFinalSignup = async () => {
     setLoading(true);
     try {
+      console.log('📝 Starting final signup with data:', { email: formData.email, planId: selectedPlan });
+      
       // Call signup API with trial plan
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -155,21 +175,29 @@ function SignupPageContent() {
         }),
       });
 
+      console.log('📡 Signup response status:', response.status);
+      
       const data = await response.json();
+      
+      console.log('📦 Signup response data:', data);
 
       if (!response.ok) {
+        console.error('❌ Signup failed:', data.message);
         setErrors({ submit: data.message || 'Signup failed' });
         return;
       }
 
       // Store token
       if (data.token) {
+        console.log('✅ Token received, storing...');
         localStorage.setItem('token', data.token);
       }
 
       // Redirect to onboarding
+      console.log('🚀 Redirecting to /onboarding...');
       router.push('/onboarding');
     } catch (error: any) {
+      console.error('❌ Signup error:', error);
       setErrors({ submit: error.message || 'An error occurred' });
     } finally {
       setLoading(false);
@@ -499,24 +527,50 @@ function SignupPageContent() {
             {/* Step 3: Creating Account */}
             {step === 'verify' && (
               <div className="space-y-6 text-center py-12">
-                <div className="flex justify-center">
-                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                    <span className="text-3xl">✓</span>
+                {errors.submit ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                        <span className="text-3xl">✕</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">
+                        Signup Failed
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {errors.submit}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setStep('form'); setErrors({}); }}
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                    >
+                      Back to Form
+                    </button>
                   </div>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Email Verified!
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Creating your account and setting up trial access...
-                  </p>
-                </div>
-                <div className="flex justify-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex justify-center">
+                      <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                        <span className="text-3xl">✓</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        Email Verified!
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Creating your account and setting up trial access...
+                      </p>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -54,8 +54,8 @@ function PlansContent() {
           </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+  {/* Plans Grid */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-16">
           {subscriptionPlans.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
             return (
@@ -89,38 +89,41 @@ function PlansContent() {
                 {/* Price */}
                 <div className="mb-8">
                   <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-5xl font-bold text-gray-900 dark:text-white">
-                      ₹{price.toLocaleString('en-IN')}
+                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                      {typeof price === 'string' && (price === 'Free' || price === 'Custom') 
+                        ? price 
+                        : `₹${price.toLocaleString('en-IN')}`}
                     </span>
-                    <span className="text-gray-600 dark:text-gray-400 text-sm">
-                      /{billingCycle === 'monthly' ? 'month' : 'year'}
-                    </span>
+                    {typeof price === 'number' && (
+                      <span className="text-gray-600 dark:text-gray-400 text-sm">
+                        /{billingCycle === 'monthly' ? 'month' : 'year'}
+                      </span>
+                    )}
                   </div>
-                  {billingCycle === 'annual' && (
+                  {billingCycle === 'annual' && typeof plan.monthlyPrice === 'number' && typeof plan.annualPrice === 'number' && (
                     <p className="text-sm text-green-600 dark:text-green-400 font-semibold">
                       Save ₹{((plan.monthlyPrice * 12) - plan.annualPrice).toLocaleString('en-IN')} annually
                     </p>
                   )}
                 </div>
 
-                {/* CTA Button - Try Now (Free Trial) or Subscribe */}
-                <div className="space-y-3 mb-8">
-                  <Link
-                    href={`/signup?plan=${plan.id}`}
-                    className={`block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all ${
-                      plan.popular
-                        ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                  >
-                    🎉 Try Now - Free (14 Days)
-                  </Link>
-                  <Link
-                    href={`/subscription/checkout?planId=${plan.id}&cycle=${billingCycle}`}
-                    className="block w-full text-center py-2 px-6 rounded-lg font-semibold transition-all text-sm bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white"
-                  >
-                    → Or subscribe now at ₹{price}
-                  </Link>
+                {/* CTA Button */}
+                <div className="mb-8">
+                  {plan.id === 'trial' ? (
+                    <Link
+                      href={`/signup?plan=${plan.id}`}
+                      className="block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                    >
+                      🎉 {plan.buttonLabel}
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/subscription/checkout?planId=${plan.id}&cycle=${billingCycle}`}
+                      className="block w-full text-center py-3 px-6 rounded-lg font-semibold transition-all bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Buy Now
+                    </Link>
+                  )}
                 </div>
 
                 {/* Features */}

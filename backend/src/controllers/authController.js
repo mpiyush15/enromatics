@@ -7,12 +7,45 @@ const generateToken = (id, role, tenantId) =>
   jwt.sign({ id, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 /**
+ * Check if email is already registered (for signup form)
+ */
+export const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const existing = await User.findOne({ email });
+    
+    if (existing) {
+      return res.status(200).json({ 
+        exists: true,
+        message: "Email already registered. Please login or use a different email."
+      });
+    }
+
+    return res.status(200).json({ 
+      exists: false,
+      message: "Email is available"
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/**
  * Register Tenant + User (or add staff to existing tenant)
  * Supports trial signup with planId and isTrial flag
  */
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password, tenantId, role, instituteName, phone, whatsappOptIn, planId, isTrial } = req.body;
+    
+    // For trial signup, use instituteName as the user's name if name is not provided
+    const userName = name || instituteName || email.split('@')[0];
+    
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: "User already exists" });
@@ -26,7 +59,7 @@ export const registerUser = async (req, res) => {
       }
 
       const user = await User.create({
-        name,
+        name: userName,
         email,
         password,
         phone: phone || null,
@@ -58,7 +91,7 @@ export const registerUser = async (req, res) => {
 
     const tenant = await Tenant.create({
       tenantId: newTenantId,
-      name: name, // Person's name
+      name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
       plan: subscriptionTier, // 'basic', 'pro', 'enterprise', or 'free'
@@ -74,7 +107,7 @@ export const registerUser = async (req, res) => {
     });
 
     const user = await User.create({
-      name,
+      name: userName,
       email,
       password,
       phone: phone || null,
@@ -114,12 +147,25 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('🔐 Login attempt for:', email);
+    
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      console.log('❌ User not found:', email);
+      return res.status(404).json({ message: "User not found" });
+    }
 
+    console.log('✓ User found, checking password...');
     const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+    console.log('🔑 Password match result:', isMatch);
+    
+    if (!isMatch) {
+      console.log('❌ Invalid password for user:', email);
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
+    console.log('✅ Login successful for:', email);
+    
     const tenant = await Tenant.findOne({ tenantId: user.tenantId });
     const plan = tenant ? tenant.plan : "free";
 

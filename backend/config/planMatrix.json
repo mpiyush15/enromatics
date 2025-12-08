@@ -1,6 +1,32 @@
 {
   "tiers": [
     {
+      "key": "trial",
+      "name": "Trial",
+      "quotas": {
+        "students": 10,
+        "staff": 2,
+        "concurrentTests": 1,
+        "storageGB": 5,
+        "bandwidth": "fair-use"
+      },
+      "features": {
+        "subdomain": true,
+        "brandingBasic": true,
+        "rbac": false,
+        "onlineTestV1": true,
+        "studyMaterials": true,
+        "attendance": true,
+        "fees": false,
+        "notifications": true,
+        "secureVideo": true,
+        "aiGenerators": false,
+        "youtubeLive": false,
+        "whiteLabelApk": false,
+        "multiBranch": false
+      }
+    },
+    {
       "key": "basic",
       "name": "Basic",
       "quotas": {

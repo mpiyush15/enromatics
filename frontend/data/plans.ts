@@ -3,10 +3,36 @@
 
 export const subscriptionPlans = [
   {
+    id: "trial",
+    name: "Trial",
+    monthlyPrice: "Free",
+    annualPrice: "Free",
+    description: "Start exploring for 14 days - No credit card required",
+    features: [
+      "✓ Up to 10 students",
+      "✓ 5 GB storage",
+      "✓ Online tests (V1)",
+      "✓ Study materials",
+      "✓ Attendance tracking",
+      "✓ Secure video delivery",
+      "✓ 14 days free access",
+    ],
+    highlightFeatures: ["10 Students", "5 GB Storage", "14 Days Free"],
+    buttonLabel: "Start Free Trial",
+    popular: false,
+    cta: "trial",
+    quotas: {
+      students: 10,
+      staff: 2,
+      storage: "5 GB",
+      concurrentTests: 1,
+    },
+  },
+  {
     id: "basic",
     name: "Basic",
-    monthlyPrice: 10, // Trial price ₹10
-    annualPrice: 10,
+    monthlyPrice: 999, // Update with actual pricing
+    annualPrice: 9999,
     description: "Perfect for small coaching institutes",
     features: [
       "✓ Up to 50 students",
@@ -20,7 +46,7 @@ export const subscriptionPlans = [
       "✓ Secure video delivery",
     ],
     highlightFeatures: ["50 Students", "10 GB Storage", "Basic Features"],
-    buttonLabel: "Start with Basic",
+    buttonLabel: "Subscribe to Basic",
     popular: false,
     quotas: {
       students: 50,
@@ -32,8 +58,8 @@ export const subscriptionPlans = [
   {
     id: "pro",
     name: "Pro",
-    monthlyPrice: 10, // Trial price ₹10
-    annualPrice: 10,
+    monthlyPrice: 1999, // Update with actual pricing
+    annualPrice: 19999,
     description: "For growing educational institutions",
     features: [
       "✓ Up to 100 students",
@@ -50,7 +76,7 @@ export const subscriptionPlans = [
       "✓ PYQ module",
     ],
     highlightFeatures: ["100 Students", "50 GB Storage", "AI Features"],
-    buttonLabel: "Go Pro",
+    buttonLabel: "Subscribe to Pro",
     popular: true,
     quotas: {
       students: 100,
@@ -62,8 +88,8 @@ export const subscriptionPlans = [
   {
     id: "enterprise",
     name: "Enterprise",
-    monthlyPrice: 10, // Trial price ₹10
-    annualPrice: 10,
+    monthlyPrice: "Custom", // Custom pricing
+    annualPrice: "Custom",
     description: "For large-scale operations with advanced needs",
     features: [
       "✓ Unlimited students",

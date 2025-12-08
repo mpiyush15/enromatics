@@ -10,9 +10,11 @@ interface TopTenant {
   email: string;
   plan: string;
   subscription: {
+    status: string;
     amount: number;
     billingCycle: string;
     startDate: string;
+    trialStartDate?: string;
   };
 }
 
@@ -188,9 +190,15 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Active
-                    </span>
+                    {tenant.subscription?.status === 'trial' ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        🎉 Trial
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ Active
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -243,10 +243,15 @@ export const getTopTenants = async (req, res) => {
 
     const topTenants = await Tenant.aggregate([
       {
-        $match: { 'subscription.status': 'active' }
+        $match: { 
+          $or: [
+            { 'subscription.status': 'active' },
+            { 'subscription.status': 'trial' }
+          ]
+        }
       },
       {
-        $sort: { 'subscription.amount': -1 }
+        $sort: { 'subscription.amount': -1, 'createdAt': -1 }
       },
       {
         $limit: parseInt(limit)
@@ -257,9 +262,12 @@ export const getTopTenants = async (req, res) => {
           name: 1,
           email: 1,
           plan: 1,
+          'subscription.status': 1,
           'subscription.amount': 1,
           'subscription.billingCycle': 1,
-          'subscription.startDate': 1
+          'subscription.startDate': 1,
+          'subscription.trialStartDate': 1,
+          createdAt: 1
         }
       }
     ]);

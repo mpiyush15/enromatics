@@ -1,9 +1,12 @@
 import express from "express";
-import { registerUser, loginUser, getCurrentUser, getSession, logoutUser } from "../controllers/authController.js";
+import { registerUser, loginUser, getCurrentUser, getSession, logoutUser, checkEmail } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import User from "../models/User.js";
 
 const router = express.Router();
+
+// 🔹 Check if email already exists (for signup form validation)
+router.post("/check-email", checkEmail);
 
 // 🔹 Register (main endpoint)
 router.post("/register", registerUser);
