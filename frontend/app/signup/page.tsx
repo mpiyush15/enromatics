@@ -67,23 +67,7 @@ function SignupPageContent() {
 
     setLoading(true);
     try {
-      // First, check if email already exists
-      console.log('🔍 Checking if email already registered...');
-      const checkResponse = await fetch('/api/auth/check-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
-      });
-
-      const checkData = await checkResponse.json();
-      
-      if (!checkResponse.ok || checkData.exists) {
-        console.log('❌ Email already registered:', formData.email);
-        setErrors({ submit: checkData.message || 'Email already registered. Please login or use a different email.' });
-        return;
-      }
-
-      console.log('✓ Email available, sending OTP...');
+      console.log('� Sending OTP to email:', formData.email);
       
       // Send OTP to email
       const response = await fetch('/api/email/send-otp', {
