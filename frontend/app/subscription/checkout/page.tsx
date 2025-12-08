@@ -299,26 +299,26 @@ function CheckoutPageContent() {
         
         // For free plans, skip payment and directly create account
         if (isFree) {
+          setStep("processing");
+          setIsSubmitting(false);
           handleFreeAccountCreation(verifiedEmailValue);
         } else {
           setStep("payment");
+          setIsSubmitting(false);
         }
       } else {
         const data = await res.json();
         toast.error(data.error || "Invalid OTP");
+        setIsSubmitting(false);
       }
     } catch {
       toast.error("Failed to verify OTP");
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleFreeAccountCreation = async (email: string) => {
     if (!plan || !formData.password) return;
-
-    setIsSubmitting(true);
-    setStep("processing");
 
     try {
       // Create account for free plan without payment
@@ -358,7 +358,6 @@ function CheckoutPageContent() {
     } catch (error: any) {
       toast.error(error.message || "Account creation failed");
       setStep("verify-otp");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -823,8 +822,8 @@ function CheckoutPageContent() {
                 </div>
               )}
 
-              {/* Step 3: Payment */}
-              {step === "payment" && (
+              {/* Step 3: Payment - Only for PAID plans */}
+              {step === "payment" && !isFree && (
                 <div className="space-y-6">
                   <button
                     onClick={() => setStep(isNewTenant ? "verify-otp" : "login")}
@@ -897,9 +896,13 @@ function CheckoutPageContent() {
               {step === "processing" && (
                 <div className="text-center py-12">
                   <Loader2 className="h-16 w-16 mx-auto animate-spin text-blue-600 mb-4" />
-                  <h3 className="font-semibold text-lg">Processing Payment...</h3>
+                  <h3 className="font-semibold text-lg">
+                    {isFree ? "Creating Your Account..." : "Processing Payment..."}
+                  </h3>
                   <p className="text-sm text-gray-500">
-                    Please wait while we redirect you to the payment gateway
+                    {isFree
+                      ? "Please wait while we set up your free trial account"
+                      : "Please wait while we redirect you to the payment gateway"}
                   </p>
                 </div>
               )}
