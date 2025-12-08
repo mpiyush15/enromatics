@@ -14,6 +14,7 @@ import {
   getSuperAdminTenantDetail,
   createNewTenant,
   sendTenantCredentials,
+  cancelSubscription,
 } from "../controllers/tenantController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -129,6 +130,19 @@ router.put(
   protect,
   authorizeRoles("superadmin"),
   downgradeExpiredPlans
+);
+
+/**
+ * @route   POST /api/tenants/:tenantId/cancel-subscription
+ * @desc    Cancel tenant subscription
+ * @access  Private – tenantAdmin (own tenant) or superadmin
+ */
+router.post(
+  "/:tenantId/cancel-subscription",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  tenantProtect,
+  cancelSubscription
 );
 
 /**

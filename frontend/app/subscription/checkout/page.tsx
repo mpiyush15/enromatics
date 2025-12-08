@@ -151,6 +151,7 @@ function CheckoutPageContent() {
   const [resendTimer, setResendTimer] = useState(0);
   const [verifiedEmail, setVerifiedEmail] = useState("");
   const [tenantId, setTenantId] = useState<string | null>(null);
+  const [signupComplete, setSignupComplete] = useState(false); // Track signup completion for redirect message
 
   // Fetch plan details
   useEffect(() => {
@@ -315,10 +316,13 @@ function CheckoutPageContent() {
         }
       } else {
         const data = await res.json();
-        toast.error(data.error || "Invalid OTP");
+        const errorMsg = data.error || data.message || "Invalid OTP";
+        console.error("OTP verification failed:", data);
+        toast.error(errorMsg);
         setIsSubmitting(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("OTP verification error:", err);
       toast.error("Failed to verify OTP");
       setIsSubmitting(false);
     }
@@ -358,12 +362,16 @@ function CheckoutPageContent() {
         localStorage.setItem("token", data.token);
       }
 
-      toast.success("Account created successfully! Please login to continue.");
+      toast.success("Account created successfully! Redirecting to login...");
+      
+      // Update step to show redirect message
+      setSignupComplete(true);
+      setStep("processing");
       
       // Redirect to login page for free plan signup
       setTimeout(() => {
         router.push("/login");
-      }, 1500);
+      }, 2000);
       setIsSubmitting(false);
     } catch (error: any) {
       toast.error(error.message || "Account creation failed");
@@ -905,15 +913,31 @@ function CheckoutPageContent() {
               {/* Processing State */}
               {step === "processing" && (
                 <div className="text-center py-12">
-                  <Loader2 className="h-16 w-16 mx-auto animate-spin text-blue-600 mb-4" />
-                  <h3 className="font-semibold text-lg">
-                    {isFree ? "Creating Your Account..." : "Processing Payment..."}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {isFree
-                      ? "Please wait while we set up your free trial account. You will be redirected to login."
-                      : "Please wait while we redirect you to the payment gateway"}
-                  </p>
+                  {signupComplete ? (
+                    <>
+                      <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <Check className="h-8 w-8 text-green-600" />
+                      </div>
+                      <h3 className="font-semibold text-lg text-green-600">
+                        🎉 Account Created Successfully!
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Redirecting you to login page...
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Loader2 className="h-16 w-16 mx-auto animate-spin text-blue-600 mb-4" />
+                      <h3 className="font-semibold text-lg">
+                        {isFree ? "Creating Your Account..." : "Processing Payment..."}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {isFree
+                          ? "Please wait while we set up your free trial account."
+                          : "Please wait while we redirect you to the payment gateway"}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>

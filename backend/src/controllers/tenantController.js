@@ -464,3 +464,40 @@ export const sendTenantCredentials = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/* ================================================================
+   🔹 10. Cancel Subscription
+================================================================ */
+export const cancelSubscription = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Update subscription status to cancelled
+    tenant.subscription = {
+      ...tenant.subscription,
+      status: "cancelled",
+      cancelledAt: new Date(),
+    };
+
+    await tenant.save();
+
+    console.log(`Subscription cancelled for tenant: ${tenantId}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Subscription cancelled successfully. Access will continue until the end of your billing period.",
+    });
+  } catch (err) {
+    console.error("Cancel Subscription Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
