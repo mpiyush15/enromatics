@@ -306,8 +306,8 @@ function CheckoutPageContent() {
         if (isFree) {
           console.log("Free plan detected - skipping payment"); // Debug log
           setStep("processing");
-          setIsSubmitting(false);
-          handleFreeAccountCreation(verifiedEmailValue);
+          // Keep isSubmitting true until account creation completes to prevent duplicate submissions
+          await handleFreeAccountCreation(verifiedEmailValue);
         } else {
           console.log("Paid plan detected - showing payment"); // Debug log
           setStep("payment");
@@ -326,6 +326,8 @@ function CheckoutPageContent() {
 
   const handleFreeAccountCreation = async (email: string) => {
     if (!plan || !formData.password) return;
+
+    setIsSubmitting(true);
 
     try {
       // Create account for free plan without payment
@@ -362,6 +364,7 @@ function CheckoutPageContent() {
       setTimeout(() => {
         router.push("/login");
       }, 1500);
+      setIsSubmitting(false);
     } catch (error: any) {
       toast.error(error.message || "Account creation failed");
       setStep("verify-otp");
