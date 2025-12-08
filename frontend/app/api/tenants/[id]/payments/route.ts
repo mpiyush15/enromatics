@@ -45,7 +45,12 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(data);
+    // Return with cache headers - cache for 30 seconds, stale-while-revalidate for 2 mins
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=120',
+      },
+    });
   } catch (error) {
     console.error("Payments fetch error:", error);
     return NextResponse.json(

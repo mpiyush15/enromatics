@@ -60,6 +60,7 @@ export async function GET(
 
     const isTrialActive = (tenant.plan === "trial" || tenant.plan === "basic") && daysRemaining > 0;
 
+    // Return with cache headers - cache for 60 seconds, stale-while-revalidate for 5 mins
     return NextResponse.json({
       success: true,
       tenant: {
@@ -77,6 +78,10 @@ export async function GET(
           daysRemaining: Math.max(0, daysRemaining), // Never show negative
           isTrialActive,
         },
+      },
+    }, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
       },
     });
   } catch (error) {
