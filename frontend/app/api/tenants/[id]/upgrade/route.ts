@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
@@ -9,15 +8,23 @@ export async function POST(
 ) {
   try {
     const { id: tenantId } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    
+    // Get cookies from request headers (same as other working routes)
+    const cookieHeader = request.headers.get("cookie") || "";
+    
+    // Extract token from cookie header
+    const tokenMatch = cookieHeader.match(/token=([^;]+)/);
+    const token = tokenMatch ? tokenMatch[1] : null;
 
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      console.log("No token found in cookies:", cookieHeader);
+      return NextResponse.json({ error: "Unauthorized - No token" }, { status: 401 });
     }
 
     const body = await request.json();
     const { planId, billingCycle = "monthly" } = body;
+    
+    console.log("Upgrade request - tenantId:", tenantId, "planId:", planId, "billingCycle:", billingCycle);
 
     if (!planId) {
       return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
@@ -28,10 +35,12 @@ export async function POST(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        Cookie: cookieHeader,
       },
     });
 
     if (!tenantResponse.ok) {
+      console.log("Tenant fetch failed:", tenantResponse.status);
       return NextResponse.json(
         { error: "Failed to fetch tenant info" },
         { status: tenantResponse.status }
@@ -40,6 +49,7 @@ export async function POST(
 
     const tenantData = await tenantResponse.json();
     const tenant = tenantData.tenant;
+    console.log("Tenant found:", tenant?.email);
 
     // Call backend to initiate upgrade payment - tenant is already authenticated
     const response = await fetch(`${BACKEND_URL}/api/payments/initiate-subscription`, {

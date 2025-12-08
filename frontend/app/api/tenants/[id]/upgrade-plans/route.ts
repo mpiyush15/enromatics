@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { subscriptionPlans } from "@/data/plans";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
@@ -13,8 +12,13 @@ export async function GET(
 ) {
   try {
     const { id: tenantId } = await params;
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    
+    // Get cookies from request headers (same as other working routes)
+    const cookieHeader = request.headers.get("cookie") || "";
+    
+    // Extract token from cookie header
+    const tokenMatch = cookieHeader.match(/token=([^;]+)/);
+    const token = tokenMatch ? tokenMatch[1] : null;
 
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,6 +29,7 @@ export async function GET(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        Cookie: cookieHeader,
       },
     });
 
