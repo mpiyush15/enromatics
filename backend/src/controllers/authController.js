@@ -94,6 +94,8 @@ export const registerUser = async (req, res) => {
     const subscriptionTier = isTrial ? (planId || 'basic') : 'free';
     const subscriptionStatus = isTrial ? 'trial' : 'active';
     const trialStartDate = isTrial ? new Date() : null;
+    // Calculate trial end date (14 days from start)
+    const trialEndDate = isTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
     console.log('📝 [SIGNUP] subscriptionTier:', subscriptionTier, 'status:', subscriptionStatus);
 
     console.log('📝 [SIGNUP] Creating tenant...');
@@ -106,6 +108,7 @@ export const registerUser = async (req, res) => {
       subscription: { 
         status: subscriptionStatus, // 'trial', 'active', or 'inactive'
         startDate: new Date(),
+        endDate: trialEndDate, // When trial/subscription ends
         trialStartDate: trialStartDate, // When trial started (for 14-day countdown)
       },
       contact: {

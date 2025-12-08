@@ -1,6 +1,7 @@
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
 import Batch from "../models/Batch.js";
+import Tenant from "../models/Tenant.js";
 import * as planGuard from "../../lib/planGuard.js";
 
 export const addStudent = async (req, res) => {
@@ -12,6 +13,20 @@ export const addStudent = async (req, res) => {
 
     if (!tenantId) {
       return res.status(403).json({ message: "Tenant ID missing" });
+    }
+
+    // Check if trial is expired
+    const tenant = await Tenant.findOne({ tenantId });
+    if (tenant && tenant.subscription?.status === 'trial') {
+      const trialStartISO = tenant.subscription?.trialStartDate?.toISOString() || tenant.subscription?.startDate?.toISOString();
+      if (planGuard.isTrialExpired({ trialStartISO })) {
+        return res.status(402).json({
+          success: false,
+          code: "trial_expired",
+          message: "Your 14-day trial has expired. Please upgrade to continue adding students.",
+          upgradeUrl: "/subscription/plans",
+        });
+      }
     }
 
     // Enforce student cap per tenant tier

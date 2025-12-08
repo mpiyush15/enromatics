@@ -44,13 +44,21 @@ export async function GET(
     const subscription = tenant.subscription || {};
     
     let daysRemaining = 0;
-    if (subscription.endDate) {
-      const endDate = new Date(subscription.endDate);
+    let calculatedEndDate = subscription.endDate;
+    
+    // If endDate is missing but trialStartDate exists, calculate endDate (14 days from start)
+    if (!subscription.endDate && subscription.trialStartDate) {
+      const trialStart = new Date(subscription.trialStartDate);
+      calculatedEndDate = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    }
+    
+    if (calculatedEndDate) {
+      const endDate = new Date(calculatedEndDate);
       const now = new Date();
       daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    const isTrialActive = tenant.plan === "trial" && daysRemaining > 0;
+    const isTrialActive = (tenant.plan === "trial" || tenant.plan === "basic") && daysRemaining > 0;
 
     return NextResponse.json({
       success: true,
@@ -61,12 +69,12 @@ export async function GET(
         subscription: {
           status: subscription.status || "inactive",
           startDate: subscription.startDate || null,
-          endDate: subscription.endDate || null,
+          endDate: calculatedEndDate || null,
           trialStartDate: subscription.trialStartDate || null,
           billingCycle: subscription.billingCycle || "monthly",
           amount: subscription.amount || 0,
           currency: subscription.currency || "INR",
-          daysRemaining,
+          daysRemaining: Math.max(0, daysRemaining), // Never show negative
           isTrialActive,
         },
       },
