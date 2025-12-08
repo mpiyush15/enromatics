@@ -9,15 +9,23 @@ export async function POST(
   try {
     const { id: tenantId } = await params;
     
-    // Get cookies from request headers (same as other working routes)
+    // Get token from Authorization header (preferred) or cookies
+    const authHeader = request.headers.get("authorization") || "";
     const cookieHeader = request.headers.get("cookie") || "";
     
-    // Extract token from cookie header
-    const tokenMatch = cookieHeader.match(/token=([^;]+)/);
-    const token = tokenMatch ? tokenMatch[1] : null;
+    // Try Authorization header first (Bearer token from localStorage)
+    let token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+    
+    // Fallback to cookie if no auth header
+    if (!token) {
+      const tokenMatch = cookieHeader.match(/token=([^;]+)/);
+      token = tokenMatch ? tokenMatch[1] : null;
+    }
+
+    console.log("Token source:", token ? (authHeader ? "Authorization header" : "Cookie") : "None");
 
     if (!token) {
-      console.log("No token found in cookies:", cookieHeader);
+      console.log("No token found. Auth header:", authHeader, "Cookie:", cookieHeader);
       return NextResponse.json({ error: "Unauthorized - No token" }, { status: 401 });
     }
 
@@ -35,7 +43,6 @@ export async function POST(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        Cookie: cookieHeader,
       },
     });
 

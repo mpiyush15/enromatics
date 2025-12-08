@@ -167,11 +167,21 @@ export default function MySubscriptionPage() {
     console.log("tenantId:", tenantId);
     console.log("billingCycle:", billingCycle);
     
+    // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please login again to continue");
+      return;
+    }
+    
     setUpgradingPlan(planId);
     try {
       const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         credentials: "include",
         body: JSON.stringify({ planId, billingCycle }),
       });
