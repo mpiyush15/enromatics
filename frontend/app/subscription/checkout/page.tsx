@@ -82,13 +82,18 @@ function OtpInput({ value, onChange, disabled }: { value: string; onChange: (val
 }
 
 // --- Step Indicator ---
-function StepIndicator({ currentStep, isNewTenant }: { currentStep: Step; isNewTenant: boolean }) {
+function StepIndicator({ currentStep, isNewTenant, isFree }: { currentStep: Step; isNewTenant: boolean; isFree: boolean }) {
   const steps = isNewTenant
-    ? [
-        { key: "choose-type", label: "Account Type" },
-        { key: "verify-otp", label: "Verify Email" },
-        { key: "payment", label: "Payment" },
-      ]
+    ? isFree
+      ? [
+          { key: "choose-type", label: "Account Type" },
+          { key: "verify-otp", label: "Verify Email" },
+        ]
+      : [
+          { key: "choose-type", label: "Account Type" },
+          { key: "verify-otp", label: "Verify Email" },
+          { key: "payment", label: "Payment" },
+        ]
     : [
         { key: "choose-type", label: "Account Type" },
         { key: "login", label: "Login" },
@@ -127,6 +132,7 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams?.get("planId") ?? null;
+  const isFree = searchParams?.get("isFree") === "true"; // Detect free plan
 
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -281,13 +287,68 @@ function CheckoutPageContent() {
       if (res.ok) {
         toast.success("Email verified successfully");
         setVerifiedEmail(formData.email);
-        setStep("payment");
+        
+        // For free plans, skip payment and directly create account
+        if (isFree) {
+          handleFreeAccountCreation();
+        } else {
+          setStep("payment");
+        }
       } else {
         const data = await res.json();
         toast.error(data.error || "Invalid OTP");
       }
     } catch {
       toast.error("Failed to verify OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFreeAccountCreation = async () => {
+    if (!plan || !verifiedEmail || !formData.password) return;
+
+    setIsSubmitting(true);
+    setStep("processing");
+
+    try {
+      // Create account for free plan without payment
+      const payload = {
+        name: formData.name,
+        instituteName: formData.instituteName,
+        email: verifiedEmail,
+        phone: formData.phone,
+        password: formData.password,
+        planId: planId,
+        isTrial: true, // Treat free plans as trial
+      };
+
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create account");
+      }
+
+      // Store token
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      toast.success("Account created successfully!");
+      
+      // Redirect to onboarding
+      setTimeout(() => {
+        router.push("/onboarding");
+      }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Account creation failed");
+      setStep("verify-otp");
     } finally {
       setIsSubmitting(false);
     }
@@ -461,7 +522,7 @@ function CheckoutPageContent() {
               <CardTitle>Complete Your Purchase</CardTitle>
             </CardHeader>
             <CardContent>
-              <StepIndicator currentStep={step} isNewTenant={isNewTenant} />
+              <StepIndicator currentStep={step} isNewTenant={isNewTenant} isFree={isFree} />
 
               {/* Step 1: Choose Account Type */}
               {step === "choose-type" && (
@@ -591,6 +652,23 @@ function CheckoutPageContent() {
                             />
                           </div>
                         </div>
+
+                        {isFree && (
+                          <div>
+                            <Label htmlFor="password">Password *</Label>
+                            <div className="relative mt-1">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <Button
