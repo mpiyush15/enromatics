@@ -37,7 +37,7 @@ const detectPlanFromAmount = (amount) => {
  */
 export const initiateSubscriptionPayment = async (req, res) => {
   try {
-    const { tenantId, planId, email, phone, billingCycle, instituteName, name } = req.body;
+    const { tenantId, planId, email, phone: reqPhone, billingCycle, instituteName, name } = req.body;
     const plan = PLANS.find(p => p.id === planId);
     if (!plan) return res.status(400).json({ message: 'Invalid plan selected' });
 
@@ -88,6 +88,10 @@ export const initiateSubscriptionPayment = async (req, res) => {
 
     // Use the tenant's actual tenantId
     const customerTenantId = tenant.tenantId;
+
+    // Get phone - try request, then tenant contact, then fallback
+    const phone = reqPhone || tenant?.contact?.phone || '9999999999';
+    console.log('Using phone for payment:', phone);
 
     // Determine price based on billing cycle
     let orderAmount = plan.priceMonthly;

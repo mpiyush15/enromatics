@@ -56,7 +56,10 @@ export async function POST(
 
     const tenantData = await tenantResponse.json();
     const tenant = tenantData.tenant;
-    console.log("Tenant found:", tenant?.email);
+    console.log("Tenant found:", tenant?.email, "Phone:", tenant?.contact?.phone || tenant?.phone);
+
+    // Get phone from contact object or direct phone field
+    const phone = tenant?.contact?.phone || tenant?.phone || "9999999999"; // Fallback phone if missing
 
     // Call backend to initiate upgrade payment - tenant is already authenticated
     const response = await fetch(`${BACKEND_URL}/api/payments/initiate-subscription`, {
@@ -71,7 +74,7 @@ export async function POST(
         name: tenant.adminName || tenant.name,
         instituteName: tenant.instituteName,
         email: tenant.email,
-        phone: tenant.phone,
+        phone: phone,
         isNewTenant: false, // Existing tenant upgrading
         tenantId: tenant._id,
         isUpgrade: true,
