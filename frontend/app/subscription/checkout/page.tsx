@@ -164,14 +164,18 @@ function CheckoutPageContent() {
         const res = await fetch(`/api/subscription/plans/${planId}`);
         if (res.ok) {
           const data = await res.json();
+          console.log("Plan fetched:", data.plan); // Debug log
           setPlan(data.plan);
           // Detect if plan is free (price = 0)
-          setIsFree(data.plan.price === 0 || data.plan.isFree === true);
+          const isFreeValue = data.plan.price === 0 || data.plan.isFree === true;
+          console.log("isFree set to:", isFreeValue); // Debug log
+          setIsFree(isFreeValue);
         } else {
           toast.error("Plan not found");
           router.push("/subscription/plans");
         }
-      } catch {
+      } catch (error) {
+        console.error("Failed to fetch plan:", error); // Debug log
         toast.error("Failed to fetch plan");
       } finally {
         setLoading(false);
@@ -298,11 +302,14 @@ function CheckoutPageContent() {
         setVerifiedEmail(verifiedEmailValue);
         
         // For free plans, skip payment and directly create account
+        console.log("OTP verified. isFree:", isFree); // Debug log
         if (isFree) {
+          console.log("Free plan detected - skipping payment"); // Debug log
           setStep("processing");
           setIsSubmitting(false);
           handleFreeAccountCreation(verifiedEmailValue);
         } else {
+          console.log("Paid plan detected - showing payment"); // Debug log
           setStep("payment");
           setIsSubmitting(false);
         }
@@ -349,11 +356,11 @@ function CheckoutPageContent() {
         localStorage.setItem("token", data.token);
       }
 
-      toast.success("Account created successfully!");
+      toast.success("Account created successfully! Please login to continue.");
       
-      // Redirect to onboarding
+      // Redirect to login page for free plan signup
       setTimeout(() => {
-        router.push("/onboarding");
+        router.push("/login");
       }, 1500);
     } catch (error: any) {
       toast.error(error.message || "Account creation failed");
@@ -901,7 +908,7 @@ function CheckoutPageContent() {
                   </h3>
                   <p className="text-sm text-gray-500">
                     {isFree
-                      ? "Please wait while we set up your free trial account"
+                      ? "Please wait while we set up your free trial account. You will be redirected to login."
                       : "Please wait while we redirect you to the payment gateway"}
                   </p>
                 </div>

@@ -19,18 +19,29 @@ export async function GET(
       );
     }
 
+    // Detect if plan is free (trial or free plans have price as "Free" string or 0)
+    const isFree = planData.id === 'trial' || 
+                   planData.id === 'free' || 
+                   planData.monthlyPrice === "Free" || 
+                   planData.monthlyPrice === 0;
+    
+    // Set numeric price for free plans
+    const price = isFree ? 0 : planData.monthlyPrice;
+    const annualPrice = isFree ? 0 : planData.annualPrice;
+
     const plan = {
       _id: planData.id,
       name: planData.name,
       description: planData.description,
-      price: planData.monthlyPrice,
-      annualPrice: planData.annualPrice,
+      price: price,
+      annualPrice: annualPrice,
       billingCycle: "monthly",
       features: planData.features.map(f => f.replace('✓ ', '')),
       maxStudents: planData.id === 'starter' ? 100 : planData.id === 'professional' ? 500 : 10000,
       maxStaff: planData.id === 'starter' ? 5 : planData.id === 'professional' ? 50 : 500,
       popular: planData.popular,
       buttonLabel: planData.buttonLabel,
+      isFree: isFree, // Explicitly set isFree flag
     };
 
     return NextResponse.json({ plan });
