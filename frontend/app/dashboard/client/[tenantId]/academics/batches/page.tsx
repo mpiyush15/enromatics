@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import useSWR from "swr";
 
 interface Batch {
   _id: string;
@@ -15,16 +16,34 @@ interface Batch {
   createdAt: string;
 }
 
+// SWR fetcher
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch batches");
+  return res.json();
+};
+
 export default function BatchesPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [message, setMessage] = useState("");
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
+
+  // Use SWR for caching
+  const { data, isLoading: loading, mutate: refreshBatches } = useSWR(
+    `/api/academics/batches`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 300000, // 5 min cache
+      revalidateIfStale: false,
+    }
+  );
+
+  const batches: Batch[] = data?.success ? data.batches : [];
 
   const [form, setForm] = useState({
     name: "",
@@ -34,34 +53,6 @@ export default function BatchesPage() {
     capacity: "",
     status: "active",
   });
-
-  useEffect(() => {
-    fetchBatches();
-  }, []);
-
-  const fetchBatches = async () => {
-    try {
-      // Use BFF route instead of direct Express call
-      const res = await fetch(`/api/academics/batches`, {
-        credentials: "include",
-      });
-      
-      // Check cache header from BFF
-      const cacheHit = res.headers.get('X-Cache');
-      if (cacheHit) {
-        setCacheStatus(cacheHit as 'HIT' | 'MISS');
-      }
-      
-      const data = await res.json();
-      if (data.success) {
-        setBatches(data.batches);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching batches:", error);
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -93,7 +84,7 @@ export default function BatchesPage() {
 
       if (data.success) {
         setMessage(editingBatch ? "✅ Batch updated!" : "✅ Batch created!");
-        fetchBatches();
+        refreshBatches();
         resetForm();
         setShowModal(false);
       } else {
@@ -131,7 +122,7 @@ export default function BatchesPage() {
 
       if (data.success) {
         setMessage("✅ Batch deleted!");
-        fetchBatches();
+        refreshBatches();
       } else {
         setMessage("❌ Delete failed");
       }

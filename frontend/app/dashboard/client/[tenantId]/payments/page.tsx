@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import useSWR from "swr";
 
 interface Payment {
   _id: string;
@@ -32,41 +33,36 @@ interface Pagination {
   pages: number;
 }
 
+// SWR fetcher
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch payments");
+  return res.json();
+};
+
 export default function PaymentHistoryPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
-
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    if (tenantId) {
-      fetchPayments();
+  // Use SWR for caching
+  const { data, isLoading: loading, mutate: refreshPayments } = useSWR(
+    tenantId ? `/api/tenants/${tenantId}/payments?page=${currentPage}&limit=10` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 300000, // 5 min cache
+      revalidateIfStale: false,
     }
-  }, [tenantId]);
+  );
 
-  const fetchPayments = async (page = 1) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/tenants/${tenantId}/payments?page=${page}&limit=10`, {
-        credentials: "include",
-      });
-      const data = await response.json();
+  const payments: Payment[] = data?.success ? data.payments : [];
+  const pagination: Pagination | null = data?.pagination || null;
 
-      if (data.success) {
-        setPayments(data.payments || []);
-        setPagination(data.pagination);
-      } else {
-        toast.error("Failed to load payment history");
-      }
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      toast.error("Failed to load payment history");
-    } finally {
-      setLoading(false);
-    }
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const handleDownloadInvoice = async (paymentId: string, invoiceNumber: string) => {
@@ -350,9 +346,9 @@ export default function PaymentHistoryPage() {
                 {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
-                    onClick={() => fetchPayments(page)}
+                    onClick={() => handlePageChange(page)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      page === pagination.page
+                      page === currentPage
                         ? "bg-blue-600 text-white"
                         : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                     }`}

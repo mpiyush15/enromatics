@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 import { useFeatureGate } from "@/hooks/useFeatureGate";
 import UpgradeRequired from "@/components/UpgradeRequired";
+import { SocialDashboardSkeleton } from "@/components/ui/Skeleton";
 
 interface AdAccount {
   id: string;
@@ -61,14 +62,7 @@ export default function SocialMediaDashboard() {
 
   // Check feature access
   if (featureLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Loading...</p>
-        </div>
-      </div>
-    );
+    return <SocialDashboardSkeleton />;
   }
 
   // Show upgrade prompt if feature not available
@@ -83,14 +77,7 @@ export default function SocialMediaDashboard() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Loading...</p>
-        </div>
-      </div>
-    );
+    return <SocialDashboardSkeleton />;
   }
 
   if (!isConnected) {

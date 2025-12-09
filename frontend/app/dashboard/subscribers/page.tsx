@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Users, Building2, Calendar, Loader2, Eye, Mail, KeyRound } from 'lucide-react';
+import { SubscribersSkeleton } from '@/components/ui/Skeleton';
 
 interface Subscriber {
   _id: string;
@@ -123,14 +124,7 @@ export default function SubscribersPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={40} />
-          <p className="text-gray-600 dark:text-gray-400">Loading subscribers...</p>
-        </div>
-      </div>
-    );
+    return <SubscribersSkeleton />;
   }
 
   return (

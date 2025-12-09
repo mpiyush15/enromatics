@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSWRFetch } from "@/lib/hooks/use-swr-fetch";
 
 interface InstituteStats {
   studentsCount: number;
@@ -12,54 +12,20 @@ interface InstituteStats {
   totalTests: number;
 }
 
+interface OverviewResponse {
+  success: boolean;
+  stats: InstituteStats | null;
+  message?: string;
+}
+
 export default function InstituteOverviewPage() {
-  const [stats, setStats] = useState<InstituteStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Use BFF route with caching
-        // BFF layer handles 5-minute cache
-        const res = await fetch("/api/dashboard/overview", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        // Check cache header from BFF
-        const cacheHit = res.headers.get('X-Cache');
-        if (cacheHit) {
-          setCacheStatus(cacheHit as 'HIT' | 'MISS');
-        }
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        if (data.success && data.stats) {
-          setStats(data.stats);
-        } else {
-          setError(data.message || "Failed to load overview data");
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch institute overview:", err);
-        setError(err.message || "An error occurred while fetching data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  // Use SWR for caching - data persists across navigation
+  const { data, isLoading: loading, isError } = useSWRFetch<OverviewResponse>(
+    "/api/dashboard/overview"
+  );
+  
+  const stats = data?.success ? data.stats : null;
+  const error = isError || (data && !data.success) ? (data?.message || "Failed to load") : null;
 
   if (loading) {
     return (

@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Search, Filter, Calendar, Users, Award, TrendingUp, Eye, Edit2, Trash2, ExternalLink, Copy, CheckCircle } from "lucide-react";
 import MobileAppBanner from "@/components/dashboard/MobileAppBanner";
+import useSWR from "swr";
+
+// SWR fetcher
+const fetcher = async (url: string) => {
+  const res = await fetch(url, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch exams");
+  return res.json();
+};
 
 interface Reward {
   rankFrom: number;
@@ -49,51 +59,25 @@ interface ScholarshipExam {
 export default function ScholarshipExamsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
 
-  const [exams, setExams] = useState<ScholarshipExam[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Fetch exams
-  useEffect(() => {
-    fetchExams();
-  }, [tenantId]);
-
-  const fetchExams = async () => {
-    try {
-      setLoading(true);
-      console.log("🔍 Fetching exams from:", `/api/scholarship-exams`);
-      // Use BFF route with caching
-      const response = await fetch(`/api/scholarship-exams`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("📡 Response status:", response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-        console.error("❌ API Error:", errorData);
-        throw new Error(errorData.message || "Failed to fetch exams");
-      }
-
-      const data = await response.json();
-      console.log("✅ Exams fetched:", data.exams?.length || 0);
-      setExams(data.exams || []);
-    } catch (error) {
-      console.error("❌ Error fetching exams:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      alert(`Failed to load exams: ${errorMessage}`);
-    } finally {
-      setLoading(false);
+  // Use SWR for caching - data persists across navigation
+  const { data, isLoading: loading, mutate: refreshExams } = useSWR(
+    `/api/scholarship-exams`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 300000, // 5 min cache
+      revalidateIfStale: false,
     }
-  };
+  );
+
+  const exams: ScholarshipExam[] = data?.exams || [];
 
   // Calculate aggregate stats
   const aggregateStats = exams.reduce(
@@ -160,7 +144,7 @@ export default function ScholarshipExamsPage() {
       }
 
       alert("Exam deleted successfully");
-      fetchExams();
+      refreshExams(); // Use SWR mutate to refresh
     } catch (error) {
       console.error("❌ Error deleting exam:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

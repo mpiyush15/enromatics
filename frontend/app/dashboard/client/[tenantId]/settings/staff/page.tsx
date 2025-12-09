@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface Staff {
   _id: string;
@@ -386,9 +387,8 @@ export default function StaffManagementPage() {
 
         {/* Staff List */}
         {loading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading staff...</p>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+            <TableSkeleton rows={6} />
           </div>
         ) : staff.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">

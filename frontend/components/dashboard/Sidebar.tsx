@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import useOptionalAuth from "@/hooks/useOptionalAuth";
 import Logout_Button from "@/app/dashboard/LogoutButton";
+import useSWR from "swr";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -19,69 +20,59 @@ interface SidebarLink {
   children?: SidebarLink[];
 }
 
+// SWR fetcher for sidebar
+const sidebarFetcher = async (url: string) => {
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+  const data = await res.json();
+  if (data.success) {
+    return data.sidebar;
+  }
+  throw new Error(data.message || "Failed to fetch sidebar");
+};
+
 export default function Sidebar({ isOpen, onClose, links: incomingLinks }: SidebarProps) {
   // If parent passed links (student dashboard) we should not force a redirect to admin login.
   const isExternalLinks = !!incomingLinks && incomingLinks.length > 0;
   const authHook = isExternalLinks ? useOptionalAuth() : useAuth();
   const { user, loading } = authHook;
   const pathname = usePathname();
-  const [links, setLinks] = useState<SidebarLink[]>([]);
-  const [loadingSidebar, setLoadingSidebar] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
+  // Use SWR for sidebar - 30 min cache, no refetch on focus
+  const shouldFetch = !isExternalLinks && user && !loading;
+  const { data: fetchedLinks, isLoading: loadingSidebar } = useSWR<SidebarLink[]>(
+    shouldFetch ? `/api/ui/sidebar` : null,
+    sidebarFetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 1800000, // 30 minutes cache
+      revalidateIfStale: false,
+    }
+  );
+
+  // Use incoming links if provided, otherwise use fetched links
+  const links = isExternalLinks ? (incomingLinks || []) : (fetchedLinks || []);
+
+  // Auto-expand sections with active children
   useEffect(() => {
-    const fetchSidebar = async () => {
-      // If links are provided by parent (student dashboard), use them immediately and skip auth/user checks
-      if (isExternalLinks) {
-        setLinks(incomingLinks || []);
-        setLoadingSidebar(false);
-        return;
-      }
-
-      // Only fetch if user exists AND is not loading
-      if (!user || loading) {
-        console.log("⏳ Skipping fetch - user not ready:", { userExists: !!user, loading });
-        return;
-      }
-
-      try {
-        console.log("🔄 Fetching sidebar for user:", { role: user.role, tenantId: user.tenantId });
-        
-        const res = await fetch(`/api/ui/sidebar`, {
-          method: "GET",
-          credentials: "include", // ✅ Sends httpOnly cookie automatically
-        });
-
-        const data = await res.json();
-        console.log("🔍 Sidebar response:", data);
-        
-        if (data.success) {
-          console.log("✅ Sidebar links received:", data.sidebar.length, "items");
-          setLinks(data.sidebar);
-          // Auto-expand sections with active children
-          const expanded = new Set<string>();
-          data.sidebar.forEach((link: SidebarLink) => {
-            if (link.children?.some((child: SidebarLink) => {
-              const childHref = child.href || "#";
-              if (childHref === "#") return false;
-              return pathname?.startsWith(childHref);
-            })) {
-              expanded.add(link.label);
-            }
-          });
-          setExpandedSections(expanded);
-        } else {
-          console.error("❌ Sidebar response not successful:", data);
+    if (links.length > 0) {
+      const expanded = new Set<string>();
+      links.forEach((link: SidebarLink) => {
+        if (link.children?.some((child: SidebarLink) => {
+          const childHref = child.href || "#";
+          if (childHref === "#") return false;
+          return pathname?.startsWith(childHref);
+        })) {
+          expanded.add(link.label);
         }
-      } catch (err) {
-        console.error("❌ Sidebar fetch error:", err);
-      } finally {
-        setLoadingSidebar(false);
-      }
-    };
-
-    fetchSidebar();
-  }, [user, loading]);
+      });
+      setExpandedSections(expanded);
+    }
+  }, [links, pathname]);
 
   if (!isExternalLinks && loading) return <p className="text-white p-4">Loading...</p>;
 

@@ -1,52 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useSWRFetch } from "@/lib/hooks/use-swr-fetch";
 
 export default function TenantDashboard() {
-  const { tenantId } = useParams();
-  const [tenant, setTenant] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTenantInfo = async () => {
-      try {
-        console.log("🔵 Fetching tenant info for tenantId:", tenantId);
-        // ✅ Use BFF route instead of direct backend call
-        const res = await fetch(`/api/tenants/${tenantId}`, {
-          method: "GET",
-          credentials: "include", // ✅ Send httpOnly cookie with request
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        console.log("📍 Tenant API response status:", res.status);
-        console.log("📍 Cache status:", res.headers.get('X-Cache'));
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          console.error("❌ Tenant API error response:", errorData);
-          throw new Error(errorData.message || `Failed to fetch tenant info (${res.status})`);
-        }
-
-        const data = await res.json();
-        console.log("🟢 Tenant info fetched successfully:", data);
-        setTenant(data);
-      } catch (err: any) {
-        console.error("❌ Error fetching tenant info:", err.message);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (tenantId) fetchTenantInfo();
-  }, [tenantId]);
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
+  
+  // Use SWR for caching - data persists across navigation
+  const { data: tenant, isLoading: loading, isError, error } = useSWRFetch<any>(
+    tenantId ? `/api/tenants/${tenantId}` : null
+  );
 
   if (loading) return <div className="p-6 text-gray-600">Loading tenant details...</div>;
-  if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
+  if (isError) return <div className="p-6 text-red-500">Error: {error?.message || "Failed to load"}</div>;
 
   return (
     <div className="p-6 space-y-4">

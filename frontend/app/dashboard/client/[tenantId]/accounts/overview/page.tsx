@@ -1,69 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import useSWR from "swr";
+
+// SWR fetcher
+const fetcher = async (url: string) => {
+  const res = await fetch(url, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
+  return res.json();
+};
 
 export default function AccountsOverviewPage() {
-  const { tenantId } = useParams();
-  const [overview, setOverview] = useState<any>(null);
-  const [expensesByCategory, setExpensesByCategory] = useState<any>({});
-  const [recentPayments, setRecentPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [dateFilter, setDateFilter] = useState({
     startDate: "",
     endDate: ""
   });
 
-  const fetchOverview = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
-      if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
+  // Build URL with filters
+  const queryParams = new URLSearchParams();
+  if (dateFilter.startDate) queryParams.append("startDate", dateFilter.startDate);
+  if (dateFilter.endDate) queryParams.append("endDate", dateFilter.endDate);
+  const url = `/api/accounts/overview?${queryParams.toString()}`;
 
-      // Use BFF route with caching
-      // BFF layer handles 5-minute cache
-      const res = await fetch(`/api/accounts/overview?${params.toString()}`, {
-        method: 'GET',
-        credentials: "include",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // Use SWR for caching
+  const { data, error, isLoading: loading, mutate } = useSWR(url, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 300000, // 5 min cache
+    revalidateIfStale: false,
+  });
 
-      // Check cache header from BFF
-      const cacheHit = res.headers.get('X-Cache');
-      if (cacheHit) {
-        setCacheStatus(cacheHit as 'HIT' | 'MISS');
-      }
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      if (data.success) {
-        setOverview(data.overview);
-        setExpensesByCategory(data.expensesByCategory);
-        setRecentPayments(data.recentPayments);
-      } else {
-        setError(data.message || 'Failed to load overview data');
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch overview:", err);
-      setError(err.message || 'An error occurred while fetching data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOverview();
-  }, [dateFilter]);
+  const overview = data?.success ? data.overview : null;
+  const expensesByCategory = data?.success ? data.expensesByCategory : {};
+  const recentPayments = data?.success ? data.recentPayments : [];
 
   if (loading) {
     return (
@@ -78,15 +53,15 @@ export default function AccountsOverviewPage() {
     );
   }
 
-  if (error) {
+  if (error || (data && !data.success)) {
     return (
       <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 dark:bg-red-900 rounded-2xl shadow-lg p-8 border-l-4 border-red-600">
             <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">Error Loading Data</h2>
-            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
+            <p className="text-red-700 dark:text-red-300 mb-4">{error?.message || data?.message || "Failed to load"}</p>
             <button
-              onClick={() => fetchOverview()}
+              onClick={() => mutate()}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
             >
               Retry

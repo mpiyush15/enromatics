@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
+import { StudentListSkeleton } from "@/components/ui/Skeleton";
 
 interface Quota {
   current: number;
@@ -169,16 +170,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
   };
 
   if (loading) {
-    return (
-      <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading students...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <StudentListSkeleton />;
   }
 
   return (

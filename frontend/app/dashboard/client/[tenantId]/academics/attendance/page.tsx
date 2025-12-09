@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface Student {
   _id: string;
@@ -185,10 +186,13 @@ export default function TestAttendancePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading attendance...</p>
+      <div className="p-4 md:p-6 space-y-6">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+          <TableSkeleton rows={8} />
         </div>
       </div>
     );

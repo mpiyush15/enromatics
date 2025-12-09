@@ -112,3 +112,120 @@ export function FormSkeleton() {
     </div>
   );
 }
+
+// Stats card skeleton for dashboard pages
+export function StatCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-7 w-16" />
+        </div>
+        <Skeleton className="h-10 w-10 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+// Row of stats cards
+export function StatsRowSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <StatCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+// Search and filter bar skeleton
+export function SearchFilterSkeleton() {
+  return (
+    <div className="flex flex-col md:flex-row gap-3 mb-6">
+      <Skeleton className="h-10 w-full md:w-64 rounded-lg" />
+      <Skeleton className="h-10 w-32 rounded-lg" />
+      <Skeleton className="h-10 w-32 rounded-lg" />
+      <div className="ml-auto">
+        <Skeleton className="h-10 w-28 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// Full student/staff list page skeleton
+export function StudentListSkeleton() {
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <Skeleton className="h-10 w-32 rounded-lg" />
+      </div>
+      
+      {/* Stats */}
+      <StatsRowSkeleton count={4} />
+      
+      {/* Search/Filter */}
+      <SearchFilterSkeleton />
+      
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <TableSkeleton rows={8} />
+      </div>
+    </div>
+  );
+}
+
+// Social media dashboard skeleton
+export function SocialDashboardSkeleton() {
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-10 w-36 rounded-lg" />
+      </div>
+      
+      {/* Stats */}
+      <StatsRowSkeleton count={4} />
+      
+      {/* Cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Admin subscribers page skeleton
+export function SubscribersSkeleton() {
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-60" />
+        </div>
+      </div>
+      
+      {/* Stats */}
+      <StatsRowSkeleton count={3} />
+      
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <TableSkeleton rows={10} />
+      </div>
+    </div>
+  );
+}
+
