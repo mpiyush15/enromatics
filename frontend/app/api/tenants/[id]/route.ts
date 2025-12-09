@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL, invalidateTenantCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
@@ -15,6 +16,18 @@ export async function GET(
         { message: 'Tenant ID is required' },
         { status: 400 }
       );
+    }
+
+    // Check Redis cache first
+    const cacheKey = `tenant:${id}`;
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
+      });
     }
 
     // Extract cookies from request
@@ -57,8 +70,16 @@ export async function GET(
       );
     }
 
+    // Cache the response for 2 minutes
+    await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+
     console.log(`✅ Successfully fetched tenant: ${data.name || data._id}`);
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
+    });
   } catch (error: any) {
     console.error('❌ Tenant Detail BFF Error:', error.message);
     return NextResponse.json(
@@ -109,6 +130,10 @@ export async function PUT(
     }
 
     const updated = await response.json();
+    
+    // Invalidate tenant cache
+    await invalidateTenantCache(id);
+    
     console.log(`✅ Successfully updated tenant: ${updated.name || updated._id}`);
     return NextResponse.json(updated);
   } catch (error: any) {
@@ -159,6 +184,10 @@ export async function DELETE(
     }
 
     const result = await response.json();
+    
+    // Invalidate tenant cache
+    await invalidateTenantCache(id);
+    
     console.log(`✅ Successfully moved tenant to trash: ${id}`);
     return NextResponse.json(result);
   } catch (error: any) {

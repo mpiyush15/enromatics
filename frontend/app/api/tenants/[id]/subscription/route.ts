@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { redisCache, CACHE_TTL } from "@/lib/redis";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
@@ -19,6 +20,19 @@ export async function GET(
         { success: false, message: "Tenant ID is required" },
         { status: 400 }
       );
+    }
+
+    // Check Redis cache first
+    const cacheKey = `subscription:${tenantId}`;
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+          'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
     }
 
     // Forward to backend
@@ -68,8 +82,8 @@ export async function GET(
       effectiveStatus = "trial";
     }
 
-    // Return with cache headers - cache for 60 seconds, stale-while-revalidate for 5 mins
-    return NextResponse.json({
+    // Build response data
+    const responseData = {
       success: true,
       tenant: {
         instituteName: tenant.instituteName,
@@ -88,8 +102,16 @@ export async function GET(
           pendingPlan: subscription.pendingPlan || null, // Show if there's a pending upgrade
         },
       },
-    }, {
+    };
+
+    // Cache the response for 2 minutes
+    await redisCache.set(cacheKey, responseData, CACHE_TTL.SHORT);
+
+    // Return with cache headers
+    return NextResponse.json(responseData, {
       headers: {
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
         'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
       },
     });
