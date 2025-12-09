@@ -3,7 +3,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, ArrowRight, Download, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, ArrowRight, Download, Mail, RefreshCw } from 'lucide-react';
+
+type PaymentStatus = 'loading' | 'paid' | 'pending' | 'failed';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -11,18 +13,33 @@ function SuccessContent() {
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('loading');
 
   useEffect(() => {
     if (orderId) {
-      // Verify payment status
+      // Verify payment status from Cashfree
       fetch(`/api/payment/verify-subscription?orderId=${orderId}`)
         .then((res) => res.json())
         .then((data) => {
           setOrderDetails(data.order);
+          // Check ACTUAL payment status from Cashfree
+          const status = data.order?.order_status;
+          if (status === 'PAID') {
+            setPaymentStatus('paid');
+          } else if (status === 'ACTIVE' || status === 'PENDING') {
+            setPaymentStatus('pending');
+          } else {
+            // CANCELLED, EXPIRED, TERMINATED, etc.
+            setPaymentStatus('failed');
+          }
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch(() => {
+          setPaymentStatus('failed');
+          setLoading(false);
+        });
     } else {
+      setPaymentStatus('failed');
       setLoading(false);
     }
   }, [orderId]);
@@ -123,6 +140,140 @@ function SuccessContent() {
     setDownloading(false);
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <RefreshCw className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-spin" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Verifying Payment...
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Please wait while we verify your payment status.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment failed or cancelled
+  if (paymentStatus === 'failed') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <XCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Payment Not Completed
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Your payment was cancelled or could not be processed. No charges have been made.
+            </p>
+            
+            {orderId && (
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-8 text-left">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Order ID</span>
+                  <span className="text-gray-900 dark:text-white font-mono">{orderId}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <Link
+                href="/dashboard"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 px-6 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                Back to Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <Link
+                href="/subscription/plans"
+                className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
+              >
+                Try Again
+              </Link>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Need help?{' '}
+                <Link href="/contact" className="text-blue-600 hover:underline">
+                  Contact Support
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment pending (in process)
+  if (paymentStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Clock className="w-12 h-12 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Payment Pending
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Your payment is being processed. This may take a few minutes. You will receive a confirmation email once completed.
+            </p>
+            
+            {orderId && (
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-8 text-left">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Order ID</span>
+                  <span className="text-gray-900 dark:text-white font-mono">{orderId}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white py-3 px-6 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Check Status Again
+              </button>
+              
+              <Link
+                href="/dashboard"
+                className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
+              >
+                Go to Dashboard
+              </Link>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Need help?{' '}
+                <Link href="/contact" className="text-blue-600 hover:underline">
+                  Contact Support
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment successful (paymentStatus === 'paid')
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
       <div className="max-w-lg w-full">

@@ -1,12 +1,36 @@
 import Staff from "../models/Staff.js";
 import User from "../models/User.js";
+import Tenant from "../models/Tenant.js";
 import bcrypt from "bcryptjs";
+import * as planGuard from "../../lib/planGuard.js";
 
 // Create new staff member
 export const createStaff = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    // Check staff cap
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+    
+    const tierKey = tenant.plan || 'trial';
+    const currentCount = await Staff.countDocuments({ tenantId });
+    const capCheck = planGuard.checkStaffCap({ tierKey, currentStaff: currentCount });
+    
+    if (!capCheck.allowed) {
+      return res.status(402).json({
+        success: false,
+        code: 'upgrade_required',
+        reason: capCheck.reason,
+        current: capCheck.current,
+        cap: capCheck.cap,
+        upgradeTo: capCheck.upgradeTo,
+        message: `Staff limit reached (${capCheck.current}/${capCheck.cap}). Please upgrade to add more staff.`
+      });
+    }
 
     const {
       name,
