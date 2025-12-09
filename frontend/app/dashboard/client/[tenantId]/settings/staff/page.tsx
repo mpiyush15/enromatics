@@ -34,6 +34,8 @@ export default function StaffManagementPage() {
 
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [filterRole, setFilterRole] = useState("");
@@ -90,17 +92,21 @@ export default function StaffManagementPage() {
     fetchStaff();
   }, [filterRole, filterStatus, searchQuery]);
 
-  const fetchStaff = async () => {
+  const fetchStaff = async (bustCache = false) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filterRole) params.append("role", filterRole);
       if (filterStatus) params.append("status", filterStatus);
       if (searchQuery) params.append("search", searchQuery);
+      if (bustCache) params.append("_t", Date.now().toString());
 
       const res = await fetch(
         `/api/staff?${params.toString()}`,
-        { headers: getHeaders() }
+        { 
+          headers: getHeaders(),
+          cache: bustCache ? 'no-store' : 'default'
+        }
       );
       const data = await res.json();
       if (data.success) {
@@ -115,6 +121,7 @@ export default function StaffManagementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const url = selectedStaff
         ? `/api/staff/${selectedStaff._id}`
@@ -127,6 +134,13 @@ export default function StaffManagementPage() {
       });
 
       const data = await res.json();
+      
+      // Handle upgrade required error
+      if (res.status === 402 && data.code === 'upgrade_required') {
+        alert(`Staff limit reached (${data.current}/${data.cap}). Please upgrade your plan to add more staff.`);
+        return;
+      }
+      
       if (data.success) {
         setShowAddModal(false);
         setSelectedStaff(null);
@@ -142,16 +156,23 @@ export default function StaffManagementPage() {
           employmentType: "fullTime",
           salary: { basic: 0, allowances: 0 },
         });
-        fetchStaff();
+        // Force fresh fetch after create/update
+        fetchStaff(true);
+      } else {
+        alert(data.message || 'Failed to save staff');
       }
     } catch (err) {
       console.error("Failed to save staff:", err);
+      alert("Failed to save staff. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this staff member?")) return;
 
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/staff/${id}`, {
         method: "DELETE",
@@ -159,10 +180,18 @@ export default function StaffManagementPage() {
       });
       const data = await res.json();
       if (data.success) {
-        fetchStaff();
+        // Optimistic update - remove from UI immediately
+        setStaff(prev => prev.filter(s => s._id !== id));
+        // Also fetch fresh data
+        fetchStaff(true);
+      } else {
+        alert(data.message || "Failed to delete staff");
       }
     } catch (err) {
       console.error("Failed to delete staff:", err);
+      alert("Failed to delete staff. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -390,9 +419,10 @@ export default function StaffManagementPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(member._id)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                          disabled={deletingId === member._id}
+                          className={`text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ${deletingId === member._id ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          🗑️ Delete
+                          {deletingId === member._id ? '⏳ Deleting...' : '🗑️ Delete'}
                         </button>
                       </td>
                     </tr>
@@ -588,15 +618,17 @@ export default function StaffManagementPage() {
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-semibold"
+                    disabled={submitting}
+                    className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-semibold disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-semibold"
+                    disabled={submitting}
+                    className={`flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-semibold ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {selectedStaff ? "Update Staff Member" : "Add Staff Member"}
+                    {submitting ? '⏳ Saving...' : (selectedStaff ? "Update Staff Member" : "Add Staff Member")}
                   </button>
                 </div>
               </form>

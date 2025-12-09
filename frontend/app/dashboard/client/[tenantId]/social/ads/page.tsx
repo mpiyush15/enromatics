@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
-const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
-
 interface AdAccount {
   id: string;
   name: string;
@@ -69,7 +67,7 @@ const campaignTemplates: CampaignTemplate[] = [
 
 export default function AdCreationPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   const { isConnected, connect } = useFacebookConnection();
 
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
@@ -91,7 +89,7 @@ export default function AdCreationPage() {
   const fetchAdAccounts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/ad-accounts`, {
+      const response = await fetch(`/api/social/ad-accounts`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -120,7 +118,7 @@ export default function AdCreationPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/create-campaign`, {
+      const response = await fetch(`/api/social/campaigns`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

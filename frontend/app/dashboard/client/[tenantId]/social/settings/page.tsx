@@ -5,11 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
-const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
-
 export default function SocialSettingsPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   const { isConnected, connect, disconnect, userInfo, isLoading } = useFacebookConnection();
 
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -24,7 +22,7 @@ export default function SocialSettingsPage() {
   const fetchPermissions = async () => {
     setLoadingPermissions(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/facebook/status`, {
+      const response = await fetch(`/api/social/status`, {
         credentials: 'include',
       });
       const data = await response.json();

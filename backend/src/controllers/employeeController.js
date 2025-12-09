@@ -1,5 +1,7 @@
 import Employee from "../models/Employee.js";
 import User from "../models/User.js";
+import Tenant from "../models/Tenant.js";
+import * as planGuard from "../../lib/planGuard.js";
 
 // Get all employees for a tenant
 export const getEmployees = async (req, res) => {
@@ -58,6 +60,28 @@ export const createEmployee = async (req, res) => {
 
     if (!tenantId) {
       return res.status(400).json({ message: "Tenant ID not found" });
+    }
+
+    // Check staff cap
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+    
+    const tierKey = tenant.plan || 'trial';
+    const currentCount = await Employee.countDocuments({ tenantId });
+    const capCheck = planGuard.checkStaffCap({ tierKey, currentStaff: currentCount });
+    
+    if (!capCheck.allowed) {
+      return res.status(402).json({
+        success: false,
+        code: 'upgrade_required',
+        reason: capCheck.reason,
+        current: capCheck.current,
+        cap: capCheck.cap,
+        upgradeTo: capCheck.upgradeTo,
+        message: `Staff limit reached (${capCheck.current}/${capCheck.cap}). Please upgrade to add more staff.`
+      });
     }
 
     // Block accounts access for staff role

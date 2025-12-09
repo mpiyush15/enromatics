@@ -35,6 +35,20 @@ function checkStudentCap({ tierKey, currentStudents }) {
   };
 }
 
+// Check staff cap
+function checkStaffCap({ tierKey, currentStaff }) {
+  const tier = getTierConfig(tierKey);
+  const cap = tier.quotas.staff;
+  const isOver = overCap(currentStaff, cap);
+  return {
+    allowed: !isOver,
+    cap,
+    current: currentStaff,
+    reason: isOver ? 'staff_cap_reached' : null,
+    upgradeTo: isOver ? suggestUpgrade(tierKey, 'staff') : null,
+  };
+}
+
 // Check storage cap (in GB)
 function checkStorageCap({ tierKey, usedGB }) {
   const tier = getTierConfig(tierKey);
@@ -79,6 +93,7 @@ function isTrialExpired({ trialStartISO }) {
 export {
   getTierConfig,
   checkStudentCap,
+  checkStaffCap,
   checkStorageCap,
   hasFeature,
   isTrialExpired,

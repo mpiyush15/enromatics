@@ -1176,10 +1176,10 @@ export const sendInvoiceEmail = async (req, res) => {
 };
 
 /**
- * Auto-cancel stale pending payments after timeout (default 30 minutes)
+ * Auto-cancel stale pending payments after timeout (default 10 minutes)
  * This can be called by a cron job or on app startup
  */
-export const autoCancelStalePendingPayments = async (timeoutMinutes = 30) => {
+export const autoCancelStalePendingPayments = async (timeoutMinutes = 10) => {
   try {
     const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000);
     

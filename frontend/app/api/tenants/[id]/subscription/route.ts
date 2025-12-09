@@ -60,6 +60,14 @@ export async function GET(
 
     const isTrialActive = (tenant.plan === "trial" || tenant.plan === "basic") && daysRemaining > 0;
 
+    // Determine effective status:
+    // - If status is "pending" but plan is still "trial", show "trial" not "pending"
+    // - Pending status should only be internal, user sees trial until payment succeeds
+    let effectiveStatus = subscription.status || "inactive";
+    if (effectiveStatus === "pending" && (tenant.plan === "trial" || !subscription.startDate)) {
+      effectiveStatus = "trial";
+    }
+
     // Return with cache headers - cache for 60 seconds, stale-while-revalidate for 5 mins
     return NextResponse.json({
       success: true,
@@ -68,7 +76,7 @@ export async function GET(
         email: tenant.email,
         plan: tenant.plan || "free",
         subscription: {
-          status: subscription.status || "inactive",
+          status: effectiveStatus,
           startDate: subscription.startDate || null,
           endDate: calculatedEndDate || null,
           trialStartDate: subscription.trialStartDate || null,
@@ -77,6 +85,7 @@ export async function GET(
           currency: subscription.currency || "INR",
           daysRemaining: Math.max(0, daysRemaining), // Never show negative
           isTrialActive,
+          pendingPlan: subscription.pendingPlan || null, // Show if there's a pending upgrade
         },
       },
     }, {

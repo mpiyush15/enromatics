@@ -35,6 +35,7 @@ import storageRoutes from './routes/storageRoutes.js';
 import videoRoutes from './routes/videoRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import subscriptionCheckoutRoutes from './routes/subscriptionCheckoutRoutes.js';
+import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 
 
 
@@ -111,6 +112,18 @@ app.get("/api/test-cookie", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5050;
-app.listen(PORT, "0.0.0.0", () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  
+  // Run auto-cancel for stale pending payments on startup
+  setTimeout(async () => {
+    console.log('⏰ Running initial stale payment cleanup...');
+    await autoCancelStalePendingPayments(10); // 10 minute timeout
+  }, 5000);
+  
+  // Run auto-cancel every 10 minutes
+  setInterval(async () => {
+    console.log('⏰ Running scheduled stale payment cleanup...');
+    await autoCancelStalePendingPayments(10);
+  }, 10 * 60 * 1000); // Every 10 minutes
+});

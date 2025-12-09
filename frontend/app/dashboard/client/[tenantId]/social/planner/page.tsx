@@ -5,11 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useFacebookConnection } from "@/hooks/useFacebookConnection";
 
-const API_BASE_URL = 'https://endearing-blessing-production-c61f.up.railway.app';
-
 export default function ContentPlannerPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   const { isConnected, connect } = useFacebookConnection();
 
   if (!isConnected) {
