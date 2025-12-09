@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,29 +20,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { subscriptionPlans } from "@/data/plans";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 
 // Plan hierarchy for filtering
 const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
-
-interface SubscriptionInfo {
-  plan: string;
-  status: string;
-  startDate: string | null;
-  endDate: string | null;
-  trialStartDate: string | null;
-  billingCycle: string;
-  amount: number;
-  currency: string;
-  daysRemaining: number;
-  isTrialActive: boolean;
-}
-
-interface TenantInfo {
-  instituteName: string;
-  email: string;
-  plan: string;
-  subscription: SubscriptionInfo;
-}
 
 interface UpgradePlan {
   _id: string;
@@ -59,11 +40,11 @@ export default function MySubscriptionPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
   
-  const [loading, setLoading] = useState(true);
-  const [tenant, setTenant] = useState<TenantInfo | null>(null);
+  // Use SWR for caching - data persists across navigation
+  const { tenant, isLoading: loading, refresh: refreshSubscription } = useSubscription(tenantId);
+  
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [upgradePlans, setUpgradePlans] = useState<UpgradePlan[]>([]);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
@@ -100,40 +81,11 @@ export default function MySubscriptionPage() {
       }));
   }, []);
 
-  const fetchSubscription = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/tenants/${tenantId}/subscription`, {
-        credentials: "include",
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setTenant(data.tenant);
-        // Set upgrade plans based on fetched tenant plan AND subscription status
-        const subscriptionStatus = data.tenant?.subscription?.status;
-        const plans = getUpgradePlansForPlan(data.tenant?.plan || "trial", subscriptionStatus);
-        setUpgradePlans(plans);
-        console.log("Current plan:", data.tenant?.plan, "Status:", subscriptionStatus, "Upgrade plans:", plans.length);
-      } else {
-        toast.error("Failed to load subscription details");
-        // Still set default upgrade plans for trial
-        setUpgradePlans(getUpgradePlansForPlan("trial"));
-      }
-    } catch (error) {
-      console.error("Error fetching subscription:", error);
-      toast.error("Failed to load subscription details");
-      // Still set default upgrade plans for trial
-      setUpgradePlans(getUpgradePlansForPlan("trial"));
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId, getUpgradePlansForPlan]);
-
-  useEffect(() => {
-    if (tenantId) {
-      fetchSubscription();
-    }
-  }, [tenantId, fetchSubscription]);
+  // Memoize upgrade plans based on tenant data
+  const upgradePlans = useMemo(() => {
+    const subscriptionStatus = tenant?.subscription?.status;
+    return getUpgradePlansForPlan(tenant?.plan || "trial", subscriptionStatus);
+  }, [tenant?.plan, tenant?.subscription?.status, getUpgradePlansForPlan]);
 
   const handleCancelSubscription = async () => {
     setCancelling(true);
@@ -149,7 +101,7 @@ export default function MySubscriptionPage() {
       if (data.success) {
         toast.success("Subscription cancelled successfully");
         setShowCancelConfirm(false);
-        fetchSubscription(); // Refresh
+        refreshSubscription(); // Refresh via SWR
       } else {
         toast.error(data.message || "Failed to cancel subscription");
       }
@@ -207,7 +159,7 @@ export default function MySubscriptionPage() {
 
       if (data.isFree) {
         toast.success("Plan upgraded successfully!");
-        fetchSubscription();
+        refreshSubscription(); // Refresh via SWR
         return;
       }
 
