@@ -57,20 +57,24 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
   // Use incoming links if provided, otherwise use fetched links
   const links = isExternalLinks ? (incomingLinks || []) : (fetchedLinks || []);
 
-  // Auto-expand sections with active children
+  // Auto-expand sections with active children (only ADD, never remove)
   useEffect(() => {
     if (links.length > 0) {
-      const expanded = new Set<string>();
       links.forEach((link: SidebarLink) => {
         if (link.children?.some((child: SidebarLink) => {
           const childHref = child.href || "#";
           if (childHref === "#") return false;
           return pathname?.startsWith(childHref);
         })) {
-          expanded.add(link.label);
+          // Only add to expanded, never reset other sections
+          setExpandedSections((prev) => {
+            if (prev.has(link.label)) return prev;
+            const newSet = new Set(prev);
+            newSet.add(link.label);
+            return newSet;
+          });
         }
       });
-      setExpandedSections(expanded);
     }
   }, [links, pathname]);
 
@@ -154,6 +158,13 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
     });
   };
 
+  // Only close sidebar on mobile devices
+  const handleLinkClick = () => {
+    if (window.innerWidth < 768) {
+      onClose();
+    }
+  };
+
   return (
     <aside
       className={`fixed md:sticky top-0 left-0 w-64 h-screen bg-gray-800 text-white z-40 transform transition-transform duration-300 flex flex-col ${
@@ -204,7 +215,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                           <li key={child.label}>
                             <Link
                               href={href}
-                              onClick={onClose}
+                              onClick={handleLinkClick}
                               className={`block px-3 py-2 text-sm rounded transition-colors ${
                                 isActiveLink
                                   ? "bg-blue-500 text-white font-medium shadow-sm"
@@ -227,7 +238,7 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                   return (
                     <Link
                       href={href}
-                      onClick={onClose}
+                      onClick={handleLinkClick}
                       className={`block px-4 py-2 rounded text-sm transition-colors ${
                         isActiveLink
                           ? "bg-blue-500 text-white font-medium shadow-sm"
