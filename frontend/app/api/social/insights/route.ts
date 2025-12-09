@@ -1,20 +1,24 @@
+/**
+ * BFF Route: /api/social/insights
+ * Purpose: Social media insights with Redis caching
+ * Cache TTL: 3 minutes
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes for frequently accessed data
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(request: NextRequest): string {
+  const tenantId = request.nextUrl.searchParams.get('tenantId') || 'default';
   const adAccountId = request.nextUrl.searchParams.get('adAccountId') || '';
   const dateRange = request.nextUrl.searchParams.get('dateRange') || '7d';
-  return `social-insights-${adAccountId}-${dateRange}`;
+  return `${CACHE_KEYS.SOCIAL_INSIGHTS(tenantId)}:${adAccountId}:${dateRange}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
     const adAccountId = request.nextUrl.searchParams.get('adAccountId') || '';
     const dateRange = request.nextUrl.searchParams.get('dateRange') || '7d';
 
@@ -25,11 +29,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check cache (3 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] Social Insights Cache HIT');
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -53,13 +61,8 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup - remove oldest if exceeds 50 entries
-      if (cache.size > 50) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+      await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+      console.log('[BFF] Social Insights Cache MISS - cached for 2 min');
     }
 
     return NextResponse.json(data, {

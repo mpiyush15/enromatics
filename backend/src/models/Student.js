@@ -104,4 +104,12 @@ studentSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// Performance indexes for common queries
+studentSchema.index({ tenantId: 1, email: 1 });
+studentSchema.index({ tenantId: 1, status: 1 });
+studentSchema.index({ tenantId: 1, course: 1 });
+studentSchema.index({ tenantId: 1, batchId: 1 });
+studentSchema.index({ tenantId: 1, createdAt: -1 });
+studentSchema.index({ tenantId: 1, name: 'text' }); // Text search for student names
+
 export default mongoose.model("Student", studentSchema, "students");

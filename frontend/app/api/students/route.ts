@@ -10,7 +10,7 @@
  * 1. Receives requests from frontend
  * 2. Forwards cookies to Express backend
  * 3. Calls Express /api/students endpoints
- * 4. Caches GET responses (3 minute TTL)
+ * 4. Caches GET responses with Redis (5 minute TTL)
  * 5. Invalidates cache on POST/PUT/DELETE
  * 6. Filters sensitive data
  * 7. Returns cleaned response
@@ -18,25 +18,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
+import { redisCache, CACHE_TTL, invalidateStudentCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
-// In-memory cache
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-function getCacheKey(endpoint: string, search: string): string {
-  return `${endpoint}:${search}`;
-}
-
-function invalidateCache(): void {
-  cache.clear();
-  console.log('[BFF] Students cache cleared due to mutation');
+function getCacheKey(tenantId: string, search: string): string {
+  return `students:list:${tenantId}:${search}`;
 }
 
 // GET /api/students or /api/students/:id
@@ -52,16 +39,20 @@ export async function GET(
       ? `/api/students/${studentId}`
       : `/api/students${url.search}`; // Preserve query params (pagination, filters)
 
-    // Check cache for list requests (not single student by ID)
+    // Check Redis cache for list requests (not single student by ID)
     if (!studentId) {
-      const cacheKey = getCacheKey('students', url.search);
-      const cachedEntry = cache.get(cacheKey);
+      // Extract tenantId from search params or use default
+      const tenantId = url.searchParams.get('tenantId') || 'default';
+      const cacheKey = getCacheKey(tenantId, url.search);
+      const cachedData = await redisCache.get<any>(cacheKey);
       
-      if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-        console.log('[BFF] Students Cache HIT (age:', Date.now() - cachedEntry.timestamp, 'ms)');
-        return NextResponse.json(cachedEntry.data, {
+      if (cachedData) {
+        const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
+        console.log(`[BFF] Students Cache HIT (${cacheType})`);
+        return NextResponse.json(cachedData, {
           headers: {
             'X-Cache': 'HIT',
+            'X-Cache-Type': cacheType,
             'Cache-Control': 'public, max-age=300',
           },
         });
@@ -105,28 +96,18 @@ export async function GET(
       student: data.student ? cleanStudent(data.student) : undefined,
     };
 
-    // Cache list requests only
+    // Cache list requests only with Redis
     if (!studentId) {
-      const cacheKey = getCacheKey('students', url.search);
-      cache.set(cacheKey, {
-        data: cleanData,
-        timestamp: Date.now(),
-      });
+      const tenantId = url.searchParams.get('tenantId') || 'default';
+      const cacheKey = getCacheKey(tenantId, url.search);
+      await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
 
-      // Cleanup old entries
-      if (cache.size > 50) {
-        const now = Date.now();
-        for (const [key, entry] of cache.entries()) {
-          if (now - entry.timestamp > CACHE_TTL * 2) {
-            cache.delete(key);
-          }
-        }
-      }
-
-      console.log('[BFF] Students Cache MISS (fresh data)');
+      const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
+      console.log(`[BFF] Students Cache MISS (stored in ${cacheType})`);
       return NextResponse.json(cleanData, {
         headers: {
           'X-Cache': 'MISS',
+          'X-Cache-Type': cacheType,
           'Cache-Control': 'public, max-age=300',
         },
       });
@@ -171,8 +152,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Invalidate cache on create
-    invalidateCache();
+    // Invalidate cache on create using Redis pattern
+    const tenantId = body.tenantId || 'default';
+    await invalidateStudentCache(tenantId);
+    console.log('[BFF] Students cache invalidated due to mutation');
 
     console.log('✅ Student created successfully');
 
@@ -231,8 +214,10 @@ export async function PUT(
       );
     }
 
-    // Invalidate cache on update
-    invalidateCache();
+    // Invalidate cache on update using Redis pattern
+    const tenantId = body.tenantId || 'default';
+    await invalidateStudentCache(tenantId);
+    console.log('[BFF] Students cache invalidated due to update');
 
     console.log('✅ Student updated successfully');
 
@@ -288,8 +273,9 @@ export async function DELETE(
       );
     }
 
-    // Invalidate cache on delete
-    invalidateCache();
+    // Invalidate cache on delete using Redis pattern
+    await invalidateStudentCache('default');
+    console.log('[BFF] Students cache invalidated due to delete');
 
     console.log('✅ Student deleted successfully');
 

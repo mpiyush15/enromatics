@@ -1,25 +1,32 @@
+/**
+ * BFF Route: /api/social/status
+ * Purpose: Social media connection status with Redis caching
+ * Cache TTL: 3 minutes
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(request: NextRequest): string {
-  const searchParams = request.nextUrl.searchParams;
-  return `social-status-${JSON.stringify(Object.fromEntries(searchParams))}`;
+  const tenantId = request.nextUrl.searchParams.get('tenantId') || 'default';
+  return `social:status:${tenantId}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
 
-    // Check cache (3 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] Social Status Cache HIT');
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -40,13 +47,8 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup - remove oldest if exceeds 50 entries
-      if (cache.size > 50) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+      await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+      console.log('[BFF] Social Status Cache MISS - cached for 2 min');
     }
 
     return NextResponse.json(data, {

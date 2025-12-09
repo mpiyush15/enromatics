@@ -1,26 +1,34 @@
+/**
+ * BFF Route: /api/whatsapp/templates
+ * Purpose: WhatsApp templates with Redis caching
+ * Cache TTL: 10 minutes (templates rarely change)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes - templates rarely change
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(request: NextRequest): string {
+  const tenantId = request.nextUrl.searchParams.get('tenantId') || 'default';
   const status = request.nextUrl.searchParams.get('status') || 'all';
   const useCase = request.nextUrl.searchParams.get('useCase') || 'all';
-  return `whatsapp-templates-${status}-${useCase}`;
+  return `${CACHE_KEYS.WHATSAPP_TEMPLATES(tenantId)}:${status}:${useCase}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
 
-    // Check cache (10 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] WhatsApp Templates Cache HIT');
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -53,7 +61,8 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
+      await redisCache.set(cacheKey, data, CACHE_TTL.LONG);
+      console.log('[BFF] WhatsApp Templates Cache MISS - cached for 10 min');
     }
 
     return NextResponse.json(data, {
@@ -73,6 +82,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const cookies = request.headers.get('cookie') || '';
+    const tenantId = request.nextUrl.searchParams.get('tenantId') || '';
 
     // POST requests bypass cache
     const backendResponse = await fetch(
@@ -91,11 +101,10 @@ export async function POST(request: NextRequest) {
     const data = await backendResponse.json();
 
     // Invalidate template caches on create
-    Array.from(cache.keys()).forEach((key) => {
-      if (key.startsWith('whatsapp-templates-')) {
-        cache.delete(key);
-      }
-    });
+    if (tenantId) {
+      await redisCache.delPattern(`whatsapp:templates:${tenantId}*`);
+      console.log('[BFF] WhatsApp Templates cache invalidated after POST');
+    }
 
     return NextResponse.json(data, {
       status: backendResponse.status,

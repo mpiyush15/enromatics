@@ -2,63 +2,38 @@
  * BFF Route: /api/accounts/receipts
  * Proxies to Express backend: GET/POST /api/accounts/receipts/*
  * 
- * Purpose: Handle fee receipt operations
- * Cache TTL: 3 minutes (receipts are mutable)
- * 
- * Supported operations:
- * - GET /api/accounts/receipts/search - Search students (cached)
- * - POST /api/accounts/receipts/create - Create payment with receipt (not cached)
- * - POST /api/accounts/receipts/generate/:paymentId - Generate receipt (not cached)
+ * Purpose: Handle fee receipt operations with Redis caching
+ * Cache TTL: 3 minutes
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { redisCache, CACHE_KEYS, CACHE_TTL, invalidateAccountsCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
-// In-memory cache for search results
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const MAX_CACHE_ENTRIES = 50;
-
-// Cache cleanup
-setInterval(() => {
-  const now = Date.now();
-  const keysToDelete: string[] = [];
-  
-  cache.forEach((entry, key) => {
-    if (now - entry.timestamp > CACHE_TTL) {
-      keysToDelete.push(key);
-    }
-  });
-  
-  keysToDelete.forEach(key => cache.delete(key));
-}, 60000);
-
 function getCacheKey(req: NextRequest): string {
   const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId') || 'default';
   const params = url.searchParams.toString();
-  return `receipts:search:${params}`;
+  return CACHE_KEYS.RECEIPTS_LIST(tenantId, params);
 }
 
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const cacheKey = getCacheKey(request);
 
-    // Only cache search operations
+    // Check Redis cache for search operations
     if (pathname.includes('/search')) {
-      const cacheKey = getCacheKey(request);
-      const now = Date.now();
-
-      // Check cache
-      const cachedEntry = cache.get(cacheKey);
-      if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-        console.log('[BFF] Receipts Search Cache HIT (age:', now - cachedEntry.timestamp, 'ms)');
+      const cached = await redisCache.get<any>(cacheKey);
+      if (cached) {
+        console.log('[BFF] Receipts Search Cache HIT');
         
-        const response = NextResponse.json(cachedEntry.data);
+        const response = NextResponse.json(cached);
         response.headers.set('X-Cache', 'HIT');
+        response.headers.set('X-Cache-Type', redisCache.isConnected() ? 'REDIS' : 'MEMORY');
         response.headers.set('Cache-Control', 'public, max-age=180');
-        response.headers.set('Age', Math.floor((now - cachedEntry.timestamp) / 1000).toString());
         return response;
       }
 
@@ -91,14 +66,8 @@ export async function GET(request: NextRequest) {
 
       // Cache the response
       if (data.success) {
-        cache.set(cacheKey, { data, timestamp: now });
-        
-        if (cache.size > MAX_CACHE_ENTRIES) {
-          const firstKey = cache.keys().next().value as string;
-          if (firstKey) cache.delete(firstKey);
-        }
-        
-        console.log('[BFF] Receipts Search Cache MISS (fresh data from backend)');
+        await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+        console.log('[BFF] Receipts Search Cache MISS - cached for 2 min');
       }
 
       const response = NextResponse.json(data);
@@ -139,10 +108,7 @@ export async function POST(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    
-    // Invalidate cache for any POST operations
-    cache.clear();
-    console.log('[BFF] Receipts cache cleared due to mutation (POST)');
+    const tenantId = url.searchParams.get('tenantId') || '';
 
     // Determine backend endpoint
     let backendEndpoint = "/api/accounts/receipts/create";
@@ -167,6 +133,13 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await backendResponse.json();
+    
+    // Invalidate cache after mutation
+    if (backendResponse.ok && tenantId) {
+      await invalidateAccountsCache(tenantId);
+      console.log('[BFF] Receipts cache invalidated after POST');
+    }
+    
     return NextResponse.json(data, { status: backendResponse.status });
 
   } catch (error: any) {
@@ -178,7 +151,5 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export function invalidateReceiptsCache() {
-  cache.clear();
-  console.log('[BFF] Receipts cache cleared due to mutation');
-}
+// Re-export for backwards compatibility
+export { invalidateAccountsCache as invalidateReceiptsCache } from '@/lib/redis';

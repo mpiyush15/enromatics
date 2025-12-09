@@ -1,13 +1,12 @@
 /**
- * BFF Employees Data Route
+ * BFF Employees Data Route with Redis Caching
  * 
  * GET /api/employees - List all employees
  * POST /api/employees - Create employee
- * 
- * Uses HTTP Cache-Control for Vercel CDN caching
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
@@ -20,9 +19,30 @@ function extractToken(request: NextRequest): string | null {
   return null;
 }
 
+function getCacheKey(tenantId: string): string {
+  return `employees:list:${tenantId}`;
+}
+
 // GET /api/employees
 export async function GET(request: NextRequest) {
   try {
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || 'default';
+    const cacheKey = getCacheKey(tenantId);
+
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] Employees Cache HIT');
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+          'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
+    }
+
     const endpoint = `/api/employees`;
 
     const token = extractToken(request);
@@ -45,9 +65,13 @@ export async function GET(request: NextRequest) {
 
     const cleanData = { success: true, ...data };
 
-    // Use stale-while-revalidate for fast loads
+    // Cache the response
+    await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
+    console.log('[BFF] Employees Cache MISS - cached for 5 min');
+
     return NextResponse.json(cleanData, {
       headers: {
+        'X-Cache': 'MISS',
         'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
       },
     });
@@ -63,6 +87,8 @@ export async function GET(request: NextRequest) {
 // POST /api/employees - Create employee
 export async function POST(request: NextRequest) {
   try {
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
     const body = await request.json();
     const endpoint = `/api/employees`;
 
@@ -83,6 +109,12 @@ export async function POST(request: NextRequest) {
         { success: false, ...data },
         { status: backendResponse.status }
       );
+    }
+
+    // Invalidate cache after mutation
+    if (tenantId) {
+      await redisCache.delPattern(`employees:*:${tenantId}*`);
+      console.log('[BFF] Employees cache invalidated after POST');
     }
 
     return NextResponse.json({ success: true, ...data });

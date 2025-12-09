@@ -1,59 +1,34 @@
 /**
  * BFF Route: /api/accounts/refunds
- * Proxies to Express backend: GET/POST/PATCH /api/accounts/refunds
- * 
- * Purpose: Handle refund management
- * Cache TTL: 3 minutes (refunds are frequently updated)
- * 
- * Supported operations:
- * - GET /api/accounts/refunds - List refunds with filters (cached)
- * - POST /api/accounts/refunds - Create refund (not cached)
- * - PATCH /api/accounts/refunds/:id - Update refund status (not cached)
+ * Purpose: Handle refund management with Redis caching
+ * Cache TTL: 3 minutes
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { redisCache, CACHE_TTL, invalidateAccountsCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
-// In-memory cache
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const MAX_CACHE_ENTRIES = 50;
-
-// Cache cleanup
-setInterval(() => {
-  const now = Date.now();
-  const keysToDelete: string[] = [];
-  
-  cache.forEach((entry, key) => {
-    if (now - entry.timestamp > CACHE_TTL) {
-      keysToDelete.push(key);
-    }
-  });
-  
-  keysToDelete.forEach(key => cache.delete(key));
-}, 60000);
-
 function getCacheKey(req: NextRequest): string {
   const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId') || 'default';
   const params = url.searchParams.toString();
-  return `refunds:list:${params}`;
+  return `refunds:list:${tenantId}:${params}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
 
-    // Check cache
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      console.log('[BFF] Refunds List Cache HIT (age:', now - cachedEntry.timestamp, 'ms)');
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] Refunds List Cache HIT');
       
-      const response = NextResponse.json(cachedEntry.data);
+      const response = NextResponse.json(cached);
       response.headers.set('X-Cache', 'HIT');
+      response.headers.set('X-Cache-Type', redisCache.isConnected() ? 'REDIS' : 'MEMORY');
       response.headers.set('Cache-Control', 'public, max-age=180');
-      response.headers.set('Age', Math.floor((now - cachedEntry.timestamp) / 1000).toString());
       return response;
     }
 
@@ -89,14 +64,8 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (data.success) {
-      cache.set(cacheKey, { data, timestamp: now });
-      
-      if (cache.size > MAX_CACHE_ENTRIES) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
-      
-      console.log('[BFF] Refunds List Cache MISS (fresh data from backend)');
+      await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+      console.log('[BFF] Refunds List Cache MISS - cached for 2 min');
     }
 
     const response = NextResponse.json(data);
@@ -115,10 +84,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Invalidate cache for any POST operations
-    cache.clear();
-    console.log('[BFF] Refunds cache cleared due to mutation (POST)');
-
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
+    
     const backendUrl = new URL("/api/accounts/refunds", BACKEND_URL);
     const cookies = request.headers.get('cookie') || '';
     const body = await request.json();
@@ -134,6 +102,13 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await backendResponse.json();
+    
+    // Invalidate cache after mutation
+    if (tenantId) {
+      await invalidateAccountsCache(tenantId);
+      console.log('[BFF] Refunds cache invalidated after POST');
+    }
+    
     return NextResponse.json(data, { status: backendResponse.status });
 
   } catch (error: any) {
@@ -147,14 +122,10 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    // Invalidate cache for any PATCH operations
-    cache.clear();
-    console.log('[BFF] Refunds cache cleared due to mutation (PATCH)');
-
-    // Extract refund ID from URL
     const url = new URL(request.url);
     const pathname = url.pathname;
     const refundId = pathname.split('/').pop();
+    const tenantId = url.searchParams.get('tenantId') || '';
 
     const backendUrl = new URL(`/api/accounts/refunds/${refundId}`, BACKEND_URL);
     const cookies = request.headers.get('cookie') || '';
@@ -171,6 +142,13 @@ export async function PATCH(request: NextRequest) {
     });
 
     const data = await backendResponse.json();
+    
+    // Invalidate cache after mutation
+    if (tenantId) {
+      await invalidateAccountsCache(tenantId);
+      console.log('[BFF] Refunds cache invalidated after PATCH');
+    }
+    
     return NextResponse.json(data, { status: backendResponse.status });
 
   } catch (error: any) {
@@ -182,7 +160,5 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-export function invalidateRefundsCache() {
-  cache.clear();
-  console.log('[BFF] Refunds cache cleared due to mutation');
-}
+// Re-export for backwards compatibility
+export { invalidateAccountsCache as invalidateRefundsCache } from '@/lib/redis';

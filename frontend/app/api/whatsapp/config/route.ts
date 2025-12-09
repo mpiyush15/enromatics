@@ -1,34 +1,32 @@
+/**
+ * BFF Route: /api/whatsapp/config
+ * Purpose: Handle WhatsApp configuration with Redis caching
+ * Cache TTL: 10 minutes (config changes rarely)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { extractCookies } from '@/lib/bff-client';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
-// In-memory cache
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes - config changes rarely
-
 function getCacheKey(req: NextRequest): string {
   const url = new URL(req.url);
-  return `whatsapp:config:${url.search}`;
+  const tenantId = url.searchParams.get('tenantId') || 'default';
+  return `whatsapp:config:${tenantId}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
 
-    // Check cache
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
       console.log('[BFF] WhatsApp Config Cache HIT');
-      return NextResponse.json(cachedEntry.data, {
+      return NextResponse.json(cached, {
         headers: {
           'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
           'Cache-Control': 'public, max-age=600',
         },
       });
@@ -69,19 +67,8 @@ export async function GET(request: NextRequest) {
     const data = await backendResponse.json();
 
     // Cache the response
-    cache.set(cacheKey, { data, timestamp: now });
-
-    // Cleanup old cache entries
-    if (cache.size > 50) {
-      const now = Date.now();
-      for (const [key, entry] of cache.entries()) {
-        if (now - entry.timestamp > CACHE_TTL * 2) {
-          cache.delete(key);
-        }
-      }
-    }
-
-    console.log('✅ WhatsApp config fetched successfully');
+    await redisCache.set(cacheKey, data, CACHE_TTL.LONG);
+    console.log('[BFF] WhatsApp Config Cache MISS - cached for 10 min');
     
     return NextResponse.json(data, {
       headers: {
@@ -103,6 +90,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const cookies = request.headers.get('cookie') || '';
     const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
 
     console.log('📤 Updating WhatsApp config via backend');
 
@@ -132,8 +120,10 @@ export async function PUT(request: NextRequest) {
     const data = await backendResponse.json();
 
     // Invalidate cache on update
-    cache.clear();
-    console.log('[BFF] WhatsApp config cache cleared due to mutation');
+    if (tenantId) {
+      await redisCache.delPattern(`whatsapp:*:${tenantId}*`);
+      console.log('[BFF] WhatsApp cache invalidated after PUT');
+    }
 
     console.log('✅ WhatsApp config updated successfully');
 

@@ -1,30 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { extractCookies } from '@/lib/bff-client';
-
-// In-memory cache for batches
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
 /**
  * BFF Route: /api/academics/batches
- * 
- * GET /api/academics/batches - List all batches
- * GET /api/academics/batches/:id - Get single batch
- * POST /api/academics/batches - Create batch
- * PUT /api/academics/batches/:id - Update batch
- * DELETE /api/academics/batches/:id - Delete batch
- * 
- * Features:
- * - ✅ 5-minute caching for list requests
- * - ✅ Cache invalidation on mutations
- * - ✅ Secure cookie forwarding
- * - ✅ Automatic cache cleanup
+ * Purpose: Handle batch management with Redis caching
+ * Cache TTL: 5 minutes
  */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { extractCookies } from '@/lib/bff-client';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
+
+function getCacheKey(query: string, tenantId: string): string {
+  return `academics:batches:${tenantId}:${query}`;
+}
+
+async function invalidateBatchesCache(tenantId: string): Promise<void> {
+  await redisCache.delPattern(`academics:batches:${tenantId}*`);
+  await redisCache.delPattern(`batches:*:${tenantId}*`);
+  console.log('[BFF] Academics batches cache invalidated');
+}
 
 export async function GET(
   request: NextRequest,
@@ -41,18 +33,20 @@ export async function GET(
 
     const url = new URL(request.url);
     const batchId = params?.id;
+    const tenantId = url.searchParams.get('tenantId') || 'default';
     const endpoint = batchId ? `/api/batches/${batchId}` : `/api/batches${url.search}`;
 
-    // Check cache for list requests
+    // Check Redis cache for list requests
     if (!batchId) {
-      const cacheKey = `batches:${url.search}`;
-      const cachedEntry = cache.get(cacheKey);
+      const cacheKey = getCacheKey(url.search, tenantId);
+      const cached = await redisCache.get<any>(cacheKey);
       
-      if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-        console.log('[BFF] Batches Cache HIT (age:', Date.now() - cachedEntry.timestamp, 'ms)');
-        return NextResponse.json(cachedEntry.data, {
+      if (cached) {
+        console.log('[BFF] Batches Cache HIT');
+        return NextResponse.json(cached, {
           headers: {
             'X-Cache': 'HIT',
+            'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
             'Cache-Control': 'public, max-age=300',
           },
         });
@@ -87,19 +81,10 @@ export async function GET(
 
     // Cache list requests
     if (!batchId) {
-      const cacheKey = `batches:${url.search}`;
-      cache.set(cacheKey, { data: cleanData, timestamp: Date.now() });
+      const cacheKey = getCacheKey(url.search, tenantId);
+      await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
 
-      if (cache.size > 50) {
-        const now = Date.now();
-        for (const [key, entry] of cache.entries()) {
-          if (now - entry.timestamp > CACHE_TTL * 2) {
-            cache.delete(key);
-          }
-        }
-      }
-
-      console.log('[BFF] Batches Cache MISS (fresh data)');
+      console.log('[BFF] Batches Cache MISS - cached for 5 min');
       return NextResponse.json(cleanData, {
         headers: {
           'X-Cache': 'MISS',
@@ -128,6 +113,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
     const body = await request.json();
 
     const expressResponse = await fetch(`${EXPRESS_URL}/api/batches`, {
@@ -148,7 +135,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    cache.clear();
+    // Invalidate cache
+    if (tenantId) {
+      await invalidateBatchesCache(tenantId);
+    }
     console.log('✅ Batch created, cache cleared');
 
     return NextResponse.json({ success: true, batch: data.batch || data }, { status: 201 });
@@ -181,6 +171,8 @@ export async function PUT(
       );
     }
 
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
     const body = await request.json();
 
     const expressResponse = await fetch(`${EXPRESS_URL}/api/batches/${params.id}`, {
@@ -201,7 +193,10 @@ export async function PUT(
       );
     }
 
-    cache.clear();
+    // Invalidate cache
+    if (tenantId) {
+      await invalidateBatchesCache(tenantId);
+    }
     console.log('✅ Batch updated, cache cleared');
 
     return NextResponse.json({ success: true, batch: data.batch || data });
@@ -234,6 +229,9 @@ export async function DELETE(
       );
     }
 
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
+
     const expressResponse = await fetch(`${EXPRESS_URL}/api/batches/${params.id}`, {
       method: 'DELETE',
       headers: {
@@ -251,7 +249,10 @@ export async function DELETE(
       );
     }
 
-    cache.clear();
+    // Invalidate cache
+    if (tenantId) {
+      await invalidateBatchesCache(tenantId);
+    }
     console.log('✅ Batch deleted, cache cleared');
 
     return NextResponse.json({ success: true, message: 'Batch deleted' });

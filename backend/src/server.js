@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import compression from "compression";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import formRoutes from "./routes/formRoutes.js";
@@ -45,6 +46,20 @@ connectDB();
 
 
 const app = express();
+
+// Gzip compression - reduces response size by 50-70%
+app.use(compression({
+  level: 6, // Balanced compression (1=fastest, 9=best compression)
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    // Don't compress if client doesn't accept it
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Use compression for all compressible responses
+    return compression.filter(req, res);
+  }
+}));
 
 // CORS - Allow both development and production domains
 app.use(

@@ -4,10 +4,13 @@
  * GET /api/staff - List all staff
  * POST /api/staff - Create staff
  * 
- * Uses HTTP Cache-Control for Vercel CDN caching
+ * Features:
+ * - Redis caching with in-memory fallback (5 min TTL)
+ * - Cache invalidation on mutations
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL, invalidateStaffCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
@@ -20,11 +23,32 @@ function extractToken(request: NextRequest): string | null {
   return null;
 }
 
+function getCacheKey(tenantId: string, search: string): string {
+  return `staff:list:${tenantId}:${search}`;
+}
+
 // GET /api/staff
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const endpoint = `/api/staff${url.search}`;
+
+    // Check Redis cache first
+    const tenantId = url.searchParams.get('tenantId') || 'default';
+    const cacheKey = getCacheKey(tenantId, url.search);
+    const cachedData = await redisCache.get<any>(cacheKey);
+
+    if (cachedData) {
+      const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
+      console.log(`[BFF] Staff Cache HIT (${cacheType})`);
+      return NextResponse.json(cachedData, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': cacheType,
+          'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
+    }
 
     const token = extractToken(request);
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -46,9 +70,15 @@ export async function GET(request: NextRequest) {
 
     const cleanData = { success: true, ...data };
 
-    // Use stale-while-revalidate for fast loads
+    // Cache the response in Redis
+    await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
+    const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
+    console.log(`[BFF] Staff Cache MISS (stored in ${cacheType})`);
+
     return NextResponse.json(cleanData, {
       headers: {
+        'X-Cache': 'MISS',
+        'X-Cache-Type': cacheType,
         'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300',
       },
     });
@@ -85,6 +115,11 @@ export async function POST(request: NextRequest) {
         { status: backendResponse.status }
       );
     }
+
+    // Invalidate cache on create
+    const tenantId = body.tenantId || 'default';
+    await invalidateStaffCache(tenantId);
+    console.log('[BFF] Staff cache invalidated due to create');
 
     return NextResponse.json({ success: true, ...data });
   } catch (error) {

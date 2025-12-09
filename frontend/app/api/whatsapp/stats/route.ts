@@ -1,21 +1,33 @@
+/**
+ * BFF Route: /api/whatsapp/stats
+ * Purpose: WhatsApp messaging stats with Redis caching
+ * Cache TTL: 2 minutes (stats need freshness)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes - stats need more freshness
 
-const cache = new Map<string, { data: any; timestamp: number }>();
-
-const CACHE_KEY = 'whatsapp-stats';
+function getCacheKey(req: NextRequest): string {
+  const url = new URL(req.url);
+  const tenantId = url.searchParams.get('tenantId') || 'default';
+  return CACHE_KEYS.WHATSAPP_STATS(tenantId);
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const now = Date.now();
+    const cacheKey = getCacheKey(request);
 
-    // Check cache (2 min TTL)
-    const cachedEntry = cache.get(CACHE_KEY);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[BFF] WhatsApp Stats Cache HIT');
+      return NextResponse.json(cached, {
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -36,7 +48,8 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(CACHE_KEY, { data, timestamp: now });
+      await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
+      console.log('[BFF] WhatsApp Stats Cache MISS - cached for 2 min');
     }
 
     return NextResponse.json(data, {
