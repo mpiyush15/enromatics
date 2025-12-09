@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
-
-// In-memory cache
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes (reports don't change often)
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 /**
  * BFF Route: /api/academics/reports
@@ -16,7 +8,7 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 minutes (reports don't change often)
  * GET /api/academics/reports - Get test reports and analytics
  * 
  * Features:
- * - ✅ 10-minute caching (reports are static)
+ * - ✅ Redis caching (10 minutes - reports are static)
  * - ✅ Secure cookie forwarding
  * - ✅ Query parameter support (filters, date range)
  */
@@ -36,13 +28,13 @@ export async function GET(request: NextRequest) {
     const endpoint = `/api/academics/reports${queryString}`;
     const cacheKey = `reports:${queryString}`;
 
-    // Check cache
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-      console.log('[BFF] Reports Cache HIT (age:', Date.now() - cachedEntry.timestamp, 'ms)');
-      return NextResponse.json(cachedEntry.data, {
+    // Check Redis cache
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
         headers: {
           'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
           'Cache-Control': 'public, max-age=600',
         },
       });
@@ -69,22 +61,14 @@ export async function GET(request: NextRequest) {
 
     const cleanData = { success: true, ...data };
 
-    // Cache the response
-    cache.set(cacheKey, { data: cleanData, timestamp: Date.now() });
-
-    if (cache.size > 50) {
-      const now = Date.now();
-      for (const [key, entry] of cache.entries()) {
-        if (now - entry.timestamp > CACHE_TTL * 2) {
-          cache.delete(key);
-        }
-      }
-    }
+    // Cache the response (10 minutes for reports)
+    await redisCache.set(cacheKey, cleanData, CACHE_TTL.LONG);
 
     console.log('[BFF] Reports Cache MISS (fresh data)');
     return NextResponse.json(cleanData, {
       headers: {
         'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
         'Cache-Control': 'public, max-age=600',
       },
     });

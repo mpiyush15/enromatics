@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
-
-// In-memory cache
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 /**
  * BFF Route: /api/academics/tests
@@ -20,7 +12,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * DELETE /api/academics/tests/:id - Delete test
  * 
  * Features:
- * - ✅ 5-minute caching for list requests
+ * - ✅ Redis caching (5 minutes for list requests)
  * - ✅ Cache invalidation on mutations
  * - ✅ Secure cookie forwarding
  */
@@ -42,16 +34,16 @@ export async function GET(
     const testId = params?.id;
     const endpoint = testId ? `/api/academics/tests/${testId}` : `/api/academics/tests${url.search}`;
 
-    // Check cache for list requests
+    // Check Redis cache for list requests
     if (!testId) {
       const cacheKey = `tests:${url.search}`;
-      const cachedEntry = cache.get(cacheKey);
+      const cached = await redisCache.get<any>(cacheKey);
       
-      if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
-        console.log('[BFF] Tests Cache HIT (age:', Date.now() - cachedEntry.timestamp, 'ms)');
-        return NextResponse.json(cachedEntry.data, {
+      if (cached) {
+        return NextResponse.json(cached, {
           headers: {
             'X-Cache': 'HIT',
+            'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
             'Cache-Control': 'public, max-age=300',
           },
         });
@@ -85,21 +77,13 @@ export async function GET(
     // Cache list requests
     if (!testId) {
       const cacheKey = `tests:${url.search}`;
-      cache.set(cacheKey, { data: cleanData, timestamp: Date.now() });
-
-      if (cache.size > 50) {
-        const now = Date.now();
-        for (const [key, entry] of cache.entries()) {
-          if (now - entry.timestamp > CACHE_TTL * 2) {
-            cache.delete(key);
-          }
-        }
-      }
+      await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
 
       console.log('[BFF] Tests Cache MISS (fresh data)');
       return NextResponse.json(cleanData, {
         headers: {
           'X-Cache': 'MISS',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
           'Cache-Control': 'public, max-age=300',
         },
       });
@@ -145,7 +129,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    cache.clear();
+    await redisCache.delPattern('tests:*');
     console.log('✅ Test created, cache cleared');
 
     return NextResponse.json({ success: true, test: data.test || data }, { status: 201 });
@@ -198,7 +182,7 @@ export async function PUT(
       );
     }
 
-    cache.clear();
+    await redisCache.delPattern('tests:*');
     console.log('✅ Test updated, cache cleared');
 
     return NextResponse.json({ success: true, test: data.test || data });
@@ -248,7 +232,7 @@ export async function DELETE(
       );
     }
 
-    cache.clear();
+    await redisCache.delPattern('tests:*');
     console.log('✅ Test deleted, cache cleared');
 
     return NextResponse.json({ success: true, message: 'Test deleted' });

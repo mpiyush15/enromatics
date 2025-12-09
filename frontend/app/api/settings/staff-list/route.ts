@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(tenantId: string): string {
-  return `settings-staff-list-${tenantId}`;
+  return `settings:staff-list:${tenantId}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -22,13 +20,15 @@ export async function GET(request: NextRequest) {
     }
 
     const cacheKey = getCacheKey(tenantId);
-    const now = Date.now();
 
-    // Check cache (5 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache (5 min TTL)
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -52,17 +52,14 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup - remove oldest if exceeds 50 entries
-      if (cache.size > 50) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+      await redisCache.set(cacheKey, data, CACHE_TTL.MEDIUM);
     }
 
     return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
       status: backendResponse.status,
     });
   } catch (error: any) {
@@ -107,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // Invalidate cache on create
     const cacheKey = getCacheKey(tenantId);
-    cache.delete(cacheKey);
+    await redisCache.del(cacheKey);
 
     return NextResponse.json(data, {
       status: backendResponse.status,

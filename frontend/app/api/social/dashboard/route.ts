@@ -1,24 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for dashboard overview
 
-const cache = new Map<string, { data: any; timestamp: number }>();
-
-const CACHE_KEY = 'social-dashboard';
+const CACHE_KEY = 'social:dashboard';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔵 BFF: Fetching social media dashboard data');
-    
-    const now = Date.now();
 
-    // Check cache (5 min TTL)
-    const cachedEntry = cache.get(CACHE_KEY);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
+    // Check Redis cache (5 min TTL)
+    const cached = await redisCache.get<any>(CACHE_KEY);
+    if (cached) {
       console.log('✅ BFF: Using cached dashboard data');
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -48,14 +47,17 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(CACHE_KEY, { data, timestamp: now });
+      await redisCache.set(CACHE_KEY, data, CACHE_TTL.MEDIUM);
       console.log('✅ BFF: Cached dashboard response');
     } else {
       console.error('❌ BFF: Backend returned error:', data);
     }
 
     return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
       status: backendResponse.status,
     });
   } catch (error: any) {

@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for GET requests
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(request: NextRequest): string {
   const adAccountId = request.nextUrl.searchParams.get('adAccountId') || '';
   const searchParams = new URLSearchParams(request.nextUrl.search);
   searchParams.delete('adAccountId');
-  return `social-campaigns-${adAccountId}-${JSON.stringify(Object.fromEntries(searchParams))}`;
+  return `social:campaigns:${adAccountId}:${JSON.stringify(Object.fromEntries(searchParams))}`;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const cacheKey = getCacheKey(request);
-    const now = Date.now();
     const adAccountId = request.nextUrl.searchParams.get('adAccountId') || '';
 
     if (!adAccountId) {
@@ -25,11 +22,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check cache (5 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache (5 min TTL)
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -53,17 +53,14 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup - remove oldest if exceeds 50 entries
-      if (cache.size > 50) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+      await redisCache.set(cacheKey, data, CACHE_TTL.MEDIUM);
     }
 
     return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
       status: backendResponse.status,
     });
   } catch (error: any) {
@@ -97,11 +94,7 @@ export async function POST(request: NextRequest) {
     const data = await backendResponse.json();
 
     // Invalidate campaign caches on create
-    Array.from(cache.keys()).forEach((key) => {
-      if (key.startsWith('social-campaigns-')) {
-        cache.delete(key);
-      }
-    });
+    await redisCache.delPattern('social:campaigns:*');
 
     return NextResponse.json(data, {
       status: backendResponse.status,

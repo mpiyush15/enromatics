@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes - exam info cache (stable data)
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(examCode: string): string {
-  return `public-exam-${examCode}`;
+  return `public:exam:${examCode}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -22,13 +20,15 @@ export async function GET(request: NextRequest) {
     }
 
     const cacheKey = getCacheKey(examCode);
-    const now = Date.now();
 
-    // Check cache (10 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache (10 min TTL - stable data)
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -40,20 +40,17 @@ export async function GET(request: NextRequest) {
 
     const data = await backendResponse.json();
 
-    // Cache the response
+    // Cache the response (10 min)
     if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup
-      if (cache.size > 100) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+      await redisCache.set(cacheKey, data, CACHE_TTL.LONG);
     }
 
     return NextResponse.json(data, {
       status: backendResponse.status,
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
     });
   } catch (error: any) {
     console.error('Exam info error:', error);
@@ -93,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Invalidate cache after registration
     const cacheKey = getCacheKey(examCode);
-    cache.delete(cacheKey);
+    await redisCache.del(cacheKey);
 
     return NextResponse.json(data, {
       status: backendResponse.status,

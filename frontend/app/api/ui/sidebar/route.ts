@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes - sidebar config rarely changes
-
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 function getCacheKey(role: string, tenantId?: string): string {
-  return `sidebar-${role}-${tenantId || 'global'}`;
+  return `sidebar:${role}:${tenantId || 'global'}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -35,19 +33,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Cache the response based on role and tenantId
+    // Cache the response based on role and tenantId (30 minutes - sidebar rarely changes)
     const cacheKey = getCacheKey(data.role, data.tenantId);
-    const now = Date.now();
-    cache.set(cacheKey, { data, timestamp: now });
-
-    // Cache cleanup
-    if (cache.size > 200) {
-      const firstKey = cache.keys().next().value as string;
-      if (firstKey) cache.delete(firstKey);
+    
+    // Check if we already have this cached
+    const cached = await redisCache.get<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
+      });
     }
 
+    // Cache for 30 minutes
+    await redisCache.set(cacheKey, data, CACHE_TTL.VERY_LONG);
+
     return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
     });
   } catch (error: any) {
     console.error('Sidebar error:', error);

@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_TTL } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes - templates rarely change
 
-const cache = new Map<string, { data: any; timestamp: number }>();
-
-const CACHE_KEY = 'social-templates';
+const CACHE_KEY = 'social:templates';
 
 export async function GET(request: NextRequest) {
   try {
-    const now = Date.now();
-
-    // Check cache (10 min TTL)
-    const cachedEntry = cache.get(CACHE_KEY);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
+    // Check Redis cache (10 min TTL - templates rarely change)
+    const cached = await redisCache.get<any>(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { 
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        },
       });
     }
 
@@ -39,11 +38,14 @@ export async function GET(request: NextRequest) {
 
     // Cache the response
     if (backendResponse.ok) {
-      cache.set(CACHE_KEY, { data, timestamp: now });
+      await redisCache.set(CACHE_KEY, data, CACHE_TTL.LONG);
     }
 
     return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
+      headers: { 
+        'X-Cache': 'MISS',
+        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+      },
       status: backendResponse.status,
     });
   } catch (error: any) {
