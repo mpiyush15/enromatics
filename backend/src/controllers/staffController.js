@@ -200,6 +200,14 @@ export const getAllStaff = async (req, res) => {
     const pageNum = Number(page);
     const lim = Math.min(Number(limit), 100);
 
+    // Get total staff count (without filters) for quota
+    const totalStaffCount = await Staff.countDocuments({ tenantId });
+    
+    // Get tenant plan for quota info
+    const tenant = await Tenant.findOne({ tenantId }).select('plan').lean();
+    const tierKey = tenant?.plan || 'trial';
+    const quotaCheck = planGuard.checkStaffCap({ tierKey, currentStaff: totalStaffCount });
+
     const total = await Staff.countDocuments(filter);
     const staff = await Staff.find(filter)
       .populate("userId", "name email status")
@@ -215,6 +223,12 @@ export const getAllStaff = async (req, res) => {
       page: pageNum,
       pages: Math.ceil(total / lim),
       staff,
+      quota: {
+        current: totalStaffCount,
+        cap: quotaCheck.cap,
+        canAdd: quotaCheck.allowed,
+        plan: tierKey,
+      },
     });
   } catch (err) {
     console.error("Get all staff error:", err);

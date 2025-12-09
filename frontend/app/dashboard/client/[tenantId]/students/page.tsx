@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
 
+interface Quota {
+  current: number;
+  cap: number;
+  canAdd: boolean;
+  plan: string;
+}
+
 export default function StudentsPage() {
   const params = useParams();
+  const router = useRouter();
   const tenantId = params?.tenantId as string;
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
@@ -25,7 +33,7 @@ export default function StudentsPage() {
   const [uploadResults, setUploadResults] = useState<any>(null);
   const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
-  const [studentCapReached, setStudentCapReached] = useState(false);
+  const [quota, setQuota] = useState<Quota | null>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -58,6 +66,10 @@ export default function StudentsPage() {
           setStudents(data.students || []);
           setPages(data.pages || 1);
           setPage(data.page || 1);
+          // Update quota info
+          if (data.quota) {
+            setQuota(data.quota);
+          }
         } else {
           setError(data.message || "Failed to fetch students");
         }
@@ -190,6 +202,11 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Manage and view all enrolled students
+              {quota && (
+                <span className={`ml-2 text-sm font-medium ${quota.canAdd ? 'text-green-600' : 'text-red-600'}`}>
+                  ({quota.current}/{quota.cap === -1 ? '∞' : quota.cap} students)
+                </span>
+              )}
             </p>
           </div>
           <div className="flex gap-3">
@@ -200,31 +217,39 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
               <span className="text-xl">📤</span>
               Upload CSV
             </button>
-            <Link href={`/dashboard/client/${tenantId}/students/add`}>
+            <div className="relative group">
               <button 
-                onClick={(e) => {
-                  // Check if student cap reached (50 for basic, 100 for pro, unlimited for enterprise)
-                  const planLimits: Record<string, number | null> = {
-                    'basic': 50,
-                    'pro': 100,
-                    'enterprise': null
-                  };
-                  const plan = user?.subscriptionTier || 'basic';
-                  const limit = planLimits[plan];
-                  
-                  if (limit !== null && students.length >= limit) {
-                    e.preventDefault();
-                    setStudentCapReached(true);
+                onClick={() => {
+                  if (quota && !quota.canAdd) {
                     setShowUpsellModal(true);
+                    return;
                   }
+                  router.push(`/dashboard/client/${tenantId}/students/add`);
                 }}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={studentCapReached}
+                disabled={quota !== null && !quota.canAdd}
+                className={`px-6 py-3 rounded-xl font-semibold shadow-lg transition-all transform flex items-center gap-2 ${
+                  quota && !quota.canAdd
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:scale-105'
+                }`}
               >
                 <span className="text-xl">➕</span>
                 Add Student
               </button>
-            </Link>
+              {/* Tooltip for disabled button */}
+              {quota && !quota.canAdd && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                  Student limit reached ({quota.current}/{quota.cap}).
+                  <button
+                    onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
+                    className="ml-2 text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Upgrade Plan
+                  </button>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -117,6 +117,14 @@ export const getStudents = async (req, res) => {
     if (course) match.course = course;
     if (rollNumber) match.rollNumber = rollNumber;
 
+    // Get total student count (without filters) for quota
+    const totalStudentCount = await Student.countDocuments({ tenantId });
+    
+    // Get tenant plan for quota info
+    const tenant = await Tenant.findOne({ tenantId }).select('plan').lean();
+    const tierKey = tenant?.plan || 'trial';
+    const quotaCheck = planGuard.checkStudentCap({ tierKey, currentStudents: totalStudentCount });
+
     // Build aggregation to support fees-based filters and pagination
     const pipeline = [{ $match: match }];
 
@@ -163,6 +171,12 @@ export const getStudents = async (req, res) => {
       pages: Math.ceil(total / lim) || 1,
       count: students.length,
       students,
+      quota: {
+        current: totalStudentCount,
+        cap: quotaCheck.cap,
+        canAdd: quotaCheck.allowed,
+        plan: tierKey,
+      },
     });
   } catch (err) {
     console.error("Get students error:", err);

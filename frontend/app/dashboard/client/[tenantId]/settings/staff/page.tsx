@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 interface Staff {
   _id: string;
@@ -28,12 +28,21 @@ interface Staff {
   };
 }
 
+interface Quota {
+  current: number;
+  cap: number;
+  canAdd: boolean;
+  plan: string;
+}
+
 export default function StaffManagementPage() {
   const params = useParams();
+  const router = useRouter();
   const tenantId = params?.tenantId as string;
 
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // For background refresh
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -41,6 +50,7 @@ export default function StaffManagementPage() {
   const [filterRole, setFilterRole] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [quota, setQuota] = useState<Quota | null>(null);
 
   const roles = [
     { value: "teacher", label: "Teacher" },
@@ -93,7 +103,13 @@ export default function StaffManagementPage() {
   }, [filterRole, filterStatus, searchQuery]);
 
   const fetchStaff = async (bustCache = false) => {
-    setLoading(true);
+    // Only show full loading spinner on initial load (when no data yet)
+    if (staff.length === 0) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true); // Background refresh indicator
+    }
+    
     try {
       const params = new URLSearchParams();
       if (filterRole) params.append("role", filterRole);
@@ -111,11 +127,16 @@ export default function StaffManagementPage() {
       const data = await res.json();
       if (data.success) {
         setStaff(data.staff);
+        // Update quota info
+        if (data.quota) {
+          setQuota(data.quota);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch staff:", err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -135,9 +156,22 @@ export default function StaffManagementPage() {
 
       const data = await res.json();
       
-      // Handle upgrade required error
-      if (res.status === 402 && data.code === 'upgrade_required') {
-        alert(`Staff limit reached (${data.current}/${data.cap}). Please upgrade your plan to add more staff.`);
+      // Handle different error cases with proper messages
+      if (!res.ok) {
+        if (res.status === 402 && data.code === 'upgrade_required') {
+          alert(`🚫 Staff Limit Reached!\n\nYou have ${data.current}/${data.cap} staff members.\nPlease upgrade your plan to add more staff.`);
+          // Refresh quota
+          fetchStaff(true);
+          return;
+        }
+        
+        if (data.code === 'duplicate_entry' || data.message?.includes('already exists')) {
+          alert(`⚠️ Duplicate Entry\n\n${data.message}`);
+          return;
+        }
+        
+        // Generic error
+        alert(`❌ Error\n\n${data.message || 'Failed to save staff. Please try again.'}`);
         return;
       }
       
@@ -159,11 +193,11 @@ export default function StaffManagementPage() {
         // Force fresh fetch after create/update
         fetchStaff(true);
       } else {
-        alert(data.message || 'Failed to save staff');
+        alert(`❌ Error\n\n${data.message || 'Failed to save staff'}`);
       }
     } catch (err) {
       console.error("Failed to save staff:", err);
-      alert("Failed to save staff. Please try again.");
+      alert("❌ Network Error\n\nFailed to save staff. Please check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -242,35 +276,66 @@ export default function StaffManagementPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
               👥 Staff Management
+              {isRefreshing && (
+                <span className="inline-block w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
+              )}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Manage your institute staff members and their roles
+              {quota && (
+                <span className={`ml-2 text-sm font-medium ${quota.canAdd ? 'text-green-600' : 'text-red-600'}`}>
+                  ({quota.current}/{quota.cap === -1 ? '∞' : quota.cap} staff)
+                </span>
+              )}
             </p>
           </div>
-          <button
-            onClick={() => {
-              setSelectedStaff(null);
-              setFormData({
-                name: "",
-                email: "",
-                phone: "",
-                password: "",
-                role: "staff",
-                department: "administration",
-                designation: "",
-                joiningDate: new Date().toISOString().split("T")[0],
-                employmentType: "fullTime",
-                salary: { basic: 0, allowances: 0 },
-              });
-              setShowAddModal(true);
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg font-semibold flex items-center gap-2"
-          >
-            <span>➕</span>
-            Add Staff Member
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => {
+                if (quota && !quota.canAdd) {
+                  return; // Don't open modal if quota reached
+                }
+                setSelectedStaff(null);
+                setFormData({
+                  name: "",
+                  email: "",
+                  phone: "",
+                  password: "",
+                  role: "staff",
+                  department: "administration",
+                  designation: "",
+                  joiningDate: new Date().toISOString().split("T")[0],
+                  employmentType: "fullTime",
+                  salary: { basic: 0, allowances: 0 },
+                });
+                setShowAddModal(true);
+              }}
+              disabled={quota !== null && !quota.canAdd}
+              className={`px-6 py-3 rounded-xl transition-all shadow-md font-semibold flex items-center gap-2 ${
+                quota && !quota.canAdd
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-lg'
+              }`}
+            >
+              <span>➕</span>
+              Add Staff Member
+            </button>
+            {/* Tooltip for disabled button */}
+            {quota && !quota.canAdd && (
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                Staff limit reached ({quota.current}/{quota.cap}).
+                <button
+                  onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
+                  className="ml-2 text-blue-400 hover:text-blue-300 underline"
+                >
+                  Upgrade Plan
+                </button>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
