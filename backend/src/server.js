@@ -36,6 +36,7 @@ import videoRoutes from './routes/videoRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import subscriptionCheckoutRoutes from './routes/subscriptionCheckoutRoutes.js';
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
+import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
 
 
@@ -114,6 +115,12 @@ app.get("/api/test-cookie", (req, res) => {
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  
+  // Run migrations on startup (after DB is connected)
+  setTimeout(async () => {
+    console.log('🔧 Running database migrations...');
+    await dropOldStaffIndexes();
+  }, 3000);
   
   // Run auto-cancel for stale pending payments on startup
   setTimeout(async () => {

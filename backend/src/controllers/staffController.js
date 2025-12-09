@@ -62,17 +62,40 @@ export const createStaff = async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email, tenantId });
+    // Check if user already exists (globally - email is unique across all tenants)
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ 
-        message: "User with this email already exists in your institute" 
+        message: "A user with this email already exists. Please use a different email." 
       });
     }
 
-    // Generate employee ID
+    // Also check if staff with this email exists in this tenant
+    const existingStaff = await Staff.findOne({ email, tenantId });
+    if (existingStaff) {
+      return res.status(400).json({ 
+        message: "Staff member with this email already exists in your institute" 
+      });
+    }
+
+    // Generate unique employee ID: {TenantPrefix-3}{DDMM}{Count-3}
+    // Example: ABC0912001 = Tenant ABC + 09 Dec + Staff #001
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    
+    // Get tenant prefix (first 3 chars of tenantId or instituteName, uppercase)
+    const tenantPrefix = (tenant.instituteName || tenant.tenantId || 'TNT')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .substring(0, 3)
+      .toUpperCase()
+      .padEnd(3, 'X'); // Pad with X if less than 3 chars
+    
+    // Get next staff number for this tenant
     const staffCount = await Staff.countDocuments({ tenantId });
-    const employeeId = `EMP${String(staffCount + 1).padStart(4, "0")}`;
+    const nextNumber = staffCount + 1;
+    
+    const employeeId = `${tenantPrefix}${dd}${mm}${String(nextNumber).padStart(3, "0")}`;
 
     // Create user account
     const userPassword = password || `${name.split(" ")[0].toLowerCase()}@${new Date().getFullYear()}`;
@@ -128,6 +151,16 @@ export const createStaff = async (req, res) => {
     });
   } catch (err) {
     console.error("Create staff error:", err);
+    
+    // Handle MongoDB duplicate key error
+    if (err.code === 11000 || err.name === 'MongoServerError' && err.message.includes('duplicate key')) {
+      const duplicateField = err.keyPattern ? Object.keys(err.keyPattern)[0] : 'email';
+      return res.status(400).json({ 
+        message: `A user with this ${duplicateField} already exists. Please use a different ${duplicateField}.`,
+        code: 'duplicate_entry'
+      });
+    }
+    
     res.status(500).json({ 
       message: "Server error", 
       error: err.message 

@@ -51,7 +51,7 @@ const staffSchema = new mongoose.Schema(
     employeeId: {
       type: String,
       required: true,
-      unique: true,
+      // Note: unique: true removed - uniqueness is enforced by compound index { tenantId: 1, employeeId: 1 }
     },
 
     role: {
