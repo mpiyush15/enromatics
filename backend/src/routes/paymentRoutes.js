@@ -15,7 +15,7 @@ import {
   triggerAutoCancelPendingPayments,
   reconcileFailedPayments,
   syncPaymentStatusFromCashfree,
-  syncAllPendingPayments
+  syncAllPendingPaymentsFromCashfree
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -53,7 +53,7 @@ router.post("/admin/auto-cancel-pending", protect, authorizeRoles("SuperAdmin"),
 // Reconcile failed payments and initiate refunds - SuperAdmin only
 router.post("/admin/reconcile-failed", protect, authorizeRoles("SuperAdmin"), reconcileFailedPayments);
 // Sync all pending payments from Cashfree - SuperAdmin only
-router.post("/admin/sync-all-pending", protect, authorizeRoles("SuperAdmin"), syncAllPendingPayments);
+router.post("/admin/sync-all-pending", protect, authorizeRoles("SuperAdmin"), syncAllPendingPaymentsFromCashfree);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

@@ -1596,3 +1596,127 @@ export const syncAllPendingPayments = async (req, res) => {
   }
 };
 
+/**
+ * Admin: Sync ALL Pending Payments from Cashfree
+ * Manually check all pending payments and update from Cashfree
+ * Used when webhook wasn't received for pending orders
+ */
+export const syncAllPendingPaymentsFromCashfree = async (req, res) => {
+  try {
+    console.log('Starting sync of ALL pending payments from Cashfree...');
+
+    // Find all pending payments
+    const pendingPayments = await SubscriptionPayment.find({
+      status: 'pending'
+    }).sort({ createdAt: -1 });
+
+    console.log(`Found ${pendingPayments.length} pending payments to sync`);
+
+    let successCount = 0;
+    let failedCount = 0;
+    let updates = [];
+
+    const axios = await import('axios').then(m => m.default);
+    const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+    const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+    const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+
+    for (const payment of pendingPayments) {
+      try {
+        console.log(`Syncing payment: ${payment.gatewayOrderId}`);
+
+        // Check status from Cashfree
+        const apiResponse = await axios.get(
+          `${CASHFREE_BASE_URL}/orders/${payment.gatewayOrderId}`,
+          {
+            headers: {
+              'x-client-id': CASHFREE_CLIENT_ID,
+              'x-client-secret': CASHFREE_CLIENT_SECRET,
+              'x-api-version': '2023-08-01'
+            }
+          }
+        );
+
+        const cashfreeOrder = apiResponse.data;
+        const orderStatus = cashfreeOrder.order_status;
+
+        console.log(`Order ${payment.gatewayOrderId} status from Cashfree: ${orderStatus}`);
+
+        // Handle PAID status
+        if (orderStatus === 'PAID') {
+          payment.status = 'success';
+          payment.paidAt = new Date();
+          payment.notes = `Auto-synced from Cashfree - PAID on ${new Date().toISOString()}`;
+          await payment.save();
+
+          // Update tenant
+          const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+          if (tenant) {
+            tenant.subscription.status = 'active';
+            tenant.paid_status = true;
+            await tenant.save();
+            console.log(`✓ Tenant ${tenant.tenantId} updated: paid_status=true, subscription=active`);
+          }
+
+          successCount++;
+          updates.push({
+            orderId: payment.gatewayOrderId,
+            status: 'success',
+            tenantId: payment.tenantId,
+            amount: payment.amount
+          });
+        }
+        // Handle FAILED/CANCELLED status
+        else if (orderStatus === 'FAILED' || orderStatus === 'CANCELLED') {
+          payment.status = 'failed';
+          payment.notes = `Auto-synced from Cashfree - ${orderStatus} on ${new Date().toISOString()}`;
+          await payment.save();
+
+          // Reset tenant paid status
+          const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+          if (tenant) {
+            tenant.paid_status = false;
+            if (tenant.subscription) {
+              tenant.subscription.status = 'inactive';
+            }
+            await tenant.save();
+            console.log(`✗ Tenant ${tenant.tenantId} updated: paid_status=false, subscription=inactive`);
+          }
+
+          failedCount++;
+          updates.push({
+            orderId: payment.gatewayOrderId,
+            status: 'failed',
+            tenantId: payment.tenantId,
+            amount: payment.amount
+          });
+        }
+        // Still pending
+        else if (orderStatus === 'ACTIVE' || orderStatus === 'PENDING') {
+          console.log(`⏳ Order ${payment.gatewayOrderId} still pending/active in Cashfree`);
+        }
+      } catch (itemErr) {
+        console.error(`Error syncing payment ${payment.gatewayOrderId}:`, itemErr?.message);
+        failedCount++;
+      }
+    }
+
+    console.log(`Sync complete: ${successCount} successful, ${failedCount} failed`);
+
+    res.status(200).json({
+      success: true,
+      message: `Synced ${successCount + failedCount} payments from Cashfree`,
+      totalPending: pendingPayments.length,
+      successCount,
+      failedCount,
+      updates
+    });
+  } catch (err) {
+    console.error('Sync all pending payments error:', err);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: err?.message 
+    });
+  }
+};
+
