@@ -31,7 +31,7 @@ export default function DashboardHomePage() {
   
   // ✅ SWR: Auto-caching, revalidation, deduplication
   const { data: analytics, isLoading, error, mutate } = useDashboardData<AnalyticsData>(
-    '/api/admin/analytics/dashboard'
+    '/api/analytics/dashboard'
   );
 
   if (isLoading) {
