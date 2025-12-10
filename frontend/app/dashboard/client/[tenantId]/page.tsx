@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 export default function TenantDashboard() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
+  const router = useRouter();
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,16 @@ export default function TenantDashboard() {
         const data = await res.json();
         console.log("🟢 Tenant info fetched successfully:", data);
         setTenant(data);
+
+        // Check if tenant needs onboarding (paid but not completed)
+        if (data.paid_status === true && data.onboarding_completed !== true) {
+          console.log("🔄 Redirecting to onboarding...");
+          // Redirect to onboarding page
+          setTimeout(() => {
+            router.push(`/onboarding/whitelabel?tenantId=${tenantId}`);
+          }, 500);
+          return;
+        }
       } catch (err: any) {
         console.error("❌ Error fetching tenant info:", err.message);
         setError(err.message);
@@ -43,7 +55,7 @@ export default function TenantDashboard() {
     };
 
     if (tenantId) fetchTenantInfo();
-  }, [tenantId]);
+  }, [tenantId, router]);
 
   if (loading) return <div className="p-6 text-gray-600">Loading tenant details...</div>;
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;

@@ -282,8 +282,10 @@ export const verifySubscriptionPayment = async (req, res) => {
           invoiceNumber: nextInvoiceNumber
         };
         tenant.paid_status = true; // Mark as paid
+        // Ensure onboarding_completed is false so user goes to onboarding page
+        tenant.onboarding_completed = false;
         await tenant.save();
-        console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan, 'Invoice:', nextInvoiceNumber);
+        console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan, 'Invoice:', nextInvoiceNumber, 'Onboarding reset to: false');
 
         // Also update SubscriptionPayment record status to 'success' if it exists
         try {
@@ -508,8 +510,10 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           pendingPlan: null // Clear pending plan on success
         };
         tenant.paid_status = true; // Mark as paid user for white-label/onboarding flow
+        // Ensure onboarding_completed is false so user goes to onboarding page
+        tenant.onboarding_completed = false;
         await tenant.save();
-        console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber, 'Paid status: true');
+        console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber, 'Paid status: true', 'Onboarding reset to: false');
 
         // Update existing pending payment to success (or create if not found)
         try {
