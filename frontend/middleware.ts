@@ -120,20 +120,21 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   // Handle regular tenant subdomain (student/public portal)
   const url = request.nextUrl.clone();
   
-  // Add tenant context
-  url.searchParams.set('tenant', subdomain);
-  url.searchParams.set('mode', 'tenant');
+  // Add subdomain as query parameter (for tenant-dashboard)
+  url.searchParams.set('subdomain', subdomain);
   
   // Route to tenant-specific pages
   if (request.nextUrl.pathname === '/') {
-    // Redirect to tenant landing page
-    url.pathname = '/tenant-portal';
+    // Redirect to tenant dashboard (white-label portal)
+    url.pathname = '/tenant-dashboard';
   } else if (request.nextUrl.pathname === '/register') {
     // Handle student registration with tenant context
     url.pathname = '/tenant-register';
+    url.searchParams.set('subdomain', subdomain);
   } else if (request.nextUrl.pathname === '/login') {
     // Handle student login with tenant context  
     url.pathname = '/tenant-login';
+    url.searchParams.set('subdomain', subdomain);
   }
   
   const response = NextResponse.rewrite(url);

@@ -204,8 +204,10 @@ function WhiteablOnboardingContent() {
       if (!res.ok) throw new Error('Failed to save branding');
       const data = await res.json();
 
-      // Redirect to tenant login page
-      router.push(`/tenant-login?subdomain=${formData.subdomain}`);
+      // Redirect to tenant dashboard (portal)
+      // Note: Eventually this should be: router.push(`https://${formData.subdomain}.enromatics.com`)
+      // But until DNS is configured, use subdomain query parameter
+      router.push(`/tenant-dashboard?subdomain=${formData.subdomain}`);
     } catch (err) {
       console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save branding');

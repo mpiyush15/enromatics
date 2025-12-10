@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Call backend to fetch tenant dashboard data
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tenants/by-subdomain/${subdomain}/dashboard`;
+    const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+    const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/by-subdomain/${subdomain}/dashboard`;
     const options = buildBackendFetchOptions(req, 'GET');
 
     const res = await fetch(backendUrl, options);
