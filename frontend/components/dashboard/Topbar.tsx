@@ -19,6 +19,9 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user, tenan
 
   // Check if user is on trial/free plan
   const isTrialUser = user?.plan === "trial" || !user?.paid_status;
+  
+  // Check if user is SuperAdmin
+  const isSuperAdmin = user?.role === "SuperAdmin";
 
   useEffect(() => {
     const updateTime = () => {
@@ -80,8 +83,8 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user, tenan
           </Link>
         )}
 
-        {/* UPGRADE BUTTON - Show for trial/free users */}
-        {isTrialUser && tenantId && (
+        {/* UPGRADE BUTTON - Show for trial/free users (HIDE from SuperAdmin) */}
+        {isTrialUser && !isSuperAdmin && tenantId && (
           <button
             onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
             className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg shadow-md transition-all hover:shadow-lg animate-pulse"
