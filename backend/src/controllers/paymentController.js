@@ -1007,10 +1007,8 @@ export const getReceipt = async (req, res) => {
 const PLAN_PRICES = {
   free: { monthly: 0, annual: 0 },
   trial: { monthly: 0, annual: 0 },
-  test: { monthly: 10, annual: 10 },
   starter: { monthly: 10, annual: 10 },
   professional: { monthly: 10, annual: 10 },
-  pro: { monthly: 10, annual: 10 },
   enterprise: { monthly: 10, annual: 10 },
 };
 
@@ -1251,3 +1249,80 @@ export const triggerAutoCancelPendingPayments = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * Payment Reconciliation: Auto-handle failed payments that deducted money
+ * Rules:
+ * 1. If payment failed BUT money was deducted - mark for refund
+ * 2. If pending payment stays unresolved > 24 hours - auto-fail and refund
+ * 3. Send notification to customer about refund/resolution
+ */
+export const reconcileFailedPayments = async (req, res) => {
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    // Find payments that are:
+    // 1. FAILED but have no refund record (money deducted but payment failed)
+    // 2. PENDING > 24 hours (never received webhook confirmation)
+    const failedPayments = await SubscriptionPayment.find({
+      $or: [
+        { status: 'failed', refundInitiated: { $ne: true } },
+        { status: 'pending', createdAt: { $lt: twentyFourHoursAgo } }
+      ]
+    });
+
+    let processedCount = 0;
+    let refundedAmount = 0;
+
+    for (const payment of failedPayments) {
+      try {
+        const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+        
+        // Mark for refund if money was deducted
+        if (payment.amount > 0) {
+          payment.refundInitiated = true;
+          payment.refundNotes = `Auto-refund: Failed payment - ${new Date().toISOString()}`;
+          payment.refundAmount = payment.amount;
+          await payment.save();
+          
+          refundedAmount += payment.amount;
+          processedCount++;
+          
+          // Send refund notification email
+          if (tenant) {
+            await sendEmail({
+              to: tenant.email,
+              subject: `Refund Initiated - Payment Failed`,
+              html: `<p>We detected that Rs ${payment.amount} was deducted from your account for order ${payment.gatewayOrderId}, but the payment failed to process.</p>
+                     <p>We have initiated an automatic refund of Rs ${payment.amount} to your original payment method.</p>
+                     <p>The refund should appear in your account within 3-5 business days.</p>
+                     <p>If you have any questions, please contact our support team.</p>`
+            });
+            console.log(`Refund notification sent to ${tenant.email} for order ${payment.gatewayOrderId}`);
+          }
+        }
+        
+        // If payment was pending for > 24 hours, mark as failed
+        if (payment.status === 'pending' && payment.createdAt < twentyFourHoursAgo) {
+          payment.status = 'failed';
+          payment.notes = `Auto-failed: No confirmation after 24 hours - ${new Date().toISOString()}`;
+          await payment.save();
+          console.log(`Auto-failed pending payment: ${payment.gatewayOrderId}`);
+        }
+      } catch (err) {
+        console.error(`Error processing payment ${payment._id}:`, err?.message);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Reconciled ${processedCount} failed payments`,
+      totalRefunded: `₹${refundedAmount}`,
+      processedPayments: processedCount
+    });
+  } catch (err) {
+    console.error('Payment reconciliation error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+

@@ -125,6 +125,25 @@ const subscriptionPaymentSchema = new mongoose.Schema({
   // Metadata
   notes: {
     type: String
+  },
+
+  // Refund tracking (for failed payments)
+  refundInitiated: {
+    type: Boolean,
+    default: false
+  },
+
+  refundAmount: {
+    type: Number,
+    default: 0
+  },
+
+  refundNotes: {
+    type: String
+  },
+
+  refundedAt: {
+    type: Date
   }
 
 }, { timestamps: true });
