@@ -83,7 +83,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user, tenan
         {/* UPGRADE BUTTON - Show for trial/free users */}
         {isTrialUser && tenantId && (
           <button
-            onClick={() => router.push(`/client/${tenantId}/payments`)}
+            onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
             className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg shadow-md transition-all hover:shadow-lg animate-pulse"
             title="Upgrade to activate white-label & unlimited features"
           >
