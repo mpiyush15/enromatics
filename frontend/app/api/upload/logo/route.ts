@@ -29,8 +29,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.ok) {
-      const error = await res.json();
-      return NextResponse.json(error, { status: res.status });
+      // Try to parse as JSON, fallback to text if HTML error
+      let errorData;
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        errorData = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('Backend returned non-JSON response:', text.substring(0, 500));
+        errorData = { error: `Upload failed with status ${res.status}: ${text.substring(0, 100)}` };
+      }
+      return NextResponse.json(errorData, { status: res.status });
     }
 
     const data = await res.json();

@@ -131,8 +131,17 @@ function WhiteablOnboardingContent() {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch('/api/upload/logo', {
         method: 'POST',
+        headers,
+        credentials: 'include',
         body: formData,
       });
 
