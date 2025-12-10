@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { TrendingUp, Users, CreditCard, BarChart3, Loader } from 'lucide-react';
+import { TrendingUp, Users, CreditCard, BarChart3, Loader, AlertCircle } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
 import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
 import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
 import { TrialBadge } from '@/components/PlanGating';
 import useAuth from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 interface AnalyticsData {
   kpis: {
@@ -28,67 +27,14 @@ interface AnalyticsData {
 }
 
 export default function DashboardHomePage() {
-  const router = useRouter();
   const { user } = useAuth();
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  
+  // ✅ SWR: Auto-caching, revalidation, deduplication
+  const { data: analytics, isLoading, error, mutate } = useDashboardData<AnalyticsData>(
+    '/api/analytics/dashboard'
+  );
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted) {
-      fetchAnalytics();
-    }
-  }, [mounted]);
-
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Get token from localStorage (stored at login)
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      if (!token) {
-        setError('Authentication required. Please log in.');
-        setLoading(false);
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-      const response = await fetch(
-        `${apiUrl}/api/analytics/dashboard`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
-        throw new Error('Failed to fetch analytics');
-      }
-
-      const data = await response.json();
-      setAnalytics(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -102,15 +48,18 @@ export default function DashboardHomePage() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-medium">Error loading dashboard</p>
-          <p className="text-red-600 text-sm mt-1">{error}</p>
-          <button
-            onClick={fetchAnalytics}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-red-800 font-medium">Error loading dashboard</p>
+            <p className="text-red-600 text-sm mt-1">{error.message}</p>
+            <button
+              onClick={() => mutate()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -237,7 +186,7 @@ export default function DashboardHomePage() {
             Last updated: {new Date().toLocaleString('en-IN')}
           </p>
           <button
-            onClick={fetchAnalytics}
+            onClick={() => mutate()}
             className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
             Refresh Data
