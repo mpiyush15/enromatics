@@ -12,37 +12,37 @@ export const PLANS = [
   {
     id: 'basic',
     name: 'Basic',
-    priceMonthly: 999,
-    priceAnnual: 9999, // ~15% discount
+    priceMonthly: 10,
+    priceAnnual: 10, // Testing at Rs 10
     description: 'Perfect for small coaching institutes',
   },
   {
     id: 'pro',
     name: 'Pro',
-    priceMonthly: 1999,
-    priceAnnual: 19999, // ~15% discount
+    priceMonthly: 10,
+    priceAnnual: 10, // Testing at Rs 10
     description: 'For growing educational institutions',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    priceMonthly: 4999,
-    priceAnnual: 49999,
+    priceMonthly: 10,
+    priceAnnual: 10,
     description: 'For large-scale operations with advanced needs',
   },
   // Keep old names as aliases for backward compatibility
   {
     id: 'starter',
     name: 'Starter',
-    priceMonthly: 999,
-    priceAnnual: 9999,
+    priceMonthly: 10,
+    priceAnnual: 10,
     description: 'Basic features for small institutes (legacy)',
   },
   {
     id: 'professional',
     name: 'Professional',
-    priceMonthly: 1999,
-    priceAnnual: 19999,
+    priceMonthly: 10,
+    priceAnnual: 10,
     description: 'Advanced features for growing institutes (legacy)',
   }
 ];
