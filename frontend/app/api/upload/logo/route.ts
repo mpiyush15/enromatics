@@ -6,7 +6,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     // Forward the multipart form data to backend
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/upload/logo`;
+    const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+    const backendUrl = `${EXPRESS_BACKEND_URL}/api/upload/logo`;
     
     const headers: HeadersInit = {};
     const cookieHeader = req.headers.get('cookie');

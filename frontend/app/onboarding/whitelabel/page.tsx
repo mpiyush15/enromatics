@@ -126,6 +126,7 @@ function WhiteablOnboardingContent() {
     if (!file) return;
 
     setUploadingLogo(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -135,12 +136,21 @@ function WhiteablOnboardingContent() {
         body: formData,
       });
 
-      if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || 'Upload failed');
+      }
+
+      if (!data.url) {
+        throw new Error('No upload URL returned from server');
+      }
+
       setFormData((prev) => ({ ...prev, logoUrl: data.url }));
     } catch (err) {
       console.error('Logo upload error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to upload logo');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload logo to S3';
+      setError(`Logo upload error: ${errorMessage}`);
     } finally {
       setUploadingLogo(false);
     }
