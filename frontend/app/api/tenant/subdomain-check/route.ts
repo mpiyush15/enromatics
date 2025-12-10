@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendFetchOptions } from '@/lib/bffHelper';
 
+const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+
 export async function GET(req: NextRequest) {
   try {
     const subdomain = req.nextUrl.searchParams.get('subdomain');
@@ -13,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Call backend to check subdomain availability
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tenants/check-subdomain?subdomain=${subdomain}`;
+    const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/check-subdomain?subdomain=${subdomain}`;
     const options = buildBackendFetchOptions(req, 'GET');
 
     const res = await fetch(backendUrl, options);
