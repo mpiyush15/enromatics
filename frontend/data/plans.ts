@@ -31,8 +31,8 @@ export const subscriptionPlans = [
   {
     id: "starter",
     name: "Starter",
-    monthlyPrice: 999, // Update with actual pricing
-    annualPrice: 9999,
+    monthlyPrice: 10, // Testing price - matches backend PLAN_PRICES
+    annualPrice: 10,
     description: "Perfect for small coaching institutes",
     features: [
       "✓ Up to 50 students",
@@ -58,8 +58,8 @@ export const subscriptionPlans = [
   {
     id: "professional",
     name: "Professional",
-    monthlyPrice: 1999, // Update with actual pricing
-    annualPrice: 19999,
+    monthlyPrice: 10, // Testing price - matches backend PLAN_PRICES
+    annualPrice: 10,
     description: "For growing educational institutions",
     features: [
       "✓ Up to 100 students",

@@ -1043,6 +1043,7 @@ export const getReceipt = async (req, res) => {
 const PLAN_PRICES = {
   free: { monthly: 0, annual: 0 },
   trial: { monthly: 0, annual: 0 },
+  test: { monthly: 10, annual: 10 },
   starter: { monthly: 10, annual: 10 },
   professional: { monthly: 10, annual: 10 },
   enterprise: { monthly: 10, annual: 10 },
