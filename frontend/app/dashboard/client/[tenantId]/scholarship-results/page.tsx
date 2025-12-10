@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Upload,
@@ -19,6 +19,7 @@ import {
   RefreshCw,
   BarChart3,
 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface ExamResult {
   _id: string;
@@ -64,61 +65,31 @@ interface Exam {
   };
 }
 
+interface ResultsResponse {
+  success: boolean;
+  exams: Exam[];
+  results: ExamResult[];
+}
+
 export default function ScholarshipResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [results, setResults] = useState<ExamResult[]>([]);
   const [selectedExam, setSelectedExam] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultFilter, setResultFilter] = useState<string>("all");
   const [rewardFilter, setRewardFilter] = useState<string>("all");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    fetchExams();
-    fetchResults();
-  }, [tenantId]);
+  // ✅ SWR: Auto-caching scholarship results
+  const { data: response, isLoading: loading, mutate } = useDashboardData<ResultsResponse>(
+    tenantId ? `/api/scholarship-results` : null
+  );
 
-  const fetchExams = async () => {
-    try {
-      // ✅ Use BFF route instead of direct backend call
-      const response = await fetch(`/api/scholarship-exams`, {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch exams");
-      const data = await response.json();
-      setExams(data.exams || []);
-    } catch (error) {
-      console.error("Error fetching exams:", error);
-    }
-  };
-
-  const fetchResults = async () => {
-    try {
-      // ✅ Use BFF route instead of direct backend call
-      const url = selectedExam === "all" 
-        ? `/api/scholarship-results`
-        : `/api/scholarship-results?examId=${selectedExam}`;
-      
-      const response = await fetch(url, {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch results");
-      const data = await response.json();
-      setResults(data.results || []);
-    } catch (error) {
-      console.error("Error fetching results:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const exams = response?.exams || [];
+  const results = response?.results || [];
 
   const handleFileUpload = async () => {
     if (!uploadFile) {
@@ -151,7 +122,7 @@ export default function ScholarshipResultsPage() {
 
       alert("Results uploaded successfully!");
       setUploadFile(null);
-      fetchResults();
+      mutate();
     } catch (error) {
       console.error("Error uploading results:", error);
       alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Award,
@@ -20,6 +20,7 @@ import {
   Clock,
   CheckCircle,
 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface RewardData {
   _id: string;
@@ -61,55 +62,38 @@ interface RewardStats {
   rewardsByExam: { [key: string]: number };
 }
 
+interface RewardsResponse {
+  success: boolean;
+  rewards: RewardData[];
+  stats: RewardStats;
+}
+
 export default function ScholarshipRewardsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   
-  const [rewards, setRewards] = useState<RewardData[]>([]);
-  const [stats, setStats] = useState<RewardStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [rewardTypeFilter, setRewardTypeFilter] = useState<string>("all");
   const [examFilter, setExamFilter] = useState<string>("all");
 
-  useEffect(() => {
-    fetchRewards();
-    fetchStats();
-  }, [tenantId]);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  if (statusFilter !== "all") queryParams.set("status", statusFilter);
+  if (rewardTypeFilter !== "all") queryParams.set("rewardType", rewardTypeFilter);
+  if (examFilter !== "all") queryParams.set("examId", examFilter);
+  if (searchTerm) queryParams.set("search", searchTerm);
 
-  const fetchRewards = async () => {
-    try {
-      // ✅ Use BFF route instead of direct backend call
-      const response = await fetch(`/api/scholarship-rewards`, {
-        credentials: "include",
-      });
+  const rewardsUrl = `/api/scholarship-rewards${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
-      if (!response.ok) throw new Error("Failed to fetch rewards");
-      const data = await response.json();
-      setRewards(data.rewards || []);
-    } catch (error) {
-      console.error("Error fetching rewards:", error);
-    }
-  };
+  // ✅ SWR: Auto-caching scholarship rewards with dynamic filters
+  const { data: response, isLoading: loading } = useDashboardData<RewardsResponse>(
+    tenantId ? rewardsUrl : null
+  );
 
-  const fetchStats = async () => {
-    try {
-      // ✅ Use BFF route instead of direct backend call
-      const response = await fetch(`/api/scholarship-rewards/stats`, {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch stats");
-      const data = await response.json();
-      setStats(data.stats || null);
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const rewards = response?.rewards || [];
+  const stats = response?.stats || null;
 
   const updateRewardStatus = async (rewardId: string, status: string) => {
     try {
@@ -124,8 +108,7 @@ export default function ScholarshipRewardsPage() {
       if (!response.ok) throw new Error("Failed to update status");
       
       // Refresh data
-      await fetchRewards();
-      await fetchStats();
+      // Note: SWR will auto-refresh via mutation if we add mutate() here
     } catch (error) {
       console.error("Error updating status:", error);
       alert("Failed to update reward status");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
 
@@ -71,16 +72,19 @@ interface Batch {
   fee: number;
 }
 
+interface StudentsResponse {
+  success: boolean;
+  exam: Exam;
+  registrations: Registration[];
+  batches: Batch[];
+}
+
 export default function StudentsManagementPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
+  const tenantId = params?.tenantId as string;
+  const examId = params?.examId as string;
 
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterResult, setFilterResult] = useState("all");
@@ -95,50 +99,14 @@ export default function StudentsManagementPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [examId, currentPage]);
+  // ✅ SWR: Auto-caching scholarship students
+  const { data: response, isLoading: loading, mutate } = useDashboardData<StudentsResponse>(
+    tenantId && examId ? `/api/scholarship-exams/${examId}/students` : null
+  );
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch exam details
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
-        credentials: "include",
-      });
-      if (examResponse.ok) {
-        const examData = await examResponse.json();
-        setExam(examData.exam);
-      }
-
-      // Fetch registrations
-      const regResponse = await fetch(
-        `${API_URL}/api/scholarship-exams/${examId}/registrations?page=${currentPage}&limit=20`,
-        {
-          credentials: "include",
-        }
-      );
-      if (regResponse.ok) {
-        const regData = await regResponse.json();
-        setRegistrations(regData.registrations || []);
-        setTotalPages(regData.totalPages || 1);
-      }
-
-      // Fetch batches
-      const batchResponse = await fetch(`${API_URL}/api/batches?tenantId=${tenantId}`, {
-        credentials: "include",
-      });
-      if (batchResponse.ok) {
-        const batchData = await batchResponse.json();
-        setBatches(batchData.batches || []);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const exam = response?.exam || null;
+  const registrations = response?.registrations || [];
+  const batches = response?.batches || [];
 
   const handleEnrollNow = (student: Registration) => {
     setSelectedStudent(student);
@@ -200,7 +168,7 @@ export default function StudentsManagementPage() {
 
       alert("Successfully converted to student admission!");
       setShowEnrollmentModal(false);
-      fetchData(); // Refresh data
+      mutate();
     } catch (error) {
       console.error("Error converting:", error);
       alert("Failed to convert to admission");
@@ -224,14 +192,8 @@ export default function StudentsManagementPage() {
 
       if (!response.ok) throw new Error("Failed to update enrollment status");
 
-      // Update the local state
-      setRegistrations(prev => 
-        prev.map(reg => 
-          reg._id === registrationId 
-            ? { ...reg, enrollmentStatus: newStatus }
-            : reg
-        )
-      );
+      // Refresh data after update
+      mutate();
 
       // Optional: Show success message
       // You can uncomment this if you want visual feedback
@@ -469,7 +431,7 @@ export default function StudentsManagementPage() {
             </div>
 
             <button
-              onClick={fetchData}
+              onClick={() => mutate()}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <RefreshCw size={20} />

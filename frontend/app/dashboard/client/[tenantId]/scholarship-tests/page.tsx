@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Calendar,
@@ -20,6 +20,7 @@ import {
   UserCheck,
   BookOpen,
 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface ExamRegistration {
   _id: string;
@@ -64,40 +65,29 @@ interface Exam {
   createdAt: string;
 }
 
+interface TestsResponse {
+  success: boolean;
+  exams: Exam[];
+}
+
 export default function ScholarshipTestsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   
-  const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [registrations, setRegistrations] = useState<ExamRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [attendanceFilter, setAttendanceFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("");
 
-  useEffect(() => {
-    fetchExams();
-  }, [tenantId]);
+  // ✅ SWR: Auto-caching scholarship tests/exams
+  const { data: response, isLoading: loading } = useDashboardData<TestsResponse>(
+    tenantId ? `/api/scholarship-exams` : null
+  );
 
-  const fetchExams = async () => {
-    try {
-      // ✅ Use BFF route instead of direct backend call
-      const response = await fetch(`/api/scholarship-exams`, {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch exams");
-      const data = await response.json();
-      setExams(data.exams || []);
-    } catch (error) {
-      console.error("Error fetching exams:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const exams = response?.exams || [];
 
   const fetchRegistrations = async (examId: string) => {
     try {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -23,6 +23,7 @@ import {
   AlertCircle,
   GraduationCap,
 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Registration {
   _id: string;
@@ -83,15 +84,18 @@ interface Exam {
   };
 }
 
+interface RegistrationsResponse {
+  success: boolean;
+  exam: Exam;
+  registrations: Registration[];
+}
+
 export default function RegistrationsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
+  const tenantId = params?.tenantId as string;
+  const examId = params?.examId as string;
 
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all");
@@ -100,40 +104,13 @@ export default function RegistrationsPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchExamAndRegistrations();
-  }, [examId]);
+  // ✅ SWR: Auto-caching scholarship registrations
+  const { data: response, isLoading: loading, mutate } = useDashboardData<RegistrationsResponse>(
+    tenantId && examId ? `/api/scholarship-exams/${examId}/registrations` : null
+  );
 
-  const fetchExamAndRegistrations = async () => {
-    try {
-      setLoading(true);
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-      
-      // Fetch exam details
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
-        credentials: "include",
-      });
-      if (examResponse.ok) {
-        const examData = await examResponse.json();
-        setExam(examData.exam);
-      }
-
-      // Fetch registrations
-      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
-        credentials: "include",
-      });
-      if (regResponse.ok) {
-        const regData = await regResponse.json();
-        setRegistrations(regData.registrations || []);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("Failed to load registrations");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const exam = response?.exam || null;
+  const registrations = response?.registrations || [];
 
   const filteredRegistrations = registrations.filter((reg) => {
     const matchesSearch =
@@ -185,14 +162,8 @@ export default function RegistrationsPage() {
 
       if (!response.ok) throw new Error("Failed to update enrollment status");
 
-      // Update the local state
-      setRegistrations(prev => 
-        prev.map(reg => 
-          reg._id === registrationId 
-            ? { ...reg, enrollmentStatus: newStatus }
-            : reg
-        )
-      );
+      // Refresh data after update
+      mutate();
 
     } catch (error) {
       console.error("Error updating enrollment status:", error);
@@ -325,7 +296,7 @@ export default function RegistrationsPage() {
       if (!response.ok) throw new Error("Failed to convert to admission");
 
       alert("Successfully converted to student admission!");
-      fetchExamAndRegistrations();
+      mutate();
     } catch (error) {
       console.error("Error converting to admission:", error);
       alert("Failed to convert to admission");

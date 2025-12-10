@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -22,8 +22,7 @@ import {
   UserCheck,
   Clock,
 } from "lucide-react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Exam {
   _id: string;
@@ -75,47 +74,25 @@ interface RecentRegistration {
   createdAt: string;
 }
 
+interface ExamDetailsResponse {
+  success: boolean;
+  exam: Exam;
+  recentRegistrations?: RecentRegistration[];
+}
+
 export default function ExamDashboard() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
+  const tenantId = params?.tenantId as string;
+  const examId = params?.examId as string;
 
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [recentRegistrations, setRecentRegistrations] = useState<RecentRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
+  // ✅ SWR: Auto-caching exam details
+  const { data: response, isLoading: loading } = useDashboardData<ExamDetailsResponse>(
+    examId ? `/api/scholarship-exams/${examId}` : null
+  );
 
-  useEffect(() => {
-    fetchExamData();
-  }, [examId]);
-
-  const fetchExamData = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch exam details
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
-        credentials: "include",
-      });
-      if (examResponse.ok) {
-        const examData = await examResponse.json();
-        setExam(examData.exam);
-      }
-
-      // Fetch recent registrations
-      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations?limit=5`, {
-        credentials: "include",
-      });
-      if (regResponse.ok) {
-        const regData = await regResponse.json();
-        setRecentRegistrations(regData.registrations || []);
-      }
-    } catch (error) {
-      console.error("Error fetching exam data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const exam = response?.exam || null;
+  const recentRegistrations = response?.recentRegistrations || [];
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
