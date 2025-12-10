@@ -47,17 +47,29 @@ function WhiteablOnboardingContent() {
         return;
       }
 
-      const res = await fetch(`/api/tenant/branding?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('Failed to load tenant data');
-
+      const res = await fetch(`/api/tenant/branding?tenantId=${tenantId}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       const data = await res.json();
+      
+      if (!res.ok) {
+        console.error('Tenant load error response:', data);
+        throw new Error(data.message || data.error || 'Failed to load tenant data');
+      }
+
+      // Set form data with loaded tenant information
       setFormData((prev) => ({
         ...prev,
-        instituteName: data.instituteName || '',
+        instituteName: data.instituteName || data.name || '',
         subdomain: data.subdomain || '',
         logoUrl: data.branding?.logoUrl || '',
         themeColor: data.branding?.themeColor || '#3b82f6',
-        whatsappNumber: data.branding?.whatsappNumber || '',
+        whatsappNumber: data.branding?.whatsappNumber || data.contact?.phone || '',
       }));
 
       setLoading(false);
@@ -84,18 +96,23 @@ function WhiteablOnboardingContent() {
 
     try {
       const res = await fetch(`/api/tenant/subdomain-check?subdomain=${subdomain}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.available) {
-          setSubdomainError(null);
-          setSubdomainAvailable(true);
-        } else {
-          setSubdomainError('This subdomain is already taken');
-          setSubdomainAvailable(false);
-        }
+      const data = await res.json();
+      
+      if (res.ok && data.available) {
+        setSubdomainError(null);
+        setSubdomainAvailable(true);
+      } else if (!data.available) {
+        setSubdomainError('This subdomain is already taken');
+        setSubdomainAvailable(false);
+      } else {
+        // Handle error response from backend
+        setSubdomainError(data.message || 'Error checking subdomain');
+        setSubdomainAvailable(false);
       }
     } catch (err) {
       console.error('Subdomain check error:', err);
+      setSubdomainError('Unable to check subdomain availability');
+      setSubdomainAvailable(false);
     }
   };
 
