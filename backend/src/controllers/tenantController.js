@@ -501,3 +501,345 @@ export const cancelSubscription = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/* ================================================================
+   🔹 11. Check Onboarding Status
+   Get /api/tenants/:tenantId/check-onboarding
+   Check if tenant needs to complete white-label onboarding
+================================================================ */
+export const checkOnboarding = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Tenant needs onboarding if:
+    // 1. They have paid_status = true (paid customer)
+    // 2. They haven't set a subdomain yet (haven't completed onboarding)
+    const needsOnboarding = tenant.paid_status === true && !tenant.subdomain;
+
+    res.status(200).json({
+      success: true,
+      needsOnboarding,
+      hasBranding: !!tenant.subdomain,
+      tenantId: tenant.tenantId,
+    });
+  } catch (err) {
+    console.error("Check Onboarding Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 12. Check Subdomain Availability
+   Get /api/tenants/check-subdomain?subdomain=myschool
+   Check if subdomain is available for registration
+================================================================ */
+export const checkSubdomainAvailability = async (req, res) => {
+  try {
+    const { subdomain } = req.query;
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    // Validate subdomain format (alphanumeric and hyphens only)
+    if (!/^[a-z0-9-]+$/.test(subdomain.toLowerCase())) {
+      return res.status(400).json({ 
+        available: false, 
+        message: "Subdomain can only contain letters, numbers, and hyphens" 
+      });
+    }
+
+    // Check if subdomain already exists
+    const existingTenant = await Tenant.findOne({ 
+      subdomain: subdomain.toLowerCase() 
+    });
+
+    const available = !existingTenant;
+
+    res.status(200).json({
+      success: true,
+      available,
+      subdomain: subdomain.toLowerCase(),
+      message: available ? "Subdomain is available" : "Subdomain is already taken",
+    });
+  } catch (err) {
+    console.error("Check Subdomain Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 13. Save Branding Configuration
+   POST /api/tenants/:tenantId/branding
+   Save subdomain, logo, theme color, and WhatsApp config
+================================================================ */
+export const saveBranding = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { subdomain, branding } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    // Validate subdomain format
+    if (!/^[a-z0-9-]+$/.test(subdomain.toLowerCase())) {
+      return res.status(400).json({ 
+        message: "Subdomain can only contain letters, numbers, and hyphens" 
+      });
+    }
+
+    // Check if subdomain is already taken by another tenant
+    const existingTenant = await Tenant.findOne({ 
+      subdomain: subdomain.toLowerCase(),
+      tenantId: { $ne: tenantId } // Exclude current tenant
+    });
+
+    if (existingTenant) {
+      return res.status(400).json({ 
+        message: "This subdomain is already taken" 
+      });
+    }
+
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Update tenant with branding
+    tenant.subdomain = subdomain.toLowerCase();
+    if (branding) {
+      tenant.branding = {
+        logoUrl: branding.logoUrl || tenant.branding?.logoUrl || null,
+        themeColor: branding.themeColor || tenant.branding?.themeColor || "#2F6CE5",
+        appName: branding.appName || tenant.branding?.appName || tenant.instituteName,
+      };
+      
+      // Store WhatsApp number in branding if provided
+      if (branding.whatsappNumber) {
+        tenant.branding.whatsappNumber = branding.whatsappNumber;
+      }
+    }
+
+    await tenant.save();
+
+    console.log(`Branding saved for tenant: ${tenantId}, subdomain: ${subdomain}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Branding configuration saved successfully",
+      tenant: {
+        tenantId: tenant.tenantId,
+        instituteName: tenant.instituteName,
+        subdomain: tenant.subdomain,
+        branding: tenant.branding,
+      },
+    });
+  } catch (err) {
+    console.error("Save Branding Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 14. Get Tenant By Subdomain
+   Get /api/tenants/by-subdomain/:subdomain
+   Fetch public tenant branding info (for login/dashboard pages)
+================================================================ */
+export const getTenantBySubdomain = async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    const tenant = await Tenant.findOne({ 
+      subdomain: subdomain.toLowerCase() 
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Return only public branding info (no sensitive data)
+    res.status(200).json({
+      success: true,
+      tenantId: tenant.tenantId,
+      instituteName: tenant.instituteName || tenant.name,
+      subdomain: tenant.subdomain,
+      branding: tenant.branding || {},
+    });
+  } catch (err) {
+    console.error("Get Tenant By Subdomain Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 15. Get Tenant Dashboard Data
+   Get /api/tenants/by-subdomain/:subdomain/dashboard
+   Fetch analytics data for branded dashboard
+================================================================ */
+export const getTenantDashboard = async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    const tenant = await Tenant.findOne({ 
+      subdomain: subdomain.toLowerCase() 
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // For now, return dummy/usage data from tenant model
+    // In production, you'd query Student, Staff, Course, and payment models
+    const totalStudents = tenant.usage?.studentsCount || 0;
+    const totalCourses = 0; // Would query Batch/Course model
+    const activeUsers = 0; // Would query User model with recent activity
+    const totalRevenue = tenant.subscription?.amount || 0;
+
+    res.status(200).json({
+      success: true,
+      tenantId: tenant.tenantId,
+      instituteName: tenant.instituteName,
+      subdomain: tenant.subdomain,
+      totalStudents,
+      totalCourses,
+      activeUsers,
+      totalRevenue,
+    });
+  } catch (err) {
+    console.error("Get Tenant Dashboard Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 16. Authenticate Tenant User
+   POST /api/tenants/authenticate
+   Authenticate tenant user for branded portal login
+================================================================ */
+export const authenticateTenantUser = async (req, res) => {
+  try {
+    const { email, password, subdomain } = req.body;
+
+    if (!email || !password || !subdomain) {
+      return res.status(400).json({ 
+        message: "Email, password, and subdomain are required" 
+      });
+    }
+
+    // Find tenant by subdomain
+    const tenant = await Tenant.findOne({ 
+      subdomain: subdomain.toLowerCase() 
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Find user with matching email and tenantId
+    const user = await User.findOne({ 
+      email,
+      tenantId: tenant.tenantId 
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Verify password
+    const isPasswordCorrect = await user.matchPassword(password);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Generate JWT token
+    const token = user.getSignedJwt();
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      tenantId: tenant.tenantId,
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
+    });
+  } catch (err) {
+    console.error("Tenant Authentication Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 17. Upload Logo
+   POST /api/upload/logo
+   Upload logo file to S3
+================================================================ */
+export const uploadLogo = async (req, res) => {
+  try {
+    // Check if file is provided
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
+    }
+
+    const { buffer, originalname, mimetype } = req.file;
+    const { uploadToS3 } = await import("../services/s3Service.js");
+
+    // Validate file type
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(mimetype)) {
+      return res.status(400).json({ 
+        message: "Only JPEG, PNG, and WebP images are allowed" 
+      });
+    }
+
+    // Validate file size (max 5MB)
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ 
+        message: "File size must be less than 5MB" 
+      });
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `logos/${timestamp}-${originalname.replace(/\s+/g, '-')}`;
+
+    // Upload to S3
+    const { url } = await uploadToS3(buffer, filename, mimetype);
+
+    res.status(200).json({
+      success: true,
+      message: "Logo uploaded successfully",
+      url,
+      filename,
+    });
+  } catch (err) {
+    console.error("Upload Logo Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

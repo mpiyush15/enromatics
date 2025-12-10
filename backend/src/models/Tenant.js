@@ -122,6 +122,14 @@ const tenantSchema = new mongoose.Schema(
       default: true, // Default to true for existing tenants
     },
 
+    // Flag to indicate if tenant is a paying customer
+    // Set to true when payment webhook succeeds
+    paid_status: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     // Analytics and usage tracking (for future scaling)
     usage: {
       studentsCount: { type: Number, default: 0 },

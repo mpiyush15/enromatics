@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 // User schema definition
 const userSchema = new mongoose.Schema(
@@ -112,6 +113,16 @@ userSchema.pre("save", async function (next) {
 // Password verification method
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Generate signed JWT token
+userSchema.methods.getSignedJwt = function () {
+  const token = jwt.sign(
+    { id: this._id, email: this.email, tenantId: this.tenantId, role: this.role },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: process.env.JWT_EXPIRE || '7d' }
+  );
+  return token;
 };
 
 // Remove password from API responses

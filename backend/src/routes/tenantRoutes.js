@@ -15,6 +15,13 @@ import {
   createNewTenant,
   sendTenantCredentials,
   cancelSubscription,
+  checkOnboarding,
+  checkSubdomainAvailability,
+  saveBranding,
+  getTenantBySubdomain,
+  getTenantDashboard,
+  authenticateTenantUser,
+  uploadLogo,
 } from "../controllers/tenantController.js";
 import {
   getPaymentHistory,
@@ -25,6 +32,7 @@ import {
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { tenantProtect } from "../middleware/tenantProtect.js";
+import multer from "multer";
 
 const router = express.Router();
 
@@ -52,8 +60,42 @@ router.post(
   createNewTenant
 );
 
+/* ============================================================
+   PUBLIC WHITE-LABEL ROUTES (No Auth Required)
+============================================================ */
+
 /**
- * @route   GET /api/tenants/admin/:tenantId
+ * @route   GET /api/tenants/check-subdomain?subdomain=myschool
+ * @desc    Check if subdomain is available
+ * @access  Public
+ */
+router.get(
+  "/check-subdomain",
+  checkSubdomainAvailability
+);
+
+/**
+ * @route   POST /api/tenants/authenticate
+ * @desc    Authenticate tenant user for branded portal login
+ * @access  Public
+ */
+router.post(
+  "/authenticate",
+  authenticateTenantUser
+);
+
+/**
+ * @route   GET /api/tenants/by-subdomain/:subdomain
+ * @desc    Fetch public tenant branding info by subdomain (for login page)
+ * @access  Public
+ */
+router.get(
+  "/by-subdomain/:subdomain",
+  getTenantBySubdomain
+);
+
+/**
+ * @route   GET /api/admin/:tenantId
  * @desc    Fetch single tenant info for superadmin (NO tenantProtect)
  * @access  Private – superadmin only
  */
@@ -213,6 +255,65 @@ router.delete(
   protect,
   authorizeRoles("superadmin"),
   deleteTenant
+);
+
+/* ============================================================
+   WHITE-LABEL ONBOARDING ROUTES (Private)
+============================================================ */
+
+/**
+ * @route   GET /api/tenants/:tenantId/check-onboarding
+ * @desc    Check if tenant needs to complete onboarding
+ * @access  Private – tenantAdmin (own tenant)
+ */
+router.get(
+  "/:tenantId/check-onboarding",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  checkOnboarding
+);
+
+/**
+ * @route   POST /api/tenants/:tenantId/branding
+ * @desc    Save branding configuration (subdomain, logo, colors, etc.)
+ * @access  Private – tenantAdmin (own tenant)
+ */
+router.post(
+  "/:tenantId/branding",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  tenantProtect,
+  saveBranding
+);
+
+/**
+ * @route   GET /api/tenants/by-subdomain/:subdomain/dashboard
+ * @desc    Fetch tenant dashboard analytics data
+ * @access  Private – Bearer token required (tenant user)
+ */
+router.get(
+  "/by-subdomain/:subdomain/dashboard",
+  protect,
+  getTenantDashboard
+);
+
+/**
+ * @route   POST /api/upload/logo
+ * @desc    Upload logo file to S3
+ * @access  Private – tenantAdmin
+ */
+// Configure multer for file upload
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+router.post(
+  "/upload/logo",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  upload.single('file'),
+  uploadLogo
 );
 
 export default router;
