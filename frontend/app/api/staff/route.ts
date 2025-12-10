@@ -11,17 +11,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { redisCache, CACHE_TTL, invalidateStaffCache } from '@/lib/redis';
+import { buildBackendFetchOptions } from '@/lib/bffHelper';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-
-// Extract token from request
-function extractToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
 
 function getCacheKey(tenantId: string, search: string): string {
   return `staff:list:${tenantId}:${search}`;
@@ -50,14 +42,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const token = extractToken(request);
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const fetchOptions = buildBackendFetchOptions(request, 'GET');
 
-    const backendResponse = await fetch(`${BACKEND_URL}${endpoint}`, {
-      method: 'GET',
-      headers,
-    });
+    const backendResponse = await fetch(`${BACKEND_URL}${endpoint}`, fetchOptions);
 
     const data = await backendResponse.json();
 
@@ -97,15 +84,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const endpoint = `/api/staff`;
 
-    const token = extractToken(request);
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const fetchOptions = buildBackendFetchOptions(request, 'POST', body);
 
-    const backendResponse = await fetch(`${BACKEND_URL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
+    const backendResponse = await fetch(`${BACKEND_URL}${endpoint}`, fetchOptions);
 
     const data = await backendResponse.json();
 
