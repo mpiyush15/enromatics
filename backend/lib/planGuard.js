@@ -13,7 +13,8 @@ const planMatrix = JSON.parse(fs.readFileSync(matrixPath, 'utf8'));
 
 function getTierConfig(tierKey) {
   const tier = planMatrix.tiers.find(t => t.key === tierKey);
-  return tier || planMatrix.tiers.find(t => t.key === 'basic');
+  // Return the found tier or default to 'trial' (most restrictive)
+  return tier || planMatrix.tiers.find(t => t.key === 'trial');
 }
 
 function overCap(value, cap) {
@@ -24,6 +25,17 @@ function overCap(value, cap) {
 // Check student cap
 function checkStudentCap({ tierKey, currentStudents }) {
   const tier = getTierConfig(tierKey);
+  if (!tier || !tier.quotas) {
+    console.error(`❌ Invalid tier config for tierKey: ${tierKey}`);
+    // Default: allow it with conservative limits
+    return {
+      allowed: true,
+      cap: 50,
+      current: currentStudents,
+      reason: null,
+      upgradeTo: null,
+    };
+  }
   const cap = tier.quotas.students;
   const isOver = overCap(currentStudents, cap);
   return {
@@ -38,6 +50,17 @@ function checkStudentCap({ tierKey, currentStudents }) {
 // Check staff cap
 function checkStaffCap({ tierKey, currentStaff }) {
   const tier = getTierConfig(tierKey);
+  if (!tier || !tier.quotas) {
+    console.error(`❌ Invalid tier config for tierKey: ${tierKey}`);
+    // Default: allow it with conservative limits
+    return {
+      allowed: true,
+      cap: 10,
+      current: currentStaff,
+      reason: null,
+      upgradeTo: null,
+    };
+  }
   const cap = tier.quotas.staff;
   const isOver = overCap(currentStaff, cap);
   return {
@@ -52,6 +75,17 @@ function checkStaffCap({ tierKey, currentStaff }) {
 // Check storage cap (in GB)
 function checkStorageCap({ tierKey, usedGB }) {
   const tier = getTierConfig(tierKey);
+  if (!tier || !tier.quotas) {
+    console.error(`❌ Invalid tier config for tierKey: ${tierKey}`);
+    // Default: allow it with conservative limits
+    return {
+      allowed: true,
+      cap: 10,
+      current: usedGB,
+      reason: null,
+      upgradeTo: null,
+    };
+  }
   const cap = tier.quotas.storageGB;
   const isOver = overCap(usedGB, cap);
   return {
