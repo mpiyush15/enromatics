@@ -1003,15 +1003,15 @@ export const getReceipt = async (req, res) => {
   }
 };
 
-// Plan prices mapping
+// Plan prices mapping (Testing at Rs 10 for all paid plans)
 const PLAN_PRICES = {
   free: { monthly: 0, annual: 0 },
   trial: { monthly: 0, annual: 0 },
   test: { monthly: 10, annual: 10 },
-  starter: { monthly: 1999, annual: 16790 },
-  professional: { monthly: 2999, annual: 25190 },
-  pro: { monthly: 2999, annual: 25190 },
-  enterprise: { monthly: 4999, annual: 41990 },
+  starter: { monthly: 10, annual: 10 },
+  professional: { monthly: 10, annual: 10 },
+  pro: { monthly: 10, annual: 10 },
+  enterprise: { monthly: 10, annual: 10 },
 };
 
 const PLAN_NAMES = {
