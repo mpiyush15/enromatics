@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
 
@@ -8,10 +9,16 @@ interface TopbarProps {
   userName: string;
   onToggleSidebar: () => void;
   isAdmin?: boolean;
+  user?: any;
+  tenantId?: string;
 }
 
-export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
+export default function Topbar({ userName, onToggleSidebar, isAdmin, user, tenantId }: TopbarProps) {
+  const router = useRouter();
   const [dateTime, setDateTime] = useState("");
+
+  // Check if user is on trial/free plan
+  const isTrialUser = user?.plan === "trial" || !user?.paid_status;
 
   useEffect(() => {
     const updateTime = () => {
@@ -71,6 +78,19 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
             <span>📱</span>
             <span className="hidden sm:inline">Social</span>
           </Link>
+        )}
+
+        {/* UPGRADE BUTTON - Show for trial/free users */}
+        {isTrialUser && tenantId && (
+          <button
+            onClick={() => router.push(`/client/${tenantId}/payments`)}
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 rounded-lg shadow-md transition-all hover:shadow-lg animate-pulse"
+            title="Upgrade to activate white-label & unlimited features"
+          >
+            <span>⭐</span>
+            <span className="hidden sm:inline">Upgrade Now</span>
+            <span className="sm:hidden">Go Pro</span>
+          </button>
         )}
         
         {/* Dark Mode Toggle */}

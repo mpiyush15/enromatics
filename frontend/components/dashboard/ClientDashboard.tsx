@@ -41,6 +41,8 @@ export default function ClientDashboard({
           userName={userName}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           isAdmin={isAdmin}
+          user={user}
+          tenantId={user?.tenantId}
         />
         {/* Scrollable content area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
