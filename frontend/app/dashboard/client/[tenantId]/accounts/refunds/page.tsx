@@ -1,13 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface Refund {
+  _id: string;
+  studentId: any;
+  amount: number;
+  reason: string;
+  refundMethod: string;
+  originalPaymentId?: string;
+  remarks?: string;
+  status: string;
+  createdAt: string;
+  refundDate?: string;
+  receiptNumber?: string;
+}
+
+interface RefundsResponse {
+  success: boolean;
+  refunds: Refund[];
+}
+
+interface StudentsResponse {
+  success: boolean;
+  students: any[];
+}
 
 export default function RefundsPage() {
-  const { tenantId } = useParams();
-  const [refunds, setRefunds] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState({
@@ -19,47 +42,24 @@ export default function RefundsPage() {
     remarks: ""
   });
 
-  const fetchRefunds = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (statusFilter) params.append("status", statusFilter);
+  // Build query string for SWR
+  const refundsQueryParams = new URLSearchParams();
+  if (statusFilter) refundsQueryParams.set("status", statusFilter);
+  
+  const refundsUrl = `/api/accounts/refunds${refundsQueryParams.toString() ? `?${refundsQueryParams.toString()}` : ""}`;
 
-      // Use BFF route with caching
-      const res = await fetch(`/api/accounts/refunds?${params.toString()}`, {
-        credentials: "include"
-      });
+  // ✅ SWR: Auto-caching refunds with dynamic status filter
+  const { data: refundsResponse, isLoading: loading, mutate } = useDashboardData<RefundsResponse>(
+    tenantId ? refundsUrl : null
+  );
 
-      const data = await res.json();
-      if (data.success) {
-        setRefunds(data.refunds);
-      }
-    } catch (err) {
-      console.error("Failed to fetch refunds:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ✅ SWR: Auto-caching students for the dropdown
+  const { data: studentsResponse, isLoading: studentsLoading } = useDashboardData<StudentsResponse>(
+    tenantId ? `/api/students?limit=1000` : null
+  );
 
-  const fetchStudents = async () => {
-    try {
-      // Use BFF route with caching
-      const res = await fetch(`/api/students?limit=1000`, {
-        credentials: "include"
-      });
-      const data = await res.json();
-      if (data.success) {
-        setStudents(data.students);
-      }
-    } catch (err) {
-      console.error("Failed to fetch students:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchRefunds();
-    fetchStudents();
-  }, [statusFilter]);
+  const refunds = refundsResponse?.refunds || [];
+  const students = studentsResponse?.students || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +87,7 @@ export default function RefundsPage() {
           originalPaymentId: "",
           remarks: ""
         });
-        fetchRefunds();
+        mutate();
       } else {
         alert("❌ " + (data.message || "Failed to create refund"));
       }
@@ -117,7 +117,7 @@ export default function RefundsPage() {
       const data = await res.json();
       if (data.success) {
         alert("✅ Refund status updated!");
-        fetchRefunds();
+        mutate();
       } else {
         alert("❌ " + (data.message || "Failed to update status"));
       }
@@ -356,7 +356,7 @@ export default function RefundsPage() {
                       }`}
                     >
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        {new Date(refund.refundDate).toLocaleDateString()}
+                        {refund.refundDate ? new Date(refund.refundDate).toLocaleDateString() : new Date(refund.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">

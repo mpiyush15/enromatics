@@ -1,69 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface OverviewResponse {
+  success: boolean;
+  overview: {
+    totalIncome: number;
+    totalExpenses: number;
+    balance: number;
+    [key: string]: any;
+  };
+  expensesByCategory: Record<string, number>;
+  recentPayments: any[];
+}
 
 export default function AccountsOverviewPage() {
-  const { tenantId } = useParams();
-  const [overview, setOverview] = useState<any>(null);
-  const [expensesByCategory, setExpensesByCategory] = useState<any>({});
-  const [recentPayments, setRecentPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [dateFilter, setDateFilter] = useState({
     startDate: "",
     endDate: ""
   });
 
-  const fetchOverview = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams();
-      if (dateFilter.startDate) params.append("startDate", dateFilter.startDate);
-      if (dateFilter.endDate) params.append("endDate", dateFilter.endDate);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  if (dateFilter.startDate) queryParams.set("startDate", dateFilter.startDate);
+  if (dateFilter.endDate) queryParams.set("endDate", dateFilter.endDate);
+  
+  const overviewUrl = `/api/accounts/overview${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
-      // Use BFF route with caching
-      // BFF layer handles 5-minute cache
-      const res = await fetch(`/api/accounts/overview?${params.toString()}`, {
-        method: 'GET',
-        credentials: "include",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // ✅ SWR: Auto-caching accounts overview with dynamic date filters
+  const { data: response, isLoading: loading, error } = useDashboardData<OverviewResponse>(
+    tenantId ? overviewUrl : null
+  );
 
-      // Check cache header from BFF
-      const cacheHit = res.headers.get('X-Cache');
-      if (cacheHit) {
-        setCacheStatus(cacheHit as 'HIT' | 'MISS');
-      }
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      if (data.success) {
-        setOverview(data.overview);
-        setExpensesByCategory(data.expensesByCategory);
-        setRecentPayments(data.recentPayments);
-      } else {
-        setError(data.message || 'Failed to load overview data');
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch overview:", err);
-      setError(err.message || 'An error occurred while fetching data');
-    } finally {
-      setLoading(false);
-    }
+  const overview = response?.overview || {
+    totalIncome: 0,
+    totalExpenses: 0,
+    balance: 0,
   };
-
-  useEffect(() => {
-    fetchOverview();
-  }, [dateFilter]);
+  const expensesByCategory = response?.expensesByCategory || {};
+  const recentPayments = response?.recentPayments || [];
+  const errorMessage = error?.message || null;
 
   if (loading) {
     return (
@@ -78,19 +59,14 @@ export default function AccountsOverviewPage() {
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-red-50 dark:bg-red-900 rounded-2xl shadow-lg p-8 border-l-4 border-red-600">
             <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">Error Loading Data</h2>
-            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
-            <button
-              onClick={() => fetchOverview()}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-            >
-              Retry
-            </button>
+            <p className="text-red-700 dark:text-red-300 mb-4">{errorMessage}</p>
+            <p className="text-red-700 dark:text-red-300 text-sm">Please try refreshing the page</p>
           </div>
         </div>
       </div>

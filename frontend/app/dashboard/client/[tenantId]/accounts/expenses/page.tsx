@@ -1,12 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface Expense {
+  _id: string;
+  category: string;
+  amount: number;
+  date: string;
+  description: string;
+  paymentMethod: string;
+  paidTo: string;
+  invoiceNumber?: string;
+  remarks?: string;
+  status: string;
+}
+
+interface ExpensesResponse {
+  success: boolean;
+  expenses: Expense[];
+}
 
 export default function ExpensesPage() {
-  const { tenantId } = useParams();
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [showForm, setShowForm] = useState(false);
   const [filters, setFilters] = useState({
     category: "",
@@ -40,34 +58,21 @@ export default function ExpensesPage() {
     { value: "other", label: "📋 Other", icon: "📋" }
   ];
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (filters.category) params.append("category", filters.category);
-      if (filters.startDate) params.append("startDate", filters.startDate);
-      if (filters.endDate) params.append("endDate", filters.endDate);
-      if (filters.status) params.append("status", filters.status);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  if (filters.category) queryParams.set("category", filters.category);
+  if (filters.startDate) queryParams.set("startDate", filters.startDate);
+  if (filters.endDate) queryParams.set("endDate", filters.endDate);
+  if (filters.status) queryParams.set("status", filters.status);
+  
+  const expensesUrl = `/api/accounts/expenses${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
-      // Use BFF route with caching
-      const res = await fetch(`/api/accounts/expenses?${params.toString()}`, {
-        credentials: "include"
-      });
+  // ✅ SWR: Auto-caching expenses with dynamic filters
+  const { data: response, isLoading: loading, mutate } = useDashboardData<ExpensesResponse>(
+    tenantId ? expensesUrl : null
+  );
 
-      const data = await res.json();
-      if (data.success) {
-        setExpenses(data.expenses);
-      }
-    } catch (err) {
-      console.error("Failed to fetch expenses:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchExpenses();
-  }, [filters]);
+  const expenses = response?.expenses || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +103,7 @@ export default function ExpensesPage() {
           remarks: "",
           status: "paid"
         });
-        fetchExpenses();
+        mutate();
       } else {
         alert("❌ " + (data.message || "Failed to record expense"));
       }
