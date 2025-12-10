@@ -281,8 +281,28 @@ export const verifySubscriptionPayment = async (req, res) => {
           currency: 'INR',
           invoiceNumber: nextInvoiceNumber
         };
+        tenant.paid_status = true; // Mark as paid
         await tenant.save();
         console.log('Updated tenant subscription:', tenant.tenantId, 'Plan:', tenant.plan, 'Invoice:', nextInvoiceNumber);
+
+        // Also update SubscriptionPayment record status to 'success' if it exists
+        try {
+          const existingPayment = await SubscriptionPayment.findOne({
+            gatewayOrderId: order.order_id
+          });
+          
+          if (existingPayment) {
+            existingPayment.status = 'success';
+            existingPayment.paidAt = new Date();
+            existingPayment.planKey = planId;
+            existingPayment.planName = plan.name || planId;
+            existingPayment.notes = `Status updated via verify endpoint - ${new Date().toISOString()}`;
+            await existingPayment.save();
+            console.log('Updated payment record to success:', order.order_id);
+          }
+        } catch (paymentErr) {
+          console.error('Failed to update payment record:', paymentErr?.message);
+        }
 
         // Trigger provisioning after verify success as well
         try {
@@ -1323,6 +1343,130 @@ export const reconcileFailedPayments = async (req, res) => {
   } catch (err) {
     console.error('Payment reconciliation error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Sync Payment Status from Cashfree
+ * Manually check Cashfree and update payment status in database
+ * Useful if webhook wasn't received
+ */
+export const syncPaymentStatusFromCashfree = async (req, res) => {
+  try {
+    const { orderId } = req.query;
+
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID is required' });
+    }
+
+    // Find pending payment in database
+    const payment = await SubscriptionPayment.findOne({
+      gatewayOrderId: orderId
+    });
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment record not found' });
+    }
+
+    // Query Cashfree for actual status
+    const axios = await import('axios').then(m => m.default);
+    const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+    const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+    const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+
+    const apiResponse = await axios.get(
+      `${CASHFREE_BASE_URL}/orders/${orderId}`,
+      {
+        headers: {
+          'x-client-id': CASHFREE_CLIENT_ID,
+          'x-client-secret': CASHFREE_CLIENT_SECRET,
+          'x-api-version': '2023-08-01'
+        }
+      }
+    );
+
+    const cashfreeOrder = apiResponse.data;
+    const orderStatus = cashfreeOrder.order_status;
+
+    console.log(`Syncing payment status - Order: ${orderId}, Status from Cashfree: ${orderStatus}`);
+
+    // Update payment status based on Cashfree response
+    if (orderStatus === 'PAID') {
+      payment.status = 'success';
+      payment.paidAt = new Date();
+      payment.notes = `Payment status synced from Cashfree - PAID on ${new Date().toISOString()}`;
+      await payment.save();
+
+      // Also update tenant subscription
+      const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+      if (tenant && tenant.subscription) {
+        tenant.subscription.status = 'active';
+        tenant.paid_status = true;
+        await tenant.save();
+        console.log(`Tenant ${tenant.tenantId} subscription updated to active`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment status updated to SUCCESS',
+        orderStatus: 'PAID',
+        paymentStatus: 'success',
+        orderId,
+        amount: payment.amount,
+        tenantId: payment.tenantId
+      });
+    } else if (orderStatus === 'FAILED' || orderStatus === 'CANCELLED') {
+      payment.status = 'failed';
+      payment.notes = `Payment status synced from Cashfree - ${orderStatus} on ${new Date().toISOString()}`;
+      await payment.save();
+
+      // Reset tenant paid status
+      const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+      if (tenant) {
+        tenant.paid_status = false;
+        if (tenant.subscription) {
+          tenant.subscription.status = 'inactive';
+          tenant.subscription.pendingPlan = null;
+        }
+        await tenant.save();
+        console.log(`Tenant ${tenant.tenantId} paid_status reset to false`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment status updated to FAILED',
+        orderStatus,
+        paymentStatus: 'failed',
+        orderId,
+        amount: payment.amount,
+        tenantId: payment.tenantId
+      });
+    } else if (orderStatus === 'ACTIVE' || orderStatus === 'PENDING') {
+      // Still processing
+      return res.status(200).json({
+        success: true,
+        message: 'Payment is still being processed',
+        orderStatus,
+        paymentStatus: 'pending',
+        orderId,
+        amount: payment.amount,
+        tenantId: payment.tenantId
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Payment status: ${orderStatus}`,
+      orderStatus,
+      orderId,
+      paymentStatus: payment.status
+    });
+  } catch (err) {
+    console.error('Sync payment status error:', err?.message || err);
+    res.status(500).json({ 
+      message: 'Failed to sync payment status',
+      error: err?.message 
+    });
   }
 };
 

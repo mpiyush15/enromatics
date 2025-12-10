@@ -13,7 +13,8 @@ import {
   downloadInvoice,
   sendInvoiceEmail,
   triggerAutoCancelPendingPayments,
-  reconcileFailedPayments
+  reconcileFailedPayments,
+  syncPaymentStatusFromCashfree
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -27,6 +28,8 @@ const router = express.Router();
 router.post("/initiate-subscription", initiateSubscriptionPayment);
 // Verify subscription payment status
 router.get("/verify-subscription", verifySubscriptionPayment);
+// Sync payment status from Cashfree (manual check if webhook wasn't received)
+router.get("/sync-status", syncPaymentStatusFromCashfree);
 // Cashfree webhook for payment status updates
 router.post("/webhook/cashfree", cashfreeSubscriptionWebhook);
 
