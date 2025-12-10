@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Call backend to save branding
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tenants/${tenantId}/branding`;
+    const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+    const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/${tenantId}/branding`;
     const options = buildBackendFetchOptions(req, 'POST', {
       branding: {
         logoUrl,
@@ -27,7 +28,16 @@ export async function POST(req: NextRequest) {
     const res = await fetch(backendUrl, options);
 
     if (!res.ok) {
-      const error = await res.json();
+      let error;
+      const contentType = res.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        error = await res.json();
+      } else {
+        const text = await res.text();
+        console.error('Backend returned non-JSON:', text.substring(0, 500));
+        error = { error: `Backend error (${res.status}): ${text.substring(0, 100)}` };
+      }
+      console.error('Save branding backend error:', error);
       return NextResponse.json(error, { status: res.status });
     }
 
