@@ -38,11 +38,11 @@ const tenantSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
 
-    // Plan type: free, pro, enterprise
+    // Plan type: trial, starter, professional, enterprise
     plan: {
       type: String,
-      enum: ["free", "trial", "test", "basic", "starter", "professional", "pro", "enterprise"],
-      default: "free",
+      enum: ["trial", "starter", "professional", "enterprise"],
+      default: "trial",
     },
 
     // Subscription details for the plan

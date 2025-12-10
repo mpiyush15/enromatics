@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema(
     // Subscription/Trial fields
     plan: {
       type: String,
-      enum: ["trial", "free", "test", "starter", "professional", "enterprise"],
+      enum: ["trial", "starter", "professional", "enterprise"],
       default: "trial",
     },
 

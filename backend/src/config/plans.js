@@ -3,11 +3,11 @@
 // Each plan has monthly and annual pricing (all set to Rs 10 for testing)
 export const PLANS = [
   {
-    id: 'test',
-    name: 'Test Plan',
-    priceMonthly: 10,
-    priceAnnual: 10,
-    description: 'Test plan for payment verification',
+    id: 'trial',
+    name: 'Trial',
+    priceMonthly: 0,
+    priceAnnual: 0,
+    description: 'Free trial plan - 14 days',
   },
   {
     id: 'starter',

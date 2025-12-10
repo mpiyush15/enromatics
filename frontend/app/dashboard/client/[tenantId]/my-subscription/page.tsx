@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +58,17 @@ interface UpgradePlan {
 
 export default function MySubscriptionPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const tenantId = params?.tenantId as string;
+  
+  // Redirect SuperAdmin to their own analytics dashboard, not tenant pages
+  useEffect(() => {
+    if (!authLoading && user?.role === 'SuperAdmin') {
+      router.push('/dashboard');
+      return;
+    }
+  }, [user?.role, authLoading, router]);
   
   const [loading, setLoading] = useState(true);
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
@@ -271,7 +282,7 @@ export default function MySubscriptionPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -279,6 +290,11 @@ export default function MySubscriptionPage() {
         </div>
       </div>
     );
+  }
+
+  // Don't render if SuperAdmin (already redirecting in useEffect)
+  if (user?.role === 'SuperAdmin') {
+    return null;
   }
 
   const subscription = tenant?.subscription;
