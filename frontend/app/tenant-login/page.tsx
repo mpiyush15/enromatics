@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, LogIn } from 'lucide-react';
 
@@ -11,7 +11,7 @@ interface TenantBranding {
   whatsappNumber?: string;
 }
 
-export default function TenantLoginPage() {
+function TenantLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
@@ -265,5 +265,20 @@ export default function TenantLoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function TenantLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading portal...</p>
+        </div>
+      </div>
+    }>
+      <TenantLoginContent />
+    </Suspense>
   );
 }

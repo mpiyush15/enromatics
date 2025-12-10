@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LogOut, Settings, BarChart3, Users, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -19,7 +19,7 @@ interface DashboardData {
   activeUsers: number;
 }
 
-export default function TenantDashboardPage() {
+function TenantDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subdomain = searchParams?.get('subdomain') || '';
@@ -301,5 +301,20 @@ function QuickActionButton({
       </div>
       <span className="text-sm font-semibold text-gray-900 dark:text-white">{label}</span>
     </a>
+  );
+}
+
+export default function TenantDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your dashboard...</p>
+        </div>
+      </div>
+    }>
+      <TenantDashboardContent />
+    </Suspense>
   );
 }

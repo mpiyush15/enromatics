@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, CheckCircle, Upload, Palette, MessageCircle, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -14,7 +14,7 @@ interface BrandingData {
   whatsappNumber?: string;
 }
 
-export default function WhiteablOnboardingPage() {
+function WhiteablOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tenantId = searchParams?.get('tenantId') || '';
@@ -484,5 +484,20 @@ export default function WhiteablOnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WhiteablOnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your branding setup...</p>
+        </div>
+      </div>
+    }>
+      <WhiteablOnboardingContent />
+    </Suspense>
   );
 }
