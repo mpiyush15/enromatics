@@ -5,6 +5,7 @@
 
 import Tenant from "../models/Tenant.js";
 import User from "../models/User.js";
+import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import crypto from "crypto";
 import {
   sendTenantRegistrationEmail,
@@ -773,6 +774,60 @@ export const authenticateTenantUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // Check payment status if tenant has pending or active subscription
+    let paymentStatus = null;
+    if (tenant.subscription?.status === 'pending') {
+      paymentStatus = 'pending';
+    } else if (tenant.subscription?.paymentId) {
+      // Check latest payment record
+      const latestPayment = await SubscriptionPayment.findOne({
+        tenantId: tenant.tenantId
+      }).sort({ createdAt: -1 });
+      
+      if (latestPayment) {
+        paymentStatus = latestPayment.status;
+      }
+    }
+
+    // If payment is pending - show error and don't allow login
+    if (paymentStatus === 'pending') {
+      return res.status(402).json({ 
+        success: false,
+        message: "Your payment is still being processed. Please wait and try again in a few moments.",
+        paymentStatus: 'pending',
+        suggestion: "Your payment is under process. Do not refresh the page. Please check back shortly."
+      });
+    }
+
+    // If payment failed - allow login but show failed message
+    if (paymentStatus === 'failed') {
+      return res.status(200).json({
+        success: true,
+        message: "Login successful but payment failed",
+        token: user.getSignedJwt(),
+        tenantId: tenant.tenantId,
+        paymentStatus: 'failed',
+        tenant: {
+          tenantId: tenant.tenantId,
+          name: tenant.name,
+          instituteName: tenant.instituteName,
+          email: tenant.email,
+          plan: tenant.plan,
+          paid_status: false, // Reset paid status
+          onboarding_completed: tenant.onboarding_completed || false,
+          subdomain: tenant.subdomain,
+        },
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenantId,
+        },
+        redirectTo: 'dashboard' // Go to free dashboard
+      });
+    }
+
     // Generate JWT token
     const token = user.getSignedJwt();
 
@@ -801,6 +856,102 @@ export const authenticateTenantUser = async (req, res) => {
     });
   } catch (err) {
     console.error("Tenant Authentication Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 17. Poll Payment Status (Auto-Check every 10 minutes)
+   GET /api/tenants/:tenantId/payment-status
+   Check latest payment status from Cashfree
+================================================================ */
+export const pollPaymentStatus = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    // Find latest payment for this tenant
+    const latestPayment = await SubscriptionPayment.findOne({
+      tenantId
+    }).sort({ createdAt: -1 });
+
+    if (!latestPayment) {
+      return res.status(404).json({ 
+        message: "No payment found",
+        status: 'no-payment'
+      });
+    }
+
+    // If payment is already resolved (success/failed), just return it
+    if (latestPayment.status === 'success' || latestPayment.status === 'failed') {
+      return res.status(200).json({
+        success: true,
+        paymentStatus: latestPayment.status,
+        orderId: latestPayment.gatewayOrderId,
+        amount: latestPayment.amount,
+        planName: latestPayment.planName,
+        message: latestPayment.status === 'success' ? 'Payment successful!' : 'Payment failed',
+        createdAt: latestPayment.createdAt,
+        paidAt: latestPayment.paidAt,
+        notes: latestPayment.notes
+      });
+    }
+
+    // If still pending, check Cashfree API for latest status
+    if (latestPayment.status === 'pending') {
+      try {
+        const axios = await import('axios').then(m => m.default);
+        const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+        const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+        const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+
+        const apiResponse = await axios.get(
+          `${CASHFREE_BASE_URL}/orders/${latestPayment.gatewayOrderId}`,
+          {
+            headers: {
+              'x-client-id': CASHFREE_CLIENT_ID,
+              'x-client-secret': CASHFREE_CLIENT_SECRET,
+              'x-api-version': '2023-08-01'
+            }
+          }
+        );
+
+        const cashfreeOrder = apiResponse.data;
+        console.log('Payment Status Poll - Order Status:', cashfreeOrder.order_status, 'Order ID:', latestPayment.gatewayOrderId);
+
+        // Return current status from Cashfree
+        return res.status(200).json({
+          success: true,
+          paymentStatus: cashfreeOrder.order_status,
+          orderId: latestPayment.gatewayOrderId,
+          amount: latestPayment.amount,
+          planName: latestPayment.planName,
+          message: `Payment status: ${cashfreeOrder.order_status}`,
+          createdAt: latestPayment.createdAt,
+          checkCount: latestPayment.statusCheckCount || 0
+        });
+      } catch (apiErr) {
+        console.error('Cashfree API check error:', apiErr?.message);
+        // Return database status if API fails
+        return res.status(200).json({
+          success: false,
+          paymentStatus: latestPayment.status,
+          message: 'Could not verify with payment gateway, current status: pending',
+          orderId: latestPayment.gatewayOrderId
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      paymentStatus: latestPayment.status,
+      orderId: latestPayment.gatewayOrderId
+    });
+  } catch (err) {
+    console.error("Poll Payment Status Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

@@ -31,6 +31,8 @@ function SuccessContent() {
             checkIfNeedsOnboarding(data.order?.customer_details?.customer_id);
           } else if (status === 'ACTIVE' || status === 'PENDING') {
             setPaymentStatus('pending');
+            // Set up polling for pending payments (check every 10 seconds, max 10 minutes)
+            startPaymentPolling(data.order?.customer_details?.customer_id);
           } else {
             // CANCELLED, EXPIRED, TERMINATED, etc.
             setPaymentStatus('failed');
@@ -46,6 +48,38 @@ function SuccessContent() {
       setLoading(false);
     }
   }, [orderId]);
+
+  const startPaymentPolling = (tenantId: string) => {
+    let pollCount = 0;
+    const maxPolls = 60; // 60 polls × 10 seconds = 600 seconds = 10 minutes
+    const pollInterval = 10000; // 10 seconds
+
+    const pollTimer = setInterval(async () => {
+      pollCount++;
+      try {
+        const res = await fetch(`/api/tenants/${tenantId}/payment-status`);
+        const data = await res.json();
+
+        if (data.paymentStatus === 'success' || data.paymentStatus === 'PAID') {
+          setPaymentStatus('paid');
+          clearInterval(pollTimer);
+          // Redirect to onboarding
+          checkIfNeedsOnboarding(tenantId);
+        } else if (data.paymentStatus === 'failed') {
+          setPaymentStatus('failed');
+          clearInterval(pollTimer);
+        }
+
+        // Stop polling after max attempts
+        if (pollCount >= maxPolls) {
+          clearInterval(pollTimer);
+        }
+      } catch (err) {
+        console.error('Payment status polling error:', err);
+        // Continue polling despite errors
+      }
+    }, pollInterval);
+  };
 
   const checkIfNeedsOnboarding = async (customerId: string) => {
     try {

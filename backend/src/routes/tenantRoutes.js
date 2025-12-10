@@ -22,6 +22,7 @@ import {
   getTenantDashboard,
   authenticateTenantUser,
   uploadLogo,
+  pollPaymentStatus,
 } from "../controllers/tenantController.js";
 import {
   getPaymentHistory,
@@ -82,6 +83,16 @@ router.get(
 router.post(
   "/authenticate",
   authenticateTenantUser
+);
+
+/**
+ * @route   GET /api/tenants/:tenantId/payment-status
+ * @desc    Poll latest payment status from Cashfree (every 10 minutes)
+ * @access  Public (checks tenantId)
+ */
+router.get(
+  "/:tenantId/payment-status",
+  pollPaymentStatus
 );
 
 /**

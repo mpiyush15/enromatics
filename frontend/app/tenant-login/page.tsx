@@ -78,12 +78,27 @@ function TenantLoginContent() {
         }),
       });
 
+      // Check for pending payment (status 402)
+      if (res.status === 402) {
+        const data = await res.json();
+        setError(data.message || 'Your payment is still being processed. Please try again in a few moments.');
+        setSubmitting(false);
+        return;
+      }
+
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Login failed');
       }
 
       const data = await res.json();
+
+      // Check if payment failed
+      if (data.paymentStatus === 'failed') {
+        setError('Your previous payment failed. Please try again or contact support.');
+        setSubmitting(false);
+        return;
+      }
       
       // Store token and tenant info
       if (data.token) {
