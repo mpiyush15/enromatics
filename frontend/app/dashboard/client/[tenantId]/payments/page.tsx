@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Payment {
   _id: string;
@@ -32,42 +33,26 @@ interface Pagination {
   pages: number;
 }
 
+interface PaymentsResponse {
+  success: boolean;
+  payments: Payment[];
+  pagination: Pagination;
+}
+
 export default function PaymentHistoryPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
 
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (tenantId) {
-      fetchPayments();
-    }
-  }, [tenantId]);
+  // ✅ SWR: Auto-caching payment history
+  const { data: response, isLoading: loading, mutate } = useDashboardData<PaymentsResponse>(
+    tenantId ? `/api/tenants/${tenantId}/payments?page=${currentPage}&limit=10` : null
+  );
 
-  const fetchPayments = async (page = 1) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/tenants/${tenantId}/payments?page=${page}&limit=10`, {
-        credentials: "include",
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setPayments(data.payments || []);
-        setPagination(data.pagination);
-      } else {
-        toast.error("Failed to load payment history");
-      }
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      toast.error("Failed to load payment history");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const payments = response?.payments || [];
+  const pagination = response?.pagination || null;
 
   const handleDownloadInvoice = async (paymentId: string, invoiceNumber: string) => {
     try {
@@ -350,7 +335,7 @@ export default function PaymentHistoryPage() {
                 {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
-                    onClick={() => fetchPayments(page)}
+                    onClick={() => setCurrentPage(page)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                       page === pagination.page
                         ? "bg-blue-600 text-white"
