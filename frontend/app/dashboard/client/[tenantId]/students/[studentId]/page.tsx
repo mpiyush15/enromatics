@@ -1,67 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface StudentResponse {
+  success: boolean;
+  student: any;
+  payments: any[];
+  message?: string;
+}
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
-  const { tenantId, studentId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
+  const studentId = params?.studentId as string;
   const router = useRouter();
 
-  const [student, setStudent] = useState<any | null>(null);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
   const [status, setStatus] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "payments">("overview");
 
-  // Helper to get auth headers
+  // ✅ SWR: Auto-caching student profile data
+  const { data: response, isLoading: loading, error, mutate } = useDashboardData<StudentResponse>(
+    user && studentId ? `/api/students/${studentId}` : null
+  );
+
+  const student = response?.student || null;
+  const payments = response?.payments || [];
+
+  // Initialize form when student data loads
+  if (student && !form.name) {
+    setForm({
+      name: student.name || "",
+      email: student.email || "",
+      phone: student.phone || "",
+      gender: student.gender || "",
+      course: student.course || "",
+      batch: student.batch || "",
+      address: student.address || "",
+      fees: student.fees ?? 0,
+      status: student.status || "active",
+    });
+  }
+
+  // Helper to get auth headers (kept for PUT/POST requests)
   const getHeaders = (): HeadersInit => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const headers: HeadersInit = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     return headers;
   };
-
-  const fetchStudent = async () => {
-    try {
-      const res = await fetch(`/api/students/${studentId}`, {
-        method: "GET",
-        headers: getHeaders(),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setStudent(data.student);
-        setPayments(data.payments || []);
-        setForm({
-          name: data.student.name || "",
-          email: data.student.email || "",
-          phone: data.student.phone || "",
-          gender: data.student.gender || "",
-          course: data.student.course || "",
-          batch: data.student.batch || "",
-          address: data.student.address || "",
-          fees: data.student.fees ?? 0,
-          status: data.student.status || "active",
-        });
-      } else {
-        setStatus(data.message || "Failed to fetch student");
-      }
-    } catch (err: any) {
-      console.error(err);
-      setStatus(err.message || "Error fetching student");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!user) return;
-    fetchStudent();
-  }, [user, studentId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -77,7 +70,7 @@ export default function StudentProfilePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update student");
-      setStudent(data.student);
+      mutate(); // Refresh student data
       setEditing(false);
       setStatus("✅ Saved successfully!");
       setTimeout(() => setStatus(""), 3000);
@@ -120,7 +113,7 @@ export default function StudentProfilePage() {
       if (!res.ok) throw new Error(data.message || "Failed to add payment");
       setPaymentAmount("");
       setStatus("✅ Payment added successfully!");
-      fetchStudent();
+      mutate(); // Refresh student data including payments
       setTimeout(() => setStatus(""), 3000);
     } catch (err: any) {
       console.error(err);
@@ -139,7 +132,7 @@ export default function StudentProfilePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to delete");
       setStatus("✅ Payment deleted");
-      fetchStudent();
+      mutate(); // Refresh student data including payments
       setTimeout(() => setStatus(""), 3000);
     } catch (err: any) {
       console.error(err);
@@ -270,7 +263,7 @@ export default function StudentProfilePage() {
                     <button
                       onClick={() => {
                         setEditing(false);
-                        fetchStudent();
+                        mutate(); // Refresh to discard form changes
                       }}
                       className="px-6 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700 font-semibold transition-colors"
                     >

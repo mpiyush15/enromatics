@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Quota {
   current: number;
@@ -13,76 +14,52 @@ interface Quota {
   plan: string;
 }
 
+interface StudentsResponse {
+  success: boolean;
+  students: any[];
+  pages: number;
+  page: number;
+  quota?: Quota;
+  message?: string;
+}
+
 export default function StudentsPage() {
   const params = useParams();
   const router = useRouter();
   const tenantId = params?.tenantId as string;
   const { user } = useAuth();
-  const [students, setStudents] = useState<any[]>([]);
+  
+  // Filter states
   const [batchFilter, setBatchFilter] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [rollFilter, setRollFilter] = useState("");
   const [feesStatus, setFeesStatus] = useState("all");
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  
+  // Upload modal states
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState<any>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
-  const [quota, setQuota] = useState<Quota | null>(null);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const params = new URLSearchParams();
-        params.set("page", String(page));
-        params.set("limit", "10");
-        if (batchFilter) params.set("batch", batchFilter);
-        if (courseFilter) params.set("course", courseFilter);
-        if (rollFilter) params.set("rollNumber", rollFilter);
-        if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  queryParams.set("page", String(page));
+  queryParams.set("limit", "10");
+  if (batchFilter) queryParams.set("batch", batchFilter);
+  if (courseFilter) queryParams.set("course", courseFilter);
+  if (rollFilter) queryParams.set("rollNumber", rollFilter);
+  if (feesStatus && feesStatus !== "all") queryParams.set("feesStatus", feesStatus);
 
-        // Use BFF route instead of direct Express call
-        const res = await fetch(`/api/students?${params.toString()}`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+  // ✅ SWR: Auto-caching with dynamic query
+  const { data: response, isLoading: loading, error, mutate } = useDashboardData<StudentsResponse>(
+    `/api/students?${queryParams.toString()}`
+  );
 
-        // Check cache header from BFF
-        const cacheHit = res.headers.get('X-Cache');
-        if (cacheHit) {
-          setCacheStatus(cacheHit as 'HIT' | 'MISS');
-        }
-
-        const data = await res.json();
-        if (data.success) {
-          setStudents(data.students || []);
-          setPages(data.pages || 1);
-          setPage(data.page || 1);
-          // Update quota info
-          if (data.quota) {
-            setQuota(data.quota);
-          }
-        } else {
-          setError(data.message || "Failed to fetch students");
-        }
-      } catch (err: any) {
-        console.error("Fetch error:", err);
-        setError(err.message || "Error fetching students");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, [page, batchFilter, courseFilter, rollFilter, feesStatus]);
+  const students = response?.students || [];
+  const pages = response?.pages || 1;
+  const quota = response?.quota || null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -131,19 +108,9 @@ export default function StudentsPage() {
       
       if (data.success) {
         setUploadResults(data.results);
-        // Refresh student list via BFF
-        const params = new URLSearchParams();
-        params.set("page", "1");
-        params.set("limit", "10");
-        
-        const refreshRes = await fetch(`/api/students?${params.toString()}`, {
-          method: "GET",
-          credentials: "include",
-        });
-        const refreshData = await refreshRes.json();
-        if (refreshData.success) {
-          setStudents(refreshData.students || []);
-        }
+        // Refresh student list via SWR mutate
+        setPage(1);
+        mutate(); // Revalidate SWR cache
       } else {
         alert(data.message || "Upload failed");
       }
@@ -328,7 +295,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
         {/* Error Message */}
         {error && (
           <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-700 p-4 rounded-xl shadow-md">
-            <p className="font-medium">❌ {error}</p>
+            <p className="font-medium">❌ {error.message}</p>
           </div>
         )}
 
