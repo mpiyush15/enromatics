@@ -781,6 +781,16 @@ export const authenticateTenantUser = async (req, res) => {
       message: "Login successful",
       token,
       tenantId: tenant.tenantId,
+      tenant: {
+        tenantId: tenant.tenantId,
+        name: tenant.name,
+        instituteName: tenant.instituteName,
+        email: tenant.email,
+        plan: tenant.plan,
+        paid_status: tenant.paid_status || false,
+        onboarding_completed: tenant.onboarding_completed || false,
+        subdomain: tenant.subdomain,
+      },
       user: {
         _id: user._id,
         email: user.email,

@@ -91,8 +91,14 @@ function TenantLoginContent() {
         localStorage.setItem('tenantId', data.tenantId);
       }
 
-      // Redirect to tenant dashboard
-      router.push(`/tenant-dashboard?subdomain=${subdomain}`);
+      // If tenant has paid and has paid_status=true, redirect to onboarding (not completed yet)
+      // Otherwise redirect to dashboard
+      if (data.tenant?.paid_status === true && !data.tenant?.onboarding_completed) {
+        router.push(`/onboarding/whitelabel?subdomain=${subdomain}&tenantId=${data.tenantId}`);
+      } else {
+        // Redirect to tenant dashboard
+        router.push(`/tenant-dashboard?subdomain=${subdomain}`);
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');

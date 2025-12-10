@@ -21,8 +21,8 @@ import {
 import { toast } from "sonner";
 import { subscriptionPlans } from "@/data/plans";
 
-// Plan hierarchy for filtering
-const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
+// Plan hierarchy for filtering (must match backend enum values)
+const PLAN_HIERARCHY = ["trial", "free", "starter", "professional", "enterprise"];
 
 interface SubscriptionInfo {
   plan: string;

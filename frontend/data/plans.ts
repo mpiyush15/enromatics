@@ -29,8 +29,8 @@ export const subscriptionPlans = [
     },
   },
   {
-    id: "basic",
-    name: "Basic",
+    id: "starter",
+    name: "Starter",
     monthlyPrice: 999, // Update with actual pricing
     annualPrice: 9999,
     description: "Perfect for small coaching institutes",
@@ -46,7 +46,7 @@ export const subscriptionPlans = [
       "✓ Secure video delivery",
     ],
     highlightFeatures: ["50 Students", "10 GB Storage", "Basic Features"],
-    buttonLabel: "Subscribe to Basic",
+    buttonLabel: "Subscribe to Starter",
     popular: false,
     quotas: {
       students: 50,
@@ -56,8 +56,8 @@ export const subscriptionPlans = [
     },
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: "professional",
+    name: "Professional",
     monthlyPrice: 1999, // Update with actual pricing
     annualPrice: 19999,
     description: "For growing educational institutions",
@@ -76,7 +76,7 @@ export const subscriptionPlans = [
       "✓ PYQ module",
     ],
     highlightFeatures: ["100 Students", "50 GB Storage", "AI Features"],
-    buttonLabel: "Subscribe to Pro",
+    buttonLabel: "Subscribe to Professional",
     popular: true,
     quotas: {
       students: 100,
