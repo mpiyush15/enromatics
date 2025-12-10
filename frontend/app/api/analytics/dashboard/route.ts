@@ -1,44 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * BFF Route: Forward analytics/dashboard requests to backend
- * 
- * Frontend calls: GET /api/analytics/dashboard
- * This forwards to: GET https://backend/api/analytics/dashboard
- */
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization');
+    // Try to get token from cookies first
+    let token = request.cookies.get("token")?.value;
+    
+    // If not in cookies, try to get from Authorization header
+    if (!token) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
+    }
 
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized - No token' },
+        { success: false, message: "Unauthorized - No token found" },
         { status: 401 }
       );
     }
 
-    const backendUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.enromatics.com'}/api/analytics/dashboard`;
+    const backendUrl = `${process.env.EXPRESS_BACKEND_URL}/api/analytics/dashboard`;
 
     const response = await fetch(backendUrl, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
+      cache: "no-store",
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      console.error('Backend analytics error:', response.status);
-      return NextResponse.json(data, { status: response.status });
-    }
-
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    console.error('Analytics BFF error:', error);
+    return NextResponse.json(data, { status: response.status });
+  } catch (error: any) {
+    console.error("BFF Analytics Error:", error);
     return NextResponse.json(
-      { success: false, message: 'Server error', error: (error as Error).message },
+      { success: false, message: "Server error", error: error.message },
       { status: 500 }
     );
   }
