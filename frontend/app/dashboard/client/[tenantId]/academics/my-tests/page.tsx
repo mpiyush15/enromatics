@@ -1,55 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface Test {
+  _id: string;
+  testId: {
+    _id: string;
+    name: string;
+    subject: string;
+    testDate: string;
+    testType: string;
+    totalMarks: number;
+  };
+  marksObtained: number;
+  percentage: number;
+  grade: string;
+  passed: boolean;
+  remarks?: string;
+}
+
+interface TestsResponse {
+  success: boolean;
+  tests: Test[];
+}
 
 export default function StudentMyTestsPage() {
   const router = useRouter();
-  const [student, setStudent] = useState<any>(null);
-  const [tests, setTests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("");
+  const { user } = useAuth();
+  const studentId = user?._id;
 
-  useEffect(() => {
-    fetchStudentTests();
-  }, []);
+  // ✅ SWR: Auto-caching student tests
+  const { data: response, isLoading: loading, error } = useDashboardData<TestsResponse>(
+    studentId ? `/api/academics/students/${studentId}/tests` : null
+  );
 
-  const fetchStudentTests = async () => {
-    try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      // Get current student info via BFF
-      const studentRes = await fetch(`/api/student-auth/me`, {
-        headers,
-      });
-      const studentData = await studentRes.json();
-      
-      if (!studentRes.ok) {
-        setTimeout(() => router.push("/student/login"), 800);
-        return;
-      }
-      
-      setStudent(studentData.student);
-
-      // Fetch test marks for this student via BFF
-      const testsRes = await fetch(
-        `/api/academics/students/${studentData.student._id}/tests`,
-        { headers }
-      );
-      const testsData = await testsRes.json();
-      
-      if (testsRes.ok) {
-        setTests(testsData.tests || []);
-      }
-    } catch (error) {
-      console.error("Error fetching tests:", error);
-      setStatus("❌ Failed to load test data");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tests = response?.tests || [];
+  const status = error ? "❌ Failed to load test data" : "";
 
   const getGradeColor = (grade: string) => {
     if (grade === "A+" || grade === "A") return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
@@ -81,11 +69,9 @@ export default function StudentMyTestsPage() {
         <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl p-8 text-white mb-6">
           <h1 className="text-4xl font-bold mb-2">📖 My Tests</h1>
           <p className="text-blue-100">View your test performance and results</p>
-          {student && (
+          {user && (
             <div className="mt-4 text-sm">
-              <p><strong>Name:</strong> {student.name}</p>
-              <p><strong>Roll No:</strong> {student.rollNumber}</p>
-              <p><strong>Course:</strong> {student.course} {student.batch && `- ${student.batch}`}</p>
+              <p><strong>Name:</strong> {user.name || user.email}</p>
             </div>
           )}
         </div>

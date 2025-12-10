@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Test {
   _id: string;
@@ -23,13 +24,16 @@ interface Test {
   };
 }
 
+interface SchedulesResponse {
+  success: boolean;
+  tests: Test[];
+}
+
 export default function TestSchedulesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const tenantId = params?.tenantId as string;
-  const [tests, setTests] = useState<Test[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTest, setEditingTest] = useState<Test | null>(null);
   const [status, setStatus] = useState("");
@@ -49,29 +53,19 @@ export default function TestSchedulesPage() {
     description: "",
   });
 
-  useEffect(() => {
-    if (user) fetchTests();
-  }, [user, filterCourse, filterStatus]);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  if (filterCourse) queryParams.set("course", filterCourse);
+  if (filterStatus) queryParams.set("status", filterStatus);
+  
+  const schedulesUrl = `/api/academics/tests${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
-  const fetchTests = async () => {
-    try {
-      let url = `/api/academics/tests`;
-      const params = new URLSearchParams();
-      if (filterCourse) params.append("course", filterCourse);
-      if (filterStatus) params.append("status", filterStatus);
-      if (params.toString()) url += `?${params.toString()}`;
+  // ✅ SWR: Auto-caching test schedules with dynamic filters
+  const { data: response, isLoading: loading, mutate } = useDashboardData<SchedulesResponse>(
+    user ? schedulesUrl : null
+  );
 
-      const res = await fetch(url, { credentials: "include" });
-      const data = await res.json();
-      if (res.ok) {
-        setTests(data.tests || []);
-      }
-    } catch (error) {
-      console.error("Error fetching tests:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tests = response?.tests || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +94,7 @@ export default function TestSchedulesPage() {
       setShowAddModal(false);
       setEditingTest(null);
       resetForm();
-      fetchTests();
+      mutate();
       setTimeout(() => setStatus(""), 3000);
     } catch (error: any) {
       console.error("Error submitting test:", error);
@@ -120,7 +114,7 @@ export default function TestSchedulesPage() {
       if (!res.ok) throw new Error("Failed to delete");
       
       setStatus("✅ Test deleted successfully");
-      fetchTests();
+      mutate();
       setTimeout(() => setStatus(""), 3000);
     } catch (error: any) {
       setStatus("❌ " + error.message);

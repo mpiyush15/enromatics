@@ -1,46 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { useDashboardData } from "@/hooks/useDashboardData";
+
+interface ReportsResponse {
+  success: boolean;
+  statistics: {
+    totalTests: number;
+    totalMarksRecords: number;
+    avgPercentage: number;
+    passPercentage: number;
+  };
+  topPerformers: any[];
+  subjectPerformance: any[];
+}
 
 export default function TestReportsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const tenantId = params?.tenantId as string;
-  const [loading, setLoading] = useState(true);
-  const [statistics, setStatistics] = useState<any>(null);
-  const [topPerformers, setTopPerformers] = useState<any[]>([]);
-  const [subjectPerformance, setSubjectPerformance] = useState<any[]>([]);
+  
   const [filterCourse, setFilterCourse] = useState("");
   const [filterBatch, setFilterBatch] = useState("");
 
-  useEffect(() => {
-    if (user) fetchReports();
-  }, [user, filterCourse, filterBatch]);
+  // Build query string for SWR
+  const queryParams = new URLSearchParams();
+  if (filterCourse) queryParams.set("course", filterCourse);
+  if (filterBatch) queryParams.set("batch", filterBatch);
+  
+  const reportUrl = `/api/academics/reports${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
-  const fetchReports = async () => {
-    try {
-      let url = `/api/academics/reports`;
-      const params = new URLSearchParams();
-      if (filterCourse) params.append("course", filterCourse);
-      if (filterBatch) params.append("batch", filterBatch);
-      if (params.toString()) url += `?${params.toString()}`;
+  // ✅ SWR: Auto-caching reports with dynamic filters
+  const { data: response, isLoading: loading } = useDashboardData<ReportsResponse>(
+    user ? reportUrl : null
+  );
 
-      const res = await fetch(url, { credentials: "include" });
-      const data = await res.json();
-      if (res.ok) {
-        setStatistics(data.statistics || {});
-        setTopPerformers(data.topPerformers || []);
-        setSubjectPerformance(data.subjectPerformance || []);
-      }
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-    } finally {
-      setLoading(false);
-    }
+  const statistics = response?.statistics || {
+    totalTests: 0,
+    totalMarksRecords: 0,
+    avgPercentage: 0,
+    passPercentage: 0,
   };
+  const topPerformers = response?.topPerformers || [];
+  const subjectPerformance = response?.subjectPerformance || [];
 
   if (loading) {
     return (

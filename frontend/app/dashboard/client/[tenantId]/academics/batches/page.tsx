@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Batch {
   _id: string;
@@ -15,16 +16,19 @@ interface Batch {
   createdAt: string;
 }
 
+interface BatchesResponse {
+  success: boolean;
+  batches: Batch[];
+  message?: string;
+}
+
 export default function BatchesPage() {
   const params = useParams();
-  const tenantId = params.tenantId as string;
+  const tenantId = params?.tenantId as string;
   
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [message, setMessage] = useState("");
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -35,33 +39,12 @@ export default function BatchesPage() {
     status: "active",
   });
 
-  useEffect(() => {
-    fetchBatches();
-  }, []);
+  // ✅ SWR: Auto-caching batches list
+  const { data: response, isLoading: loading, error, mutate } = useDashboardData<BatchesResponse>(
+    tenantId ? `/api/academics/batches` : null
+  );
 
-  const fetchBatches = async () => {
-    try {
-      // Use BFF route instead of direct Express call
-      const res = await fetch(`/api/academics/batches`, {
-        credentials: "include",
-      });
-      
-      // Check cache header from BFF
-      const cacheHit = res.headers.get('X-Cache');
-      if (cacheHit) {
-        setCacheStatus(cacheHit as 'HIT' | 'MISS');
-      }
-      
-      const data = await res.json();
-      if (data.success) {
-        setBatches(data.batches);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching batches:", error);
-      setLoading(false);
-    }
-  };
+  const batches = response?.batches || [];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -93,7 +76,7 @@ export default function BatchesPage() {
 
       if (data.success) {
         setMessage(editingBatch ? "✅ Batch updated!" : "✅ Batch created!");
-        fetchBatches();
+        mutate();
         resetForm();
         setShowModal(false);
       } else {
@@ -131,7 +114,7 @@ export default function BatchesPage() {
 
       if (data.success) {
         setMessage("✅ Batch deleted!");
-        fetchBatches();
+        mutate();
       } else {
         setMessage("❌ Delete failed");
       }
