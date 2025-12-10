@@ -523,14 +523,16 @@ export const checkOnboarding = async (req, res) => {
 
     // Tenant needs onboarding if:
     // 1. They have paid_status = true (paid customer)
-    // 2. They haven't set a subdomain yet (haven't completed onboarding)
-    const needsOnboarding = tenant.paid_status === true && !tenant.subdomain;
+    // 2. They haven't completed onboarding yet (onboarding_completed = false)
+    const needsOnboarding = tenant.paid_status === true && tenant.onboarding_completed !== true;
 
     res.status(200).json({
       success: true,
       needsOnboarding,
+      onboardingCompleted: tenant.onboarding_completed || false,
       hasBranding: !!tenant.subdomain,
       tenantId: tenant.tenantId,
+      subdomain: tenant.subdomain,
     });
   } catch (err) {
     console.error("Check Onboarding Error:", err);
@@ -634,6 +636,9 @@ export const saveBranding = async (req, res) => {
         tenant.branding.whatsappNumber = branding.whatsappNumber;
       }
     }
+
+    // Mark onboarding as completed when subdomain and branding are saved
+    tenant.onboarding_completed = true;
 
     await tenant.save();
 

@@ -130,6 +130,14 @@ const tenantSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Flag to indicate if tenant has completed onboarding workflow
+    // Set to true after subdomain, branding, and institute setup completed
+    onboarding_completed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     // Analytics and usage tracking (for future scaling)
     usage: {
       studentsCount: { type: Number, default: 0 },
