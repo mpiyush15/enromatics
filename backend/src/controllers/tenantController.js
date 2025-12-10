@@ -126,18 +126,22 @@ export const getTenantInfo = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      tenant: {
-        tenantId: tenant.tenantId,
-        name: tenant.name,
-        email: tenant.email,
-        plan: tenant.plan,
-        subscription: tenant.subscription,
-        active: tenant.active,
-        contact: tenant.contact,
-        usage: tenant.usage,
-        createdAt: tenant.createdAt,
-        updatedAt: tenant.updatedAt,
-      }
+      tenantId: tenant.tenantId,
+      name: tenant.name,
+      instituteName: tenant.instituteName,
+      email: tenant.email,
+      plan: tenant.plan,
+      subscription: tenant.subscription,
+      active: tenant.active,
+      contact: tenant.contact,
+      usage: tenant.usage,
+      createdAt: tenant.createdAt,
+      updatedAt: tenant.updatedAt,
+      // Include branding data for onboarding page
+      subdomain: tenant.subdomain,
+      branding: tenant.branding,
+      paid_status: tenant.paid_status,
+      onboarding_completed: tenant.onboarding_completed,
     });
   } catch (err) {
     console.error("Tenant Info Error:", err);
