@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Employee {
   _id: string;
@@ -22,11 +23,16 @@ interface Employee {
   };
 }
 
+interface EmployeesResponse {
+  success: boolean;
+  employees: Employee[];
+}
+
 export default function StaffManagementPage() {
   const router = useRouter();
   const params = useParams();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const tenantId = params?.tenantId as string;
+
   const [showModal, setShowModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -49,33 +55,12 @@ export default function StaffManagementPage() {
     },
   });
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+  // ✅ SWR: Auto-caching staff employees
+  const { data: response, isLoading: loading, mutate } = useDashboardData<EmployeesResponse>(
+    tenantId ? `/api/employees` : null
+  );
 
-  // Helper to get auth headers
-  const getHeaders = (): HeadersInit => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
-
-  const fetchEmployees = async () => {
-    try {
-      const res = await fetch(`/api/employees`, {
-        headers: getHeaders(),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEmployees(data.employees);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      setLoading(false);
-    }
-  };
+  const employees = response?.employees || [];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -106,7 +91,8 @@ export default function StaffManagementPage() {
 
       const res = await fetch(url, {
         method,
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
 
@@ -114,7 +100,7 @@ export default function StaffManagementPage() {
 
       if (data.success) {
         setMessage(editingEmployee ? "✅ Employee updated!" : "✅ Employee created!");
-        fetchEmployees();
+        mutate();
         resetForm();
         setShowModal(false);
       } else {
@@ -151,14 +137,15 @@ export default function StaffManagementPage() {
     try {
       const res = await fetch(`/api/employees/${id}`, {
         method: "DELETE",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
 
       const data = await res.json();
 
       if (data.success) {
         setMessage("✅ Employee deleted!");
-        fetchEmployees();
+        mutate();
       } else {
         setMessage("❌ Delete failed");
       }
@@ -231,7 +218,8 @@ export default function StaffManagementPage() {
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -242,7 +230,7 @@ export default function StaffManagementPage() {
       if (res.ok && data.success) {
         setMessage(`✅ ${data.message}`);
         setShowPasswordModal(false);
-        fetchEmployees();
+        mutate();
         setPassword("");
         setSelectedEmployee(null);
       } else {

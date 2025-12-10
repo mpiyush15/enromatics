@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface Staff {
   _id: string;
@@ -35,13 +36,17 @@ interface Quota {
   plan: string;
 }
 
+interface StaffResponse {
+  success: boolean;
+  staff: Staff[];
+  quota: Quota;
+}
+
 export default function StaffManagementPage() {
   const params = useParams();
   const router = useRouter();
   const tenantId = params?.tenantId as string;
 
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false); // For background refresh
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -50,7 +55,6 @@ export default function StaffManagementPage() {
   const [filterRole, setFilterRole] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [quota, setQuota] = useState<Quota | null>(null);
 
   const roles = [
     { value: "teacher", label: "Teacher" },
@@ -98,47 +102,18 @@ export default function StaffManagementPage() {
     return headers;
   };
 
-  useEffect(() => {
-    fetchStaff();
-  }, [filterRole, filterStatus, searchQuery]);
+  // ✅ SWR: Auto-caching staff members with dynamic filters
+  const queryParams = new URLSearchParams();
+  if (filterRole) queryParams.append("role", filterRole);
+  if (filterStatus) queryParams.append("status", filterStatus);
+  if (searchQuery) queryParams.append("search", searchQuery);
 
-  const fetchStaff = async (bustCache = false) => {
-    // Only show full loading spinner on initial load (when no data yet)
-    if (staff.length === 0) {
-      setLoading(true);
-    } else {
-      setIsRefreshing(true); // Background refresh indicator
-    }
-    
-    try {
-      const params = new URLSearchParams();
-      if (filterRole) params.append("role", filterRole);
-      if (filterStatus) params.append("status", filterStatus);
-      if (searchQuery) params.append("search", searchQuery);
-      if (bustCache) params.append("_t", Date.now().toString());
+  const { data: response, isLoading: loading, mutate } = useDashboardData<StaffResponse>(
+    tenantId ? `/api/staff?${queryParams.toString()}` : null
+  );
 
-      const res = await fetch(
-        `/api/staff?${params.toString()}`,
-        { 
-          headers: getHeaders(),
-          cache: bustCache ? 'no-store' : 'default'
-        }
-      );
-      const data = await res.json();
-      if (data.success) {
-        setStaff(data.staff);
-        // Update quota info
-        if (data.quota) {
-          setQuota(data.quota);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch staff:", err);
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
+  const staff = response?.staff || [];
+  const quota = response?.quota || null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +136,7 @@ export default function StaffManagementPage() {
         if (res.status === 402 && data.code === 'upgrade_required') {
           alert(`🚫 Staff Limit Reached!\n\nYou have ${data.current}/${data.cap} staff members.\nPlease upgrade your plan to add more staff.`);
           // Refresh quota
-          fetchStaff(true);
+          mutate();
           return;
         }
         
@@ -190,8 +165,8 @@ export default function StaffManagementPage() {
           employmentType: "fullTime",
           salary: { basic: 0, allowances: 0 },
         });
-        // Force fresh fetch after create/update
-        fetchStaff(true);
+        // Refresh data after create/update
+        mutate();
       } else {
         alert(`❌ Error\n\n${data.message || 'Failed to save staff'}`);
       }
@@ -210,14 +185,13 @@ export default function StaffManagementPage() {
     try {
       const res = await fetch(`/api/staff/${id}`, {
         method: "DELETE",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
       if (data.success) {
-        // Optimistic update - remove from UI immediately
-        setStaff(prev => prev.filter(s => s._id !== id));
-        // Also fetch fresh data
-        fetchStaff(true);
+        // Refresh data after delete
+        mutate();
       } else {
         alert(data.message || "Failed to delete staff");
       }
