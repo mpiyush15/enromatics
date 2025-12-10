@@ -1,11 +1,15 @@
 import useSWR from 'swr';
 
-// 🔒 SAFE API Fetcher - Handles auth cookies automatically
+// 🔒 SAFE API Fetcher - Handles auth cookies and tokens
 const safeFetcher = async (url: string) => {
+  // Get token from localStorage (where frontend stores it after login)
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  
   const response = await fetch(url, {
     credentials: 'include', // ✅ Include auth cookies (httpOnly)
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }), // ✅ Add Bearer token if available
     },
   });
 
