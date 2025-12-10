@@ -410,13 +410,22 @@ export const verifySubscriptionPayment = async (req, res) => {
 export const cashfreeSubscriptionWebhook = async (req, res) => {
   try {
     const event = req.body.event;
-    if (event === 'order.paid') {
-      const orderData = req.body.data.order;
+    const eventData = req.body.data;
+    
+    console.log(`=== WEBHOOK RECEIVED ===`);
+    console.log(`Event: ${event}`);
+    console.log(`Data:`, JSON.stringify(eventData, null, 2));
+    console.log(`=======================`);
+    
+    // Handle payment success events
+    if (['order.paid', 'payment_success', 'success_payment', 'transaction_wise_settlement_success'].includes(event)) {
+      console.log(`Processing payment success event: ${event}`);
+      const orderData = eventData.order || eventData;
       const orderId = orderData.order_id;
-      const tenantId = orderData.customer_details.customer_id;
-      const customerEmail = orderData.customer_details.customer_email;
+      const tenantId = orderData.customer_details?.customer_id || orderData.customerId;
+      const customerEmail = orderData.customer_details?.customer_email || orderData.email;
       const orderMeta = orderData.order_meta || {};
-      const orderAmount = orderData.order_amount || 0;
+      const orderAmount = orderData.order_amount || orderData.amount || 0;
       
       // Verify order status via Cashfree API (instead of signature)
       try {
@@ -628,11 +637,13 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           console.error('Portal ready email (webhook) failed:', e?.message || e);
         }
       }
-    } else if (event === 'order.failed' || event === 'order.cancelled') {
-      const orderData = req.body.data.order;
+    } else if (['order.failed', 'order.cancelled', 'payment_failed', 'failed_payment', 'settlement_failed', 'settlement_reversed'].includes(event)) {
+      // Handle payment failure events
+      console.log(`Processing payment failure event: ${event}`);
+      const orderData = eventData.order || eventData;
       const orderId = orderData.order_id;
-      const tenantId = orderData.customer_details.customer_id;
-      const orderAmount = orderData.order_amount || 0;
+      const tenantId = orderData.customer_details?.customer_id || orderData.customerId;
+      const orderAmount = orderData.order_amount || orderData.amount || 0;
       const orderMeta = orderData.order_meta || {};
       
       const tenant = await Tenant.findOne({ tenantId });
@@ -700,6 +711,11 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           html: `<p>Your payment for the upgrade was not successful. Your current subscription remains unchanged. Please try again when you're ready.</p>`
         });
       }
+    } else {
+      // Log all other webhook events for debugging
+      console.log(`Webhook event not yet handled: ${event}`);
+      console.log(`Event data:`, JSON.stringify(eventData, null, 2));
+      // Still return 200 to acknowledge receipt
     }
     res.status(200).json({ success: true });
   } catch (err) {
@@ -1467,6 +1483,116 @@ export const syncPaymentStatusFromCashfree = async (req, res) => {
       message: 'Failed to sync payment status',
       error: err?.message 
     });
+  }
+};
+
+/**
+ * Admin: Sync All Pending Payments from Cashfree
+ * SuperAdmin only - Updates all pending payments from Cashfree
+ */
+export const syncAllPendingPayments = async (req, res) => {
+  try {
+    // Find all pending payments
+    const pendingPayments = await SubscriptionPayment.find({
+      status: 'pending'
+    }).sort({ createdAt: -1 });
+
+    if (pendingPayments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No pending payments to sync',
+        totalProcessed: 0
+      });
+    }
+
+    const axios = await import('axios').then(m => m.default);
+    const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+    const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+    const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+
+    let successCount = 0;
+    let failedCount = 0;
+    const updates = [];
+
+    for (const payment of pendingPayments) {
+      try {
+        const apiResponse = await axios.get(
+          `${CASHFREE_BASE_URL}/orders/${payment.gatewayOrderId}`,
+          {
+            headers: {
+              'x-client-id': CASHFREE_CLIENT_ID,
+              'x-client-secret': CASHFREE_CLIENT_SECRET,
+              'x-api-version': '2023-08-01'
+            }
+          }
+        );
+
+        const cashfreeOrder = apiResponse.data;
+        const orderStatus = cashfreeOrder.order_status;
+
+        console.log(`Processing payment ${payment.gatewayOrderId}: Status=${orderStatus}`);
+
+        if (orderStatus === 'PAID') {
+          payment.status = 'success';
+          payment.paidAt = new Date();
+          payment.notes = `Bulk synced from Cashfree - PAID on ${new Date().toISOString()}`;
+          await payment.save();
+
+          // Update tenant
+          const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+          if (tenant) {
+            tenant.paid_status = true;
+            if (tenant.subscription) {
+              tenant.subscription.status = 'active';
+            }
+            await tenant.save();
+          }
+
+          successCount++;
+          updates.push({
+            orderId: payment.gatewayOrderId,
+            status: 'success',
+            tenantId: payment.tenantId
+          });
+        } else if (orderStatus === 'FAILED' || orderStatus === 'CANCELLED') {
+          payment.status = 'failed';
+          payment.notes = `Bulk synced from Cashfree - ${orderStatus} on ${new Date().toISOString()}`;
+          await payment.save();
+
+          const tenant = await Tenant.findOne({ tenantId: payment.tenantId });
+          if (tenant) {
+            tenant.paid_status = false;
+            if (tenant.subscription) {
+              tenant.subscription.status = 'inactive';
+            }
+            await tenant.save();
+          }
+
+          failedCount++;
+          updates.push({
+            orderId: payment.gatewayOrderId,
+            status: 'failed',
+            tenantId: payment.tenantId
+          });
+        }
+        // else: still pending, don't update
+      } catch (err) {
+        console.error(`Error syncing ${payment.gatewayOrderId}:`, err?.message);
+        failedCount++;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Synced ${successCount} successful and ${failedCount} failed payments`,
+      totalProcessed: successCount + failedCount,
+      successCount,
+      failedCount,
+      updates
+    });
+  } catch (err) {
+    console.error('Sync all payments error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
