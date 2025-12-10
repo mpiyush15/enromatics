@@ -89,6 +89,23 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
+      // First check if email already exists
+      const checkRes = await fetch(`/api/email/check-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists) {
+          setErrors({ submit: "⚠️ This email is already registered. Please login instead." });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Email is available, proceed with registration
       const res = await fetch(`/api/public/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
