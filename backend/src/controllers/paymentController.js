@@ -478,8 +478,9 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           invoiceNumber: nextInvoiceNumber,
           pendingPlan: null // Clear pending plan on success
         };
+        tenant.paid_status = true; // Mark as paid user for white-label/onboarding flow
         await tenant.save();
-        console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber);
+        console.log('Webhook: Updated tenant subscription:', tenant.tenantId, 'Plan:', planId, 'Invoice:', nextInvoiceNumber, 'Paid status: true');
 
         // Update existing pending payment to success (or create if not found)
         try {

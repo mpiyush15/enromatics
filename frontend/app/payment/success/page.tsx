@@ -14,6 +14,7 @@ function SuccessContent() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('loading');
+  const [shouldRedirectToOnboarding, setShouldRedirectToOnboarding] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -26,6 +27,8 @@ function SuccessContent() {
           const status = data.order?.order_status;
           if (status === 'PAID') {
             setPaymentStatus('paid');
+            // Check if this is a new tenant that needs onboarding
+            checkIfNeedsOnboarding(data.order?.customer_details?.customer_id);
           } else if (status === 'ACTIVE' || status === 'PENDING') {
             setPaymentStatus('pending');
           } else {
@@ -43,6 +46,25 @@ function SuccessContent() {
       setLoading(false);
     }
   }, [orderId]);
+
+  const checkIfNeedsOnboarding = async (customerId: string) => {
+    try {
+      // Check if tenant has completed onboarding (has paid_status = true but no subdomain configured yet)
+      const res = await fetch(`/api/tenant/check-onboarding?tenantId=${customerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.needsOnboarding) {
+          setShouldRedirectToOnboarding(true);
+          // Redirect after 2 seconds to let user see success message
+          setTimeout(() => {
+            window.location.href = `/onboarding/whitelabel?tenantId=${customerId}`;
+          }, 2000);
+        }
+      }
+    } catch (err) {
+      console.error('Check onboarding status error:', err);
+    }
+  };
 
   const downloadInvoice = () => {
     if (!orderDetails) return;
@@ -274,6 +296,35 @@ function SuccessContent() {
   }
 
   // Payment successful (paymentStatus === 'paid')
+  if (shouldRedirectToOnboarding) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
+            </div>
+
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Payment Successful!
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Redirecting you to set up your branded portal...
+            </p>
+
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin" />
+            </div>
+
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-8">
+              This will only take a moment
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-950 flex items-center justify-center px-4">
       <div className="max-w-lg w-full">
