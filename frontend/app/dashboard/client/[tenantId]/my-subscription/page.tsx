@@ -449,7 +449,19 @@ export default function MySubscriptionPage() {
           )}
         </CardContent>
 
-        <CardFooter className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between">
+        <CardFooter className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between gap-3">
+          {/* Start Onboarding Button - Show if paid but not onboarded */}
+          {tenant && tenant.subscription && tenant.subscription.status !== "cancelled" && 
+           (tenant.plan === "starter" || tenant.plan === "professional" || tenant.plan === "enterprise") && (
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+              onClick={() => router.push(`/onboarding/whitelabel?tenantId=${tenantId}`)}
+            >
+              <Zap className="h-4 w-4" />
+              Start White-Label Onboarding
+            </Button>
+          )}
+          
           {subscription?.status !== "cancelled" && !isTrialOrFree && (
             <Button 
               variant="destructive" 
