@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface InstituteStats {
   studentsCount: number;
@@ -12,54 +12,19 @@ interface InstituteStats {
   totalTests: number;
 }
 
+interface OverviewResponse {
+  success: boolean;
+  stats: InstituteStats;
+  message?: string;
+}
+
 export default function InstituteOverviewPage() {
-  const [stats, setStats] = useState<InstituteStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
+  // ✅ SWR: Auto-caching, revalidation, deduplication
+  const { data: response, isLoading: loading, error, mutate } = useDashboardData<OverviewResponse>(
+    '/api/dashboard/overview'
+  );
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Use BFF route with caching
-        // BFF layer handles 5-minute cache
-        const res = await fetch("/api/dashboard/overview", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        // Check cache header from BFF
-        const cacheHit = res.headers.get('X-Cache');
-        if (cacheHit) {
-          setCacheStatus(cacheHit as 'HIT' | 'MISS');
-        }
-
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.statusText}`);
-        }
-
-        const data = await res.json();
-        if (data.success && data.stats) {
-          setStats(data.stats);
-        } else {
-          setError(data.message || "Failed to load overview data");
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch institute overview:", err);
-        setError(err.message || "An error occurred while fetching data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  const stats = response?.stats;
 
   if (loading) {
     return (
@@ -84,9 +49,9 @@ export default function InstituteOverviewPage() {
             <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
               Error Loading Data
             </h2>
-            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
+            <p className="text-red-700 dark:text-red-300 mb-4">{error.message}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => mutate()}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition"
             >
               Retry
