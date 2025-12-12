@@ -39,12 +39,11 @@ export default function RevenueBreakdownCard() {
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
       const response = await fetch(
-        `${apiUrl}/api/analytics/revenue-breakdown`,
+        '/api/analytics/revenue-breakdown',
         {
+          credentials: 'include',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
