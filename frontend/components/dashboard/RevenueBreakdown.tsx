@@ -31,14 +31,6 @@ export default function RevenueBreakdownCard() {
       setLoading(true);
       setError(null);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      if (!token) {
-        setError('Authentication required');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(
         '/api/analytics/revenue-breakdown',
         {

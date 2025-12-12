@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    let token = request.cookies.get("token")?.value;
+    let token = request.cookies.get("jwt")?.value;
 
     if (!token) {
       const authHeader = request.headers.get("authorization");
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!token) {
-      console.log("❌ No token provided");
+      console.log("❌ No token found in cookies or headers");
       return NextResponse.json(
         { success: false, message: "Unauthorized - No token found" },
         { status: 401 }

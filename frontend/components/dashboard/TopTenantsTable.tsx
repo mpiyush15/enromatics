@@ -53,14 +53,6 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       setLoading(true);
       setError(null);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      if (!token) {
-        setError('Authentication required');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(
         `/api/analytics/top-tenants?limit=${limit}`,
         {

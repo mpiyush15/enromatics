@@ -1,62 +1,88 @@
 # Analytics BFF Routes - Fixed ✅
 
-## Problem Found & Resolved
-The frontend was making **direct backend calls** for analytics endpoints instead of using BFF (Backend-For-Frontend) routes. This caused 404 errors in production because `NEXT_PUBLIC_API_URL` was misconfigured.
+## Problems Found & Resolved
 
-## Solution Implemented
+### Problem 1: Missing BFF Routes (404 Error)
+The frontend was making **direct backend calls** for analytics endpoints instead of using BFF (Backend-For-Frontend) routes.
+- ❌ 404 error on `/api/analytics/dashboard`
 
-### Created 3 New BFF Routes:
+### Problem 2: Wrong Cookie Name (401 Error)
+BFF routes were looking for cookie named "token", but Express backend sets cookie named "jwt"
+- ❌ 401 Unauthorized because token extraction failed
+
+## Solutions Implemented
+
+### 1. Created 3 BFF Routes:
 1. ✅ **`/api/analytics/dashboard`** → `frontend/app/api/analytics/dashboard/route.ts`
 2. ✅ **`/api/analytics/revenue-breakdown`** → `frontend/app/api/analytics/revenue-breakdown/route.ts`
 3. ✅ **`/api/analytics/top-tenants`** → `frontend/app/api/analytics/top-tenants/route.ts`
 
-### Updated Components:
+### 2. Fixed Token Extraction:
+All BFF routes now correctly:
+- ✅ Look for cookie named **"jwt"** (set by Express backend)
+- ✅ Fall back to Authorization header if cookie not found
+- ✅ Forward token to Express backend
+
+### 3. Updated Components:
 1. ✅ **`frontend/app/dashboard/home/page.tsx`**
    - Already using relative path `/api/analytics/dashboard` ✓
 
 2. ✅ **`frontend/components/dashboard/RevenueBreakdown.tsx`**
-   - Changed from: `${apiUrl}/api/analytics/revenue-breakdown` 
-   - Changed to: `/api/analytics/revenue-breakdown` (BFF route)
+   - Changed from direct backend call to `/api/analytics/revenue-breakdown` (BFF route)
+   - Removed localStorage token check (BFF handles via cookies)
 
 3. ✅ **`frontend/components/dashboard/TopTenantsTable.tsx`**
-   - Changed from: `${apiUrl}/api/analytics/top-tenants?limit=${limit}`
-   - Changed to: `/api/analytics/top-tenants?limit=${limit}` (BFF route)
+   - Changed from direct backend call to `/api/analytics/top-tenants` (BFF route)
+   - Removed localStorage token check (BFF handles via cookies)
 
-## How It Works
+## How It Works Now (✅ Fixed)
 
-### Before (❌ Broken):
 ```
-Frontend (localhost:3000) 
-  ↓
-  Direct call: ${NEXT_PUBLIC_API_URL}/api/analytics/dashboard
-  ↓
-  Production URL misconfigured → 404 Error
+1. Frontend Login:
+   Login Page → POST /api/auth/login (BFF)
+   BFF forwards to Express → Express sets 'jwt' cookie
+   Express returns Set-Cookie header
+   BFF forwards Set-Cookie → Browser stores as httpOnly cookie
+
+2. Frontend Analytics Request:
+   Dashboard Component → GET /api/analytics/dashboard (BFF, relative path)
+   Browser sends 'jwt' cookie automatically (credentials: 'include')
+   BFF extracts 'jwt' from request.cookies
+   BFF forwards token to Express backend
+   Express returns analytics data
+   BFF returns data to frontend
 ```
 
-### After (✅ Fixed):
+## Cookie Flow
+
 ```
-Frontend (localhost:3000)
-  ↓
-  Call: /api/analytics/dashboard (relative path)
-  ↓
-  BFF Route (Next.js API route)
-  ↓
-  Uses: EXPRESS_BACKEND_URL (server-side environment variable)
-  ↓
-  Backend (localhost:5050 or Railway)
-  ↓
-  Returns data securely
+Express Backend:
+  res.cookie("jwt", token, {
+    httpOnly: true,
+    secure: (production),
+    sameSite: (production ? "none" : "lax"),
+    maxAge: 30 * 24 * 60 * 60 * 1000
+  })
+
+BFF Route:
+  let token = request.cookies.get("jwt")?.value;
+  // Use token to call Express backend
 ```
 
 ## Benefits
-- ✅ Secure: Token forwarding is handled server-side only
-- ✅ Flexible: Backend URL can be changed without frontend rebuild
-- ✅ Consistent: All analytics endpoints use same BFF pattern
-- ✅ Cacheable: Server-side caching via `cache: "no-store"`
-- ✅ Works offline: Query parameters properly forwarded
+- ✅ Secure: Tokens handled server-side via httpOnly cookies
+- ✅ Works in Production: Proper sameSite and secure flags
+- ✅ No CORS Issues: All calls within same domain (vercel.app)
+- ✅ Automatic Cookie Forwarding: BFF handles Set-Cookie headers
+- ✅ Flexible Backend: Can change URL without frontend rebuild
+- ✅ Consistent Pattern: All analytics endpoints follow same BFF pattern
 
-## Next Steps
-1. Commit these changes
-2. Test locally with `npm run dev`
-3. Deploy to production (Vercel will auto-detect new routes)
-4. Verify analytics dashboard works in production
+## Testing Checklist
+- [ ] Login works (token stored in httpOnly cookie)
+- [ ] Dashboard analytics loads without 401
+- [ ] Revenue breakdown chart loads
+- [ ] Top tenants table loads
+- [ ] All three endpoints show proper data
+- [ ] Refresh page - data persists (cookies still valid)
+- [ ] Test in production after deployment
+
