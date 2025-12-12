@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader } from 'lucide-react';
+import { useJWTFetch } from '@/hooks/useJWTFetch';
 
 interface RevenueBreakdown {
   cycle: string;
@@ -11,6 +12,7 @@ interface RevenueBreakdown {
 }
 
 export default function RevenueBreakdownCard() {
+  const { fetchWithJWT } = useJWTFetch();
   const [breakdown, setBreakdown] = useState<RevenueBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,20 +33,15 @@ export default function RevenueBreakdownCard() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
+      const response = await fetchWithJWT(
         '/api/analytics/revenue-breakdown',
-        {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        { method: 'GET' }
       );
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token');
-          setError('Session expired. Please refresh.');
+          setError('Session expired. Please log in again.');
+          localStorage.removeItem('jwt_token');
           setLoading(false);
           return;
         }

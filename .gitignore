@@ -28,6 +28,11 @@ out/
 .env.development
 .env.development.local
 .env.test
+
+# Documentation files - DO NOT COMMIT
+*.md
+!README.md
+CHANGELOG.md
 .env.test.local
 .env.production
 .env.production.local

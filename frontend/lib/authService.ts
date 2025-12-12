@@ -11,13 +11,13 @@ const BFF_BASE = '/api/auth';
 let authCheckPromise: Promise<any> | null = null;
 
 export const authService = {
-  // Login user - Now through BFF layer
+  // Login user - Now through BFF layer with JWT storage
   async login(email: string, password: string) {
     try {
       const res = await fetch(`${BFF_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // ✅ BFF handles cookie forwarding
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -25,6 +25,12 @@ export const authService = {
 
       if (!res.ok) {
         throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ Store JWT token in localStorage for all subsequent requests
+      if (data.token) {
+        localStorage.setItem('jwt_token', data.token);
+        console.log('✅ JWT token stored in localStorage');
       }
 
       // Cache user data after successful login
@@ -100,8 +106,12 @@ export const authService = {
     try {
       const res = await fetch(`${BFF_BASE}/logout`, {
         method: "POST",
-        credentials: "include", // ✅ Send cookies (BFF handles forwarding)
+        credentials: "include",
       });
+
+      // Clear JWT from localStorage
+      localStorage.removeItem('jwt_token');
+      console.log('✅ JWT token removed from localStorage');
 
       // Clear all auth-related cache
       cache.clearPattern('auth:');
@@ -110,6 +120,8 @@ export const authService = {
       return res.ok;
     } catch (error) {
       console.error("❌ Logout error:", error);
+      // Clear token even if logout request fails
+      localStorage.removeItem('jwt_token');
       return false;
     }
   },

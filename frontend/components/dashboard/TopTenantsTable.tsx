@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { TrendingUp, Loader } from 'lucide-react';
+import { useJWTFetch } from '@/hooks/useJWTFetch';
 
 interface TopTenant {
   _id: string;
@@ -33,6 +34,7 @@ const planColors: Record<string, string> = {
 };
 
 export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
+  const { fetchWithJWT } = useJWTFetch();
   const [tenants, setTenants] = useState<TopTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,20 +55,15 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
+      const response = await fetchWithJWT(
         `/api/analytics/top-tenants?limit=${limit}`,
-        {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        { method: 'GET' }
       );
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token');
-          setError('Session expired. Please refresh.');
+          setError('Session expired. Please log in again.');
+          localStorage.removeItem('jwt_token');
           setLoading(false);
           return;
         }

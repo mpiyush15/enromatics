@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractJWT } from "@/lib/jwt-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    let token = request.cookies.get("jwt")?.value;
+    const token = extractJWT(request);
 
     if (!token) {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
-      }
-    }
-
-    if (!token) {
-      console.log("❌ No token found in cookies or headers");
       return NextResponse.json(
-        { success: false, message: "Unauthorized - No token found" },
+        { success: false, message: "Unauthorized - No JWT found" },
         { status: 401 }
       );
     }

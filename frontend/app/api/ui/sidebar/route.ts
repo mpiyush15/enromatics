@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { extractJWT } from '@/lib/jwt-utils';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes - sidebar config rarely changes
 
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -11,18 +12,24 @@ function getCacheKey(role: string, tenantId?: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const cookies = request.headers.get('cookie') || '';
+    const token = extractJWT(request);
 
-    // Fetch from backend with cookies to get authenticated user's role
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Fetch from backend with JWT token
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/ui/sidebar`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': cookies,
+          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include',
       }
     );
 
