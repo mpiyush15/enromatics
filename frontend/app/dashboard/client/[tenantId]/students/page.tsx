@@ -37,109 +37,74 @@ export default function StudentsPage() {
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [quota, setQuota] = useState<Quota | null>(null);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const params = new URLSearchParams();
-        params.set("page", String(page));
-        params.set("limit", "10");
-        if (batchFilter) params.set("batch", batchFilter);
-        if (courseFilter) params.set("course", courseFilter);
-        if (rollFilter) params.set("rollNumber", rollFilter);
-        if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
+  // Unified fetch function with optional cache busting
+  const fetchStudents = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
 
-        // Use BFF route instead of direct Express call
-        const res = await fetch(`/api/students?${params.toString()}`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", "10");
+      if (batchFilter) params.set("batch", batchFilter);
+      if (courseFilter) params.set("course", courseFilter);
+      if (rollFilter) params.set("rollNumber", rollFilter);
+      if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
 
-        // Check cache header from BFF
-        const cacheHit = res.headers.get('X-Cache');
-        if (cacheHit) {
-          setCacheStatus(cacheHit as 'HIT' | 'MISS');
-        }
-
-        const data = await res.json();
-        if (data.success) {
-          setStudents(data.students || []);
-          setPages(data.pages || 1);
-          setPage(data.page || 1);
-          // Update quota info
-          if (data.quota) {
-            setQuota(data.quota);
-          }
-        } else {
-          setError(data.message || "Failed to fetch students");
-        }
-      } catch (err: any) {
-        console.error("Fetch error:", err);
-        setError(err.message || "Error fetching students");
-      } finally {
-        setLoading(false);
+      // 🔥 CACHE BUST WHEN REFRESH
+      if (forceRefresh) {
+        params.set("_ts", Date.now().toString());
       }
-    };
 
-    fetchStudents();
+      const res = await fetch(`/api/students?${params.toString()}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+        },
+      });
+
+      // Check cache header from BFF
+      const cacheHit = res.headers.get('X-Cache');
+      if (cacheHit) {
+        setCacheStatus(cacheHit as 'HIT' | 'MISS');
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setStudents(data.students || []);
+        setPages(data.pages || 1);
+        setPage(data.page || 1);
+        if (data.quota) {
+          setQuota(data.quota);
+        }
+      } else {
+        setError(data.message || "Failed to fetch students");
+      }
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setError(err.message || "Error fetching students");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Normal list fetching - triggers on filter/pagination change
+  useEffect(() => {
+    fetchStudents(false);
   }, [page, batchFilter, courseFilter, rollFilter, feesStatus]);
 
   // Handle refresh flag from URL query params
   useEffect(() => {
     if (!searchParams) return;
     const refresh = searchParams.get("refresh");
+
     if (refresh === "1") {
       setPage(1);
-      setLoading(true);
-      // Fetch fresh data
-      const fetchStudents = async () => {
-        try {
-          const params = new URLSearchParams();
-          params.set("page", "1");
-          params.set("limit", "10");
-          if (batchFilter) params.set("batch", batchFilter);
-          if (courseFilter) params.set("course", courseFilter);
-          if (rollFilter) params.set("rollNumber", rollFilter);
-          if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
-
-          const res = await fetch(`/api/students?${params.toString()}`, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          const cacheHit = res.headers.get('X-Cache');
-          if (cacheHit) {
-            setCacheStatus(cacheHit as 'HIT' | 'MISS');
-          }
-
-          const data = await res.json();
-          if (data.success) {
-            setStudents(data.students || []);
-            setPages(data.pages || 1);
-            setPage(data.page || 1);
-            if (data.quota) {
-              setQuota(data.quota);
-            }
-          } else {
-            setError(data.message || "Failed to fetch students");
-          }
-        } catch (err: any) {
-          console.error("Fetch error:", err);
-          setError(err.message || "Error fetching students");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchStudents();
-      // Clean up the URL by removing the refresh parameter
-      router.replace(`/dashboard/client/${tenantId}/students`);
+      fetchStudents(true); // 🔥 force refresh with cache bust
+      router.replace(`/dashboard/client/${tenantId}/students`, { scroll: false });
     }
-  }, [searchParams, tenantId, router, batchFilter, courseFilter, rollFilter, feesStatus]);
+  }, [searchParams]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
