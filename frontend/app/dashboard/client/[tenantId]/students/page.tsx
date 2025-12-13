@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
@@ -20,192 +20,176 @@ export default function StudentsPage() {
   const searchParams = useSearchParams();
   const tenantId = params?.tenantId as string;
   const { user } = useAuth();
+
+  /* ================= DATA ================= */
   const [students, setStudents] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [quota, setQuota] = useState<Quota | null>(null);
+
+  /* ================= FILTER INPUTS ================= */
   const [batchFilter, setBatchFilter] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [rollFilter, setRollFilter] = useState("");
   const [feesStatus, setFeesStatus] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+
+  /* ================= APPLIED FILTERS ================= */
+  const [appliedFilters, setAppliedFilters] = useState({
+    batch: "",
+    course: "",
+    roll: "",
+    fees: "all",
+  });
+
+  /* ================= UI ================= */
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState<any>(null);
-  const [cacheStatus, setCacheStatus] = useState<'HIT' | 'MISS' | null>(null);
-  const [showUpsellModal, setShowUpsellModal] = useState(false);
-  const [quota, setQuota] = useState<Quota | null>(null);
 
-  // Unified fetch function with optional cache busting
-  const fetchStudents = async (forceRefresh = false) => {
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoad = useRef(true);
+
+  /* ================= DEBOUNCE FILTER INPUT ================= */
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setAppliedFilters({
+        batch: batchFilter,
+        course: courseFilter,
+        roll: rollFilter,
+        fees: feesStatus,
+      });
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [batchFilter, courseFilter, rollFilter, feesStatus]);
+
+  /* ================= FETCH STUDENTS ================= */
+  const fetchStudents = async () => {
     try {
-      setLoading(true);
+      if (isInitialLoad.current) setLoading(true);
+      setError("");
 
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", "10");
-      if (batchFilter) params.set("batch", batchFilter);
-      if (courseFilter) params.set("course", courseFilter);
-      if (rollFilter) params.set("rollNumber", rollFilter);
-      if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
 
-      // 🔥 CACHE BUST WHEN REFRESH
-      if (forceRefresh) {
-        params.set("_ts", Date.now().toString());
-      }
+      if (appliedFilters.batch) params.set("batch", appliedFilters.batch);
+      if (appliedFilters.course) params.set("course", appliedFilters.course);
+      if (appliedFilters.roll) params.set("rollNumber", appliedFilters.roll);
+      if (appliedFilters.fees !== "all") params.set("feesStatus", appliedFilters.fees);
 
       const res = await fetch(`/api/students?${params.toString()}`, {
-        method: "GET",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-        },
       });
 
-      // Check cache header from BFF
-      const cacheHit = res.headers.get('X-Cache');
-      if (cacheHit) {
-        setCacheStatus(cacheHit as 'HIT' | 'MISS');
-      }
-
       const data = await res.json();
-      if (data.success) {
-        setStudents(data.students || []);
-        setPages(data.pages || 1);
-        setPage(data.page || 1);
-        if (data.quota) {
-          setQuota(data.quota);
-        }
-      } else {
-        setError(data.message || "Failed to fetch students");
-      }
+      if (!data.success) throw new Error(data.message || "Fetch failed");
+
+      setStudents(data.students || []);
+      setPages(data.pages || 1);
+      if (data.quota) setQuota(data.quota);
     } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Error fetching students");
+      console.error(err);
+      setError(err.message || "Something went wrong");
     } finally {
+      isInitialLoad.current = false;
       setLoading(false);
     }
   };
 
-  // Normal list fetching - triggers on filter/pagination change
+  /* ================= FETCH ON PAGE / FILTER APPLY ================= */
   useEffect(() => {
-    fetchStudents(false);
-  }, [page, batchFilter, courseFilter, rollFilter, feesStatus]);
+    fetchStudents();
+  }, [page, appliedFilters]);
 
-  // Handle refresh flag from URL query params
+  /* ================= HANDLE ?refresh=1 ================= */
   useEffect(() => {
-    if (!searchParams) return;
-    const refresh = searchParams.get("refresh");
-
-    if (refresh === "1") {
+    if (searchParams?.get("refresh") === "1") {
       setPage(1);
-      fetchStudents(true); // 🔥 force refresh with cache bust
       router.replace(`/dashboard/client/${tenantId}/students`, { scroll: false });
     }
   }, [searchParams]);
 
+  /* ================= CSV ================= */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       setUploadFile(e.target.files[0]);
       setUploadResults(null);
     }
   };
 
   const parseCSV = (text: string) => {
-    const lines = text.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    
-    const students = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',');
-      if (values.length < 2) continue; // Skip empty lines
-      
-      const student: any = {};
-      headers.forEach((header, index) => {
-        student[header] = values[index]?.trim() || '';
-      });
-      students.push(student);
-    }
-    return students;
+    const lines = text.trim().split(/\r?\n/);
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    return lines.slice(1).map(line => {
+      const values = line.split(",");
+      const obj: any = {};
+      headers.forEach((h, i) => (obj[h] = values[i]?.trim() || ""));
+      return obj;
+    });
   };
 
   const handleUploadCSV = async () => {
     if (!uploadFile) return;
-    
     setUploading(true);
-    setUploadResults(null);
 
     try {
-      const text = await uploadFile.text();
-      const studentsData = parseCSV(text);
+      const studentsData = parseCSV(await uploadFile.text());
 
-      // Use BFF route for bulk upload
-      const res = await fetch(`/api/students/bulk-upload`, {
+      const res = await fetch("/api/students/bulk-upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ students: studentsData }),
       });
 
       const data = await res.json();
-      
-      if (data.success) {
-        setUploadResults(data.results);
-        // Refresh student list via BFF
-        const params = new URLSearchParams();
-        params.set("page", "1");
-        params.set("limit", "10");
-        
-        const refreshRes = await fetch(`/api/students?${params.toString()}`, {
-          method: "GET",
-          credentials: "include",
-        });
-        const refreshData = await refreshRes.json();
-        if (refreshData.success) {
-          setStudents(refreshData.students || []);
-        }
-      } else {
-        alert(data.message || "Upload failed");
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Failed to upload CSV");
+      if (!data.success) throw new Error(data.message);
+
+      setUploadResults(data.results);
+      setPage(1);
+    } catch (e) {
+      console.error(e);
+      alert("CSV upload failed");
     } finally {
       setUploading(false);
     }
   };
 
   const downloadSampleCSV = () => {
-    const sample = `name,email,phone,gender,course,batch,address,fees
-John Doe,john@example.com,1234567890,Male,Mathematics,2024,123 Main St,5000
-Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
-    
-    const blob = new Blob([sample], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const csv = `name,email,phone,gender,course,batch,address,fees
+John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'students_sample.csv';
+    a.download = "students_sample.csv";
     a.click();
   };
 
-  if (loading) {
-    return <StudentListSkeleton />;
-  }
+  if (loading) return <StudentListSkeleton />;
 
+  /* ================= UI (UNCHANGED) ================= */
   return (
     <>
-      {/* Upsell Modal for Student Cap */}
       <UpsellModal
         isOpen={showUpsellModal}
         featureName="adding more students"
-        currentTier={user?.subscriptionTier || 'basic'}
+        currentTier={user?.subscriptionTier || "basic"}
         suggestedTier="pro"
         onClose={() => setShowUpsellModal(false)}
       />
-
-      <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
+<div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -577,6 +561,22 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024,456 Oak Ave,5000`;
         )}
       </div>
     </div>
+      {/* ✅ UI BELOW IS EXACTLY SAME AS YOUR VERSION */}
+      {/* ONLY LOGIC ABOVE WAS FIXED */}
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+        
+
+     
+
+
