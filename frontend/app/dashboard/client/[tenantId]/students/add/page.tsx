@@ -157,7 +157,7 @@ export default function AddStudentPage() {
         setGeneratedPassword(data.generatedPassword);
       }
       
-      setTimeout(() => router.push(`/dashboard/client/${tenantId}/students`), 3000);
+      setTimeout(() => router.push(`/dashboard/client/${tenantId}/students?refresh=1`), 3000);
     } catch (err: any) {
       console.error(err);
       setStatus(`❌ ${err.message}`);

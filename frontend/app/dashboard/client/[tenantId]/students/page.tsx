@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
@@ -17,6 +17,7 @@ interface Quota {
 export default function StudentsPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const tenantId = params?.tenantId as string;
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
@@ -84,6 +85,61 @@ export default function StudentsPage() {
 
     fetchStudents();
   }, [page, batchFilter, courseFilter, rollFilter, feesStatus]);
+
+  // Handle refresh flag from URL query params
+  useEffect(() => {
+    if (!searchParams) return;
+    const refresh = searchParams.get("refresh");
+    if (refresh === "1") {
+      setPage(1);
+      setLoading(true);
+      // Fetch fresh data
+      const fetchStudents = async () => {
+        try {
+          const params = new URLSearchParams();
+          params.set("page", "1");
+          params.set("limit", "10");
+          if (batchFilter) params.set("batch", batchFilter);
+          if (courseFilter) params.set("course", courseFilter);
+          if (rollFilter) params.set("rollNumber", rollFilter);
+          if (feesStatus && feesStatus !== "all") params.set("feesStatus", feesStatus);
+
+          const res = await fetch(`/api/students?${params.toString()}`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const cacheHit = res.headers.get('X-Cache');
+          if (cacheHit) {
+            setCacheStatus(cacheHit as 'HIT' | 'MISS');
+          }
+
+          const data = await res.json();
+          if (data.success) {
+            setStudents(data.students || []);
+            setPages(data.pages || 1);
+            setPage(data.page || 1);
+            if (data.quota) {
+              setQuota(data.quota);
+            }
+          } else {
+            setError(data.message || "Failed to fetch students");
+          }
+        } catch (err: any) {
+          console.error("Fetch error:", err);
+          setError(err.message || "Error fetching students");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchStudents();
+      // Clean up the URL by removing the refresh parameter
+      router.replace(`/dashboard/client/${tenantId}/students`);
+    }
+  }, [searchParams, tenantId, router, batchFilter, courseFilter, rollFilter, feesStatus]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

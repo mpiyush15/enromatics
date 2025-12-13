@@ -7,29 +7,29 @@ import * as planGuard from "../../lib/planGuard.js";
 export const addStudent = async (req, res) => {
   try {
     const { name, email, phone, gender, course, batchId, address, fees, password, dateOfBirth } = req.body;
-
-    // Tenant comes from JWT
     const tenantId = req.user?.tenantId;
 
     if (!tenantId) {
       return res.status(403).json({ message: "Tenant ID missing" });
     }
 
-    // Check if trial is expired
+    // Plan & trial checks
     const tenant = await Tenant.findOne({ tenantId });
-    if (tenant && tenant.subscription?.status === 'trial') {
-      const trialStartISO = tenant.subscription?.trialStartDate?.toISOString() || tenant.subscription?.startDate?.toISOString();
+    if (tenant?.subscription?.status === "trial") {
+      const trialStartISO =
+        tenant.subscription.trialStartDate?.toISOString() ||
+        tenant.subscription.startDate?.toISOString();
+
       if (planGuard.isTrialExpired({ trialStartISO })) {
         return res.status(402).json({
           success: false,
           code: "trial_expired",
-          message: "Your 14-day trial has expired. Please upgrade to continue adding students.",
-          upgradeUrl: "/subscription/plans",
+          message: "Trial expired. Please upgrade.",
         });
       }
     }
 
-    // Enforce student cap per tenant tier
+    // Student cap
     const tierKey = req.user?.subscriptionTier || "basic";
     const currentCount = await Student.countDocuments({ tenantId });
     const capCheck = planGuard.checkStudentCap({ tierKey, currentStudents: currentCount });
@@ -37,37 +37,24 @@ export const addStudent = async (req, res) => {
       return res.status(402).json({
         success: false,
         code: "upgrade_required",
-        message: `Student limit reached for your plan (${capCheck.cap}). Please upgrade to ${capCheck.upgradeTo || "a higher plan"}.`,
-        details: capCheck,
+        message: `Student limit reached (${capCheck.cap})`,
       });
     }
 
-    // Get batch details to generate roll number
-    let batchPrefix = "00"; // default if no batch
+    // Batch prefix
+    let batchPrefix = "ST";
     if (batchId) {
-      const batch = await Batch.findById(batchId);
-      if (batch) {
-        // Extract first 2 letters of batch name for prefix (e.g., "Batch 2024" -> "BA" or "Morning" -> "MO")
-        const words = batch.name.split(/\s+/);
-        if (words.length > 1) {
-          batchPrefix = (words[0][0] + words[1][0]).toUpperCase();
-        } else {
-          batchPrefix = batch.name.substring(0, 2).toUpperCase();
-        }
+      const batch = await Batch.findById(batchId).lean();
+      if (batch?.name) {
+        batchPrefix = batch.name.substring(0, 2).toUpperCase();
       }
     }
-    
-    // Generate a random password if not provided
+
+    const seq = (await Student.countDocuments({ tenantId, batchId })) + 1;
+    const rollNumber = `${batchPrefix}${String(seq).padStart(3, "0")}`;
     const studentPassword = password || Math.random().toString(36).slice(-8);
 
-    // Generate 5-digit roll number: BBXXX (e.g., BA001, MO015)
-    // Count existing students for same tenant + batch to generate sequence
-    const existingCount = await Student.countDocuments({ tenantId, batchId: batchId || null });
-    const seq = existingCount + 1;
-    const seqStr = String(seq).padStart(3, "0"); // 3 digits for sequence
-    const rollNumber = `${batchPrefix}${seqStr}`;
-
-    const newStudent = await Student.create({
+    const student = await Student.create({
       tenantId,
       name,
       email,
@@ -76,106 +63,126 @@ export const addStudent = async (req, res) => {
       course,
       batchId: batchId || null,
       address: address || "",
-      fees: fees ? Number(fees) : 0,
+      fees: Number(fees) || 0,
       balance: 0,
       password: studentPassword,
       rollNumber,
       dateOfBirth: dateOfBirth || null,
     });
 
-    // Increment enrolled count in batch
     if (batchId) {
       await Batch.findByIdAndUpdate(batchId, { $inc: { enrolledCount: 1 } });
     }
-    
-    console.log(`✅ Student created: ${newStudent.name} | Roll: ${rollNumber} | Password: ${password ? '(provided)' : studentPassword}`);
 
     res.status(201).json({
       success: true,
-      message: "Student added successfully",
-      student: newStudent,
-      ...(password ? {} : { generatedPassword: studentPassword })
+      student,
+      ...(password ? {} : { generatedPassword: studentPassword }),
     });
   } catch (err) {
     console.error("Add student error:", err);
-    res.status(500).json({ message: err.message || "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const getStudents = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    // Filters & pagination
-    const { page = 1, limit = 10, batch, course, rollNumber, feesStatus } = req.query;
-    const pageNum = Number(page) || 1;
-    const lim = Math.min(Number(limit) || 10, 100);
+    const { page = 1, limit = 10, batchId, course, rollNumber, feesStatus } = req.query;
+    const pageNum = Number(page);
+    const lim = Math.min(Number(limit), 100);
 
+    /* ---------------- MATCH ---------------- */
     const match = { tenantId };
-    if (batch) match.batch = batch;
-    if (course) match.course = course;
-    if (rollNumber) match.rollNumber = rollNumber;
 
-    // Get total student count (without filters) for quota
-    const totalStudentCount = await Student.countDocuments({ tenantId });
-    
-    // Get tenant plan for quota info
-    const tenant = await Tenant.findOne({ tenantId }).select('plan').lean();
-    const tierKey = tenant?.plan || 'trial';
-    const quotaCheck = planGuard.checkStudentCap({ tierKey, currentStudents: totalStudentCount });
+    if (batchId) {
+      match.batchId = new mongoose.Types.ObjectId(batchId);
+    }
 
-    // Build aggregation to support fees-based filters and pagination
+    if (course) {
+      match.course = { $regex: course, $options: "i" };
+    }
+
+    if (rollNumber) {
+      match.rollNumber = rollNumber;
+    }
+
+    /* ---------------- PIPELINE ---------------- */
     const pipeline = [{ $match: match }];
 
     if (feesStatus === "paid_gt_50") {
       pipeline.push({
         $match: {
           $expr: {
-            $gt: [
-              { $cond: [{ $gt: ["$fees", 0] }, { $divide: ["$balance", "$fees"] }, 0] },
-              0.5,
-            ],
-          },
-        },
-      });
-    } else if (feesStatus === "remaining_gt_50") {
-      pipeline.push({
-        $match: {
-          $expr: {
-            $gt: [
-              { $cond: [{ $gt: ["$fees", 0] }, { $divide: [{ $subtract: ["$fees", "$balance"] }, "$fees"] }, 0] },
-              0.5,
-            ],
+            $gt: [{ $divide: ["$balance", "$fees"] }, 0.5],
           },
         },
       });
     }
 
-    // Count total matching
+    if (feesStatus === "remaining_gt_50") {
+      pipeline.push({
+        $match: {
+          $expr: {
+            $gt: [{ $divide: [{ $subtract: ["$fees", "$balance"] }, "$fees"] }, 0.5],
+          },
+        },
+      });
+    }
+
+    /* 🔥 BATCH LOOKUP (IMPORTANT) */
+    pipeline.push(
+      {
+        $lookup: {
+          from: "batches",
+          localField: "batchId",
+          foreignField: "_id",
+          as: "batch",
+        },
+      },
+      {
+        $addFields: {
+          batchName: { $arrayElemAt: ["$batch.name", 0] },
+        },
+      }
+    );
+
+    /* ---------------- COUNT ---------------- */
     const countPipeline = [...pipeline, { $count: "total" }];
     const countResult = await Student.aggregate(countPipeline);
     const total = countResult[0]?.total || 0;
 
-    // Add sort, skip, limit
-    pipeline.push({ $sort: { createdAt: -1 } });
-    pipeline.push({ $skip: (pageNum - 1) * lim });
-    pipeline.push({ $limit: lim });
+    /* ---------------- PAGINATION ---------------- */
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: (pageNum - 1) * lim },
+      { $limit: lim }
+    );
 
     const students = await Student.aggregate(pipeline);
 
-    res.status(200).json({
+    /* ---------------- QUOTA ---------------- */
+    const totalStudents = await Student.countDocuments({ tenantId });
+    const tenant = await Tenant.findOne({ tenantId }).select("plan").lean();
+    const quotaCheck = planGuard.checkStudentCap({
+      tierKey: tenant?.plan || "trial",
+      currentStudents: totalStudents,
+    });
+
+    res.json({
       success: true,
-      total,
+      students,
       page: pageNum,
       pages: Math.ceil(total / lim) || 1,
-      count: students.length,
-      students,
+      total,
       quota: {
-        current: totalStudentCount,
+        current: totalStudents,
         cap: quotaCheck.cap,
         canAdd: quotaCheck.allowed,
-        plan: tierKey,
+        plan: tenant?.plan,
       },
     });
   } catch (err) {
@@ -183,6 +190,7 @@ export const getStudents = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const getStudentById = async (req, res) => {
   try {
