@@ -43,14 +43,6 @@ export default function AddStudentPage() {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Helper to get auth headers
-  const getHeaders = (): HeadersInit => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
-
   useEffect(() => {
     fetchBatches();
     if (regId && fromScholarship) {
@@ -60,8 +52,8 @@ export default function AddStudentPage() {
 
   const fetchBatches = async () => {
     try {
-      const res = await fetch(`/api/batches`, {
-        headers: getHeaders(),
+      const res = await fetch(`/api/academics/batches`, {
+        credentials: "include",
       });
       const data = await res.json();
       if (data.success) {
@@ -91,7 +83,7 @@ export default function AddStudentPage() {
       
       // Fetch all registrations for the exam and find the specific one
       const res = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
-        headers: getHeaders(),
+        credentials: "include",
       });
       
       if (res.ok) {
@@ -143,7 +135,10 @@ export default function AddStudentPage() {
     try {
       const res = await fetch(`/api/students`, {
         method: "POST",
-        headers: getHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
         body: JSON.stringify({
           ...form,
           name: form.studentName, // Map studentName to name for backend
