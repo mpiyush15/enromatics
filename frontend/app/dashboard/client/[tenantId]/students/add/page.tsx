@@ -14,7 +14,7 @@ export default function AddStudentPage() {
   const router = useRouter();
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   
-  const tenantId = params.tenantId as string;
+  const tenantId = (params?.tenantId as string) || '';
   const regId = searchParams.get('regId');
   const fromScholarship = searchParams.get('from') === 'scholarship';
   
