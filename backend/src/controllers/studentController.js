@@ -52,8 +52,22 @@ export const addStudent = async (req, res) => {
       }
     }
 
-    const seq = (await Student.countDocuments({ tenantId, batchId })) + 1;
-    const rollNumber = `${batchPrefix}${String(seq).padStart(3, "0")}`;
+    // 🔥 IMPROVED ROLL NUMBER LOGIC
+    // Format: <year><batchPrefix><sequence>
+    // Example: 2025MA001 (Year 2025, Batch MA, Sequence 001)
+    const currentYear = new Date().getFullYear();
+    
+    // Count students in this batch admitted in the current year
+    const seq = (await Student.countDocuments({ 
+      tenantId, 
+      batchId,
+      createdAt: {
+        $gte: new Date(`${currentYear}-01-01`),
+        $lt: new Date(`${currentYear + 1}-01-01`)
+      }
+    })) + 1;
+    
+    const rollNumber = `${currentYear}${batchPrefix}${String(seq).padStart(3, "0")}`;
     const studentPassword = password || Math.random().toString(36).slice(-8);
 
     const student = await Student.create({
@@ -367,12 +381,22 @@ export const bulkUploadStudents = async (req, res) => {
         // Generate password
         const studentPassword = Math.random().toString(36).slice(-8);
 
-        // Generate roll number
-        const batchKey = (batch || "").toString().replace(/[^0-9]/g, "");
-        const existingCount = await Student.countDocuments({ tenantId, batch: batchKey });
+        // 🔥 IMPROVED ROLL NUMBER LOGIC (same as addStudent)
+        // Format: <year><batchPrefix><sequence>
+        const currentYear = new Date().getFullYear();
+        const batchPrefix = (batch || "ST").substring(0, 2).toUpperCase();
+        
+        const existingCount = await Student.countDocuments({ 
+          tenantId, 
+          batchId,
+          createdAt: {
+            $gte: new Date(`${currentYear}-01-01`),
+            $lt: new Date(`${currentYear + 1}-01-01`)
+          }
+        });
         const seq = existingCount + 1;
         const seqStr = String(seq).padStart(3, "0");
-        const rollNumber = `${batchKey}/${seqStr}`;
+        const rollNumber = `${currentYear}${batchPrefix}${seqStr}`;
 
         // Create student (check cap progressively)
         const currentBeforeCreate = await Student.countDocuments({ tenantId });
