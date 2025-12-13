@@ -22,8 +22,8 @@ import { redisCache, CACHE_TTL, invalidateStudentCache } from '@/lib/redis';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 
-function getCacheKey(tenantId: string, search: string): string {
-  return `students:list:${tenantId}:${search}`;
+function getCacheKey(search: string): string {
+  return `students:list:${search}`;
 }
 
 // GET /api/students or /api/students/:id
@@ -41,9 +41,7 @@ export async function GET(
 
     // Check Redis cache for list requests (not single student by ID)
     if (!studentId) {
-      // Extract tenantId from search params or use default
-      const tenantId = url.searchParams.get('tenantId') || 'default';
-      const cacheKey = getCacheKey(tenantId, url.search);
+      const cacheKey = getCacheKey(url.search);
       const cachedData = await redisCache.get<any>(cacheKey);
       
       if (cachedData) {
@@ -98,8 +96,7 @@ export async function GET(
 
     // Cache list requests only with Redis
     if (!studentId) {
-      const tenantId = url.searchParams.get('tenantId') || 'default';
-      const cacheKey = getCacheKey(tenantId, url.search);
+      const cacheKey = getCacheKey(url.search);
       await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
 
       const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
@@ -154,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     // Invalidate cache on create using Redis pattern
     const tenantId = body.tenantId || 'default';
-    await invalidateStudentCache(tenantId);
+    await invalidateStudentCache(); // wildcard / pattern based
     console.log('[BFF] Students cache invalidated due to mutation');
 
     console.log('✅ Student created successfully');
@@ -215,8 +212,7 @@ export async function PUT(
     }
 
     // Invalidate cache on update using Redis pattern
-    const tenantId = body.tenantId || 'default';
-    await invalidateStudentCache(tenantId);
+    await invalidateStudentCache();
     console.log('[BFF] Students cache invalidated due to update');
 
     console.log('✅ Student updated successfully');
@@ -274,7 +270,7 @@ export async function DELETE(
     }
 
     // Invalidate cache on delete using Redis pattern
-    await invalidateStudentCache('default');
+    await invalidateStudentCache();
     console.log('[BFF] Students cache invalidated due to delete');
 
     console.log('✅ Student deleted successfully');

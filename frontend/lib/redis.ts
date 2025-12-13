@@ -391,12 +391,19 @@ export async function invalidateTenantCache(tenantId: string): Promise<number> {
 
 /**
  * Invalidate cache after student mutation
+ * Clears all students cache entries via pattern
  */
-export async function invalidateStudentCache(tenantId: string): Promise<void> {
-  await Promise.all([
-    redisCache.delPattern(`students:*:${tenantId}:*`),
-    redisCache.delPattern(`dashboard:*:${tenantId}*`),
-  ]);
+export async function invalidateStudentCache(tenantId?: string): Promise<void> {
+  if (tenantId) {
+    // Legacy: if tenantId provided, use it
+    await Promise.all([
+      redisCache.delPattern(`students:*:${tenantId}:*`),
+      redisCache.delPattern(`dashboard:*:${tenantId}*`),
+    ]);
+  } else {
+    // New: clear all students cache
+    await redisCache.delPattern(`students:list:*`);
+  }
 }
 
 /**
