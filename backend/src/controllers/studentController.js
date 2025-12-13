@@ -140,12 +140,38 @@ export const getStudents = async (req, res) => {
           from: "batches",
           localField: "batchId",
           foreignField: "_id",
-          as: "batch",
+          as: "batchData",
         },
       },
       {
         $addFields: {
-          batchName: { $arrayElemAt: ["$batch.name", 0] },
+          batch: {
+            $cond: [
+              { $gt: [{ $size: "$batchData" }, 0] },
+              { $arrayElemAt: ["$batchData.name", 0] },
+              "$batch", // Fallback to existing batch field
+            ],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          tenantId: 1,
+          name: 1,
+          email: 1,
+          phone: 1,
+          gender: 1,
+          course: 1,
+          batch: 1,
+          batchId: 1,
+          rollNumber: 1,
+          address: 1,
+          fees: 1,
+          balance: 1,
+          status: 1,
+          joinDate: 1,
+          createdAt: 1,
         },
       }
     );
