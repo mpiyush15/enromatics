@@ -7,8 +7,8 @@ import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 function SessionTimeoutWrapper({ children }: { children: React.ReactNode }) {
   const { showWarning, remainingTime, extendSession } = useSessionTimeout({
-    timeout: 3 * 60 * 1000, // 3 minutes
-    warningTime: 30 * 1000, // 30 seconds warning
+    timeout: 30 * 60 * 1000, // 30 minutes (increased from 3 minutes)
+    warningTime: 2 * 60 * 1000, // 2 minutes warning before logout
     onTimeout: () => {
       console.log("Session expired due to inactivity");
     },

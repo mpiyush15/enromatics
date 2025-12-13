@@ -12,8 +12,8 @@ interface UseSessionTimeoutProps {
 }
 
 export const useSessionTimeout = ({
-  timeout = 3 * 60 * 1000, // 3 minutes default
-  warningTime = 30 * 1000, // 30 seconds warning
+  timeout = 30 * 60 * 1000, // 30 minutes default (increased from 3 minutes)
+  warningTime = 2 * 60 * 1000, // 2 minutes warning
   onTimeout,
   onWarning,
 }: UseSessionTimeoutProps = {}) => {
