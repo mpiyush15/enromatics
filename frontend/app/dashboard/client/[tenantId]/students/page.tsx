@@ -116,6 +116,40 @@ export default function StudentsPage() {
   useEffect(() => {
     if (searchParams?.get("refresh") === "1") {
       setPage(1);
+      // 🔥 Immediately fetch with cache bust (_ts parameter)
+      // This prevents returning stale cached data
+      const bustedFetch = async () => {
+        try {
+          setLoading(true);
+          const params = new URLSearchParams();
+          params.set("page", "1");
+          params.set("limit", "10");
+          params.set("_ts", Date.now().toString()); // Cache buster
+          
+          if (appliedFilters.batch) params.set("batch", appliedFilters.batch);
+          if (appliedFilters.course) params.set("course", appliedFilters.course);
+          if (appliedFilters.roll) params.set("rollNumber", appliedFilters.roll);
+          if (appliedFilters.fees !== "all") params.set("feesStatus", appliedFilters.fees);
+
+          const res = await fetch(`/api/students?${params.toString()}`, {
+            credentials: "include",
+          });
+
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message || "Fetch failed");
+
+          setStudents(data.students || []);
+          setPages(data.pages || 1);
+          if (data.quota) setQuota(data.quota);
+        } catch (err: any) {
+          console.error(err);
+          setError(err.message || "Something went wrong");
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      bustedFetch();
       router.replace(`/dashboard/client/${tenantId}/students`, { scroll: false });
     }
   }, [searchParams]);

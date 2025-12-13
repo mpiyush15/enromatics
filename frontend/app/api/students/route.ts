@@ -39,8 +39,11 @@ export async function GET(
       ? `/api/students/${studentId}`
       : `/api/students${url.search}`; // Preserve query params (pagination, filters)
 
-    // Check Redis cache for list requests (not single student by ID)
-    if (!studentId) {
+    // 🔥 Check if this is a cache-busting request (has _ts parameter)
+    const hasCacheBuster = url.searchParams.has('_ts');
+
+    // Check Redis cache for list requests (not single student by ID, and not cache-busting)
+    if (!studentId && !hasCacheBuster) {
       const cacheKey = getCacheKey(url.search);
       const cachedData = await redisCache.get<any>(cacheKey);
       
@@ -54,6 +57,12 @@ export async function GET(
             'Cache-Control': 'public, max-age=300',
           },
         });
+      }
+      
+      if (hasCacheBuster) {
+        console.log('🔄 Cache MISS (cache buster active - _ts parameter present)');
+      } else {
+        console.log('🔄 Cache MISS (not in cache)');
       }
     }
 
