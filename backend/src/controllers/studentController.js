@@ -41,12 +41,14 @@ export const addStudent = async (req, res) => {
       });
     }
 
-    // Batch prefix
+    // Batch prefix and batch name
     let batchPrefix = "ST";
+    let batchName = null;
     if (batchId) {
       const batch = await Batch.findById(batchId).lean();
       if (batch?.name) {
         batchPrefix = batch.name.substring(0, 2).toUpperCase();
+        batchName = batch.name; // 🔥 Save batch name
       }
     }
 
@@ -62,6 +64,7 @@ export const addStudent = async (req, res) => {
       gender,
       course,
       batchId: batchId || null,
+      batch: batchName, // 🔥 Store batch name
       address: address || "",
       fees: Number(fees) || 0,
       balance: 0,
