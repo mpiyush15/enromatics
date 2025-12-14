@@ -31,6 +31,7 @@ const studentSchema = new mongoose.Schema({
   gender: {
     type: String,
     enum: ["Male", "Female", "Other"],
+    set: v => vv?.toLowerCase(),
   },
   course: {
     type: String,

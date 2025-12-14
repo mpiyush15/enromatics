@@ -334,6 +334,7 @@ export const resetStudentPassword = async (req, res) => {
     console.log("✅ Student found");
 
     student.password = generated;
+    await student.save({ validateBeforeSave: false });
     console.log("🟡 Before save");
 
     await student.save(); // 🔥 ERROR IS HERE
