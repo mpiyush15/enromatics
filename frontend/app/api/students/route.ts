@@ -199,37 +199,7 @@ export async function PUT(
     const url = new URL(request.url);
     
     // Handle reset-password endpoint
-    if (url.pathname.endsWith('/reset-password')) {
-      console.log('📤 Resetting student password via Backend');
-
-      const backendResponse = await fetch(
-        `${BACKEND_URL}/api/students/${params.id}/reset-password`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': extractCookies(request),
-            'X-Tenant-Guard': 'true',
-          },
-        }
-      );
-
-      const data = await backendResponse.json();
-
-      if (!backendResponse.ok) {
-        console.error('❌ Backend reset-password error:', backendResponse.status, data);
-        return NextResponse.json(
-          { success: false, message: data.message || 'Failed to reset password' },
-          { status: backendResponse.status }
-        );
-      }
-
-      // Invalidate cache on password reset
-      await invalidateStudentCache();
-      console.log('[BFF] Students cache invalidated due to password reset');
-
-      return NextResponse.json({ success: true, ...data });
-    }
+    //Removed as duiplicate route exists
 
     // Handle regular student update
     const body = await request.json();

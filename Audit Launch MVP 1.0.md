@@ -235,9 +235,11 @@ Page crashes
 ```
 1. Click on student row in students list
    Result: ❌ Page loads but shows "Failed to fetch student"
-   
+   #done#
+
 2. Click Edit Profile button
    Result: ❌ Form loads but any change fails to save
+   
    
 3. Try to reset password
    Result: ❌ "Error resetting password" (401)

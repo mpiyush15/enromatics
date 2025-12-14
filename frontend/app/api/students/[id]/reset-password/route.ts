@@ -26,6 +26,7 @@ export async function PUT(
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
         },
+        body: JSON.stringify(await request.json()),
       }
     );
 
@@ -40,7 +41,7 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      message: data.message || 'Password reset successfully',
+      message: data.newPassword || 'Password reset successfully',
     });
   } catch (error) {
     console.error('❌ BFF reset-password error:', error);
