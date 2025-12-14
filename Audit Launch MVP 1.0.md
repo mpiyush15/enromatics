@@ -117,6 +117,7 @@ Frontend is calling `/api/students/:id` directly against backend, but:
 
 **SOLUTION:** Fetch available batches and render as `<select>` dropdown
 
+#Done#
 ---
 
 ## 🧨 CRITICAL ISSUE #4: Missing getHeaders() Impacts
@@ -142,10 +143,11 @@ const getHeaders = (): HeadersInit => {
 - Page breaks
 
 **IMPACT:** ❌ All API calls on this page fail
-
+#done#
 ---
 
-## 🏗️ ARCHITECTURE MISMATCH
+## 🏗️ ARCHITECTURE MISMATCH 
+#Done
 
 ### Expected Flow (Current Design)
 
@@ -182,7 +184,7 @@ Backend: "No Authorization header" → 401
     ↓
 Page crashes
 ```
-
+#Done#
 ---
 
 ## 📊 CRASH MATRIX
@@ -195,6 +197,7 @@ Page crashes
 | **Student Detail** | `/api/students/:id` PUT | localStorage token | localStorage | ❌ NO | 🔴 CRASH |
 | **Student Detail** | `/api/students/:id/reset-pwd` | localStorage token | localStorage | ❌ NO | 🔴 CRASH |
 
+#Done#
 ---
 
 ## 🔧 FIX PRIORITY

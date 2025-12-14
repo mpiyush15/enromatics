@@ -196,6 +196,42 @@ export async function PUT(
       );
     }
 
+    const url = new URL(request.url);
+    
+    // Handle reset-password endpoint
+    if (url.pathname.endsWith('/reset-password')) {
+      console.log('📤 Resetting student password via Backend');
+
+      const backendResponse = await fetch(
+        `${BACKEND_URL}/api/students/${params.id}/reset-password`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': extractCookies(request),
+            'X-Tenant-Guard': 'true',
+          },
+        }
+      );
+
+      const data = await backendResponse.json();
+
+      if (!backendResponse.ok) {
+        console.error('❌ Backend reset-password error:', backendResponse.status, data);
+        return NextResponse.json(
+          { success: false, message: data.message || 'Failed to reset password' },
+          { status: backendResponse.status }
+        );
+      }
+
+      // Invalidate cache on password reset
+      await invalidateStudentCache();
+      console.log('[BFF] Students cache invalidated due to password reset');
+
+      return NextResponse.json({ success: true, ...data });
+    }
+
+    // Handle regular student update
     const body = await request.json();
 
     console.log('📤 Updating student via Backend');
@@ -298,56 +334,6 @@ export async function DELETE(
       { success: false, message: 'Internal server error' },
       { status: 500 }
     );
-  }
-}
-
-// PUT /api/students/:id/reset-password
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id?: string } }
-) {
-  // Support PATCH as alias for reset-password endpoint if frontend uses PATCH
-  try {
-    if (!params?.id) {
-      return NextResponse.json({ success: false, message: 'Student ID required' }, { status: 400 });
-    }
-
-    const url = new URL(request.url);
-    // If request path contains reset-password, forward to backend reset endpoint
-    if (url.pathname.endsWith('/reset-password')) {
-      console.log('📤 Resetting student password via Backend (PATCH)');
-
-      const backendResponse = await fetch(
-        `${BACKEND_URL}/api/students/${params.id}/reset-password`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': extractCookies(request),
-            'X-Tenant-Guard': 'true',
-          },
-        }
-      );
-
-      const data = await backendResponse.json();
-
-      if (!backendResponse.ok) {
-        console.error('❌ Backend reset-password error:', backendResponse.status, data);
-        return NextResponse.json({ success: false, message: data.message || 'Failed to reset password' }, { status: backendResponse.status });
-      }
-
-      // Invalidate cache on password reset
-      await invalidateStudentCache();
-      console.log('[BFF] Students cache invalidated due to password reset');
-
-      return NextResponse.json({ success: true, ...data });
-    }
-
-    // If not reset-password, fallthrough
-    return NextResponse.json({ success: false, message: 'Unsupported PATCH' }, { status: 400 });
-  } catch (error) {
-    console.error('❌ BFF Students PATCH error:', error);
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }
 
