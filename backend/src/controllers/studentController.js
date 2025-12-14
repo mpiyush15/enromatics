@@ -281,8 +281,11 @@ export const updateStudent = async (req, res) => {
   }
 };
 
+// Admin reset student password (generate or set new password)
+/*
 export const resetStudentPassword = async (req, res) => {
   try {
+
     const tenantId = req.user?.tenantId;
     const { id } = req.params;
     const { newPassword } = req.body;
@@ -303,6 +306,54 @@ export const resetStudentPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+*/
+
+//Temp fix for reset password issue
+
+export const resetStudentPassword = async (req, res) => {
+  try {
+    console.log("🔑 Reset password start");
+
+    const tenantId = req.user?.tenantId;
+    const { id } = req.params;
+
+    if (!tenantId) {
+      console.log("❌ Tenant missing");
+      return res.status(403).json({ message: "Tenant ID missing" });
+    }
+
+    const generated = Math.random().toString(36).slice(-8);
+    console.log("✅ Generated password:", generated);
+
+    const student = await Student.findOne({ _id: id, tenantId });
+    if (!student) {
+      console.log("❌ Student not found");
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    console.log("✅ Student found");
+
+    student.password = generated;
+    console.log("🟡 Before save");
+
+    await student.save(); // 🔥 ERROR IS HERE
+
+    console.log("🟢 After save");
+
+    return res.status(200).json({
+      success: true,
+      newPassword: generated,
+    });
+
+  } catch (err) {
+    console.error("🔥 RESET PASSWORD REAL ERROR:", err);
+    return res.status(500).json({
+      message: err.message,
+      stack: err.stack,
+    });
+  }
+};
+
 
 /**
  * Bulk upload students from CSV

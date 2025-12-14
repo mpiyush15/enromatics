@@ -208,13 +208,14 @@ Page crashes
   - Remove `getHeaders()` usage
   - Add `credentials: "include"`
   - Stop calling backend directly
+  #Done#
   
 - [ ] Extend BFF route to handle `/:id` operations
   - GET `/api/students/:id`
   - PUT `/api/students/:id`
   - DELETE `/api/students/:id`
-  - PUT `/api/students/:id/reset-password`
-
+  - PUT `/api/students/:id/reset-password` #Critical#
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ### Priority 2: HIGH (UX BLOCKER)
 
 - [ ] Fix batch selection UI
@@ -239,7 +240,7 @@ Page crashes
 
 2. Click Edit Profile button
    Result: ❌ Form loads but any change fails to save
-   
+
    
 3. Try to reset password
    Result: ❌ "Error resetting password" (401)
