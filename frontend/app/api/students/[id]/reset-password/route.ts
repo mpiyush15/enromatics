@@ -1,52 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { extractCookies } from '@/lib/bff-client';
+import { NextRequest, NextResponse } from "next/server";
+import { extractCookies } from "@/lib/bff-client";
+
+const EXPRESS_URL = process.env.EXPRESS_BACKEND_URL;
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const EXPRESS_URL = process.env.EXPRESS_BACKEND_URL;
     if (!EXPRESS_URL) {
       return NextResponse.json(
-        { success: false, message: 'Backend configuration error' },
+        { success: false, message: "Backend not configured" },
         { status: 500 }
       );
     }
 
-    const { id } = params;
-
-    console.log('📤 Resetting student password:', id);
-
-    const expressResponse = await fetch(
-      `${EXPRESS_URL}/api/students/${id}/reset-password`,
+    const res = await fetch(
+      `${EXPRESS_URL}/api/students/${params.id}/reset-password`,
       {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
+          "Content-Type": "application/json",
+          Cookie: extractCookies(request),
         },
-        body: JSON.stringify(await request.json()),
+        body: JSON.stringify({}), // REQUIRED
       }
     );
 
-    const data = await expressResponse.json();
+    let data: any = {};
+    const contentType = res.headers.get("content-type");
 
-    if (!expressResponse.ok) {
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = { message: text };
+    }
+
+    if (!res.ok) {
       return NextResponse.json(
-        { success: false, message: data.message || 'Failed to reset password' },
-        { status: expressResponse.status }
+        { success: false, message: data.message || "Reset failed" },
+        { status: res.status }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: data.newPassword || 'Password reset successfully',
+      newPassword: data.newPassword,
     });
-  } catch (error) {
-    console.error('❌ BFF reset-password error:', error);
+
+  } catch (err) {
+    console.error("❌ BFF reset-password crash:", err);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
