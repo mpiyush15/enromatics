@@ -69,7 +69,7 @@ router.put(
 router.put(
   "/:id/reset-password",
   protect,
-  authorizeRoles("tenantAdmin"),
+  //authorizeRoles("tenantAdmin"),
   resetStudentPassword
 );
 
