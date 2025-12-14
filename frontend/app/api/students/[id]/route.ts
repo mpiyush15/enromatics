@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
+import { invalidateStudentCache } from '@/lib/redis';
+
 
 export async function GET(
   request: NextRequest,
@@ -30,6 +32,7 @@ export async function GET(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
       }
     );
@@ -81,6 +84,7 @@ export async function PUT(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
         body: JSON.stringify(body),
       }
@@ -95,9 +99,14 @@ export async function PUT(
       );
     }
 
+    // 🔥 Invalidate cache on update
+    await invalidateStudentCache();
+    console.log('[BFF] Students cache invalidated due to update');
+
     return NextResponse.json({
       success: true,
       student: cleanStudent(data.student || data),
+      
     });
   } catch (error) {
     console.error('❌ BFF Student PUT error:', error);
@@ -132,6 +141,7 @@ export async function DELETE(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
       }
     );
@@ -144,6 +154,10 @@ export async function DELETE(
         { status: expressResponse.status }
       );
     }
+
+    // 🔥 Invalidate cache on delete
+    await invalidateStudentCache();
+    console.log('[BFF] Students cache invalidated due to delete');
 
     return NextResponse.json({
       success: true,

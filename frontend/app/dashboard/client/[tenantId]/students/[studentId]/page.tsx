@@ -6,7 +6,11 @@ import useAuth from "@/hooks/useAuth";
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
-  const { tenantId, studentId } = useParams();
+ 
+  const params = useParams<{ tenantId: string; studentId?: string }>();
+  const tenantId = params?.tenantId;
+  const studentId = params?.studentId;
+
   const router = useRouter();
 
   const [student, setStudent] = useState<any | null>(null);
@@ -30,7 +34,7 @@ export default function StudentProfilePage() {
     try {
       const res = await fetch(`/api/students/${studentId}`, {
         method: "GET",
-        headers: getHeaders(),
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data.success) {

@@ -20,8 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
 import { redisCache, CACHE_TTL, invalidateStudentCache } from '@/lib/redis';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
 function getCacheKey(search: string): string {
   return `students:list:${search}`;
 }
@@ -75,6 +74,7 @@ export async function GET(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
       }
     );
@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
         body: JSON.stringify(body),
       }
@@ -205,6 +206,7 @@ export async function PUT(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
         body: JSON.stringify(body),
       }
@@ -264,6 +266,7 @@ export async function DELETE(
         headers: {
           'Content-Type': 'application/json',
           'Cookie': extractCookies(request),
+          'X-Tenant-Guard': 'true',
         },
       }
     );
@@ -297,6 +300,56 @@ export async function DELETE(
   }
 }
 
+// PUT /api/students/:id/reset-password
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id?: string } }
+) {
+  // Support PATCH as alias for reset-password endpoint if frontend uses PATCH
+  try {
+    if (!params?.id) {
+      return NextResponse.json({ success: false, message: 'Student ID required' }, { status: 400 });
+    }
+
+    const url = new URL(request.url);
+    // If request path contains reset-password, forward to backend reset endpoint
+    if (url.pathname.endsWith('/reset-password')) {
+      console.log('📤 Resetting student password via Backend (PATCH)');
+
+      const backendResponse = await fetch(
+        `${BACKEND_URL}/api/students/${params.id}/reset-password`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': extractCookies(request),
+            'X-Tenant-Guard': 'true',
+          },
+        }
+      );
+
+      const data = await backendResponse.json();
+
+      if (!backendResponse.ok) {
+        console.error('❌ Backend reset-password error:', backendResponse.status, data);
+        return NextResponse.json({ success: false, message: data.message || 'Failed to reset password' }, { status: backendResponse.status });
+      }
+
+      // Invalidate cache on password reset
+      await invalidateStudentCache();
+      console.log('[BFF] Students cache invalidated due to password reset');
+
+      return NextResponse.json({ success: true, ...data });
+    }
+
+    // If not reset-password, fallthrough
+    return NextResponse.json({ success: false, message: 'Unsupported PATCH' }, { status: 400 });
+  } catch (error) {
+    console.error('❌ BFF Students PATCH error:', error);
+    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
+  }
+}
+
 /**
  * Clean student data - remove sensitive fields
  */
@@ -309,6 +362,10 @@ function cleanStudent(student: any): any {
     name: student.name,
     email: student.email,
     phone: student.phone,
+    // expose core academic fields
+    course: student.course,
+    batch: student.batch,
+    rollNumber: student.rollNumber,
     enrollmentNumber: student.enrollmentNumber,
     status: student.status,
     stream: student.stream,
