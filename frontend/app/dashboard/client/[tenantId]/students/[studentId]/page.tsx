@@ -21,6 +21,8 @@ export default function StudentProfilePage() {
   const [status, setStatus] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "payments">("overview");
+  const [batches, setBatches] = useState<any[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
 
   // Helper to get auth headers
   const getHeaders = (): HeadersInit => {
@@ -46,7 +48,7 @@ export default function StudentProfilePage() {
           phone: data.student.phone || "",
           gender: data.student.gender || "",
           course: data.student.course || "",
-          batch: data.student.batch || "",
+          batch: data.student.batchId || "",
           address: data.student.address || "",
           fees: data.student.fees ?? 0,
           status: data.student.status || "active",
@@ -62,10 +64,31 @@ export default function StudentProfilePage() {
     }
   };
 
+  const fetchBatches = async () => {
+    try {
+      setLoadingBatches(true);
+      const res = await fetch(`/api/academics/batches?tenantId=${tenantId}&active=true`, {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBatches(data.batches || []);
+      } else {
+        console.warn("Failed to fetch batches:", data.message);
+      }
+    } catch (err: any) {
+      console.error("Error fetching batches:", err);
+    } finally {
+      setLoadingBatches(false);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     fetchStudent();
-  }, [user, studentId]);
+    fetchBatches();
+  }, [user, studentId, tenantId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -74,10 +97,17 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
+      const saveData = {
+        ...form,
+        batchId: form.batch, // Send as batchId to backend
+      };
+      delete saveData.batch; // Remove batch field
+      
       const res = await fetch(`/api/students/${studentId}`, {
         method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify(form),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(saveData),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update student");
@@ -98,7 +128,8 @@ export default function StudentProfilePage() {
     try {
       const res = await fetch(`/api/students/${studentId}/reset-password`, {
         method: "PUT",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
@@ -117,7 +148,8 @@ export default function StudentProfilePage() {
     try {
       const res = await fetch(`/api/payments`, {
         method: "POST",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, amount: Number(paymentAmount) }),
       });
       const data = await res.json();
@@ -138,7 +170,8 @@ export default function StudentProfilePage() {
     try {
       const res = await fetch(`/api/payments/${paymentId}`, {
         method: "DELETE",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to delete");
@@ -456,12 +489,22 @@ export default function StudentProfilePage() {
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Batch</label>
                   {editing ? (
-                    <input 
-                      name="batch" 
-                      value={form.batch} 
-                      onChange={handleChange} 
-                      className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600" 
-                    />
+                    <select
+                      name="batch"
+                      value={form.batch || ''}
+                      onChange={handleChange}
+                      disabled={loadingBatches}
+                      className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600"
+                    >
+                      <option value="">
+                        {loadingBatches ? 'Loading batches...' : 'Select batch'}
+                      </option>
+                      {batches.map((batch) => (
+                        <option key={batch._id} value={batch._id}>
+                          {batch.name}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     <p className="text-lg font-semibold">{student.batch || "Not assigned"}</p>
                   )}
