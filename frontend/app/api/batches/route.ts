@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
+import { extractCookies } from '@/lib/bff-client';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
+
+if (!BACKEND_URL) {
+  throw new Error('EXPRESS_BACKEND_URL not configured');
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,45 +14,65 @@ export async function GET(request: NextRequest) {
     const tenantId = searchParams.get("tenantId");
 
     if (!tenantId) {
-      return NextResponse.json({ message: "Tenant ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Tenant ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Check Redis cache
     const cacheKey = CACHE_KEYS.BATCHES_LIST(tenantId);
     const cached = await redisCache.get<any>(cacheKey);
-    
+
     if (cached) {
       console.log('[BFF] Batches Cache HIT');
-      const response = NextResponse.json(cached, { status: 200 });
-      response.headers.set('X-Cache', 'HIT');
-      response.headers.set('X-Cache-Type', redisCache.isConnected() ? 'REDIS' : 'MEMORY');
-      return response;
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          'X-Cache': 'HIT',
+          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+          'Cache-Control': 'public, max-age=600',
+        },
+      });
     }
 
-    const cookie = request.cookies.get("token");
+    const backendRes = await fetch(
+      `${BACKEND_URL}/api/batches?tenantId=${tenantId}`,
+      {
+        method: "GET",
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': extractCookies(request),
+        },
+      }
+    );
 
-    const response = await fetch(`${BACKEND_URL}/api/batches?tenantId=${tenantId}`, {
-      method: "GET",
+    const data = await backendRes.json();
+
+    if (!backendRes.ok) {
+      return NextResponse.json(data, { status: backendRes.status });
+    }
+
+    const cleanData = {
+      success: true,
+      batches: data.batches || data || [],
+    };
+
+    await redisCache.set(cacheKey, cleanData, CACHE_TTL.LONG);
+    console.log('[BFF] Batches Cache MISS - cached');
+
+    return NextResponse.json(cleanData, {
+      status: 200,
       headers: {
-        Cookie: cookie ? `${cookie.name}=${cookie.value}` : "",
+        'X-Cache': 'MISS',
+        'Cache-Control': 'public, max-age=600',
       },
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
-    }
-
-    // Cache successful response
-    await redisCache.set(cacheKey, data, CACHE_TTL.LONG);
-    console.log('[BFF] Batches Cache MISS - cached for 10 min');
-
-    const res = NextResponse.json(data, { status: 200 });
-    res.headers.set('X-Cache', 'MISS');
-    return res;
   } catch (error: any) {
-    console.error("Error fetching batches:", error);
-    return NextResponse.json({ message: "Internal server error", error: error.message }, { status: 500 });
+    console.error("❌ BFF batches error:", error);
+    return NextResponse.json(
+      { success: false, message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

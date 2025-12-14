@@ -9,7 +9,7 @@ interface Student {
   name: string;
   email: string;
   rollNumber: string;
-  batch: string;
+  batchName: string;
   course: string;
   attendance: {
     _id: string;
@@ -587,7 +587,7 @@ export default function AttendancePage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {student.batch}
+                            {student.batchName}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

@@ -101,7 +101,7 @@ export default function StudentMyTestsPage() {
               <div className="mt-4 space-y-1 text-sm">
                 <p><strong>Name:</strong> {student.name}</p>
                 <p><strong>Roll Number:</strong> {student.rollNumber}</p>
-                <p><strong>Course:</strong> {student.course} | <strong>Batch:</strong> {student.batch}</p>
+                <p><strong>Course:</strong> {student.course} | <strong>Batch:</strong> {student.batchName}</p>
               </div>
             )}
           </div>

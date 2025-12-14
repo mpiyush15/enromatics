@@ -94,7 +94,7 @@ export default function StudentDashboardPage() {
                   Welcome back, {student.name}! 👋
                 </h1>
                 <p className="text-blue-100 text-sm md:text-base">
-                  {student.rollNumber} • {student.course} • {student.batch}
+                  {student.rollNumber} • {student.course} • {student.batchName}
                 </p>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function StudentDashboardPage() {
                     <div className="text-2xl">🎓</div>
                     <div className="flex-1">
                       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Batch</div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{student.batch}</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{student.batchName}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">

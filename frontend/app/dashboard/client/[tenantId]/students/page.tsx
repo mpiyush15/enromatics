@@ -6,6 +6,7 @@ import Link from "next/link";
 import { UpsellModal } from "@/components/PlanGating";
 import useAuth from "@/hooks/useAuth";
 import { StudentListSkeleton } from "@/components/ui/Skeleton";
+import type { StudentDTO, StudentListResponse } from "@/types/student";
 
 interface Quota {
   current: number;
@@ -22,7 +23,7 @@ export default function StudentsPage() {
   const { user } = useAuth();
 
   /* ================= DATA ================= */
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<StudentDTO[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [quota, setQuota] = useState<Quota | null>(null);
@@ -444,7 +445,7 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                               📚 {student.course}
                             </span>
                             <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 w-fit">
-                              🎓 {student.batch || "N/A"}
+                              🎓 {student.batchName || "N/A"}
                             </span>
                           </div>
                         </td>

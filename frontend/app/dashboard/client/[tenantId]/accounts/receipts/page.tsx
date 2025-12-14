@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import FeeReceipt from "@/components/accounts/FeeReceipt";
 
 export default function FeeReceiptsPage() {
-  const { tenantId } = useParams();
+  //const { tenantId } = useParams();
   const [searchType, setSearchType] = useState<"rollNumber" | "batch" | "name">("rollNumber");
   const [searchValue, setSearchValue] = useState("");
   const [students, setStudents] = useState<any[]>([]);
@@ -206,7 +206,7 @@ export default function FeeReceiptsPage() {
                           Roll: {student.rollNumber}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-500">
-                          {student.course} | Batch {student.batch}
+                          {student.course} | Batch {student.batchName}
                         </div>
                       </div>
                     </div>
@@ -250,7 +250,7 @@ export default function FeeReceiptsPage() {
                 </div>
                 <div>
                   <div className="opacity-80">Batch</div>
-                  <div className="font-semibold">{selectedStudent.batch}</div>
+                  <div className="font-semibold">{selectedStudent.batchName}</div>
                 </div>
                 <div>
                   <div className="opacity-80">Phone</div>

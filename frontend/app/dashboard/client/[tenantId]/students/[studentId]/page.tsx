@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import type { StudentDTO, StudentFormData, StudentDetailResponse, StudentMutationResponse } from "@/types/student";
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
@@ -13,24 +14,16 @@ export default function StudentProfilePage() {
 
   const router = useRouter();
 
-  const [student, setStudent] = useState<any | null>(null);
+  const [student, setStudent] = useState<StudentDTO | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<StudentFormData>({});
   const [status, setStatus] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "payments">("overview");
   const [batches, setBatches] = useState<any[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-
-  // Helper to get auth headers
-  const getHeaders = (): HeadersInit => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
 
   const fetchStudent = async () => {
     try {
@@ -38,17 +31,17 @@ export default function StudentProfilePage() {
         method: "GET",
         credentials: "include",
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data: StudentDetailResponse = await res.json();
+      if (res.ok && data.success && data.student) {
         setStudent(data.student);
         setPayments(data.payments || []);
         setForm({
           name: data.student.name || "",
           email: data.student.email || "",
           phone: data.student.phone || "",
-          gender: data.student.gender || "",
+          gender: data.student.gender,
           course: data.student.course || "",
-          batch: data.student.batchId || "",
+          batchId: data.student.batchId || "",
           address: data.student.address || "",
           fees: data.student.fees ?? 0,
           status: data.student.status || "active",
@@ -97,21 +90,17 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const saveData = {
-        ...form,
-        batchId: form.batch, // Send as batchId to backend
-      };
-      delete saveData.batch; // Remove batch field
-      
       const res = await fetch(`/api/students/${studentId}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saveData),
+        body: JSON.stringify(form),
       });
-      const data = await res.json();
+      const data: StudentMutationResponse = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update student");
-      setStudent(data.student);
+      if (data.student) {
+        setStudent(data.student);
+      }
       setEditing(false);
       setStatus("✅ Saved successfully!");
       setTimeout(() => setStatus(""), 3000);
@@ -131,7 +120,7 @@ export default function StudentProfilePage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
-      const data = await res.json();
+      const data: StudentMutationResponse = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
       const newPwd = data.newPassword;
       alert(`Password reset successfully!\n\nNew Password: ${newPwd}\n\nPlease share this with the student.`);
@@ -274,7 +263,7 @@ export default function StudentProfilePage() {
                     <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    <span>{student.course} - {student.batch}</span>
+                    <span>{student.course} - {student.batchName}</span>
                   </div>
                 </div>
               </div>
@@ -377,7 +366,7 @@ export default function StudentProfilePage() {
                 <p className="text-2xl font-bold">{student.course}</p>
               </div>
             </div>
-            <p className="text-sm opacity-90">Batch: {student.batch}</p>
+            <p className="text-sm opacity-90">Batch: {student.batchName}</p>
           </div>
         </div>
 
@@ -490,8 +479,8 @@ export default function StudentProfilePage() {
                   <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Batch</label>
                   {editing ? (
                     <select
-                      name="batch"
-                      value={form.batch || ''}
+                      name="batchId"
+                      value={form.batchId || ''}
                       onChange={handleChange}
                       disabled={loadingBatches}
                       className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600"
@@ -503,10 +492,10 @@ export default function StudentProfilePage() {
                         <option key={batch._id} value={batch._id}>
                           {batch.name}
                         </option>
-                      ))}
+                      ))}                   
                     </select>
                   ) : (
-                    <p className="text-lg font-semibold">{student.batch || "Not assigned"}</p>
+                    <p className="text-lg font-semibold">{student.batchName || "Not assigned"}</p>
                   )}
                 </div>
 

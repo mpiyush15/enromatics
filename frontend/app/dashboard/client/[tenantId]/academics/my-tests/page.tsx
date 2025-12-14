@@ -85,7 +85,7 @@ export default function StudentMyTestsPage() {
             <div className="mt-4 text-sm">
               <p><strong>Name:</strong> {student.name}</p>
               <p><strong>Roll No:</strong> {student.rollNumber}</p>
-              <p><strong>Course:</strong> {student.course} {student.batch && `- ${student.batch}`}</p>
+              <p><strong>Course:</strong> {student.course} {student.batchName && `- ${student.batchName}`}</p>
             </div>
           )}
         </div>

@@ -126,7 +126,7 @@ export default function StudentTestSchedulePage() {
             {student && (
               <div className="mt-4 space-y-1 text-sm">
                 <p><strong>Name:</strong> {student.name}</p>
-                <p><strong>Course:</strong> {student.course} | <strong>Batch:</strong> {student.batch}</p>
+                <p><strong>Course:</strong> {student.course} | <strong>Batch:</strong> {student.batchName}</p>
               </div>
             )}
           </div>

@@ -35,7 +35,7 @@ export default function StudentProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { credentials: "include" });
+      const res = await fetch(`${process.env.EXPRESS_BACKEND_URL}/api/student-auth/me`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Not authenticated");
       setStudent(data);
@@ -65,7 +65,7 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`${API_BASE_URL}/api/student-auth/update-profile`, {
+      const res = await fetch(`${process.env.EXPRESS_BACKEND_URL}/api/student-auth/update-profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -246,7 +246,7 @@ export default function StudentProfilePage() {
                     🎓 Batch
                   </label>
                   <p className="text-lg font-medium text-gray-900 dark:text-white px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    {student.batch}
+                    {student.batchName}
                   </p>
                 </div>
               </div>

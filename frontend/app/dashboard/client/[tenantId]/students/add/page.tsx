@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import type { StudentFormData, StudentMutationResponse } from "@/types/student";
 
 interface Batch {
   _id: string;
@@ -147,14 +148,14 @@ export default function AddStudentPage() {
         }),
       });
 
-      const data = await res.json();
+      const data: StudentMutationResponse = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to add student");
 
       setStatus("✅ Student added successfully!");
       
       // If password was auto-generated, show it
-      if (data.generatedPassword) {
-        setGeneratedPassword(data.generatedPassword);
+      if (data.newPassword) {
+        setGeneratedPassword(data.newPassword);
       }
       
       setTimeout(() => router.push(`/dashboard/client/${tenantId}/students?refresh=1`), 3000);
