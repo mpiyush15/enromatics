@@ -21,7 +21,8 @@ export async function PUT(
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Cookie: extractCookies(request),
+          "Cookie": extractCookies(request),
+          "X-Tenant-Guard": "true",
         },
         body: JSON.stringify({}), // REQUIRED
       }
