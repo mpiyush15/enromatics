@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
 import { redisCache, CACHE_TTL, invalidateStudentCache } from '@/lib/redis';
+import type { StudentDTO, StudentListResponse, StudentMutationResponse } from '@/types/student';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
 function getCacheKey(search: string): string {
@@ -92,7 +93,7 @@ export async function GET(
     console.log('✅ Backend returned students data');
 
     // Clean response - remove sensitive fields
-    const cleanData = {
+    const cleanData: StudentListResponse | { success: boolean; student: StudentDTO | null } = {
       success: true,
       ...data,
       // If it's a list, clean each student
@@ -166,9 +167,9 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Student created successfully');
 
-    const cleanData = {
+    const cleanData: StudentMutationResponse = {
       success: true,
-      student: data.student ? cleanStudent(data.student) : data,
+      student: data.student ? cleanStudent(data.student) : undefined,
       message: data.message,
     };
 
@@ -228,9 +229,9 @@ export async function PUT(
 
     console.log('✅ Student updated successfully');
 
-    const cleanData = {
+    const cleanData: StudentMutationResponse = {
       success: true,
-      student: data.student ? cleanStudent(data.student) : data,
+      student: data.student ? cleanStudent(data.student) : undefined,
       message: data.message,
     };
 
@@ -352,42 +353,42 @@ export async function PATCH(
 
 /**
  * Clean student data - remove sensitive fields
+ * Maps backend response to StudentDTO
  */
-function cleanStudent(student: any): any {
+function cleanStudent(student: any): StudentDTO | null {
   if (!student) return null;
 
   return {
+    // ✅ ALWAYS include both id and _id
     _id: student._id,
-    id: student.id,
+    id: student.id || student._id,
+    
+    tenantId: student.tenantId,
     name: student.name,
     email: student.email,
     phone: student.phone,
-    // expose core academic fields
+    gender: student.gender,
     course: student.course,
-    batch: student.batch,
+    
+    // 🔑 BATCH HANDLING - normalize both fields
+    batchId: student.batchId,
+    batchName: student.batch || student.batchName,  // Handle both 'batch' and 'batchName'
+    
     rollNumber: student.rollNumber,
     enrollmentNumber: student.enrollmentNumber,
+    fees: student.fees,
+    balance: student.balance,
     status: student.status,
-    stream: student.stream,
-    class: student.class,
-    parentName: student.parentName,
-    parentEmail: student.parentEmail,
-    parentPhone: student.parentPhone,
     address: student.address,
     city: student.city,
     state: student.state,
     pincode: student.pincode,
-    profilePicture: student.profilePicture,
-    tenantId: student.tenantId,
     createdAt: student.createdAt,
     updatedAt: student.updatedAt,
-    // Include additional fields but exclude password/sensitive data
-    ...(student.fees && { fees: student.fees }),
-    ...(student.attendance && { attendance: student.attendance }),
+    
     // Never expose
     // password: ❌
     // refreshToken: ❌
     // otp: ❌
-    // internalNotes: ❌
   };
 }

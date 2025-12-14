@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
 import { invalidateStudentCache } from '@/lib/redis';
+import type { StudentDTO, StudentDetailResponse, StudentMutationResponse } from '@/types/student';
 
 
 export async function GET(
@@ -49,7 +50,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       student: cleanStudent(data.student || data),
-    });
+    } as StudentDetailResponse);
   } catch (error) {
     console.error('❌ BFF Student GET error:', error);
     return NextResponse.json(
@@ -106,8 +107,7 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       student: cleanStudent(data.student || data),
-      
-    });
+    } as StudentMutationResponse);
   } catch (error) {
     console.error('❌ BFF Student PUT error:', error);
     return NextResponse.json(
@@ -172,31 +172,35 @@ export async function DELETE(
   }
 }
 
-function cleanStudent(student: any): any {
+function cleanStudent(student: any): StudentDTO | null {
   if (!student) return null;
 
   return {
+    // ✅ ALWAYS include both id and _id
     _id: student._id,
-    id: student.id,
+    id: student.id || student._id,
+    
+    tenantId: student.tenantId,
     name: student.name,
     email: student.email,
     phone: student.phone,
+    gender: student.gender,
+    course: student.course,
+    
+    // 🔑 BATCH HANDLING - normalize both fields
+    batchId: student.batchId,
+    batchName: student.batch || student.batchName,  // Handle both 'batch' and 'batchName'
+    
+    rollNumber: student.rollNumber,
     enrollmentNumber: student.enrollmentNumber,
+    fees: student.fees,
+    balance: student.balance,
     status: student.status,
-    stream: student.stream,
-    class: student.class,
-    parentName: student.parentName,
-    parentEmail: student.parentEmail,
-    parentPhone: student.parentPhone,
     address: student.address,
     city: student.city,
     state: student.state,
     pincode: student.pincode,
-    profilePicture: student.profilePicture,
-    tenantId: student.tenantId,
     createdAt: student.createdAt,
     updatedAt: student.updatedAt,
-    ...(student.fees && { fees: student.fees }),
-    ...(student.attendance && { attendance: student.attendance }),
   };
 }
