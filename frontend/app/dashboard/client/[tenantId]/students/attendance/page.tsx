@@ -54,7 +54,7 @@ export default function AttendancePage() {
         });
         const data = await res.json();
         if (data.success) {
-          const uniqueBatches = [...new Set(data.students.map((s: any) => s.batch))].filter(Boolean);
+          const uniqueBatches = [...new Set(data.students.map((s: any) => s.batchName))].filter(Boolean);
           const uniqueCourses = [...new Set(data.students.map((s: any) => s.course))].filter(Boolean);
           setBatches(uniqueBatches as string[]);
           setCourses(uniqueCourses as string[]);
@@ -74,7 +74,7 @@ export default function AttendancePage() {
       if (batch) params.append("batch", batch);
       if (course) params.append("course", course);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/date?${params.toString()}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/date?${params.toString()}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -126,7 +126,7 @@ export default function AttendancePage() {
         remarks: s.attendance?.remarks || "",
       }));
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/mark`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/mark`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -188,7 +188,7 @@ export default function AttendancePage() {
       formData.append("file", uploadFile);
       formData.append("date", date);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/upload-csv`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/upload-csv`, {
         method: "POST",
         credentials: "include",
         body: formData,
