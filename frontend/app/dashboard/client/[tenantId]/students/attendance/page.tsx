@@ -45,20 +45,12 @@ export default function AttendancePage() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
 
-  // Helper to get auth headers
-  const getHeaders = (): HeadersInit => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
-
   // Fetch unique batches and courses for filters
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`/api/students?tenantId=${tenantId}&limit=1000`, {
-          headers: getHeaders(),
+        const res = await fetch(`/api/students?limit=1000`, {
+          credentials: "include",
         });
         const data = await res.json();
         if (data.success) {
@@ -82,8 +74,8 @@ export default function AttendancePage() {
       if (batch) params.append("batch", batch);
       if (course) params.append("course", course);
 
-      const res = await fetch(`/api/attendance/date?${params.toString()}`, {
-        headers: getHeaders(),
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/date?${params.toString()}`, {
+        credentials: "include",
       });
       const data = await res.json();
 
@@ -134,9 +126,12 @@ export default function AttendancePage() {
         remarks: s.attendance?.remarks || "",
       }));
 
-      const res = await fetch(`/api/attendance/mark`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/mark`, {
         method: "POST",
-        headers: getHeaders(),
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ records }),
       });
 
@@ -189,17 +184,13 @@ export default function AttendancePage() {
     setUploadStatus("⏳ Processing CSV file...");
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       const formData = new FormData();
       formData.append("file", uploadFile);
       formData.append("date", date);
 
-      const headers: HeadersInit = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch(`/api/attendance/upload-csv`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance/upload-csv`, {
         method: "POST",
-        headers,
+        credentials: "include",
         body: formData,
       });
 
