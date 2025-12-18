@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import { TableSkeleton } from "@/components/ui/Skeleton";
@@ -57,7 +57,7 @@ export default function TestAttendancePage() {
   const [filterBatch, setFilterBatch] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "present" | "absent">("all");
 
-  const fetchTestAndStudents = async () => {
+  const fetchTestAndStudents = useCallback(async () => {
     try {
       // Fetch test details via BFF with cookie auth using the correct endpoint
       console.log('📤 Fetching test:', testId);
@@ -84,7 +84,12 @@ export default function TestAttendancePage() {
         );
         const studentsData = await studentsRes.json();
         if (studentsRes.ok) {
-          setStudents(studentsData.students || []);
+          // ✅ FIX 3: Normalize batch data (handle both batch.name and batchName)
+          const normalized = (studentsData.students || []).map((s: any) => ({
+            ...s,
+            batch: s.batch?.name || s.batchName || s.batch || "",
+          }));
+          setStudents(normalized);
 
           // Fetch existing attendance via BFF with cookie auth
           const attendanceRes = await fetch(
@@ -112,7 +117,7 @@ export default function TestAttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]); // ✅ FIX 1: Only depend on testId, not the function itself
 
   useEffect(() => {
     if (!testId) {
@@ -143,7 +148,7 @@ export default function TestAttendancePage() {
     const current = newAttendance.get(studentId);
     newAttendance.set(studentId, {
       studentId,
-      present: current?.present || false,
+      present: current?.present ?? false, // ✅ FIX 2: Use ?? instead of || to preserve false
       remarks,
     });
     setAttendance(newAttendance);
