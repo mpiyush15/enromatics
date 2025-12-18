@@ -174,20 +174,23 @@ export default function TestAttendancePage() {
         const record = attendance.get(student._id);
         return {
           studentId: student._id,
-          present: record?.present || false,
+          present: record?.present ?? false, // ✅ Use ?? to preserve false values
           remarks: record?.remarks || "",
         };
       });
 
-      const res = await fetch(`/api/academics/attendance?testId=${testId}`, {
+      const res = await fetch(`/api/academics/attendance`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceData }),
+        body: JSON.stringify({ 
+          testId, // ✅ Include testId in body, not query string
+          attendanceData 
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Failed to save attendance");
 
       setStatus("✅ Attendance saved successfully!");
       setTimeout(() => {
@@ -196,6 +199,7 @@ export default function TestAttendancePage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to save attendance";
       setStatus("❌ " + errorMessage);
+      console.error("❌ Save attendance error:", error);
     }
   };
 
