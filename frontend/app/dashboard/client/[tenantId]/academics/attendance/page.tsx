@@ -59,12 +59,13 @@ export default function TestAttendancePage() {
         credentials: "include",
       });
       const testData = await testRes.json();
-      if (testRes.ok) {
-        setTest(testData.test);
+      if (testRes.ok && testData.test) {
+        const testDetails = testData.test;
+        setTest(testDetails);
 
         // Fetch students for this course/batch via BFF with cookie auth
         const studentsRes = await fetch(
-          `/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
+          `/api/students?course=${testDetails.course}${testDetails.batch ? `&batch=${testDetails.batch}` : ""}`,
           { credentials: "include" }
         );
         const studentsData = await studentsRes.json();

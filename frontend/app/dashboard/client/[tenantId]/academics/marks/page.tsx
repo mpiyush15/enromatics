@@ -63,8 +63,9 @@ export default function MarksEntryPage() {
         credentials: "include",
       });
       const testData = await testRes.json();
-      if (testRes.ok) {
-        setTest(testData.test);
+      if (testRes.ok && testData.test) {
+        const testDetails = testData.test;
+        setTest(testDetails);
 
         // Fetch attendance via BFF with cookie auth
         const attendanceRes = await fetch(
@@ -86,7 +87,7 @@ export default function MarksEntryPage() {
           // Only fetch students who were present
           if (presentStudentIds.size > 0) {
             const studentsRes = await fetch(
-              `/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
+              `/api/students?course=${testDetails.course}${testDetails.batch ? `&batch=${testDetails.batch}` : ""}`,
               { credentials: "include" }
             );
             const studentsData = await studentsRes.json();
