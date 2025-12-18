@@ -54,31 +54,27 @@ export default function TestAttendancePage() {
 
   const fetchTestAndStudents = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      // Fetch test details via BFF
+      // Fetch test details via BFF with cookie auth
       const testRes = await fetch(`/api/academics/tests?testId=${testId}`, {
-        headers,
+        credentials: "include",
       });
       const testData = await testRes.json();
       if (testRes.ok) {
         setTest(testData.test);
 
-        // Fetch students for this course/batch via BFF
+        // Fetch students for this course/batch via BFF with cookie auth
         const studentsRes = await fetch(
           `/api/students?course=${testData.test.course}${testData.test.batch ? `&batch=${testData.test.batch}` : ""}`,
-          { headers }
+          { credentials: "include" }
         );
         const studentsData = await studentsRes.json();
         if (studentsRes.ok) {
           setStudents(studentsData.students || []);
 
-          // Fetch existing attendance via BFF
+          // Fetch existing attendance via BFF with cookie auth
           const attendanceRes = await fetch(
             `/api/academics/attendance?testId=${testId}`,
-            { headers }
+            { credentials: "include" }
           );
           const attendanceData = await attendanceRes.json();
           if (attendanceRes.ok) {
