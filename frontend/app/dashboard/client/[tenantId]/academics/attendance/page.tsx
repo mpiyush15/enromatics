@@ -54,12 +54,21 @@ export default function TestAttendancePage() {
 
   const fetchTestAndStudents = async () => {
     try {
-      // Fetch test details via BFF with cookie auth
-      const testRes = await fetch(`/api/academics/tests?testId=${testId}`, {
+      // Fetch test details via BFF with cookie auth using the correct endpoint
+      console.log('📤 Fetching test:', testId);
+      const testRes = await fetch(`/api/academics/tests/${testId}`, {
         credentials: "include",
       });
       const testData = await testRes.json();
-      if (testRes.ok && testData.test) {
+      console.log('📥 Test response:', testRes.status, testData);
+      
+      if (!testRes.ok) {
+        setStatus(`❌ Failed to load test: ${testData.message || 'Unknown error'}`);
+        setLoading(false);
+        return;
+      }
+      
+      if (testData.test) {
         const testDetails = testData.test;
         setTest(testDetails);
 
