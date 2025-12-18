@@ -128,9 +128,11 @@ export default function TestAttendancePage() {
   const toggleAttendance = (studentId: string) => {
     const newAttendance = new Map(attendance);
     const current = newAttendance.get(studentId);
+    // If no record exists, default to false (absent), then toggle to true (present)
+    const currentPresent = current?.present ?? false;
     newAttendance.set(studentId, {
       studentId,
-      present: current ? !current.present : true,
+      present: !currentPresent,
       remarks: current?.remarks || "",
     });
     setAttendance(newAttendance);
@@ -477,7 +479,6 @@ export default function TestAttendancePage() {
                     <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Roll No</th>
                     <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Student Name</th>
                     <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Batch</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Email</th>
                     <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Attendance</th>
                     <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Remarks</th>
                   </tr>
@@ -485,7 +486,7 @@ export default function TestAttendancePage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredStudents.map((student) => {
                     const record = attendance.get(student._id);
-                    const isPresent = record?.present || false;
+                    const isPresent = record?.present ?? false;
 
                     return (
                       <tr key={student._id} className="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
@@ -505,7 +506,6 @@ export default function TestAttendancePage() {
                             {student.batch || "N/A"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{student.email}</td>
                         <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => toggleAttendance(student._id)}
