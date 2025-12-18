@@ -149,10 +149,6 @@ export default function TestAttendancePage() {
   const handleSubmit = async () => {
     setStatus("Saving attendance...");
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const attendanceData = students.map((student) => {
         const record = attendance.get(student._id);
         return {
@@ -164,7 +160,8 @@ export default function TestAttendancePage() {
 
       const res = await fetch(`/api/academics/attendance?testId=${testId}`, {
         method: "POST",
-        headers,
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attendanceData }),
       });
 

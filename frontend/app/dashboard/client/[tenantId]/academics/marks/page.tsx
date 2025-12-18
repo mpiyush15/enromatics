@@ -190,10 +190,6 @@ export default function MarksEntryPage() {
   const handleSubmit = async () => {
     setStatus("Saving marks...");
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const marksData = students.map((student) => {
         const record = marks.get(student._id);
         return {
@@ -205,7 +201,8 @@ export default function MarksEntryPage() {
 
       const res = await fetch(`/api/academics/marks?testId=${testId}`, {
         method: "POST",
-        headers,
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ marksData }),
       });
 
