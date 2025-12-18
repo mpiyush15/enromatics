@@ -74,7 +74,8 @@ export default function AttendancePage() {
       if (batch) params.append("batch", batch);
       if (course) params.append("course", course);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/date?${params.toString()}`, {
+      // Call BFF route instead of backend directly
+      const res = await fetch(`/api/attendance/date?${params.toString()}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -126,7 +127,8 @@ export default function AttendancePage() {
         remarks: s.attendance?.remarks || "",
       }));
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/mark`, {
+      // Call BFF route instead of backend directly
+      const res = await fetch(`/api/attendance/mark`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -188,7 +190,8 @@ export default function AttendancePage() {
       formData.append("file", uploadFile);
       formData.append("date", date);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/upload-csv`, {
+      // Call BFF route instead of backend directly
+      const res = await fetch(`/api/attendance/upload-csv`, {
         method: "POST",
         credentials: "include",
         body: formData,
