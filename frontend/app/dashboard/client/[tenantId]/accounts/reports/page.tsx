@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useSWRFetch } from "@/lib/hooks/use-swr-fetch";
 
 interface ReportResponse {
   success: boolean;
@@ -43,7 +43,7 @@ export default function AccountsReportsPage() {
   const reportsUrl = `/api/accounts/reports${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
   // ✅ SWR: Auto-caching financial reports with dynamic date filters
-  const { data: response, isLoading: loading } = useDashboardData<ReportResponse>(
+  const { data: response, isLoading: loading } = useSWRFetch<ReportResponse>(
     tenantId ? reportsUrl : null
   );
 
@@ -212,7 +212,7 @@ export default function AccountsReportsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {summary.topExpenseCategories.map((category, index) => (
+              {summary.topExpenseCategories.map((category: any, index: number) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="flex-shrink-0 w-32">
                     <div className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
@@ -267,7 +267,7 @@ export default function AccountsReportsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {summary.monthlyData.map((month, index) => {
+                  {summary.monthlyData.map((month: any, index: number) => {
                     const margin = month.income > 0 ? (month.profit / month.income) * 100 : 0;
                     return (
                       <tr
