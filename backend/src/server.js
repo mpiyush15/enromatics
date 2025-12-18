@@ -65,7 +65,8 @@ app.use(compression({
 app.use(
   cors({
     origin: [
-      "https://enromatics.com", 
+      "https://enromatics.com",
+      "https://www.enromatics.com",
       "https://enromatics.vercel.app",
       "https://endearing-blessing-production-c61f.up.railway.app",
       "http://localhost:3000", 
