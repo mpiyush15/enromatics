@@ -14,15 +14,11 @@ export default function Navbar() {
   const servicesRef = useRef<HTMLLIElement>(null);
   const pathname = usePathname();
 
-  /* ✅ Handle theme + mount */
+  /* ✅ Handle mount and read theme from DOM */
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("theme");
-    const html = document.documentElement;
-    if (savedTheme === "dark") {
-      html.classList.add("dark");
-      setIsDark(true);
-    }
+    // Theme is already set by blocking script in layout.tsx
+    setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
   /* ✅ Close dropdowns when route changes */
@@ -59,15 +55,17 @@ export default function Navbar() {
   /* ✅ Theme toggle */
   const toggleTheme = () => {
     const html = document.documentElement;
-    if (isDark) {
-      html.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-      setIsDark(false);
-    } else {
+    const newIsDark = !isDark;
+    
+    if (newIsDark) {
       html.classList.add("dark");
       localStorage.setItem("theme", "dark");
-      setIsDark(true);
+    } else {
+      html.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
+    
+    setIsDark(newIsDark);
   };
 
   /* ✅ Close mobile menu when clicking a link */
