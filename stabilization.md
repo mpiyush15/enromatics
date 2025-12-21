@@ -4,7 +4,45 @@
 **Document Type:** Stabilization & Technical Cleanup Update
 **Version:** MVP v1.1
 **Date:** 21 December 2025
-**Status:** 🟡 Stable with Identified Risks
+**Status:** � Stabilization In Progress
+
+---
+
+## ✅ STABILIZED & FROZEN PAGES
+
+The following pages have been fully stabilized and are **FROZEN** (no changes allowed without re-audit):
+
+### 1. Institute Overview Page ✅ FROZEN
+- **Path:** `/dashboard/client/[tenantId]/institute-overview`
+- **BFF Route:** `/api/dashboard/overview`
+- **Status:** 100% SSOT + BFF compliant
+- **Commit:** `8fc1fe6`
+- **Changes Made:**
+  - Uses `apiClient` exclusively
+  - No direct backend calls
+  - Clean BFF route (no Redis, no caching)
+  - Verified useEffect dependencies safe
+  - Tested: hard refresh, direct URL, logout/login, 5x reload
+- **Result:** Deterministic, zero random errors
+
+### 2. Dashboard Home Page ✅ FROZEN
+- **Path:** `/dashboard/home`
+- **BFF Route:** `/api/dashboard/home`
+- **Status:** 100% SSOT + BFF compliant
+- **Commit:** `e8961f4`
+- **Changes Made:**
+  - Uses `apiClient` exclusively
+  - Removed token handling (BFF handles cookies)
+  - No direct backend calls
+  - Verified useEffect dependencies safe
+  - Tested: hard refresh, direct URL, logout/login, 5x reload
+- **Result:** Deterministic, zero random errors
+
+### Core Infrastructure ✅ STABLE
+- **apiClient.ts:** Unified API client for entire frontend
+- **Sidebar.tsx:** Infinite loop fixed, tenant URL routing working
+- **useAuth.tsx:** React 19 strict mode compatible
+- **Commits:** `743776a`, `76eb0e8`
 
 ---
 
