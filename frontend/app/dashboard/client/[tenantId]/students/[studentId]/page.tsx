@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import type { StudentDTO, StudentFormData, StudentDetailResponse, StudentMutationResponse } from "@/types/student";
+import { api, safeApiCall } from "@/lib/apiClient";
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
@@ -27,12 +28,17 @@ export default function StudentProfilePage() {
 
   const fetchStudent = async () => {
     try {
-      const res = await fetch(`/api/students/${studentId}`, {
-        method: "GET",
-        credentials: "include",
-      });
-      const data: StudentDetailResponse = await res.json();
-      if (res.ok && data.success && data.student) {
+      const [data, err] = await safeApiCall(() =>
+        api.get<StudentDetailResponse>(`/api/students/${studentId}`)
+      );
+
+      if (err) {
+        setStatus(err.message || "Failed to fetch student");
+        setLoading(false);
+        return;
+      }
+
+      if (data && data.success && data.student) {
         setStudent(data.student);
         setPayments(data.payments || []);
         setForm({
@@ -47,7 +53,7 @@ export default function StudentProfilePage() {
           status: data.student.status || "active",
         });
       } else {
-        setStatus(data.message || "Failed to fetch student");
+        setStatus(data?.message || "Failed to fetch student");
       }
     } catch (err: any) {
       console.error(err);
@@ -60,15 +66,19 @@ export default function StudentProfilePage() {
   const fetchBatches = async () => {
     try {
       setLoadingBatches(true);
-      const res = await fetch(`/api/academics/batches?tenantId=${tenantId}&active=true`, {
-        method: "GET",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const [data, err] = await safeApiCall(() =>
+        api.get<any>(`/api/academics/batches?tenantId=${tenantId}&active=true`)
+      );
+
+      if (err) {
+        console.warn("Failed to fetch batches:", err.message);
+        return;
+      }
+
+      if (data && data.success) {
         setBatches(data.batches || []);
       } else {
-        console.warn("Failed to fetch batches:", data.message);
+        console.warn("Failed to fetch batches:", data?.message);
       }
     } catch (err: any) {
       console.error("Error fetching batches:", err);
@@ -90,15 +100,16 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`/api/students/${studentId}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data: StudentMutationResponse = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update student");
-      if (data.student) {
+      const [data, err] = await safeApiCall(() =>
+        api.put<StudentMutationResponse>(`/api/students/${studentId}`, form)
+      );
+
+      if (err) {
+        setStatus("❌ " + (err.message || "Error saving"));
+        return;
+      }
+
+      if (data && data.student) {
         setStudent(data.student);
       }
       setEditing(false);
@@ -115,14 +126,16 @@ export default function StudentProfilePage() {
     if (!ok) return;
     setStatus("Resetting password...");
     try {
-      const res = await fetch(`/api/students/${studentId}/reset-password`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data: StudentMutationResponse = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reset password");
-      const newPwd = data.newPassword;
+      const [data, err] = await safeApiCall(() =>
+        api.put<StudentMutationResponse>(`/api/students/${studentId}/reset-password`, {})
+      );
+
+      if (err) {
+        setStatus("❌ " + (err.message || "Error resetting password"));
+        return;
+      }
+
+      const newPwd = data?.newPassword;
       alert(`Password reset successfully!\n\nNew Password: ${newPwd}\n\nPlease share this with the student.`);
       setStatus(`✅ Password reset. New password: ${newPwd}`);
     } catch (err: any) {
@@ -135,14 +148,15 @@ export default function StudentProfilePage() {
     if (!paymentAmount) return setStatus("❌ Enter amount");
     setStatus("Adding payment...");
     try {
-      const res = await fetch(`/api/payments`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, amount: Number(paymentAmount) }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to add payment");
+      const [data, err] = await safeApiCall(() =>
+        api.post<any>(`/api/payments`, { studentId, amount: Number(paymentAmount) })
+      );
+
+      if (err) {
+        setStatus("❌ " + (err.message || "Error adding payment"));
+        return;
+      }
+
       setPaymentAmount("");
       setStatus("✅ Payment added successfully!");
       fetchStudent();
@@ -157,13 +171,15 @@ export default function StudentProfilePage() {
     const ok = confirm("Are you sure you want to delete this payment receipt?");
     if (!ok) return;
     try {
-      const res = await fetch(`/api/payments/${paymentId}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to delete");
+      const [data, err] = await safeApiCall(() =>
+        api.delete<any>(`/api/payments/${paymentId}`)
+      );
+
+      if (err) {
+        setStatus("❌ " + (err.message || "Error deleting payment"));
+        return;
+      }
+
       setStatus("✅ Payment deleted");
       fetchStudent();
       setTimeout(() => setStatus(""), 3000);

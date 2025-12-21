@@ -27,6 +27,7 @@ export default function StudentsPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [quota, setQuota] = useState<Quota | null>(null);
+  const [limit, setLimit] = useState(10); // Per page limit
 
   /* ================= FILTER INPUTS ================= */
   const [batchFilter, setBatchFilter] = useState("");
@@ -82,7 +83,7 @@ export default function StudentsPage() {
 
       const params = new URLSearchParams();
       params.set("page", String(page));
-      params.set("limit", "10");
+      params.set("limit", String(limit));
 
       if (appliedFilters.batch) params.set("batch", appliedFilters.batch);
       if (appliedFilters.course) params.set("course", appliedFilters.course);
@@ -108,10 +109,10 @@ export default function StudentsPage() {
     }
   };
 
-  /* ================= FETCH ON PAGE / FILTER APPLY ================= */
+  /* ================= FETCH ON PAGE / FILTER / LIMIT APPLY ================= */
   useEffect(() => {
     fetchStudents();
-  }, [page, appliedFilters]);
+  }, [page, appliedFilters, limit]);
 
   /* ================= HANDLE ?refresh=1 ================= */
   useEffect(() => {
@@ -385,23 +386,23 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
         ) : (
           <>
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-hidden">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600">
+                  <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                         Student
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                         Contact
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                         Course Details
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                         Roll No
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
                         Status
                       </th>
                     </tr>
@@ -410,18 +411,16 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                     {students.map((student, index) => (
                       <tr
                         key={student._id}
-                        className={`hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors ${
-                          index % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/50 dark:bg-gray-800/50"
-                        }`}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <td className="px-6 py-4">
                           <Link href={`/dashboard/client/${tenantId}/students/${student._id}`}>
                             <div className="flex items-center cursor-pointer group">
-                              <div className="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                              <div className="flex-shrink-0 h-10 w-10 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
                                 {student.name.charAt(0).toUpperCase()}
                               </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                              <div className="ml-3">
+                                <div className="text-sm text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
                                   {student.name}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -433,36 +432,36 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900 dark:text-white">
-                            📧 {student.email}
+                            {student.email}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            📞 {student.phone || "N/A"}
+                            {student.phone || "N/A"}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 w-fit">
-                              📚 {student.course}
-                            </span>
-                            <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 w-fit">
-                              🎓 {student.batchName || "N/A"}
-                            </span>
+                          <div className="space-y-1">
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {student.course}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {student.batchName || "No Batch"}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm font-mono font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-lg">
-                            {student.rollNumber || "N/A"}
+                          <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                            {student.rollNumber || "—"}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               student.status === "active"
-                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
-                                : "bg-gradient-to-r from-red-500 to-red-600 text-white"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                             }`}
                           >
-                            {student.status === "active" ? "✓ Active" : "✗ Inactive"}
+                            {student.status === "active" ? "Active" : "Inactive"}
                           </span>
                         </td>
                       </tr>
@@ -475,9 +474,30 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
             {/* Pagination */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                  📄 Page <span className="font-bold text-gray-900 dark:text-white">{page}</span> of{" "}
-                  <span className="font-bold text-gray-900 dark:text-white">{pages}</span>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Page <span className="font-bold text-gray-900 dark:text-white">{page}</span> of{" "}
+                    <span className="font-bold text-gray-900 dark:text-white">{pages}</span>
+                  </div>
+                  
+                  {/* Per Page Selector */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600 dark:text-gray-400">Show:</label>
+                    <select
+                      value={limit}
+                      onChange={(e) => {
+                        setLimit(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">entries</span>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button

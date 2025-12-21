@@ -1,5 +1,5 @@
 /**
- * BFF Students Data Route
+ * BFF Students Data Route (STABILIZED - NO CACHING)
  * 
  * GET /api/students - List all students
  * GET /api/students/:id - Get single student
@@ -10,21 +10,17 @@
  * 1. Receives requests from frontend
  * 2. Forwards cookies to Express backend
  * 3. Calls Express /api/students endpoints
- * 4. Caches GET responses with Redis (5 minute TTL)
- * 5. Invalidates cache on POST/PUT/DELETE
- * 6. Filters sensitive data
- * 7. Returns cleaned response
+ * 4. Filters sensitive data
+ * 5. Returns cleaned response
+ * 
+ * NO Redis caching during stabilization phase.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { extractCookies } from '@/lib/bff-client';
-import { redisCache, CACHE_TTL, invalidateStudentCache } from '@/lib/redis';
 import type { StudentDTO, StudentListResponse, StudentMutationResponse } from '@/types/student';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
-function getCacheKey(search: string): string {
-  return `students:list:${search}`;
-}
 
 // GET /api/students or /api/students/:id
 export async function GET(
@@ -32,39 +28,11 @@ export async function GET(
   { params }: { params: { id?: string } }
 ) {
   try {
-
     const url = new URL(request.url);
     const studentId = params?.id;
     const endpoint = studentId 
       ? `/api/students/${studentId}`
       : `/api/students${url.search}`; // Preserve query params (pagination, filters)
-
-    // 🔥 Check if this is a cache-busting request (has _ts parameter)
-    const hasCacheBuster = url.searchParams.has('_ts');
-
-    // Check Redis cache for list requests (not single student by ID, and not cache-busting)
-    if (!studentId && !hasCacheBuster) {
-      const cacheKey = getCacheKey(url.search);
-      const cachedData = await redisCache.get<any>(cacheKey);
-      
-      if (cachedData) {
-        const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
-        console.log(`[BFF] Students Cache HIT (${cacheType})`);
-        return NextResponse.json(cachedData, {
-          headers: {
-            'X-Cache': 'HIT',
-            'X-Cache-Type': cacheType,
-            'Cache-Control': 'public, max-age=300',
-          },
-        });
-      }
-      
-      if (hasCacheBuster) {
-        console.log('🔄 Cache MISS (cache buster active - _ts parameter present)');
-      } else {
-        console.log('🔄 Cache MISS (not in cache)');
-      }
-    }
 
     console.log('📤 Calling Backend:', `${BACKEND_URL}${endpoint}`);
 
@@ -103,22 +71,6 @@ export async function GET(
       // If it's a single student
       student: data.student ? cleanStudent(data.student) : undefined,
     };
-
-    // Cache list requests only with Redis
-    if (!studentId) {
-      const cacheKey = getCacheKey(url.search);
-      await redisCache.set(cacheKey, cleanData, CACHE_TTL.MEDIUM);
-
-      const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
-      console.log(`[BFF] Students Cache MISS (stored in ${cacheType})`);
-      return NextResponse.json(cleanData, {
-        headers: {
-          'X-Cache': 'MISS',
-          'X-Cache-Type': cacheType,
-          'Cache-Control': 'public, max-age=300',
-        },
-      });
-    }
 
     return NextResponse.json(cleanData);
   } catch (error) {
@@ -159,11 +111,6 @@ export async function POST(request: NextRequest) {
         { status: backendResponse.status }
       );
     }
-
-    // Invalidate cache on create using Redis pattern
-    const tenantId = body.tenantId || 'default';
-    await invalidateStudentCache(); // wildcard / pattern based
-    console.log('[BFF] Students cache invalidated due to mutation');
 
     console.log('✅ Student created successfully');
 
@@ -229,10 +176,6 @@ export async function PUT(
       );
     }
 
-    // Invalidate cache on update using Redis pattern
-    await invalidateStudentCache();
-    console.log('[BFF] Students cache invalidated due to update');
-
     console.log('✅ Student updated successfully');
 
     const cleanData: StudentMutationResponse = {
@@ -287,10 +230,6 @@ export async function DELETE(
         { status: backendResponse.status }
       );
     }
-
-    // Invalidate cache on delete using Redis pattern
-    await invalidateStudentCache();
-    console.log('[BFF] Students cache invalidated due to delete');
 
     console.log('✅ Student deleted successfully');
 
