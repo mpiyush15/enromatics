@@ -57,16 +57,26 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
   // Use incoming links if provided, otherwise use fetched links
   const links = isExternalLinks ? (incomingLinks || []) : (fetchedLinks || []);
 
-  // Auto-expand sections with active children (only ADD, never remove)
+  // Auto-expand sections with active children (supports 3-level nesting)
   useEffect(() => {
     if (links.length > 0) {
       links.forEach((link: SidebarLink) => {
-        if (link.children?.some((child: SidebarLink) => {
+        // Check for active direct children
+        const hasActiveChild = link.children?.some((child: SidebarLink) => {
           const childHref = child.href || "#";
-          if (childHref === "#") return false;
-          return pathname?.startsWith(childHref);
-        })) {
-          // Only add to expanded, never reset other sections
+          if (childHref !== "#" && pathname?.startsWith(childHref)) return true;
+          
+          // Check for active grandchildren (3rd level)
+          if (child.children) {
+            return child.children.some((grandchild: SidebarLink) => {
+              const grandchildHref = grandchild.href || "#";
+              return grandchildHref !== "#" && pathname?.startsWith(grandchildHref);
+            });
+          }
+          return false;
+        });
+
+        if (hasActiveChild) {
           setExpandedSections((prev) => {
             if (prev.has(link.label)) return prev;
             const newSet = new Set(prev);
@@ -74,6 +84,25 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
             return newSet;
           });
         }
+
+        // Also expand 2nd level if it has active grandchildren
+        link.children?.forEach((child: SidebarLink) => {
+          if (child.children) {
+            const hasActiveGrandchild = child.children.some((grandchild: SidebarLink) => {
+              const grandchildHref = grandchild.href || "#";
+              return grandchildHref !== "#" && pathname?.startsWith(grandchildHref);
+            });
+
+            if (hasActiveGrandchild) {
+              setExpandedSections((prev) => {
+                if (prev.has(child.label)) return prev;
+                const newSet = new Set(prev);
+                newSet.add(child.label);
+                return newSet;
+              });
+            }
+          }
+        });
       });
     }
   }, [links, pathname]);
@@ -192,6 +221,55 @@ export default function Sidebar({ isOpen, onClose, links: incomingLinks }: Sideb
                   {expandedSections.has(link.label) && (
                     <ul className="ml-4 mt-1 space-y-1">
                       {link.children.map((child) => {
+                        // Check if child has its own children (3rd level nesting)
+                        if (child.children && child.children.length > 0) {
+                          return (
+                            <li key={child.label}>
+                              <button
+                                onClick={() => toggleSection(child.label)}
+                                className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold transition-colors rounded ${
+                                  "text-gray-300 hover:bg-gray-700/30"
+                                }`}
+                              >
+                                <span>{child.label}</span>
+                                <svg
+                                  className={`w-3 h-3 transition-transform ${expandedSections.has(child.label) ? "rotate-180" : ""}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              {expandedSections.has(child.label) && (
+                                <ul className="ml-4 mt-1 space-y-1">
+                                  {child.children.map((grandchild) => {
+                                    const href = buildHref(grandchild.href || "#");
+                                    const isActiveLink = isActiveExact(grandchild.href || "#");
+                                    return (
+                                      <li key={grandchild.label}>
+                                        <Link
+                                          href={href}
+                                          onClick={handleLinkClick}
+                                          className={`block px-3 py-2 text-sm rounded transition-colors ${
+                                            isActiveLink
+                                              ? "bg-blue-500 text-white font-medium shadow-sm"
+                                              : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
+                                          }`}
+                                          prefetch={false}
+                                        >
+                                          {grandchild.label}
+                                        </Link>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </li>
+                          );
+                        }
+                        
+                        // Regular 2nd level link
                         const href = buildHref(child.href || "#");
                         const isActiveLink = isActiveExact(child.href || "#");
                         return (
