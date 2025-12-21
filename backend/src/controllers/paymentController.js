@@ -884,7 +884,7 @@ export const getSubscriptionStats = async (req, res) => {
 export const addPayment = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    const { studentId, amount, method = "cash", status = "success", date } = req.body;
+    const { studentId, amount, method = "cash", status = "success", date, remarks } = req.body;
 
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
     if (!studentId || !amount) return res.status(400).json({ message: "studentId and amount are required" });
@@ -896,6 +896,7 @@ export const addPayment = async (req, res) => {
       method,
       status,
       date: date ? new Date(date) : new Date(),
+      remarks: remarks || "",
     });
 
     // Update student's balance (sum of payments made)
@@ -998,6 +999,89 @@ export const getReceipt = async (req, res) => {
     res.send(html);
   } catch (err) {
     console.error("Get receipt error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get payment details with student and institute info for receipt generation
+ */
+export const getPaymentDetails = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const { id } = req.params; // payment id
+
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const payment = await Payment.findOne({ _id: id, tenantId }).lean();
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    const student = await Student.findById(payment.studentId).lean();
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // Get tenant/institute info
+    const Tenant = await import("../models/Tenant.js");
+    const institute = await Tenant.default.findOne({ tenantId }).lean();
+
+    res.json({
+      success: true,
+      payment,
+      student,
+      institute: {
+        name: institute?.name || "Educational Institute",
+        email: institute?.email || "",
+        phone: institute?.phone || "",
+        address: institute?.address || "",
+      }
+    });
+  } catch (err) {
+    console.error("Get payment details error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Upload receipt PDF to S3 and update payment record
+ */
+export const uploadReceiptToS3 = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const { id } = req.params; // payment id
+    const { pdfBase64, filename, studentId } = req.body;
+
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+    if (!pdfBase64 || !filename) {
+      return res.status(400).json({ message: "PDF data and filename are required" });
+    }
+
+    const payment = await Payment.findOne({ _id: id, tenantId });
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    // Convert base64 to buffer
+    const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+
+    // Upload to S3
+    const s3Helper = await import("../utils/s3Helper.js");
+    const s3Key = `receipts/${tenantId}/${studentId}/${filename}`;
+    const contentType = 'application/pdf';
+
+    const uploadResult = await s3Helper.uploadToS3(pdfBuffer, s3Key, contentType);
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ message: "Failed to upload receipt to S3" });
+    }
+
+    // Update payment with receipt URL
+    payment.receiptUrl = uploadResult.url;
+    await payment.save();
+
+    res.json({
+      success: true,
+      receiptUrl: uploadResult.url,
+      message: "Receipt uploaded successfully"
+    });
+  } catch (err) {
+    console.error("Upload receipt error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

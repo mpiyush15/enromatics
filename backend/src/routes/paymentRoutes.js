@@ -3,6 +3,8 @@ import {
   addPayment, 
   deletePayment, 
   getReceipt,
+  getPaymentDetails,
+  uploadReceiptToS3,
   initiateSubscriptionPayment,
   verifySubscriptionPayment,
   cashfreeSubscriptionWebhook,
@@ -50,6 +52,11 @@ router.post("/admin/auto-cancel-pending", protect, authorizeRoles("SuperAdmin"),
 // Employees can create fees if they have canCreateFees permission
 router.post("/", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), requirePermission("canCreateFees"), addPayment);
 router.delete("/:id", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), requirePermission("canCreateFees"), deletePayment);
+
+// Receipt routes
+router.get("/:id/details", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), getPaymentDetails);
+router.post("/:id/upload-receipt", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), uploadReceiptToS3);
+
 // allow student to download their own receipt too
 // Admin route to download any receipt
 router.get("/:id/receipt", protect, authorizeRoles("tenantAdmin", "teacher", "staff"), getReceipt);

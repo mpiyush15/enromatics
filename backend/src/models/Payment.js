@@ -42,6 +42,10 @@ const paymentSchema = new mongoose.Schema({
     sparse: true
   },
 
+  receiptUrl: {
+    type: String,
+  },
+
   receiptGenerated: {
     type: Boolean,
     default: false

@@ -50,6 +50,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       student: cleanStudent(data.student || data),
+      payments: data.payments || [],
     } as StudentDetailResponse);
   } catch (error) {
     console.error('❌ BFF Student GET error:', error);
