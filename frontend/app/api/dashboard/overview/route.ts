@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 /**
- * BFF Route: GET /api/dashboard/overview
+ * 🔒 BFF Route: GET /api/dashboard/overview (STABILIZED)
+ * 
+ * Part of: stabilization/ssot-bff
+ * Date: 21 Dec 2025
  * 
  * Fetches dashboard overview data including:
- * - Account summary (fees, expenses, income)
- * - Expenses by category
- * - Recent payments
+ * - Student count
+ * - Revenue totals
+ * - Test statistics
+ * - Attendance data
+ * - Active batches
  * 
  * Features:
- * - ✅ Redis caching with in-memory fallback (5 minutes)
- * - ✅ Forwards cookies to Express backend
- * - ✅ ~5-20ms cached response (vs 100-150ms fresh)
+ * - ✅ Forwards cookies to Express backend for auth
+ * - ✅ Single source of truth (backend only)
+ * - ✅ No caching (per stabilization rules)
+ * - ✅ Clean error handling
  */
 
 export async function GET(request: NextRequest) {
@@ -34,24 +39,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
     
-    // Create cache key - extract tenantId from query or use generic key
-    const tenantId = searchParams.get('tenantId') || 'default';
-    const cacheKey = CACHE_KEYS.DASHBOARD_OVERVIEW(tenantId) + ':' + queryString;
-
-    // Check Redis cache first
-    const cachedData = await redisCache.get<any>(cacheKey);
-    if (cachedData) {
-      const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
-      console.log(`[BFF] Dashboard Overview Cache HIT (${cacheType})`);
-      return NextResponse.json(cachedData, {
-        headers: {
-          'X-Cache': 'HIT',
-          'X-Cache-Type': cacheType,
-          'Cache-Control': 'public, max-age=300',
-        },
-      });
-    }
-
     // Build the URL
     const url = `${BACKEND_URL}/api/dashboard/overview${queryString ? '?' + queryString : ''}`;
 
@@ -66,20 +53,9 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    // If successful, cache and return the data
+    // If successful, return the data
     if (response.ok) {
-      // Cache the data in Redis (5 minutes TTL)
-      await redisCache.set(cacheKey, data, CACHE_TTL.MEDIUM);
-
-      const cacheType = redisCache.isConnected() ? 'REDIS' : 'MEMORY';
-      console.log(`[BFF] Dashboard Overview Cache MISS (stored in ${cacheType})`);
-      return NextResponse.json(data, {
-        headers: {
-          'X-Cache': 'MISS',
-          'X-Cache-Type': cacheType,
-          'Cache-Control': 'public, max-age=300',
-        },
-      });
+      return NextResponse.json(data);
     }
 
     // If unauthorized, return 401

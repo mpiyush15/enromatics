@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
+import { api, safeApiCall } from "@/lib/apiClient";
 
 interface DashboardStats {
   totalStudents: number;
@@ -20,11 +21,23 @@ interface TopRanker {
   percentage: number;
 }
 
+/**
+ * 🔒 Institute Overview Page (STABILIZED)
+ * 
+ * Part of: stabilization/ssot-bff
+ * Date: 21 Dec 2025
+ * 
+ * Features:
+ * - ✅ Uses unified apiClient (SSOT compliant)
+ * - ✅ BFF pattern (calls /api/dashboard/overview)
+ * - ✅ No direct backend calls
+ * - ✅ Clean error handling
+ */
 export default function InstituteOverviewPage() {
   const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = (params?.tenantId as string) || '';
   
   const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
@@ -37,6 +50,7 @@ export default function InstituteOverviewPage() {
   const [topRankers, setTopRankers] = useState<TopRanker[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -46,26 +60,38 @@ export default function InstituteOverviewPage() {
     if (!user) return;
 
     try {
-      // Fetch overview stats from BFF
-      const statsRes = await fetch(`/api/dashboard/overview`, {
-        credentials: "include",
-      });
-      const statsData = await statsRes.json();
-      
-      if (statsData.success) {
+      setLoading(true);
+      setError(null);
+
+      // 🔒 SSOT: Use apiClient to call BFF route
+      const [data, err] = await safeApiCall(() => 
+        api.get<any>('/api/dashboard/overview')
+      );
+
+      if (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError(err.message || "Failed to load dashboard data");
+        setLoading(false);
+        return;
+      }
+
+      if (data?.success && data?.stats) {
         setStats({
-          totalStudents: statsData.stats.studentsCount || 0,
-          totalRevenue: statsData.stats.totalRevenue || 0,
-          totalTests: statsData.stats.totalTests || 0,
-          todayAttendance: statsData.stats.todayAttendance || 0,
-          pendingFees: statsData.stats.pendingFees || 0,
-          activeBatches: statsData.stats.activeBatches || 0,
+          totalStudents: data.stats.studentsCount || 0,
+          totalRevenue: data.stats.totalRevenue || 0,
+          totalTests: data.stats.totalTests || 0,
+          todayAttendance: data.stats.todayAttendance || 0,
+          pendingFees: data.stats.pendingFees || 0,
+          activeBatches: data.stats.activeBatches || 0,
         });
+      } else {
+        setError(data?.message || "Invalid response format");
       }
 
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
+      setError(error?.message || "An unexpected error occurred");
       setLoading(false);
     }
   };
@@ -73,7 +99,34 @@ export default function InstituteOverviewPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading dashboard...</div>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 md:p-6 min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-2xl mx-auto mt-20">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">⚠️</span>
+              <h2 className="text-xl font-bold text-red-800 dark:text-red-200">
+                Failed to Load Dashboard
+              </h2>
+            </div>
+            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
+            <button
+              onClick={fetchDashboardData}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
