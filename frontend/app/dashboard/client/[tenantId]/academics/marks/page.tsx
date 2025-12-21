@@ -401,7 +401,7 @@ export default function MarksEntryPage() {
                 onClick={() => router.push(`/dashboard/client/${tenantId}/academics/attendance?testId=${testId}`)}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
               >
-                Mark Attendance
+                Mark Test Attendance
               </button>
             </div>
           ) : (

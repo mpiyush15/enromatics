@@ -325,7 +325,7 @@ export default function TestSchedulesPage() {
                     onClick={() => router.push(`/dashboard/client/${tenantId}/academics/attendance?testId=${test._id}`)}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
                   >
-                    ✅ Attendance
+                    ✅ Test Attendance
                   </button>
                   <button
                     onClick={() => router.push(`/dashboard/client/${tenantId}/academics/marks?testId=${test._id}`)}

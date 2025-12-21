@@ -248,7 +248,7 @@ export default function TestReportsPage() {
               onClick={() => router.push(`/dashboard/client/${tenantId}/academics/attendance`)}
               className="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-shadow font-semibold"
             >
-              ✅ Mark Attendance
+              ✅ Mark Test Attendance
             </button>
             <button
               onClick={() => router.push(`/dashboard/client/${tenantId}/academics/marks`)}

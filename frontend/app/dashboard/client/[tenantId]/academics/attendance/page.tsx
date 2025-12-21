@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-import { TableSkeleton } from "@/components/ui/Skeleton";
 
 interface Student {
   _id: string;
@@ -16,7 +15,7 @@ interface Student {
 
 interface AttendanceRecord {
   studentId: string;
-  present: boolean;
+  status: "present" | "absent" | "late";
   remarks: string;
 }
 
@@ -49,8 +48,14 @@ export default function TestAttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Map<string, AttendanceRecord>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [status, setStatus] = useState("");
   const [selectAll, setSelectAll] = useState(false);
+  
+  // Date and Batch selection
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
+  const [selectedBatch, setSelectedBatch] = useState<string>("");
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,38 +82,15 @@ export default function TestAttendancePage() {
         const testDetails = testData.test;
         setTest(testDetails);
 
-        // Fetch students for this course/batch via BFF with cookie auth
-        const studentsRes = await fetch(
-          `/api/students?course=${testDetails.course}${testDetails.batch ? `&batch=${testDetails.batch}` : ""}`,
+        // Fetch available batches for this course
+        const batchesRes = await fetch(
+          `/api/academics/batches?course=${testDetails.course}`,
           { credentials: "include" }
         );
-        const studentsData = await studentsRes.json();
-        if (studentsRes.ok) {
-          // ✅ FIX 3: Normalize batch data (handle both batch.name and batchName)
-          const normalized = (studentsData.students || []).map((s: any) => ({
-            ...s,
-            batch: s.batch?.name || s.batchName || s.batch || "",
-          }));
-          setStudents(normalized);
-
-          // Fetch existing attendance via BFF with cookie auth
-          const attendanceRes = await fetch(
-            `/api/academics/attendance?testId=${testId}`,
-            { credentials: "include" }
-          );
-          const attendanceData = await attendanceRes.json();
-          if (attendanceRes.ok) {
-            const attendanceMap = new Map();
-            attendanceData.attendance.forEach((record: AttendanceApiRecord) => {
-              const studentId = typeof record.studentId === 'string' ? record.studentId : record.studentId._id;
-              attendanceMap.set(studentId, {
-                studentId,
-                present: record.present,
-                remarks: record.remarks || "",
-              });
-            });
-            setAttendance(attendanceMap);
-          }
+        const batchesData = await batchesRes.json();
+        if (batchesRes.ok && batchesData.batches) {
+          const batchNames = batchesData.batches.map((b: any) => b.name);
+          setAvailableBatches(batchNames);
         }
       }
     } catch (error) {
@@ -118,6 +100,57 @@ export default function TestAttendancePage() {
       setLoading(false);
     }
   }, [testId]); // ✅ FIX 1: Only depend on testId, not the function itself
+
+  const fetchStudentsForBatch = async (batch: string, date: string) => {
+    if (!test || !batch || !date) return;
+    
+    try {
+      setLoadingStudents(true);
+      setStatus("Loading students...");
+      
+      // Fetch students for this course/batch via BFF with cookie auth
+      const studentsRes = await fetch(
+        `/api/students?course=${test.course}&batch=${batch}`,
+        { credentials: "include" }
+      );
+      const studentsData = await studentsRes.json();
+      if (studentsRes.ok) {
+        // ✅ FIX 3: Normalize batch data (handle both batch.name and batchName)
+        const normalized = (studentsData.students || []).map((s: any) => ({
+          ...s,
+          batch: s.batch?.name || s.batchName || s.batch || "",
+        }));
+        setStudents(normalized);
+
+        // Fetch existing attendance for this date via BFF with cookie auth
+        const attendanceRes = await fetch(
+          `/api/academics/attendance?testId=${testId}&date=${date}`,
+          { credentials: "include" }
+        );
+        const attendanceData = await attendanceRes.json();
+        if (attendanceRes.ok && attendanceData.attendance) {
+          const attendanceMap = new Map();
+          attendanceData.attendance.forEach((record: AttendanceApiRecord) => {
+            const studentId = typeof record.studentId === 'string' ? record.studentId : record.studentId._id;
+            attendanceMap.set(studentId, {
+              studentId,
+              status: record.present ? "present" : "absent", // Convert boolean to status
+              remarks: record.remarks || "",
+            });
+          });
+          setAttendance(attendanceMap);
+        }
+        setStatus("");
+      } else {
+        setStatus(`❌ Failed to load students: ${studentsData.message}`);
+      }
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      setStatus("❌ Failed to load students");
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
 
   useEffect(() => {
     if (!testId) {
@@ -130,14 +163,12 @@ export default function TestAttendancePage() {
     }
   }, [user, testId, fetchTestAndStudents]);
 
-  const toggleAttendance = (studentId: string) => {
+  const setStudentStatus = (studentId: string, status: "present" | "absent" | "late") => {
     const newAttendance = new Map(attendance);
     const current = newAttendance.get(studentId);
-    // If no record exists, default to false (absent), then toggle to true (present)
-    const currentPresent = current?.present ?? false;
     newAttendance.set(studentId, {
       studentId,
-      present: !currentPresent,
+      status,
       remarks: current?.remarks || "",
     });
     setAttendance(newAttendance);
@@ -148,7 +179,7 @@ export default function TestAttendancePage() {
     const current = newAttendance.get(studentId);
     newAttendance.set(studentId, {
       studentId,
-      present: current?.present ?? false, // ✅ FIX 2: Use ?? instead of || to preserve false
+      status: current?.status ?? "absent",
       remarks,
     });
     setAttendance(newAttendance);
@@ -159,7 +190,7 @@ export default function TestAttendancePage() {
     students.forEach((student) => {
       newAttendance.set(student._id, {
         studentId: student._id,
-        present: !selectAll,
+        status: !selectAll ? "present" : "absent",
         remarks: attendance.get(student._id)?.remarks || "",
       });
     });
@@ -168,13 +199,19 @@ export default function TestAttendancePage() {
   };
 
   const handleSubmit = async () => {
+    if (!selectedDate) {
+      setStatus("❌ Please select a date");
+      return;
+    }
+    
     setStatus("Saving attendance...");
     try {
       const attendanceData = students.map((student) => {
         const record = attendance.get(student._id);
         return {
           studentId: student._id,
-          present: record?.present ?? false, // ✅ Use ?? to preserve false values
+          present: record?.status === "present", // Convert status to boolean for backend
+          status: record?.status || "absent",
           remarks: record?.remarks || "",
         };
       });
@@ -184,7 +221,9 @@ export default function TestAttendancePage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          testId, // ✅ Include testId in body, not query string
+          testId,
+          date: selectedDate,
+          batch: selectedBatch,
           attendanceData 
         }),
       });
@@ -267,13 +306,14 @@ export default function TestAttendancePage() {
     
     if (filterStatus === "all") return true;
     const record = attendance.get(student._id);
-    if (filterStatus === "present") return record?.present === true;
-    if (filterStatus === "absent") return record?.present === false;
+    if (filterStatus === "present") return record?.status === "present";
+    if (filterStatus === "absent") return record?.status === "absent";
     return true;
   });
 
-  const presentCount = Array.from(attendance.values()).filter((r) => r.present).length;
-  const absentCount = students.length - presentCount;
+  const presentCount = Array.from(attendance.values()).filter((r) => r.status === "present").length;
+  const absentCount = Array.from(attendance.values()).filter((r) => r.status === "absent").length;
+  const lateCount = Array.from(attendance.values()).filter((r) => r.status === "late").length;
   const presentPercentage = students.length > 0 ? Math.round((presentCount / students.length) * 100) : 0;
 
   const markAllPresent = () => {
@@ -281,7 +321,7 @@ export default function TestAttendancePage() {
     filteredStudents.forEach((student) => {
       newAttendance.set(student._id, {
         studentId: student._id,
-        present: true,
+        status: "present",
         remarks: attendance.get(student._id)?.remarks || "",
       });
     });
@@ -293,7 +333,19 @@ export default function TestAttendancePage() {
     filteredStudents.forEach((student) => {
       newAttendance.set(student._id, {
         studentId: student._id,
-        present: false,
+        status: "absent",
+        remarks: attendance.get(student._id)?.remarks || "",
+      });
+    });
+    setAttendance(newAttendance);
+  };
+
+  const markAllLate = () => {
+    const newAttendance = new Map(attendance);
+    filteredStudents.forEach((student) => {
+      newAttendance.set(student._id, {
+        studentId: student._id,
+        status: "late",
         remarks: attendance.get(student._id)?.remarks || "",
       });
     });
@@ -316,7 +368,7 @@ export default function TestAttendancePage() {
           </button>
 
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl p-8 text-white">
-            <h1 className="text-4xl font-bold mb-2">✅ Mark Attendance</h1>
+            <h1 className="text-4xl font-bold mb-2">✅ Test Attendance</h1>
             <p className="text-blue-100 mb-4">{test.name} - {test.subject}</p>
             <div className="flex gap-4 text-sm">
               <span>📅 {new Date(test.testDate).toLocaleDateString()}</span>
@@ -337,8 +389,57 @@ export default function TestAttendancePage() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Date and Batch Selector */}
+        {availableBatches.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              � Select Date & Batch to Mark Attendance
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Batch
+                </label>
+                <select
+                  value={selectedBatch}
+                  onChange={(e) => setSelectedBatch(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
+                >
+                  <option value="">-- Select a Batch --</option>
+                  {availableBatches.map((batch) => (
+                    <option key={batch} value={batch}>
+                      {batch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => selectedBatch && selectedDate && fetchStudentsForBatch(selectedBatch, selectedDate)}
+                disabled={!selectedBatch || !selectedDate || loadingStudents}
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold shadow-lg transition-all"
+              >
+                {loadingStudents ? "Loading..." : "Load Students"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Show content only when students are loaded */}
+        {students.length > 0 && (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -353,11 +454,15 @@ export default function TestAttendancePage() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white">
+          <button
+            onClick={markAllPresent}
+            className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105 cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm">Present</p>
                 <p className="text-3xl font-bold">{presentCount}</p>
+                <p className="text-xs text-green-100 mt-1">Click to mark all</p>
               </div>
               <div className="p-3 bg-white bg-opacity-20 rounded-full">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,13 +470,17 @@ export default function TestAttendancePage() {
                 </svg>
               </div>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white">
+          <button
+            onClick={markAllAbsent}
+            className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white hover:from-red-600 hover:to-red-700 transition-all transform hover:scale-105 cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-red-100 text-sm">Absent</p>
                 <p className="text-3xl font-bold">{absentCount}</p>
+                <p className="text-xs text-red-100 mt-1">Click to mark all</p>
               </div>
               <div className="p-3 bg-white bg-opacity-20 rounded-full">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +488,25 @@ export default function TestAttendancePage() {
                 </svg>
               </div>
             </div>
-          </div>
+          </button>
+
+          <button
+            onClick={markAllLate}
+            className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl shadow-lg p-6 text-white hover:from-yellow-600 hover:to-orange-700 transition-all transform hover:scale-105 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-yellow-100 text-sm">Late</p>
+                <p className="text-3xl font-bold">{lateCount}</p>
+                <p className="text-xs text-yellow-100 mt-1">Click to mark all</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </button>
 
           <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
             <div className="flex items-center justify-between">
@@ -495,7 +622,7 @@ export default function TestAttendancePage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredStudents.map((student) => {
                     const record = attendance.get(student._id);
-                    const isPresent = record?.present ?? false;
+                    const status = record?.status || "absent";
 
                     return (
                       <tr key={student._id} className="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
@@ -515,17 +642,39 @@ export default function TestAttendancePage() {
                             {student.batch || "N/A"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => toggleAttendance(student._id)}
-                            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all transform hover:scale-105 shadow-md ${
-                              isPresent
-                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700"
-                                : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700"
-                            }`}
-                          >
-                            {isPresent ? "✓ Present" : "✗ Absent"}
-                          </button>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => setStudentStatus(student._id, "present")}
+                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                                status === "present"
+                                  ? "bg-green-600 text-white shadow-lg scale-105"
+                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900"
+                              }`}
+                            >
+                              ✓ Present
+                            </button>
+                            <button
+                              onClick={() => setStudentStatus(student._id, "absent")}
+                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                                status === "absent"
+                                  ? "bg-red-600 text-white shadow-lg scale-105"
+                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900"
+                              }`}
+                            >
+                              ✗ Absent
+                            </button>
+                            <button
+                              onClick={() => setStudentStatus(student._id, "late")}
+                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                                status === "late"
+                                  ? "bg-yellow-600 text-white shadow-lg scale-105"
+                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+                              }`}
+                            >
+                              ⏰ Late
+                            </button>
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <input
@@ -544,6 +693,8 @@ export default function TestAttendancePage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

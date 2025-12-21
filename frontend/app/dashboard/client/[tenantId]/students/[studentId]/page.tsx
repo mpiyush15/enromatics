@@ -22,9 +22,13 @@ export default function StudentProfilePage() {
   const [form, setForm] = useState<StudentFormData>({});
   const [status, setStatus] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [activeTab, setActiveTab] = useState<"overview" | "payments">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "payments" | "attendance">("overview");
   const [batches, setBatches] = useState<any[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [attendanceSummary, setAttendanceSummary] = useState<any>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const fetchStudent = async () => {
     try {
@@ -86,6 +90,52 @@ export default function StudentProfilePage() {
       setLoadingBatches(false);
     }
   };
+
+  const fetchAttendance = async () => {
+    if (!studentId) return;
+    
+    try {
+      setLoadingAttendance(true);
+      
+      // Get first and last day of current month
+      const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      
+      const startDate = firstDay.toISOString().split('T')[0];
+      const endDate = lastDay.toISOString().split('T')[0];
+      
+      const [data, err] = await safeApiCall(() =>
+        api.get<any>(`/api/attendance/student/${studentId}?startDate=${startDate}&endDate=${endDate}&limit=100`)
+      );
+
+      if (err) {
+        console.error("Failed to fetch attendance:", err.message);
+        setAttendanceHistory([]);
+        setAttendanceSummary(null);
+        return;
+      }
+
+      if (data && data.success) {
+        setAttendanceHistory(data.records || []);
+        setAttendanceSummary(data.summary || null);
+      } else {
+        setAttendanceHistory([]);
+        setAttendanceSummary(null);
+      }
+    } catch (err: any) {
+      console.error("Error fetching attendance:", err);
+      setAttendanceHistory([]);
+      setAttendanceSummary(null);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "attendance") {
+      fetchAttendance();
+    }
+  }, [activeTab, currentMonth, studentId]);
 
   useEffect(() => {
     if (!user) return;
@@ -422,6 +472,16 @@ export default function StudentProfilePage() {
             >
               💳 Payments ({payments.length})
             </button>
+            <button
+              onClick={() => setActiveTab("attendance")}
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                activeTab === "attendance"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 dark:text-gray-400 hover:text-blue-600"
+              }`}
+            >
+              📅 Attendance
+            </button>
           </div>
         </div>
 
@@ -627,6 +687,195 @@ export default function StudentProfilePage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === "attendance" && (
+            <div>
+              {/* Month Selector */}
+              <div className="flex items-center justify-between mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <button
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+                >
+                  ← Previous
+                </button>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </h3>
+                <button
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+
+              {/* Summary Stats */}
+              {attendanceSummary && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-green-50 dark:bg-green-900 border-2 border-green-200 dark:border-green-700 rounded-xl">
+                    <p className="text-sm text-green-600 dark:text-green-300 font-semibold mb-1">Present</p>
+                    <p className="text-3xl font-bold text-green-700 dark:text-green-200">{attendanceSummary.present || 0}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 dark:bg-red-900 border-2 border-red-200 dark:border-red-700 rounded-xl">
+                    <p className="text-sm text-red-600 dark:text-red-300 font-semibold mb-1">Absent</p>
+                    <p className="text-3xl font-bold text-red-700 dark:text-red-200">{attendanceSummary.absent || 0}</p>
+                  </div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900 border-2 border-yellow-200 dark:border-yellow-700 rounded-xl">
+                    <p className="text-sm text-yellow-600 dark:text-yellow-300 font-semibold mb-1">Late</p>
+                    <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-200">{attendanceSummary.late || 0}</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 dark:bg-purple-900 border-2 border-purple-200 dark:border-purple-700 rounded-xl">
+                    <p className="text-sm text-purple-600 dark:text-purple-300 font-semibold mb-1">Excused</p>
+                    <p className="text-3xl font-bold text-purple-700 dark:text-purple-200">{attendanceSummary.excused || 0}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {loadingAttendance && (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Loading attendance...</p>
+                </div>
+              )}
+
+              {/* Calendar Grid */}
+              {!loadingAttendance && (
+                <>
+                  <div className="mb-6">
+                    {/* Weekday Headers */}
+                    <div className="grid grid-cols-7 gap-2 mb-2">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-center font-bold text-gray-600 dark:text-gray-400 py-2">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7 gap-2">
+                      {(() => {
+                        const year = currentMonth.getFullYear();
+                        const month = currentMonth.getMonth();
+                        const firstDay = new Date(year, month, 1);
+                        const lastDay = new Date(year, month + 1, 0);
+                        const daysInMonth = lastDay.getDate();
+                        const startingDayOfWeek = firstDay.getDay();
+
+                        // Create attendance map for quick lookup
+                        const attendanceMap = new Map();
+                        attendanceHistory.forEach((record: any) => {
+                          const dateStr = new Date(record.date).toDateString();
+                          attendanceMap.set(dateStr, record);
+                        });
+
+                        const days = [];
+
+                        // Empty cells for days before month starts
+                        for (let i = 0; i < startingDayOfWeek; i++) {
+                          days.push(
+                            <div key={`empty-${i}`} className="aspect-square"></div>
+                          );
+                        }
+
+                        // Days of the month
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const date = new Date(year, month, day);
+                          const dateStr = date.toDateString();
+                          const record = attendanceMap.get(dateStr);
+                          const isToday = dateStr === new Date().toDateString();
+
+                          const statusStyles = {
+                            present: "bg-green-100 border-green-500 dark:bg-green-900",
+                            absent: "bg-red-100 border-red-500 dark:bg-red-900",
+                            late: "bg-yellow-100 border-yellow-500 dark:bg-yellow-900",
+                            excused: "bg-purple-100 border-purple-500 dark:bg-purple-900"
+                          };
+
+                          const statusIcons = {
+                            present: "✓",
+                            absent: "✗",
+                            late: "⏰",
+                            excused: "📝"
+                          };
+
+                          const statusTextColors = {
+                            present: "text-green-700 dark:text-green-200",
+                            absent: "text-red-700 dark:text-red-200",
+                            late: "text-yellow-700 dark:text-yellow-200",
+                            excused: "text-purple-700 dark:text-purple-200"
+                          };
+
+                          days.push(
+                            <div
+                              key={day}
+                              className={`aspect-square p-2 border-2 rounded-xl flex flex-col items-center justify-center transition-all hover:shadow-lg cursor-pointer ${
+                                record 
+                                  ? statusStyles[record.status as keyof typeof statusStyles]
+                                  : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                              } ${isToday ? "ring-2 ring-blue-500" : ""}`}
+                              title={record ? `${record.status} - ${date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}${record.markedBy ? `\nMarked by: ${record.markedBy.name}` : ''}` : date.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            >
+                              <div className={`text-lg font-bold ${
+                                record 
+                                  ? statusTextColors[record.status as keyof typeof statusTextColors]
+                                  : "text-gray-700 dark:text-gray-300"
+                              }`}>
+                                {day}
+                              </div>
+                              {record && (
+                                <div className={`text-2xl mt-1 ${statusTextColors[record.status as keyof typeof statusTextColors]}`}>
+                                  {statusIcons[record.status as keyof typeof statusIcons]}
+                                </div>
+                              )}
+                              {isToday && !record && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Today</div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return days;
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* No Records Message */}
+                  {attendanceHistory.length === 0 && (
+                    <div className="text-center py-8">
+                      <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-gray-600 dark:text-gray-400">No attendance records for this month</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Legend */}
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Legend:</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl text-green-600">✓</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Present</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl text-red-600">✗</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Absent</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl text-yellow-600">⏰</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Late</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl text-purple-600">📝</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Excused</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -186,8 +186,8 @@ export default function InstituteOverviewPage() {
         >
           <span className="text-2xl">✅</span>
           <div className="text-left">
-            <div className="font-bold">Mark Attendance</div>
-            <div className="text-xs opacity-90">Track presence</div>
+            <div className="font-bold">Daily Attendance</div>
+            <div className="text-xs opacity-90">Mark batch attendance</div>
           </div>
         </button>
       </div>
@@ -331,7 +331,7 @@ export default function InstituteOverviewPage() {
               onClick={() => router.push(`/dashboard/client/${tenantId}/students/attendance`)}
               className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors"
             >
-              Mark Attendance Now
+              Mark Daily Attendance
             </button>
           </div>
         </div>

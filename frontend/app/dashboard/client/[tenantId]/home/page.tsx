@@ -27,8 +27,8 @@ export default function TenantHomePage() {
       color: "from-purple-500 to-purple-600"
     },
     {
-      title: "📅 Attendance",
-      description: "Mark and view student attendance",
+      title: "📅 Daily Attendance",
+      description: "Mark daily batch attendance",
       href: `/dashboard/client/${tenantId}/students/attendance`,
       color: "from-orange-500 to-orange-600"
     },
