@@ -53,13 +53,27 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   /* ------------------------ AUTO EXPAND ACTIVE ------------------------ */
   useEffect(() => {
-    if (!pathname) return;
+    if (!pathname || !user) return;
+    if (links.length === 0) return;
 
     const open = new Set<string>();
 
+    // Build href locally to avoid dependency issues
+    const buildHrefLocal = (href: string) => {
+      if (href.includes("/client/")) return href;
+      if (
+        user?.tenantId &&
+        TENANT_ROLES.includes(user.role) &&
+        href.startsWith("/dashboard")
+      ) {
+        return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+      }
+      return href;
+    };
+
     const walk = (items: SidebarLink[], parents: string[] = []) => {
       for (const item of items) {
-        if (item.href && pathname === buildHref(item.href)) {
+        if (item.href && pathname === buildHrefLocal(item.href)) {
           parents.forEach(p => open.add(p));
         }
         if (item.children) {
@@ -70,10 +84,14 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
     walk(links);
     setExpanded(open);
-  }, [pathname, links]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, user?.tenantId, user?.role]);
 
   /* ------------------------ HELPERS ------------------------ */
   const TENANT_ROLES = ["tenantAdmin", "teacher", "staff", "accountant", "counsellor"];
+
+  // Debug: Log user state
+  console.log("🔍 Sidebar render - User:", user?.email, "Role:", user?.role, "TenantID:", user?.tenantId, "Loading:", loading);
 
   function buildHref(href: string) {
     if (href.includes("/client/")) return href;
@@ -82,8 +100,11 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       TENANT_ROLES.includes(user.role) &&
       href.startsWith("/dashboard")
     ) {
-      return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+      const built = `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+      console.log(`🔧 buildHref: "${href}" → "${built}"`);
+      return built;
     }
+    console.log(`🔧 buildHref: "${href}" → unchanged (no tenant conversion)`);
     return href;
   }
 
@@ -105,14 +126,24 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   }
 
   /* ------------------------ LOADING STATE ------------------------ */
-  if (!isExternal && loading && links.length === 0) {
-    return <aside className="w-72 h-screen bg-gray-800" />;
+  // Wait for user to load if not external (prevents wrong URLs)
+  if (!isExternal && (loading || !user)) {
+    return (
+      <aside className="w-72 h-screen bg-gray-800 text-white p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm text-gray-400">Loading user data...</div>
+        </div>
+      </aside>
+    );
   }
 
+  // Show loading only if we're still fetching sidebar links
   if (isLoading && links.length === 0) {
     return (
-      <aside className="w-72 h-screen bg-gray-800 text-white p-4">
-        Loading sidebar…
+      <aside className="w-72 h-screen bg-gray-800 text-white p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm text-gray-400">Loading sidebar...</div>
+        </div>
       </aside>
     );
   }

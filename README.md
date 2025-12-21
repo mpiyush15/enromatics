@@ -2,6 +2,22 @@
 
 A comprehensive institute management system for coaching institutes with student management, attendance tracking, academics, WhatsApp integration, and accounting features.
 
+---
+
+## ⚠️ **STABILIZATION MODE ACTIVE**
+**Branch:** `stabilization/ssot-bff`  
+**Status:** 🟡 In Progress  
+**Rules:**
+- ❌ No new features
+- ❌ No UI refactors
+- ❌ No API behavior changes
+- ✅ Bug fixes & Next.js 15 migration only
+- ✅ SSOT + BFF architecture enforcement
+
+**See:** `stabilization.md` for full plan
+
+---
+
 ## 🚀 Production URLs
 
 - **Frontend**: https://enromatics.com

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/authService";
 
@@ -7,44 +7,40 @@ export default function useAuth() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const isMounted = useRef(true);
-  const hasChecked = useRef(false);
 
   useEffect(() => {
-    // Prevent multiple auth checks
-    if (hasChecked.current) return;
-    hasChecked.current = true;
+    let isCancelled = false;
 
     const checkAuth = async () => {
       try {
         const currentUser = await authService.getCurrentUser();
         
-        if (!isMounted.current) return;
+        if (isCancelled) return;
 
         if (currentUser) {
+          console.log("✅ useAuth: User loaded", currentUser.email, currentUser.role, currentUser.tenantId);
           setUser(currentUser);
+          setLoading(false);
         } else {
+          console.log("❌ useAuth: No user found, redirecting to login");
           setUser(null);
+          setLoading(false);
           router.push("/login");
         }
       } catch (error) {
         console.error("❌ Auth check error:", error);
-        if (isMounted.current) {
+        if (!isCancelled) {
           setUser(null);
-          router.push("/login");
-        }
-      } finally {
-        if (isMounted.current) {
           setLoading(false);
+          router.push("/login");
         }
       }
     };
 
     checkAuth();
 
-    // Cleanup function
     return () => {
-      isMounted.current = false;
+      isCancelled = true;
     };
   }, []); // Empty dependency array - only run once
 
