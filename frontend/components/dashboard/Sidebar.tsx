@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
@@ -15,310 +15,242 @@ interface SidebarProps {
 }
 
 interface SidebarLink {
-  href?: string;
   label: string;
+  href?: string;
   children?: SidebarLink[];
 }
 
-// SWR fetcher for sidebar
+/* ------------------------ SWR FETCHER ------------------------ */
 const sidebarFetcher = async (url: string) => {
-  const res = await fetch(url, {
-    method: "GET",
-    credentials: "include",
-  });
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Sidebar fetch failed");
   const data = await res.json();
-  if (data.success) {
-    return data.sidebar;
-  }
-  throw new Error(data.message || "Failed to fetch sidebar");
+  return data.sidebar || [];
 };
 
-export default function Sidebar({ isOpen, onClose, links: incomingLinks }: SidebarProps) {
-  // If parent passed links (student dashboard) we should not force a redirect to admin login.
-  const isExternalLinks = !!incomingLinks && incomingLinks.length > 0;
-  const authHook = isExternalLinks ? useOptionalAuth() : useAuth();
-  const { user, loading } = authHook;
+/* ------------------------ COMPONENT ------------------------ */
+export default function Sidebar({ isOpen, onClose, links: externalLinks }: SidebarProps) {
+  const isExternal = !!externalLinks?.length;
+  const auth = isExternal ? useOptionalAuth() : useAuth();
+  const { user, loading } = auth;
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  // Use SWR for sidebar - 30 min cache, no refetch on focus
-  const shouldFetch = !isExternalLinks && user && !loading;
-  const { data: fetchedLinks, isLoading: loadingSidebar } = useSWR<SidebarLink[]>(
-    shouldFetch ? `/api/ui/sidebar` : null,
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  /* ------------------------ SWR ------------------------ */
+  const { data: fetchedLinks = [], isLoading } = useSWR<SidebarLink[]>(
+    isExternal ? null : "/api/ui/sidebar",
     sidebarFetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 1800000, // 30 minutes cache
-      revalidateIfStale: false,
+      dedupingInterval: 30 * 60 * 1000,
+      keepPreviousData: true,
     }
   );
 
-  // Use incoming links if provided, otherwise use fetched links
-  const links = isExternalLinks ? (incomingLinks || []) : (fetchedLinks || []);
+  const links = isExternal ? externalLinks! : fetchedLinks;
 
-  // Auto-expand sections with active children (supports 3-level nesting)
+  /* ------------------------ AUTO EXPAND ACTIVE ------------------------ */
   useEffect(() => {
-    if (links.length > 0) {
-      links.forEach((link: SidebarLink) => {
-        // Check for active direct children
-        const hasActiveChild = link.children?.some((child: SidebarLink) => {
-          const childHref = child.href || "#";
-          if (childHref !== "#" && pathname?.startsWith(childHref)) return true;
-          
-          // Check for active grandchildren (3rd level)
-          if (child.children) {
-            return child.children.some((grandchild: SidebarLink) => {
-              const grandchildHref = grandchild.href || "#";
-              return grandchildHref !== "#" && pathname?.startsWith(grandchildHref);
-            });
-          }
-          return false;
-        });
+    if (!pathname) return;
 
-        if (hasActiveChild) {
-          setExpandedSections((prev) => {
-            if (prev.has(link.label)) return prev;
-            const newSet = new Set(prev);
-            newSet.add(link.label);
-            return newSet;
-          });
+    const open = new Set<string>();
+
+    const walk = (items: SidebarLink[], parents: string[] = []) => {
+      for (const item of items) {
+        if (item.href && pathname === buildHref(item.href)) {
+          parents.forEach(p => open.add(p));
         }
+        if (item.children) {
+          walk(item.children, [...parents, item.label]);
+        }
+      }
+    };
 
-        // Also expand 2nd level if it has active grandchildren
-        link.children?.forEach((child: SidebarLink) => {
-          if (child.children) {
-            const hasActiveGrandchild = child.children.some((grandchild: SidebarLink) => {
-              const grandchildHref = grandchild.href || "#";
-              return grandchildHref !== "#" && pathname?.startsWith(grandchildHref);
-            });
+    walk(links);
+    setExpanded(open);
+  }, [pathname, links]);
 
-            if (hasActiveGrandchild) {
-              setExpandedSections((prev) => {
-                if (prev.has(child.label)) return prev;
-                const newSet = new Set(prev);
-                newSet.add(child.label);
-                return newSet;
-              });
-            }
-          }
-        });
-      });
+  /* ------------------------ HELPERS ------------------------ */
+  const TENANT_ROLES = ["tenantAdmin", "teacher", "staff", "accountant", "counsellor"];
+
+  function buildHref(href: string) {
+    if (href.includes("/client/")) return href;
+    if (
+      user?.tenantId &&
+      TENANT_ROLES.includes(user.role) &&
+      href.startsWith("/dashboard")
+    ) {
+      return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
     }
-  }, [links, pathname]);
+    return href;
+  }
 
-  if (!isExternalLinks && loading) return <p className="text-white p-4">Loading...</p>;
+  function isActive(href?: string) {
+    if (!href) return false;
+    return pathname === buildHref(href);
+  }
 
-  // ✅ If user is loaded but sidebar links are still loading, show empty sidebar (don't block)
-  if (loadingSidebar && links.length === 0) {
+  function toggle(label: string) {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
+
+  function handleClick() {
+    if (window.innerWidth < 768) onClose();
+  }
+
+  /* ------------------------ LOADING STATE ------------------------ */
+  if (!isExternal && loading && links.length === 0) {
+    return <aside className="w-72 h-screen bg-gray-800" />;
+  }
+
+  if (isLoading && links.length === 0) {
     return (
-      <aside className={`fixed md:static w-64 h-screen bg-gray-800 text-white z-40 transform transition-transform duration-300 flex flex-col ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      } md:translate-x-0`}>
-        <div className="md:hidden flex justify-end p-4">
-          <button onClick={onClose} className="text-xl">✕</button>
-        </div>
-        <div className="p-4">
-          <p className="text-gray-400 text-sm">Loading sidebar...</p>
-        </div>
+      <aside className="w-72 h-screen bg-gray-800 text-white p-4">
+        Loading sidebar…
       </aside>
     );
   }
 
-  // ✅ Dynamically build hrefs (inject tenantId for tenant users)
-  const buildHref = (href: string) => {
-    // If href already contains /client/, it means backend already replaced [tenantId]
-    if (href.includes('/client/')) {
-      return href;
-    }
-    
-    if (
-      user?.tenantId &&
-      user.role &&
-      (user.role.startsWith("tenant") || user.role.endsWith("Manager")) &&
-      href.startsWith("/dashboard")
-    ) {
-      const path = href.replace("/dashboard", "");
-      return `/dashboard/client/${user.tenantId}${path}`;
-    }
-    return href;
-  };
-
-  const isActiveExact = (href: string) => {
-    if (href === "#") return false;
-    const builtHref = buildHref(href);
-    
-    // Exact match only - no startsWith logic
-    // This prevents /students from being active when on /students/attendance
-    return pathname === builtHref;
-  };
-
-  const hasActiveChild = (children: SidebarLink[]) => {
-    return children.some(child => {
-      const childHref = child.href || "#";
-      return isActiveExact(childHref);
-    });
-  };
-
-  const toggleSection = (label: string) => {
-    setExpandedSections((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(label)) {
-        newSet.delete(label);
-      } else {
-        newSet.add(label);
-      }
-      return newSet;
-    });
-  };
-
-  // Only close sidebar on mobile devices
-  const handleLinkClick = () => {
-    if (window.innerWidth < 768) {
-      onClose();
-    }
-  };
-
+  /* ------------------------ RENDER ------------------------ */
   return (
     <aside
-      className={`fixed md:sticky top-0 left-0 w-64 h-screen bg-gray-800 text-white z-40 transform transition-transform duration-300 flex flex-col ${
+      className={`fixed md:sticky top-0 left-0 w-72 h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white z-40 transition-transform duration-300 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      } md:translate-x-0`}
+      } md:translate-x-0 flex flex-col shadow-2xl`}
     >
+      {/* Mobile close */}
       <div className="md:hidden flex justify-end p-4">
-        <button onClick={onClose} className="text-xl">✕</button>
+        <button 
+          onClick={onClose}
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto sidebar-scroll">
-        <h2 className="text-xl font-bold">Dashboard</h2>
-        {links.length === 0 && !loadingSidebar && (
-          <p className="text-gray-400 text-sm">❌ No links available for your role: {user?.role}</p>
-        )}
-        <ul className="space-y-2">
-          {links.map((link, idx) => (
-            <li key={link.label}>
-              {idx > 0 && <div className="border-t border-dashed border-gray-400/40 my-2" />}
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-gray-700/50 backdrop-blur-sm">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
+      </div>
 
-              {link.children ? (
-                <div>
+      {/* Menu */}
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+        <ul className="space-y-1">
+          {links.map((section, idx) => (
+            <li key={section.label}>
+              {idx > 0 && <div className="my-3 border-t border-gray-700/30" />}
+              
+              {/* Section */}
+              {section.children ? (
+                <>
                   <button
-                    onClick={() => toggleSection(link.label)}
-                    className={`w-full flex items-center justify-between px-4 py-2 text-sm font-semibold transition-colors rounded ${
-                      // Never highlight the parent section button - only the active child link
-                      "text-gray-300 hover:bg-gray-700/30"
-                    }`}
+                    onClick={() => toggle(section.label)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200 group"
                   >
-                    <span>{link.label}</span>
-                    <svg
-                      className={`w-4 h-4 transition-transform ${expandedSections.has(link.label) ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {section.label}
+                    </span>
+                    <svg 
+                      className={`w-4 h-4 transition-transform duration-200 ${expanded.has(section.label) ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  {expandedSections.has(link.label) && (
-                    <ul className="ml-4 mt-1 space-y-1">
-                      {link.children.map((child) => {
-                        // Check if child has its own children (3rd level nesting)
-                        if (child.children && child.children.length > 0) {
-                          return (
-                            <li key={child.label}>
-                              <button
-                                onClick={() => toggleSection(child.label)}
-                                className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold transition-colors rounded ${
-                                  "text-gray-300 hover:bg-gray-700/30"
-                                }`}
+
+                  {expanded.has(section.label) && (
+                    <ul className="ml-3 mt-1 space-y-1 border-l-2 border-gray-700/30 pl-3">
+                      {section.children.map(child =>
+                        child.children ? (
+                          <li key={child.label}>
+                            <button
+                              onClick={() => toggle(child.label)}
+                              className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700/30 rounded-md transition-all duration-150"
+                            >
+                              <span>{child.label}</span>
+                              <svg 
+                                className={`w-3 h-3 transition-transform duration-200 ${expanded.has(child.label) ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
                               >
-                                <span>{child.label}</span>
-                                <svg
-                                  className={`w-3 h-3 transition-transform ${expandedSections.has(child.label) ? "rotate-180" : ""}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                              {expandedSections.has(child.label) && (
-                                <ul className="ml-4 mt-1 space-y-1">
-                                  {child.children.map((grandchild) => {
-                                    const href = buildHref(grandchild.href || "#");
-                                    const isActiveLink = isActiveExact(grandchild.href || "#");
-                                    return (
-                                      <li key={grandchild.label}>
-                                        <Link
-                                          href={href}
-                                          onClick={handleLinkClick}
-                                          className={`block px-3 py-2 text-sm rounded transition-colors ${
-                                            isActiveLink
-                                              ? "bg-blue-500 text-white font-medium shadow-sm"
-                                              : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
-                                          }`}
-                                          prefetch={false}
-                                        >
-                                          {grandchild.label}
-                                        </Link>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              )}
-                            </li>
-                          );
-                        }
-                        
-                        // Regular 2nd level link
-                        const href = buildHref(child.href || "#");
-                        const isActiveLink = isActiveExact(child.href || "#");
-                        return (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+
+                            {expanded.has(child.label) && (
+                              <ul className="ml-3 mt-1 space-y-1 border-l border-gray-700/30 pl-3">
+                                {child.children.map(grand => (
+                                  <li key={grand.label}>
+                                    <Link
+                                      href={buildHref(grand.href!)}
+                                      onClick={handleClick}
+                                      className={`block px-3 py-2 text-sm rounded-md transition-all duration-150 ${
+                                        isActive(grand.href)
+                                          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-lg shadow-blue-500/30"
+                                          : "text-gray-400 hover:text-white hover:bg-gray-700/30"
+                                      }`}
+                                    >
+                                      {grand.label}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ) : (
                           <li key={child.label}>
                             <Link
-                              href={href}
-                              onClick={handleLinkClick}
-                              className={`block px-3 py-2 text-sm rounded transition-colors ${
-                                isActiveLink
-                                  ? "bg-blue-500 text-white font-medium shadow-sm"
-                                  : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
+                              href={buildHref(child.href!)}
+                              onClick={handleClick}
+                              className={`block px-3 py-2 text-sm rounded-md transition-all duration-150 ${
+                                isActive(child.href)
+                                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-lg shadow-blue-500/30"
+                                  : "text-gray-400 hover:text-white hover:bg-gray-700/30"
                               }`}
-                              prefetch={false}
                             >
                               {child.label}
                             </Link>
                           </li>
-                        );
-                      })}
+                        )
+                      )}
                     </ul>
                   )}
-                </div>
+                </>
               ) : (
-                (() => {
-                  const href = buildHref(link.href || "#");
-                  const isActiveLink = isActiveExact(link.href || "#");
-                  return (
-                    <Link
-                      href={href}
-                      onClick={handleLinkClick}
-                      className={`block px-4 py-2 rounded text-sm transition-colors ${
-                        isActiveLink
-                          ? "bg-blue-500 text-white font-medium shadow-sm"
-                          : "text-gray-300 hover:bg-gray-700/30 hover:text-white"
-                      }`}
-                      prefetch={false}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })()
+                <Link
+                  href={buildHref(section.href!)}
+                  onClick={handleClick}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm rounded-lg transition-all duration-200 group ${
+                    isActive(section.href)
+                      ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-lg shadow-blue-500/30"
+                      : "text-gray-300 hover:text-white hover:bg-gray-700/50"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive(section.href) ? 'bg-white' : 'bg-blue-400 opacity-0 group-hover:opacity-100'} transition-opacity`} />
+                  {section.label}
+                </Link>
               )}
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Logout Button - Fixed at bottom */}
-      <div className="p-4 mt-auto border-t border-gray-700 bg-gray-900">
+      {/* Logout */}
+      <div className="p-4 border-t border-gray-700/50 backdrop-blur-sm bg-gray-900/50">
         <Logout_Button />
       </div>
     </aside>
