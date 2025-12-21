@@ -9,6 +9,7 @@ import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
 import { TrialBadge } from '@/components/PlanGating';
 import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { api, safeApiCall } from '@/lib/apiClient';
 
 interface AnalyticsData {
   kpis: {
@@ -50,37 +51,25 @@ export default function DashboardHomePage() {
       setLoading(true);
       setError(null);
 
-      // Get token from localStorage (stored at login)
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      if (!token) {
-        setError('Authentication required. Please log in.');
+      // Use apiClient to call BFF route
+      const [data, err] = await safeApiCall(() =>
+        api.get<AnalyticsData>('/api/dashboard/home')
+      );
+
+      if (err) {
+        // Handle unauthorized error
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          router.push('/login');
+          return;
+        }
+        setError(err.message);
         setLoading(false);
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-      const response = await fetch(
-        `${apiUrl}/api/analytics/dashboard`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
-          return;
-        }
-        throw new Error('Failed to fetch analytics');
+      if (data) {
+        setAnalytics(data);
       }
-
-      const data = await response.json();
-      setAnalytics(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analytics');
     } finally {
