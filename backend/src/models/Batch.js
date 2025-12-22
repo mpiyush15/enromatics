@@ -15,6 +15,13 @@ const batchSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Course ID - Optional link to a course
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      default: null,
+    },
+
     // Batch name (e.g., "Batch 2024", "Morning Batch", "JEE Advanced")
     name: {
       type: String,

@@ -1,23 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
-
-interface Student {
-  _id: string;
-  name: string;
-  rollNumber: string;
-  email: string;
-  course: string;
-  batch: string;
-}
-
-interface AttendanceRecord {
-  studentId: string;
-  status: "present" | "absent" | "late";
-  remarks: string;
-}
 
 interface Test {
   _id: string;
@@ -28,673 +13,273 @@ interface Test {
   date: string;
   testDate: string;
   totalMarks: number;
+  duration?: number;
+  attendanceMarked?: boolean;
 }
 
-interface AttendanceApiRecord {
-  studentId: { _id: string } | string;
-  present: boolean;
-  remarks?: string;
-}
-
-export default function TestAttendancePage() {
+export default function TestAttendanceIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const tenantId = params?.tenantId as string;
-  const searchParams = useSearchParams();
-  const testId = searchParams?.get("testId");
 
-  const [test, setTest] = useState<Test | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [attendance, setAttendance] = useState<Map<string, AttendanceRecord>>(new Map());
+  const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingStudents, setLoadingStudents] = useState(false);
-  const [status, setStatus] = useState("");
-  const [selectAll, setSelectAll] = useState(false);
-  
-  // Date and Batch selection
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>("");
-  
-  // Filters
+  const [error, setError] = useState<string | null>(null);
+  const [filterCourse, setFilterCourse] = useState("");
+  const [filterBatch, setFilterBatch] = useState("");
+  const [filterSubject, setFilterSubject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterBatch, setFilterBatch] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | "present" | "absent">("all");
-
-  const fetchTestAndStudents = useCallback(async () => {
-    try {
-      // Fetch test details via BFF with cookie auth using the correct endpoint
-      console.log('📤 Fetching test:', testId);
-      const testRes = await fetch(`/api/academics/tests/${testId}`, {
-        credentials: "include",
-      });
-      const testData = await testRes.json();
-      console.log('📥 Test response:', testRes.status, testData);
-      
-      if (!testRes.ok) {
-        setStatus(`❌ Failed to load test: ${testData.message || 'Unknown error'}`);
-        setLoading(false);
-        return;
-      }
-      
-      if (testData.test) {
-        const testDetails = testData.test;
-        setTest(testDetails);
-
-        // Fetch available batches for this course
-        const batchesRes = await fetch(
-          `/api/academics/batches?course=${testDetails.course}`,
-          { credentials: "include" }
-        );
-        const batchesData = await batchesRes.json();
-        if (batchesRes.ok && batchesData.batches) {
-          const batchNames = batchesData.batches.map((b: any) => b.name);
-          setAvailableBatches(batchNames);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setStatus("❌ Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  }, [testId]); // ✅ FIX 1: Only depend on testId, not the function itself
-
-  const fetchStudentsForBatch = async (batch: string, date: string) => {
-    if (!test || !batch || !date) return;
-    
-    try {
-      setLoadingStudents(true);
-      setStatus("Loading students...");
-      
-      // Fetch students for this course/batch via BFF with cookie auth
-      const studentsRes = await fetch(
-        `/api/students?course=${test.course}&batch=${batch}`,
-        { credentials: "include" }
-      );
-      const studentsData = await studentsRes.json();
-      if (studentsRes.ok) {
-        // ✅ FIX 3: Normalize batch data (handle both batch.name and batchName)
-        const normalized = (studentsData.students || []).map((s: any) => ({
-          ...s,
-          batch: s.batch?.name || s.batchName || s.batch || "",
-        }));
-        setStudents(normalized);
-
-        // Fetch existing attendance for this date via BFF with cookie auth
-        const attendanceRes = await fetch(
-          `/api/academics/attendance?testId=${testId}&date=${date}`,
-          { credentials: "include" }
-        );
-        const attendanceData = await attendanceRes.json();
-        if (attendanceRes.ok && attendanceData.attendance) {
-          const attendanceMap = new Map();
-          attendanceData.attendance.forEach((record: AttendanceApiRecord) => {
-            const studentId = typeof record.studentId === 'string' ? record.studentId : record.studentId._id;
-            attendanceMap.set(studentId, {
-              studentId,
-              status: record.present ? "present" : "absent", // Convert boolean to status
-              remarks: record.remarks || "",
-            });
-          });
-          setAttendance(attendanceMap);
-        }
-        setStatus("");
-      } else {
-        setStatus(`❌ Failed to load students: ${studentsData.message}`);
-      }
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      setStatus("❌ Failed to load students");
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
 
   useEffect(() => {
-    if (!testId) {
-      setLoading(false);
-      setStatus("❌ No test selected. Please select a test from Test Schedules.");
-      return;
+    if (user) {
+      fetchTests();
     }
-    if (user && testId) {
-      fetchTestAndStudents();
-    }
-  }, [user, testId, fetchTestAndStudents]);
+  }, [user]);
 
-  const setStudentStatus = (studentId: string, status: "present" | "absent" | "late") => {
-    const newAttendance = new Map(attendance);
-    const current = newAttendance.get(studentId);
-    newAttendance.set(studentId, {
-      studentId,
-      status,
-      remarks: current?.remarks || "",
-    });
-    setAttendance(newAttendance);
-  };
-
-  const updateRemarks = (studentId: string, remarks: string) => {
-    const newAttendance = new Map(attendance);
-    const current = newAttendance.get(studentId);
-    newAttendance.set(studentId, {
-      studentId,
-      status: current?.status ?? "absent",
-      remarks,
-    });
-    setAttendance(newAttendance);
-  };
-
-  const handleSelectAll = () => {
-    const newAttendance = new Map(attendance);
-    students.forEach((student) => {
-      newAttendance.set(student._id, {
-        studentId: student._id,
-        status: !selectAll ? "present" : "absent",
-        remarks: attendance.get(student._id)?.remarks || "",
-      });
-    });
-    setAttendance(newAttendance);
-    setSelectAll(!selectAll);
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedDate) {
-      setStatus("❌ Please select a date");
-      return;
-    }
-    
-    setStatus("Saving attendance...");
+  const fetchTests = async () => {
     try {
-      const attendanceData = students.map((student) => {
-        const record = attendance.get(student._id);
-        return {
-          studentId: student._id,
-          present: record?.status === "present", // Convert status to boolean for backend
-          status: record?.status || "absent",
-          remarks: record?.remarks || "",
-        };
-      });
+      setLoading(true);
+      setError(null);
 
-      const res = await fetch(`/api/academics/attendance`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          testId,
-          date: selectedDate,
-          batch: selectedBatch,
-          attendanceData 
-        }),
-      });
+      let url = `/api/academics/tests`;
+      const query = new URLSearchParams();
 
+      if (filterCourse) query.append("course", filterCourse);
+      if (filterBatch) query.append("batch", filterBatch);
+      if (filterSubject) query.append("subject", filterSubject);
+
+      if (query.toString()) {
+        url += `?${query.toString()}`;
+      }
+
+      const res = await fetch(url, { credentials: "include" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to save attendance");
 
-      setStatus("✅ Attendance saved successfully!");
-      setTimeout(() => {
-        router.push(`/dashboard/client/${tenantId}/academics/schedules`);
-      }, 1500);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to save attendance";
-      setStatus("❌ " + errorMessage);
-      console.error("❌ Save attendance error:", error);
+      if (res.ok && data.success) {
+        setTests(data.tests || []);
+      } else {
+        setError(data.message || "Failed to fetch tests");
+      }
+    } catch (err) {
+      console.error("Error fetching tests:", err);
+      setError("Failed to load tests. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const filteredTests = tests.filter((test) => {
+    if (searchQuery && !test.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !test.subject.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+
+  const getTestStatusColor = (test: Test) => {
+    const testDate = new Date(test.testDate || test.date);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - testDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (test.attendanceMarked) {
+      return 'bg-green-100 text-green-800 border-green-200';
+    } else if (daysDiff > 7) {
+      return 'bg-red-100 text-red-800 border-red-200';
+    } else if (daysDiff > 0) {
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    }
+    return 'bg-blue-100 text-blue-800 border-blue-200';
+  };
+
+  const getTestStatus = (test: Test) => {
+    const testDate = new Date(test.testDate || test.date);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - testDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (test.attendanceMarked) return 'Marked';
+    if (daysDiff > 7) return 'Overdue';
+    if (daysDiff > 0) return 'Pending';
+    return 'Upcoming';
   };
 
   if (loading) {
     return (
-      <div className="p-4 md:p-6 space-y-6">
-        <div className="space-y-2">
-          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-          <TableSkeleton rows={8} />
-        </div>
-      </div>
-    );
-  }
-
-  if (!testId) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="text-6xl mb-4">📋</div>
-          <p className="text-red-600 text-xl mb-4">No test selected</p>
-          <p className="text-gray-600 mb-6">Please select a test from Test Schedules to mark attendance.</p>
-          <button
-            onClick={() => router.push(`/dashboard/client/${tenantId}/academics/schedules`)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
-          >
-            Go to Test Schedules
-          </button>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
+          <p className="text-gray-600">Loading tests...</p>
         </div>
       </div>
     );
   }
-
-  if (!test) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-600 text-xl mb-4">Test not found</p>
-          <button
-            onClick={() => router.push(`/dashboard/client/${tenantId}/academics/schedules`)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            Back to Schedules
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Get unique batches for filter
-  const uniqueBatches = Array.from(new Set(students.map(s => s.batch).filter(Boolean)));
-  
-  // Filtered students
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch = 
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
-    
-    if (filterBatch !== "all" && student.batch !== filterBatch) return false;
-    
-    if (filterStatus === "all") return true;
-    const record = attendance.get(student._id);
-    if (filterStatus === "present") return record?.status === "present";
-    if (filterStatus === "absent") return record?.status === "absent";
-    return true;
-  });
-
-  const presentCount = Array.from(attendance.values()).filter((r) => r.status === "present").length;
-  const absentCount = Array.from(attendance.values()).filter((r) => r.status === "absent").length;
-  const lateCount = Array.from(attendance.values()).filter((r) => r.status === "late").length;
-  const presentPercentage = students.length > 0 ? Math.round((presentCount / students.length) * 100) : 0;
-
-  const markAllPresent = () => {
-    const newAttendance = new Map(attendance);
-    filteredStudents.forEach((student) => {
-      newAttendance.set(student._id, {
-        studentId: student._id,
-        status: "present",
-        remarks: attendance.get(student._id)?.remarks || "",
-      });
-    });
-    setAttendance(newAttendance);
-  };
-
-  const markAllAbsent = () => {
-    const newAttendance = new Map(attendance);
-    filteredStudents.forEach((student) => {
-      newAttendance.set(student._id, {
-        studentId: student._id,
-        status: "absent",
-        remarks: attendance.get(student._id)?.remarks || "",
-      });
-    });
-    setAttendance(newAttendance);
-  };
-
-  const markAllLate = () => {
-    const newAttendance = new Map(attendance);
-    filteredStudents.forEach((student) => {
-      newAttendance.set(student._id, {
-        studentId: student._id,
-        status: "late",
-        remarks: attendance.get(student._id)?.remarks || "",
-      });
-    });
-    setAttendance(newAttendance);
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
         {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push(`/dashboard/client/${tenantId}/academics/schedules`)}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 mb-4 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Back to Test Schedules</span>
-          </button>
-
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl p-8 text-white">
-            <h1 className="text-4xl font-bold mb-2">✅ Test Attendance</h1>
-            <p className="text-blue-100 mb-4">{test.name} - {test.subject}</p>
-            <div className="flex gap-4 text-sm">
-              <span>📅 {new Date(test.testDate).toLocaleDateString()}</span>
-              <span>📚 {test.course} {test.batch && `- ${test.batch}`}</span>
-              <span>📊 {presentPercentage}% Present</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Message */}
-        {status && (
-          <div className={`mb-6 p-4 rounded-xl font-semibold ${
-            status.includes("✅") 
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-          }`}>
-            {status}
-          </div>
-        )}
-
-        {/* Date and Batch Selector */}
-        {availableBatches.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              � Select Date & Batch to Mark Attendance
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Batch
-                </label>
-                <select
-                  value={selectedBatch}
-                  onChange={(e) => setSelectedBatch(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
-                >
-                  <option value="">-- Select a Batch --</option>
-                  {availableBatches.map((batch) => (
-                    <option key={batch} value={batch}>
-                      {batch}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={() => selectedBatch && selectedDate && fetchStudentsForBatch(selectedBatch, selectedDate)}
-                disabled={!selectedBatch || !selectedDate || loadingStudents}
-                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold shadow-lg transition-all"
-              >
-                {loadingStudents ? "Loading..." : "Load Students"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Show content only when students are loaded */}
-        {students.length > 0 && (
-          <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Total Students</p>
-                <p className="text-3xl font-bold">{students.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={markAllPresent}
-            className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white hover:from-green-600 hover:to-green-700 transition-all transform hover:scale-105 cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm">Present</p>
-                <p className="text-3xl font-bold">{presentCount}</p>
-                <p className="text-xs text-green-100 mt-1">Click to mark all</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={markAllAbsent}
-            className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white hover:from-red-600 hover:to-red-700 transition-all transform hover:scale-105 cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-red-100 text-sm">Absent</p>
-                <p className="text-3xl font-bold">{absentCount}</p>
-                <p className="text-xs text-red-100 mt-1">Click to mark all</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={markAllLate}
-            className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl shadow-lg p-6 text-white hover:from-yellow-600 hover:to-orange-700 transition-all transform hover:scale-105 cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-yellow-100 text-sm">Late</p>
-                <p className="text-3xl font-bold">{lateCount}</p>
-                <p className="text-xs text-yellow-100 mt-1">Click to mark all</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </button>
-
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm">Attendance Rate</p>
-                <p className="text-3xl font-bold">{presentPercentage}%</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters & Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block text-sm font-semibold mb-2">🔍 Search Student</label>
-              <input
-                type="text"
-                placeholder="Search by name, roll number or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-              />
+              <h1 className="text-3xl font-bold text-gray-900">Test Attendance</h1>
+              <p className="text-gray-600 mt-1">Mark attendance for scheduled tests</p>
             </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">📚 Filter by Batch</label>
-              <select
-                value={filterBatch}
-                onChange={(e) => setFilterBatch(e.target.value)}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-              >
-                <option value="all">All Batches</option>
-                {uniqueBatches.map((batch) => (
-                  <option key={batch} value={batch}>{batch}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">📊 Filter by Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as "all" | "present" | "absent")}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700"
-              >
-                <option value="all">All Students</option>
-                <option value="present">Present Only</option>
-                <option value="absent">Absent Only</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
             <button
-              onClick={markAllPresent}
-              className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold transition-colors"
+              onClick={fetchTests}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
-              ✓ Mark All Present
-            </button>
-            <button
-              onClick={markAllAbsent}
-              className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold transition-colors"
-            >
-              ✗ Mark All Absent
-            </button>
-            <button
-              onClick={handleSelectAll}
-              className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold transition-colors"
-            >
-              {selectAll ? "Deselect All" : "Select All"}
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="ml-auto px-8 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 font-bold text-lg shadow-lg transition-all"
-            >
-              💾 Save Attendance
-            </button>
-          </div>
-        </div>
-
-        {/* Attendance Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-2xl font-bold">Student List <span className="text-gray-500 text-lg">({filteredStudents.length} students)</span></h2>
-          </div>
-
-          {filteredStudents.length === 0 ? (
-            <div className="p-16 text-center">
-              <svg className="w-20 h-20 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <p className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</p>
-              <p className="text-gray-500">Try adjusting your filters or search query</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Roll No</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Student Name</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Batch</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">Attendance</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredStudents.map((student) => {
-                    const record = attendance.get(student._id);
-                    const status = record?.status || "absent";
-
-                    return (
-                      <tr key={student._id} className="hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{student.rollNumber}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
-                              {student.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-semibold text-lg">{student.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm font-semibold">
-                            {student.batch || "N/A"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2 justify-center">
-                            <button
-                              onClick={() => setStudentStatus(student._id, "present")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                                status === "present"
-                                  ? "bg-green-600 text-white shadow-lg scale-105"
-                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900"
-                              }`}
-                            >
-                              ✓ Present
-                            </button>
-                            <button
-                              onClick={() => setStudentStatus(student._id, "absent")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                                status === "absent"
-                                  ? "bg-red-600 text-white shadow-lg scale-105"
-                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900"
-                              }`}
-                            >
-                              ✗ Absent
-                            </button>
-                            <button
-                              onClick={() => setStudentStatus(student._id, "late")}
-                              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                                status === "late"
-                                  ? "bg-yellow-600 text-white shadow-lg scale-105"
-                                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-yellow-100 dark:hover:bg-yellow-900"
-                              }`}
-                            >
-                              ⏰ Late
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <input
-                            type="text"
-                            placeholder="Add remarks..."
-                            value={record?.remarks || ""}
-                            onChange={(e) => updateRemarks(student._id, e.target.value)}
-                            className="w-full px-4 py-2 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 text-sm transition-all"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+              Refresh
+            </button>
+          </div>
         </div>
-        </>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="text-red-800 flex-1">{error}</div>
+          </div>
         )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h3 className="font-semibold text-gray-900 mb-4">Filter Tests</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              type="text"
+              placeholder="Search by name or subject..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              type="text"
+              placeholder="Filter by course"
+              value={filterCourse}
+              onChange={(e) => {
+                setFilterCourse(e.target.value);
+                fetchTests();
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              type="text"
+              placeholder="Filter by batch"
+              value={filterBatch}
+              onChange={(e) => {
+                setFilterBatch(e.target.value);
+                fetchTests();
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <input
+              type="text"
+              placeholder="Filter by subject"
+              value={filterSubject}
+              onChange={(e) => {
+                setFilterSubject(e.target.value);
+                fetchTests();
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Tests Grid */}
+        {filteredTests.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <svg className="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Tests Found</h3>
+            <p className="text-gray-500">No scheduled tests available or they don't match your filters.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTests.map((test) => (
+              <div
+                key={test._id}
+                onClick={() => router.push(`/dashboard/client/${tenantId}/academics/attendance/${test._id}`)}
+                className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group overflow-hidden"
+              >
+                {/* Card Header */}
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <h3 className="font-semibold text-lg">{test.subject}</h3>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getTestStatusColor(test)}`}>
+                      {getTestStatus(test)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-5 space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 text-lg mb-1">{test.name}</h4>
+                    <p className="text-sm text-gray-500">Total Marks: {test.totalMarks}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-gray-500">Course</p>
+                      <p className="font-medium text-gray-900">{test.course}</p>
+                    </div>
+                    {test.batch && (
+                      <div>
+                        <p className="text-gray-500">Batch</p>
+                        <p className="font-medium text-gray-900">{test.batch}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {new Date(test.testDate || test.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    {test.duration && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {test.duration} minutes
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Footer */}
+                <div className="px-5 pb-4">
+                  <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 group-hover:bg-blue-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    {test.attendanceMarked ? 'View Attendance' : 'Mark Attendance'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
   );

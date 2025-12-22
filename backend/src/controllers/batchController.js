@@ -7,11 +7,19 @@ export const getBatches = async (req, res) => {
   try {
     const tenantId = req.user.tenantId;
 
-    const batches = await Batch.find({ tenantId }).sort({ createdAt: -1 });
+    const batches = await Batch.find({ tenantId })
+      .populate("courseId", "name") // Populate course name
+      .sort({ createdAt: -1 });
+
+    // Map to include courseName field for easy access
+    const batchesWithCourseName = batches.map((batch) => ({
+      ...batch.toObject(),
+      courseName: batch.courseId?.name || null,
+    }));
 
     res.status(200).json({
       success: true,
-      batches,
+      batches: batchesWithCourseName,
     });
   } catch (error) {
     console.error("Error fetching batches:", error);
@@ -57,7 +65,7 @@ export const getBatchById = async (req, res) => {
  */
 export const createBatch = async (req, res) => {
   try {
-    const { name, description, startDate, endDate, capacity } = req.body;
+    const { name, courseId, description, startDate, endDate, capacity, status } = req.body;
     const tenantId = req.user.tenantId;
 
     // Check if batch name already exists for this tenant
@@ -72,17 +80,24 @@ export const createBatch = async (req, res) => {
     const batch = await Batch.create({
       tenantId,
       name,
+      courseId: courseId || null,
       description,
       startDate,
       endDate,
       capacity,
-      status: "active",
+      status: status || "active",
     });
+
+    // Populate course name if courseId exists
+    await batch.populate("courseId", "name");
 
     res.status(201).json({
       success: true,
       message: "Batch created successfully",
-      batch,
+      batch: {
+        ...batch.toObject(),
+        courseName: batch.courseId?.name || null,
+      },
     });
   } catch (error) {
     console.error("Error creating batch:", error);

@@ -49,10 +49,6 @@ export default function TestSchedulesPage() {
     description: "",
   });
 
-  useEffect(() => {
-    if (user) fetchTests();
-  }, [user, filterCourse, filterStatus]);
-
   const fetchTests = async () => {
     try {
       let url = `/api/academics/tests`;
@@ -72,6 +68,11 @@ export default function TestSchedulesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) fetchTests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, filterCourse, filterStatus]); // Fetch when user or filters change
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
