@@ -64,7 +64,7 @@ interface RewardStats {
 export default function ScholarshipRewardsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = (params?.tenantId as string) || '';
   
   const [rewards, setRewards] = useState<RewardData[]>([]);
   const [stats, setStats] = useState<RewardStats | null>(null);
@@ -86,11 +86,17 @@ export default function ScholarshipRewardsPage() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch rewards");
+      if (!response.ok) {
+        console.warn("Failed to fetch rewards, setting empty array");
+        setRewards([]);
+        return;
+      }
+      
       const data = await response.json();
       setRewards(data.rewards || []);
     } catch (error) {
       console.error("Error fetching rewards:", error);
+      setRewards([]); // Set empty array on error
     }
   };
 
@@ -101,11 +107,18 @@ export default function ScholarshipRewardsPage() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch stats");
+      if (!response.ok) {
+        console.warn("Failed to fetch stats, setting null");
+        setStats(null);
+        setLoading(false);
+        return;
+      }
+      
       const data = await response.json();
       setStats(data.stats || null);
     } catch (error) {
       console.error("Error fetching stats:", error);
+      setStats(null); // Set null on error
     } finally {
       setLoading(false);
     }

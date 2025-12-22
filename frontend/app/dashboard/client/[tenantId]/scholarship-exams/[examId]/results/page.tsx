@@ -23,8 +23,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-
 interface Registration {
   _id: string;
   registrationNumber: string;
@@ -64,8 +62,8 @@ interface ExamData {
 export default function ResultManagementPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
+  const tenantId = (params?.tenantId as string) || '';
+  const examId = (params?.examId as string) || '';
 
   const [exam, setExam] = useState<ExamData | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -89,24 +87,31 @@ export default function ResultManagementPage() {
     try {
       setLoading(true);
       
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
+      const examResponse = await fetch(`/api/scholarship-exams/${examId}`, {
         credentials: "include",
       });
       if (examResponse.ok) {
         const examData = await examResponse.json();
         setExam(examData.exam);
+      } else {
+        console.warn("Failed to fetch exam data, setting null");
+        setExam(null);
       }
 
-      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
+      const regResponse = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
       if (regResponse.ok) {
         const regData = await regResponse.json();
         setRegistrations(regData.registrations || []);
+      } else {
+        console.warn("Failed to fetch registrations, setting empty array");
+        setRegistrations([]);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
-      alert("Failed to load data");
+      setExam(null);
+      setRegistrations([]);
     } finally {
       setLoading(false);
     }
@@ -124,7 +129,7 @@ export default function ResultManagementPage() {
 
   const saveIndividualResult = async (registration: Registration) => {
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/registration/${registration._id}`, {
+      const response = await fetch(`/api/scholarship-exams/registration/${registration._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -151,7 +156,7 @@ export default function ResultManagementPage() {
 
     setPublishing(true);
     try {
-      const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}/publish-results`, {
+      const response = await fetch(`/api/scholarship-exams/${examId}/publish-results`, {
         method: "POST",
         credentials: "include",
       });
@@ -229,7 +234,7 @@ export default function ResultManagementPage() {
 
     try {
       setUploadingResults(true);
-      const response = await fetch(`${API_URL}/api/scholarship-exams/${examId}/upload-results`, {
+      const response = await fetch(`/api/scholarship-exams/${examId}/upload-results`, {
         method: 'POST',
         credentials: 'include',
         body: formData,

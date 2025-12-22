@@ -67,7 +67,7 @@ interface Exam {
 export default function ScholarshipResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = (params?.tenantId as string) || '';
   
   const [exams, setExams] = useState<Exam[]>([]);
   const [results, setResults] = useState<ExamResult[]>([]);
@@ -91,11 +91,17 @@ export default function ScholarshipResultsPage() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch exams");
+      if (!response.ok) {
+        console.warn("Failed to fetch exams, setting empty array");
+        setExams([]);
+        return;
+      }
+      
       const data = await response.json();
       setExams(data.exams || []);
     } catch (error) {
       console.error("Error fetching exams:", error);
+      setExams([]);
     }
   };
 
@@ -110,11 +116,18 @@ export default function ScholarshipResultsPage() {
         credentials: "include",
       });
 
-      if (!response.ok) throw new Error("Failed to fetch results");
+      if (!response.ok) {
+        console.warn("Failed to fetch results, setting empty array");
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      
       const data = await response.json();
       setResults(data.results || []);
     } catch (error) {
       console.error("Error fetching results:", error);
+      setResults([]);
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_KEYS } from '@/lib/redis';
 
 // Helper to extract cookies
 function extractCookies(request: NextRequest) {
@@ -25,6 +26,12 @@ export async function GET(request: NextRequest) {
     });
 
     const data = await res.json();
+
+    console.log('[BFF] Academics Batches Response:', {
+      success: data.success,
+      batchCount: data.batches?.length || 0,
+      firstBatch: data.batches?.[0] || null,
+    });
 
     if (!data.success) {
       return NextResponse.json(
@@ -68,6 +75,13 @@ export async function POST(request: NextRequest) {
         { success: false, message: data.message || 'Failed to create batch' },
         { status: res.status }
       );
+    }
+
+    // Invalidate batches cache after creation
+    if (data.batch?.tenantId) {
+      const cacheKey = CACHE_KEYS.BATCHES_LIST(data.batch.tenantId);
+      await redisCache.del(cacheKey);
+      console.log('[BFF] Invalidated batches cache after creation for tenant:', data.batch.tenantId);
     }
 
     return NextResponse.json({

@@ -121,3 +121,42 @@ export function invalidateRegistrationsCache(examId: string) {
   });
   console.log('[BFF] Registrations cache cleared for exam:', examId);
 }
+
+// POST - Manual registration by admin
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id: examId } = params;
+    const body = await request.json();
+
+    // Forward to backend with cookies
+    const response = await fetch(
+      `${BACKEND_URL}/api/scholarship-exams/${examId}/registrations/manual`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: request.headers.get("cookie") || "",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    const data = await response.json();
+    
+    // Invalidate cache on successful registration
+    if (data.success) {
+      invalidateRegistrationsCache(examId);
+    }
+    
+    return NextResponse.json(data, { status: response.status });
+  } catch (error: any) {
+    console.error("BFF Error - Manual Registration:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}

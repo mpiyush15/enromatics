@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { redisCache, CACHE_KEYS } from '@/lib/redis';
 
 // Helper to extract cookies
 function extractCookies(request: NextRequest) {
@@ -22,6 +23,8 @@ export async function PUT(
     const body = await request.json();
     const { id } = params;
 
+    console.log('[BFF] Updating batch:', { id, body });
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/batches/${id}`, {
       method: 'PUT',
       headers: {
@@ -34,11 +37,24 @@ export async function PUT(
 
     const data = await res.json();
 
+    console.log('[BFF] Batch update response:', {
+      success: data.success,
+      batch: data.batch,
+    });
+
     if (!data.success) {
       return NextResponse.json(
         { success: false, message: data.message || 'Failed to update batch' },
         { status: res.status }
       );
+    }
+
+    // Invalidate batches cache after update
+    // Get tenantId from the updated batch response
+    if (data.batch?.tenantId) {
+      const cacheKey = CACHE_KEYS.BATCHES_LIST(data.batch.tenantId);
+      await redisCache.del(cacheKey);
+      console.log('[BFF] Invalidated batches cache for tenant:', data.batch.tenantId);
     }
 
     return NextResponse.json({

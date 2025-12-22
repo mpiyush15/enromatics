@@ -74,11 +74,15 @@ interface Exam {
 
 interface Batch {
   _id: string;
-  batchName: string;
-  course: string;
-  fee: number;
+  name: string;
+  courseName?: string;
+  courseId?: {
+    _id: string;
+    name: string;
+    fees: number;
+    duration?: string;
+  };
   startDate: string;
-  duration: string;
   description?: string;
 }
 
@@ -156,12 +160,15 @@ export default function EnrollmentFormPage() {
       }
 
       // Fetch batches
-      const batchResponse = await fetch(`${API_URL}/api/batches?tenantId=${tenantId}`, {
+      const batchResponse = await fetch(`/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       if (batchResponse.ok) {
         const batchData = await batchResponse.json();
+        console.log('Batches fetched for enrollment:', batchData.batches?.length || 0);
         setBatches(batchData.batches || []);
+      } else {
+        console.error('Failed to fetch batches:', await batchResponse.text());
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -175,7 +182,7 @@ export default function EnrollmentFormPage() {
     setFormData(prev => ({ ...prev, selectedBatch: batchId }));
     const batch = batches.find((b) => b._id === batchId);
     if (batch) {
-      const baseFee = batch.fee || 0;
+      const baseFee = batch.courseId?.fees || 0;
       let discount = 0;
 
       // Apply scholarship discount if eligible
@@ -361,7 +368,9 @@ export default function EnrollmentFormPage() {
                   <option value="">Select a batch...</option>
                   {batches.map((batch) => (
                     <option key={batch._id} value={batch._id}>
-                      {batch.batchName} - {batch.course} | Duration: {batch.duration} | Fee: ₹{(batch.fee || 0).toLocaleString()}
+                      {batch.name} - {batch.courseName || 'No Course'} 
+                      {batch.courseId?.duration ? ` | Duration: ${batch.courseId.duration}` : ''} 
+                      {batch.courseId?.fees ? ` | Fee: ₹${batch.courseId.fees.toLocaleString()}` : ''}
                     </option>
                   ))}
                 </select>
@@ -376,19 +385,19 @@ export default function EnrollmentFormPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-600">Course</p>
-                          <p className="font-semibold">{batch.course}</p>
+                          <p className="font-semibold">{batch.courseName || batch.courseId?.name || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Duration</p>
-                          <p className="font-semibold">{batch.duration}</p>
+                          <p className="font-semibold">{batch.courseId?.duration || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Start Date</p>
-                          <p className="font-semibold">{formatDate(batch.startDate)}</p>
+                          <p className="font-semibold">{batch.startDate ? formatDate(batch.startDate) : 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Base Fee</p>
-                          <p className="font-semibold">₹{(batch.fee || 0).toLocaleString()}</p>
+                          <p className="font-semibold">₹{(batch.courseId?.fees ?? 0).toLocaleString()}</p>
                         </div>
                         {batch.description && (
                           <div className="md:col-span-2">

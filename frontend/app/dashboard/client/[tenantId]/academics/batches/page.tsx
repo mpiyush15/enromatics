@@ -17,7 +17,12 @@ interface Course {
 interface Batch {
   _id: string;
   name: string;
-  courseId?: string;
+  courseId?: string | {
+    _id: string;
+    name: string;
+    fees?: number;
+    duration?: string;
+  };
   courseName?: string;
   description: string;
   startDate: string;
@@ -197,17 +202,23 @@ export default function CoursesAndBatchesPage() {
         : `/api/academics/batches`;
       const method = editingBatch ? "PUT" : "POST";
 
+      const payload = {
+        ...batchForm,
+        capacity: batchForm.capacity ? parseInt(batchForm.capacity) : null,
+      };
+
+      console.log('[FRONTEND] Submitting batch:', { method, url, payload });
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          ...batchForm,
-          capacity: batchForm.capacity ? parseInt(batchForm.capacity) : null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
+
+      console.log('[FRONTEND] Batch response:', data);
 
       if (data.success) {
         setMessage(editingBatch ? "✅ Batch updated!" : "✅ Batch created!");
@@ -225,9 +236,17 @@ export default function CoursesAndBatchesPage() {
 
   const handleEditBatch = (batch: Batch) => {
     setEditingBatch(batch);
+    
+    // Extract courseId string - handle both populated object and string
+    const courseIdValue = typeof batch.courseId === 'object' && batch.courseId?._id 
+      ? batch.courseId._id 
+      : typeof batch.courseId === 'string' 
+      ? batch.courseId 
+      : "";
+    
     setBatchForm({
       name: batch.name,
-      courseId: batch.courseId || "",
+      courseId: courseIdValue,
       description: batch.description || "",
       startDate: batch.startDate ? new Date(batch.startDate).toISOString().split("T")[0] : "",
       endDate: batch.endDate ? new Date(batch.endDate).toISOString().split("T")[0] : "",

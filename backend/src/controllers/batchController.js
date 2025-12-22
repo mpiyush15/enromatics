@@ -8,7 +8,7 @@ export const getBatches = async (req, res) => {
     const tenantId = req.user.tenantId;
 
     const batches = await Batch.find({ tenantId })
-      .populate("courseId", "name") // Populate course name
+      .populate("courseId", "name fees duration") // Populate course with fees and duration
       .sort({ createdAt: -1 });
 
     // Map to include courseName field for easy access
@@ -38,7 +38,8 @@ export const getBatchById = async (req, res) => {
     const { id } = req.params;
     const tenantId = req.user.tenantId;
 
-    const batch = await Batch.findOne({ _id: id, tenantId });
+    const batch = await Batch.findOne({ _id: id, tenantId })
+      .populate("courseId", "name fees duration");
 
     if (!batch) {
       return res.status(404).json({
@@ -49,7 +50,10 @@ export const getBatchById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      batch,
+      batch: {
+        ...batch.toObject(),
+        courseName: batch.courseId?.name || null,
+      },
     });
   } catch (error) {
     console.error("Error fetching batch:", error);
@@ -88,8 +92,8 @@ export const createBatch = async (req, res) => {
       status: status || "active",
     });
 
-    // Populate course name if courseId exists
-    await batch.populate("courseId", "name");
+    // Populate course details with fees and duration
+    await batch.populate("courseId", "name fees duration");
 
     res.status(201).json({
       success: true,
@@ -114,8 +118,10 @@ export const createBatch = async (req, res) => {
 export const updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, startDate, endDate, capacity, status } = req.body;
+    const { name, courseId, description, startDate, endDate, capacity, status } = req.body;
     const tenantId = req.user.tenantId;
+
+    console.log('[BATCH UPDATE] Request:', { id, name, courseId, description, startDate, endDate, capacity, status });
 
     // Check if batch exists
     const batch = await Batch.findOne({ _id: id, tenantId });
@@ -125,6 +131,8 @@ export const updateBatch = async (req, res) => {
         message: "Batch not found",
       });
     }
+
+    console.log('[BATCH UPDATE] Current batch courseId:', batch.courseId);
 
     // If name is being changed, check for duplicates
     if (name && name !== batch.name) {
@@ -139,18 +147,34 @@ export const updateBatch = async (req, res) => {
 
     // Update batch
     batch.name = name || batch.name;
+    // Handle courseId: empty string "" should set to null, undefined keeps existing
+    if (courseId !== undefined) {
+      batch.courseId = courseId === "" ? null : courseId;
+    }
     batch.description = description !== undefined ? description : batch.description;
     batch.startDate = startDate !== undefined ? startDate : batch.startDate;
     batch.endDate = endDate !== undefined ? endDate : batch.endDate;
     batch.capacity = capacity !== undefined ? capacity : batch.capacity;
     batch.status = status || batch.status;
 
+    console.log('[BATCH UPDATE] New courseId to save:', batch.courseId);
+
     await batch.save();
+
+    console.log('[BATCH UPDATE] Batch saved, now populating...');
+
+    // Populate course details after saving
+    await batch.populate("courseId", "name fees duration");
+
+    console.log('[BATCH UPDATE] Populated batch.courseId:', batch.courseId);
 
     res.status(200).json({
       success: true,
       message: "Batch updated successfully",
-      batch,
+      batch: {
+        ...batch.toObject(),
+        courseName: batch.courseId?.name || null,
+      },
     });
   } catch (error) {
     console.error("Error updating batch:", error);

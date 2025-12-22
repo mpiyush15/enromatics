@@ -17,6 +17,7 @@ import {
   downloadAdmitCard,
   submitEnrollmentInterest,
   updateEnrollmentStatus,
+  manualRegisterForExam,
 } from "../controllers/scholarshipExamController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -43,6 +44,9 @@ router.delete("/:id", deleteExam);
 router.post("/:id/publish-results", publishResults);
 router.get("/:id/stats", getExamStats);
 router.get("/:id/registrations", getExamRegistrations);
+
+// Manual registration by admin
+router.post("/:examId/registrations/manual", manualRegisterForExam);
 
 // Registration management
 router.put("/registration/:id", updateRegistration);

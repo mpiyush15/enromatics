@@ -2,6 +2,7 @@ import ScholarshipExam from "../models/ScholarshipExam.js";
 import ExamRegistration from "../models/ExamRegistration.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
 import bcrypt from "bcryptjs";
 
 // Create new scholarship exam
@@ -623,41 +624,110 @@ export const updateAttendance = async (req, res) => {
 export const convertToAdmission = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+    if (!tenantId) {
+      console.error('[CONVERT ERROR] Tenant ID missing');
+      return res.status(403).json({ success: false, message: "Tenant ID missing" });
+    }
 
     const { id } = req.params;
-    const { batchId, course, feeAmount } = req.body;
+    const { batchId, feeAmount, discountApplied, enrollmentData } = req.body;
 
+    console.log('[CONVERT TO ADMISSION] Request:', { id, batchId, feeAmount, discountApplied, enrollmentData });
+
+    if (!batchId) {
+      console.error('[CONVERT ERROR] Batch ID missing');
+      return res.status(400).json({ success: false, message: "Batch ID is required" });
+    }
+
+    // Find registration
     const registration = await ExamRegistration.findOne({ _id: id, tenantId });
     if (!registration) {
-      return res.status(404).json({ message: "Registration not found" });
+      console.error('[CONVERT ERROR] Registration not found:', id);
+      return res.status(404).json({ success: false, message: "Registration not found" });
     }
 
     if (registration.convertedToStudent) {
-      return res.status(400).json({ message: "Already converted to student" });
+      console.error('[CONVERT ERROR] Already converted');
+      return res.status(400).json({ success: false, message: "Already converted to student" });
+    }
+
+    // Fetch batch to get course name
+    const batch = await Batch.findById(batchId).populate('courseId', 'name');
+    if (!batch) {
+      console.error('[CONVERT ERROR] Batch not found:', batchId);
+      return res.status(404).json({ success: false, message: "Batch not found" });
+    }
+
+    const courseName = batch.courseId?.name || 'Not Assigned';
+
+    console.log('[CONVERT TO ADMISSION] Batch found:', { batchName: batch.name, courseName });
+
+    // Generate roll number
+    // Format: <year><batchPrefix><sequence>
+    // Example: 2025MA001 (Year 2025, Batch MA, Sequence 001)
+    const currentYear = new Date().getFullYear();
+    const batchPrefix = batch.name.substring(0, 2).toUpperCase();
+    
+    // Count students in this batch admitted in the current year
+    const seq = (await Student.countDocuments({ 
+      tenantId, 
+      batchId,
+      createdAt: {
+        $gte: new Date(`${currentYear}-01-01`),
+        $lt: new Date(`${currentYear + 1}-01-01`)
+      }
+    })) + 1;
+    
+    const rollNumber = `${currentYear}${batchPrefix}${String(seq).padStart(3, "0")}`;
+
+    console.log('[CONVERT TO ADMISSION] Generated roll number:', rollNumber);
+
+    // Prepare address string
+    let addressString = 'N/A';
+    if (typeof registration.address === 'string') {
+      addressString = registration.address;
+    } else if (registration.address) {
+      if (registration.address.full) {
+        addressString = registration.address.full;
+      } else {
+        const parts = [
+          registration.address.street,
+          registration.address.city,
+          registration.address.state,
+          registration.address.zipCode,
+          registration.address.country
+        ].filter(Boolean);
+        addressString = parts.length > 0 ? parts.join(', ') : 'N/A';
+      }
     }
 
     // Create student record
-    const student = await Student.create({
+    const studentData = {
       name: registration.studentName,
       email: registration.email,
       phone: registration.phone,
       dateOfBirth: registration.dateOfBirth,
       gender: registration.gender,
-      fatherName: registration.fatherName,
-      motherName: registration.motherName,
-      address: registration.address,
-      batch: batchId,
-      course,
+      address: addressString,
+      batch: batch.name,
+      batchId: batchId,
+      course: courseName,
+      rollNumber: rollNumber,
       tenantId,
       status: "active",
-      admissionDate: new Date(),
-      feeDetails: {
-        totalFee: feeAmount,
-        paidAmount: 0,
-        pendingAmount: feeAmount,
-      },
-    });
+      joinDate: new Date(),
+      fees: feeAmount || 0,
+      balance: 0, // Balance starts at 0, increments with payments
+    };
+
+    console.log('[CONVERT TO ADMISSION] Creating student with data:', studentData);
+
+    const student = await Student.create(studentData);
+
+    console.log('[CONVERT TO ADMISSION] Student created:', student._id);
+
+    // Update batch enrolled count
+    await Batch.findByIdAndUpdate(batchId, { $inc: { enrolledCount: 1 } });
 
     // Update registration
     await ExamRegistration.findByIdAndUpdate(id, {
@@ -669,14 +739,29 @@ export const convertToAdmission = async (req, res) => {
       },
     });
 
+    // Update exam stats
+    if (registration.examId) {
+      await ScholarshipExam.findByIdAndUpdate(registration.examId, {
+        $inc: { convertedCount: 1 }
+      });
+    }
+
+    console.log('[CONVERT TO ADMISSION] Success!');
+
     res.status(200).json({
       success: true,
       message: "Successfully converted to student admission",
       student,
     });
   } catch (err) {
-    console.error("Convert to admission error:", err);
+    console.error("[CONVERT TO ADMISSION ERROR]", err);
+    console.error("Error details:", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    });
     res.status(500).json({ 
+      success: false,
       message: "Server error", 
       error: err.message 
     });
@@ -1151,7 +1236,7 @@ export const submitEnrollmentInterest = async (req, res) => {
 };
 
 // Update enrollment status for a registration
-const updateEnrollmentStatus = async (req, res) => {
+export const updateEnrollmentStatus = async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { enrollmentStatus } = req.body;
@@ -1223,4 +1308,191 @@ const updateEnrollmentStatus = async (req, res) => {
   }
 };
 
-export { updateEnrollmentStatus };
+// Manual registration by admin
+export const manualRegisterForExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Tenant ID missing" 
+      });
+    }
+
+    console.log("[MANUAL REGISTRATION] Admin:", req.user.email, "Exam ID:", examId);
+
+    // Validate exam exists and belongs to tenant
+    const exam = await ScholarshipExam.findOne({ _id: examId, tenantId });
+    if (!exam) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Exam not found" 
+      });
+    }
+
+    // Extract registration data
+    const {
+      studentName,
+      email,
+      phone,
+      dateOfBirth,
+      gender,
+      fatherName,
+      motherName,
+      parentPhone,
+      currentClass,
+      school,
+      address,
+      selectedExamDate,
+      remarks
+    } = req.body;
+
+    // Validate required fields
+    if (!studentName || !email || !phone || !dateOfBirth || !gender || 
+        !fatherName || !motherName || !parentPhone || !currentClass || 
+        !school || !address) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing required fields" 
+      });
+    }
+
+    // Check if email already registered for this exam
+    const existingRegistration = await ExamRegistration.findOne({
+      tenantId,
+      examId: exam._id,
+      email: email.toLowerCase()
+    });
+
+    if (existingRegistration) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered for this exam"
+      });
+    }
+
+    // Generate registration number
+    const registrationCount = exam.registrationCount || 0;
+    const registrationNumber = `${exam.examCode}-${String(registrationCount + 1).padStart(5, "0")}`;
+
+    // Generate username from email (base part before @)
+    let baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    let username = baseUsername;
+    let usernameCounter = 1;
+
+    // Check for username collision
+    while (await User.findOne({ username, tenantId })) {
+      username = `${baseUsername}${usernameCounter}`;
+      usernameCounter++;
+    }
+
+    console.log("[MANUAL REGISTRATION] Generated:", { registrationNumber, username });
+
+    // Generate temporary password
+    const tempPassword = Math.random().toString(36).slice(-8).toUpperCase();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    // Create user account for student
+    const newUser = await User.create({
+      tenantId,
+      username,
+      name: studentName, // Add required name field
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: "student",
+      phone,
+      status: "active",
+    });
+
+    console.log("[MANUAL REGISTRATION] User created:", newUser._id);
+
+    // Format address
+    const addressData = typeof address === 'string' 
+      ? { full: address }
+      : address;
+
+    // Create registration
+    const registration = await ExamRegistration.create({
+      tenantId,
+      examId: exam._id,
+      userId: newUser._id,
+      registrationNumber,
+      username,
+      studentName,
+      email: email.toLowerCase(),
+      phone,
+      dateOfBirth,
+      gender,
+      fatherName,
+      motherName,
+      parentPhone,
+      currentClass,
+      school,
+      address: addressData,
+      preferredExamDate: selectedExamDate || exam.examDates?.[0] || null,
+      paymentAmount: exam.registrationFee.amount || 0,
+      paymentStatus: exam.registrationFee.paymentRequired ? "pending" : "waived",
+      registrationType: "manual", // Mark as manual registration
+      remarks: remarks || "Manual registration by admin",
+      status: "registered", // Valid enum: registered, approved, rejected, appeared, resultPublished, enrolled
+      hasAttended: false,
+      enrollmentStatus: "notInterested", // Valid enum: notInterested, interested, followUp, enrolled, converted, directAdmission, waitingList, cancelled
+      convertedToStudent: false
+    });
+
+    // Update exam stats
+    await ScholarshipExam.findByIdAndUpdate(exam._id, {
+      $inc: { 
+        "stats.totalRegistrations": 1,
+        "registrationCount": 1 
+      }
+    });
+
+    console.log("[MANUAL REGISTRATION] Success:", registration.registrationNumber);
+
+    // Return success with credentials
+    res.status(201).json({
+      success: true,
+      message: "Registration created successfully",
+      registration: {
+        _id: registration._id,
+        registrationNumber: registration.registrationNumber,
+        username: registration.username,
+        temporaryPassword: tempPassword,
+        studentName: registration.studentName,
+        email: registration.email,
+        phone: registration.phone
+      }
+    });
+
+  } catch (error) {
+    console.error("[ERROR] Manual registration failed:", error);
+    
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(error.errors).forEach(key => {
+        validationErrors[key] = error.errors[key].message;
+      });
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: validationErrors
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate registration detected"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create registration"
+    });
+  }
+};
+

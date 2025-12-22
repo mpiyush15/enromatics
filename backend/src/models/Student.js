@@ -30,8 +30,7 @@ const studentSchema = new mongoose.Schema({
   }, // Consent for WhatsApp messages
   gender: {
     type: String,
-    enum: ["Male", "Female", "Other"],
-    set: v => v?.toLowerCase(),
+    enum: ["male", "female", "other", "Male", "Female", "Other"],
   },
   course: {
     type: String,

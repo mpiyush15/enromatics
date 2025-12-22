@@ -28,21 +28,22 @@ interface Registration {
   studentName: string;
   email: string;
   phone: string;
-  dateOfBirth: string;
-  gender: string;
-  fatherName: string;
-  motherName: string;
-  parentPhone: string;
+  dateOfBirth?: string;
+  gender?: string;
+  fatherName?: string;
+  motherName?: string;
+  parentPhone?: string;
   parentEmail?: string;
-  address: string | {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
+  address?: string | {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    full?: string;
   };
-  currentClass: string;
-  school: string;
+  currentClass?: string;
+  school?: string;
   previousMarks?: string;
   photoUrl?: string;
   documents?: Array<{ name: string; url: string }>;
@@ -81,24 +82,42 @@ interface Exam {
 
 interface Batch {
   _id: string;
-  batchName: string;
-  course: string;
-  fee: number;
+  name: string;
+  courseName?: string;
+  courseId?: {
+    _id: string;
+    name: string;
+    fees: number;
+    duration?: string;
+  };
 }
 
-const formatAddress = (address: string | { street: string; city: string; state: string; zipCode: string; country: string }) => {
+const formatAddress = (address: string | { street?: string; city?: string; state?: string; zipCode?: string; country?: string; full?: string } | undefined) => {
+  if (!address) return 'N/A';
   if (typeof address === 'string') {
     return address;
   }
-  return `${address.street}, ${address.city}, ${address.state} ${address.zipCode}, ${address.country}`;
+  // Check if it has a 'full' property (from manual registration)
+  if (address.full) {
+    return address.full;
+  }
+  // Build address from parts, filtering out empty values
+  const parts = [
+    address.street,
+    address.city,
+    address.state && address.zipCode ? `${address.state} ${address.zipCode}` : address.state || address.zipCode,
+    address.country
+  ].filter(Boolean);
+  
+  return parts.length > 0 ? parts.join(', ') : 'N/A';
 };
 
 export default function StudentResultPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
-  const regId = params.regId as string;
+  const tenantId = (params?.tenantId as string) || '';
+  const examId = (params?.examId as string) || '';
+  const regId = (params?.regId as string) || '';
 
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [exam, setExam] = useState<Exam | null>(null);
@@ -148,12 +167,15 @@ export default function StudentResultPage() {
       }
 
       // Fetch batches for enrollment  
-      const batchResponse = await fetch(`${API_URL}/api/batches?tenantId=${tenantId}`, {
+      const batchResponse = await fetch(`/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       if (batchResponse.ok) {
         const batchData = await batchResponse.json();
+        console.log('Batches loaded:', batchData.batches?.length || 0);
         setBatches(batchData.batches || []);
+      } else {
+        console.error('Failed to fetch batches:', await batchResponse.text());
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -167,7 +189,7 @@ export default function StudentResultPage() {
     setSelectedBatch(batchId);
     const batch = batches.find((b) => b._id === batchId);
     if (batch) {
-      const baseFee = batch.fee;
+      const baseFee = batch.courseId?.fees || 0;
       let discount = 0;
 
       // Apply scholarship discount if eligible
@@ -247,12 +269,17 @@ export default function StudentResultPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   const getResultBadge = () => {
@@ -702,7 +729,9 @@ export default function StudentResultPage() {
                   <option value="">Choose a batch...</option>
                   {batches.map((batch) => (
                     <option key={batch._id} value={batch._id}>
-                      {batch.batchName} - {batch.course} (₹{batch.fee.toLocaleString()})
+                      {batch.name} - {batch.courseName || 'No Course'} 
+                      {batch.courseId?.fees ? ` (₹${batch.courseId.fees.toLocaleString()})` : ' (No Fee)'}
+                      {batch.courseId?.duration ? ` - ${batch.courseId.duration}` : ''}
                     </option>
                   ))}
                 </select>
@@ -715,17 +744,17 @@ export default function StudentResultPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Base Fee</span>
-                      <span className="font-semibold text-gray-900">₹{feeAmount.toLocaleString()}</span>
+                      <span className="font-semibold text-gray-900">₹{(feeAmount ?? 0).toLocaleString()}</span>
                     </div>
                     {discountApplied > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-green-600">Scholarship Discount</span>
-                        <span className="font-semibold text-green-600">- ₹{discountApplied.toLocaleString()}</span>
+                        <span className="font-semibold text-green-600">- ₹{(discountApplied ?? 0).toLocaleString()}</span>
                       </div>
                     )}
                     <div className="pt-2 border-t border-gray-300 flex justify-between">
                       <span className="font-semibold text-gray-900">Final Fee</span>
-                      <span className="text-2xl font-bold text-blue-600">₹{finalFee.toLocaleString()}</span>
+                      <span className="text-2xl font-bold text-blue-600">₹{(finalFee ?? 0).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

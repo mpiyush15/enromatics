@@ -1,6 +1,7 @@
 import express from "express";
 import { addStudent, getStudents, getStudentById, updateStudent, bulkUploadStudents } from "../controllers/studentController.js";
 import { resetStudentPassword } from "../controllers/studentController.js";
+import { fixScholarshipStudents } from "../controllers/migrationController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { requirePermission } from "../middleware/permissionMiddleware.js";
@@ -103,6 +104,19 @@ router.delete(
       res.status(500).json({ message: 'Server error' });
     }
   }
+);
+
+/**
+ * @route POST /api/students/fix-scholarship-enrollments
+ * @desc Fix scholarship-enrolled students (negative balance, missing roll numbers)
+ * @access Private - tenantAdmin only
+ */
+router.post(
+  "/fix-scholarship-enrollments",
+  protect,
+  authorizeRoles("tenantAdmin"),
+  requirePermission("canAccessStudents"),
+  fixScholarshipStudents
 );
 
 export default router;
