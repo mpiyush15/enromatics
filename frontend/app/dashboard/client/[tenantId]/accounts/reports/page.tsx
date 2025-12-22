@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useSWRFetch } from "@/lib/hooks/use-swr-fetch";
 
 interface ReportResponse {
   success: boolean;
@@ -34,18 +33,8 @@ export default function AccountsReportsPage() {
     startDate: "",
     endDate: ""
   });
-
-  // Build query string for SWR
-  const queryParams = new URLSearchParams();
-  if (dateFilter.startDate) queryParams.set("startDate", dateFilter.startDate);
-  if (dateFilter.endDate) queryParams.set("endDate", dateFilter.endDate);
-  
-  const reportsUrl = `/api/accounts/reports${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-
-  // ✅ SWR: Auto-caching financial reports with dynamic date filters
-  const { data: response, isLoading: loading } = useSWRFetch<ReportResponse>(
-    tenantId ? reportsUrl : null
-  );
+  const [loading, setLoading] = useState(true);
+  const [response, setResponse] = useState<ReportResponse | null>(null);
 
   const summary = response?.summary || {
     totalIncome: 0,
@@ -56,6 +45,39 @@ export default function AccountsReportsPage() {
     monthlyData: [],
     topExpenseCategories: [],
   };
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+
+      // Build query string
+      const queryParams = new URLSearchParams();
+      if (dateFilter.startDate) queryParams.set("startDate", dateFilter.startDate);
+      if (dateFilter.endDate) queryParams.set("endDate", dateFilter.endDate);
+      
+      const reportsUrl = `/api/accounts/reports${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+
+      const res = await fetch(reportsUrl, {
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setResponse(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tenantId) {
+      fetchReports();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, dateFilter.startDate, dateFilter.endDate]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {

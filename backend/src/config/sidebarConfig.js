@@ -62,6 +62,7 @@ export const sidebarLinks = [
     tenantSpecific: true,
     children: [
       { label: "📊 Overview", href: "/dashboard/accounts/overview", roles: ["tenantAdmin", "accountant"] },
+      { label: "💳 All Transactions", href: "/dashboard/accounts/transactions", roles: ["tenantAdmin", "accountant"] },
       { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
       { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantAdmin", "accountant"] },
       { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantAdmin", "accountant"] },

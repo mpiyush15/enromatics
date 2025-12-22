@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Counter from "./Counter.js";
 
 const paymentSchema = new mongoose.Schema({
 
@@ -101,18 +102,30 @@ const paymentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// Generate receipt number before saving
+// Generate receipt number before saving (atomic counter approach)
 paymentSchema.pre("save", async function (next) {
-  if (!this.receiptNumber && this.receiptGenerated) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const count = await mongoose.model("Payment").countDocuments({
-      tenantId: this.tenantId,
-    });
-    this.receiptNumber = `RCP/${year}${month}/${(count + 1).toString().padStart(4, "0")}`;
+  try {
+    if (!this.receiptNumber && this.receiptGenerated) {
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const prefix = `RCP/${year}${month}/`;
+      
+      // Get next sequence number atomically
+      const sequence = await Counter.getNextSequence(
+        this.tenantId,
+        'receipt',
+        prefix
+      );
+      
+      this.receiptNumber = `${prefix}${sequence.toString().padStart(4, "0")}`;
+      console.log('📋 Generated receipt number:', this.receiptNumber);
+    }
+    next();
+  } catch (err) {
+    console.error('❌ Error generating receipt number:', err);
+    next(err);
   }
-  next();
 });
 
 export default mongoose.model("Payment", paymentSchema);

@@ -8,7 +8,10 @@ import {
   createExpense,
   getRefunds,
   createRefund,
-  updateRefundStatus
+  updateRefundStatus,
+  getFinancialReports,
+  getFeesPendingStudents,
+  getAllTransactions
 } from "../controllers/accountsController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -26,10 +29,19 @@ router.use(authorizeRoles("tenantAdmin", "accountant", "teacher"));
 // Accounts overview/dashboard
 router.get("/overview", getAccountsOverview);
 
+// Financial reports (Profit & Loss)
+router.get("/reports", getFinancialReports);
+
+// Fees pending students
+router.get("/fees-pending", getFeesPendingStudents);
+
 // Receipt management
 router.get("/receipts/search", searchStudentsForReceipt);
 router.post("/receipts/generate/:paymentId", generateReceipt);
 router.post("/receipts/create", createPaymentWithReceipt);
+
+// All transactions (payments + refunds combined)
+router.get("/transactions", getAllTransactions);
 
 // Expenses
 router.get("/expenses", getExpenses);
