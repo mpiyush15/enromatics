@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 /**
  * 🔒 BFF Route: GET /api/dashboard/home (STABILIZED)

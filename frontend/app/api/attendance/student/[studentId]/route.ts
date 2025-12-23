@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 import { extractCookies } from '@/lib/bff-client';
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;

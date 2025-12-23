@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
@@ -11,7 +12,7 @@ export async function POST(
     
     // Get token from Authorization header (preferred) or cookies
     const authHeader = request.headers.get("authorization") || "";
-    const cookieHeader = request.headers.get("cookie") || "";
+    // Headers now built with buildBFFHeaders() including subdomain
     
     // Try Authorization header first (Bearer token from localStorage)
     let token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
 

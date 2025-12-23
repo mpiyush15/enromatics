@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { tenantId } = await params;
-    const cookieHeader = request.headers.get('cookie');
+    // Headers now built with buildBFFHeaders() including subdomain
 
     if (!cookieHeader || !cookieHeader.includes('token=')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

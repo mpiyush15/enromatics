@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5050";
 
@@ -8,7 +9,7 @@ export async function PATCH(
   { params }: { params: { rewardId: string } }
 ) {
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
+    // Headers now built with buildBFFHeaders() including subdomain
     const body = await request.json();
     const { rewardId } = params;
 
@@ -18,7 +19,6 @@ export async function PATCH(
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Cookie: cookieHeader,
         },
         credentials: "include",
         body: JSON.stringify(body),

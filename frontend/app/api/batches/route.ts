@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { extractCookies } from '@/lib/bff-client';
 

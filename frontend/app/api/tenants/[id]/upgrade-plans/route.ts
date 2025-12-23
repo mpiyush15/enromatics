@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 import { subscriptionPlans } from "@/data/plans";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
@@ -14,7 +15,7 @@ export async function GET(
     const { id: tenantId } = await params;
     
     // Get cookies from request headers (same as other working routes)
-    const cookieHeader = request.headers.get("cookie") || "";
+    // Headers now built with buildBFFHeaders() including subdomain
     
     // Extract token from cookie header
     const tokenMatch = cookieHeader.match(/token=([^;]+)/);
@@ -29,7 +30,6 @@ export async function GET(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        Cookie: cookieHeader,
       },
     });
 
