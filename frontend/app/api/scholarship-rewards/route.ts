@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5050";
 
 // GET /api/scholarship-rewards - List all rewards
 export async function GET(request: NextRequest) {
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
+    const headers = await buildBFFHeaders();
     const searchParams = request.nextUrl.searchParams;
     
     // Build query string from search params
@@ -14,10 +15,7 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: cookieHeader,
-      },
+      headers,
       credentials: "include",
     });
 
@@ -36,15 +34,12 @@ export async function GET(request: NextRequest) {
 // POST /api/scholarship-rewards - Create new reward
 export async function POST(request: NextRequest) {
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
+    const headers = await buildBFFHeaders();
     const body = await request.json();
 
     const response = await fetch(`${BACKEND_URL}/api/scholarship-rewards`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: cookieHeader,
-      },
+      headers,
       credentials: "include",
       body: JSON.stringify(body),
     });

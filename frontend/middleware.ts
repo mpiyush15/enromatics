@@ -82,8 +82,9 @@ function handleAdminSubdomain(request: NextRequest, tenantSubdomain: string) {
   
   const response = NextResponse.rewrite(url);
   
-  // Set tenant cookie for easy access
+  // Set tenant cookie for easy access - with domain for cross-subdomain sharing
   response.cookies.set('tenant-context', tenantSubdomain, {
+    domain: isProduction ? '.enromatics.com' : undefined, // Wildcard subdomain support
     httpOnly: false,
     secure: isProduction,
     sameSite: 'lax',
@@ -107,6 +108,7 @@ function handleStaffSubdomain(request: NextRequest, tenantSubdomain: string) {
   const response = NextResponse.rewrite(url);
   
   response.cookies.set('tenant-context', tenantSubdomain, {
+    domain: isProduction ? '.enromatics.com' : undefined, // Wildcard subdomain support
     httpOnly: false,
     secure: isProduction,
     sameSite: 'lax',
@@ -138,8 +140,9 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   
   const response = NextResponse.rewrite(url);
   
-  // Set tenant context cookie
+  // Set tenant context cookie with domain for cross-subdomain sharing
   response.cookies.set('tenant-context', subdomain, {
+    domain: isProduction ? '.enromatics.com' : undefined, // Wildcard subdomain support
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -148,6 +151,7 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   
   // Set branding context cookie (will be populated by API)
   response.cookies.set('tenant-branding-needed', 'true', {
+    domain: isProduction ? '.enromatics.com' : undefined, // Wildcard subdomain support
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
