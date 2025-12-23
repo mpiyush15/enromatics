@@ -37,15 +37,13 @@ export async function resolveTenantFromSubdomain(subdomain) {
     const cachedTenantId = await redisClient.get(cacheKey);
     
     if (cachedTenantId) {
-      console.log(`[SubdomainResolver] Cache HIT: ${normalizedSubdomain} → ${cachedTenantId}`);
       return cachedTenantId;
     }
   } catch (redisError) {
-    console.warn("[SubdomainResolver] Redis error (falling back to DB):", redisError.message);
+    // Silent fallback to DB
   }
 
   // Cache miss - query MongoDB
-  console.log(`[SubdomainResolver] Cache MISS: Querying DB for ${normalizedSubdomain}`);
   
   try {
     const tenant = await Tenant.findOne({ 
@@ -54,16 +52,14 @@ export async function resolveTenantFromSubdomain(subdomain) {
     }).select("tenantId subdomain");
 
     if (!tenant) {
-      console.warn(`[SubdomainResolver] No tenant found for subdomain: ${normalizedSubdomain}`);
       return null;
     }
 
     // Cache the result
     try {
       await redisClient.setex(cacheKey, CACHE_TTL, tenant.tenantId);
-      console.log(`[SubdomainResolver] Cached: ${normalizedSubdomain} → ${tenant.tenantId}`);
     } catch (redisError) {
-      console.warn("[SubdomainResolver] Failed to cache result:", redisError.message);
+      // Silent cache failure
     }
 
     return tenant.tenantId;
@@ -85,9 +81,8 @@ export async function invalidateSubdomainCache(subdomain) {
 
   try {
     await redisClient.del(cacheKey);
-    console.log(`[SubdomainResolver] Cache invalidated: ${normalizedSubdomain}`);
   } catch (error) {
-    console.warn("[SubdomainResolver] Failed to invalidate cache:", error.message);
+    // Silent cache invalidation failure
   }
 }
 

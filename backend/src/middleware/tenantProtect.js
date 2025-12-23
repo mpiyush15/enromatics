@@ -17,7 +17,6 @@ export const tenantProtect = async (req, res, next) => {
   const subdomainHeader = req.headers["x-tenant-subdomain"];
   
   if (subdomainHeader) {
-    console.log(`[TenantProtect] Resolving subdomain: ${subdomainHeader}`);
     requestTenantId = await resolveTenantFromSubdomain(subdomainHeader);
     
     if (!requestTenantId) {
@@ -26,8 +25,6 @@ export const tenantProtect = async (req, res, next) => {
         subdomain: subdomainHeader 
       });
     }
-    
-    console.log(`[TenantProtect] Subdomain ${subdomainHeader} → tenantId: ${requestTenantId}`);
   }
   
   // Priority 2: Legacy path-based routing (fallback for backward compatibility)

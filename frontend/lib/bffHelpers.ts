@@ -25,7 +25,6 @@ export async function extractTenantSubdomain(): Promise<string | null> {
   const hostname = headersList.get("host") || "";
 
   if (!hostname) {
-    console.warn("[BFF] No hostname in headers");
     return null;
   }
 
@@ -37,7 +36,6 @@ export async function extractTenantSubdomain(): Promise<string | null> {
     const parts = cleanHostname.split(".");
     if (parts.length >= 3) {
       const subdomain = parts[parts.length - 3];
-      console.log(`[BFF] Extracted subdomain from lvh.me: ${subdomain}`);
       return subdomain;
     }
     return null;
@@ -50,26 +48,22 @@ export async function extractTenantSubdomain(): Promise<string | null> {
     // prasamagar.enromatics.com (3 parts)
     if (parts.length === 3) {
       const subdomain = parts[0];
-      console.log(`[BFF] Extracted subdomain (3 parts): ${subdomain}`);
       return subdomain;
     }
 
     // admin.prasamagar.enromatics.com (4 parts)
     if (parts.length === 4) {
       const subdomain = parts[1];
-      console.log(`[BFF] Extracted subdomain (4 parts): ${subdomain}`);
       return subdomain;
     }
 
     // Just enromatics.com (no subdomain)
     if (parts.length === 2) {
-      console.log("[BFF] No subdomain (root domain)");
       return null;
     }
   }
 
   // Localhost or other (no subdomain)
-  console.log(`[BFF] No subdomain extracted from: ${cleanHostname}`);
   return null;
 }
 
@@ -100,7 +94,6 @@ export async function buildBFFHeaders(): Promise<HeadersInit> {
   const subdomain = await extractTenantSubdomain();
   if (subdomain) {
     headers["X-Tenant-Subdomain"] = subdomain;
-    console.log(`[BFF] Added X-Tenant-Subdomain: ${subdomain}`);
   }
 
   return headers;
@@ -143,16 +136,13 @@ export async function getTenantIdentifier(pathTenantId?: string): Promise<string
   const subdomain = await extractTenantSubdomain();
   
   if (subdomain) {
-    console.log(`[BFF] Using subdomain as tenant identifier: ${subdomain}`);
     return subdomain;
   }
   
   if (pathTenantId) {
-    console.log(`[BFF] Using path tenantId as fallback: ${pathTenantId}`);
     return pathTenantId;
   }
   
-  console.warn("[BFF] No tenant identifier found");
   return null;
 }
 

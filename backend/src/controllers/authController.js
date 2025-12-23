@@ -161,6 +161,7 @@ export const registerUser = async (req, res) => {
 
 /**
  * Login User & set cookie
+ * ✅ STRICT subdomain-based role enforcement for data security
  */
 export const loginUser = async (req, res) => {
   try {
@@ -168,19 +169,82 @@ export const loginUser = async (req, res) => {
 
     console.log('🔐 Login attempt for:', email);
     
+    // Extract subdomain type from request (set by frontend middleware or BFF)
+    const subdomainType = req.headers['x-subdomain-type'] || req.query.subdomainType;
+    console.log('🌐 Subdomain type:', subdomainType);
+    
     const user = await User.findOne({ email });
     if (!user) {
       console.log('❌ User not found:', email);
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log('✓ User found, checking password...');
+    console.log('✓ User found, role:', user.role, 'checking password...');
     const isMatch = await user.matchPassword(password);
     console.log('🔑 Password match result:', isMatch);
     
     if (!isMatch) {
       console.log('❌ Invalid password for user:', email);
       return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // ✅ STRICT SUBDOMAIN-BASED ROLE ENFORCEMENT
+    const userRole = user.role?.toLowerCase();
+    
+    // 1. SuperAdmin → ONLY main domain (enromatics.com/login)
+    if (userRole === 'superadmin') {
+      if (subdomainType) {
+        console.log('❌ Access denied: SuperAdmin trying to login on subdomain');
+        return res.status(403).json({ 
+          message: "Access denied. SuperAdmin can only login on enromatics.com",
+          hint: "Please visit enromatics.com/login"
+        });
+      }
+      console.log('✅ SuperAdmin login on main domain');
+    }
+    
+    // 2. Admin → ONLY admin.tenant.enromatics.com
+    else if (userRole === 'admin' || userRole === 'tenantadmin') {
+      if (subdomainType !== 'admin') {
+        console.log('❌ Access denied: Admin trying to login on wrong subdomain');
+        return res.status(403).json({ 
+          message: "Access denied. Admins can only login on admin.tenant.enromatics.com",
+          hint: `Please visit admin.${user.tenantId || 'yourtenant'}.enromatics.com`
+        });
+      }
+      console.log('✅ Admin login on admin subdomain');
+    }
+    
+    // 3. Staff/Employee/Teacher/Manager/Counsellor → ONLY staff.tenant.enromatics.com
+    else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager'].includes(userRole)) {
+      if (subdomainType !== 'staff') {
+        console.log('❌ Access denied: Staff member trying to login on wrong subdomain');
+        return res.status(403).json({ 
+          message: "Access denied. Staff members can only login on staff.tenant.enromatics.com",
+          hint: `Please visit staff.${user.tenantId || 'yourtenant'}.enromatics.com`
+        });
+      }
+      console.log(`✅ ${userRole} login on staff subdomain`);
+    }
+    
+    // 4. Student → ONLY tenant.enromatics.com (no admin/staff prefix)
+    else if (userRole === 'student') {
+      if (subdomainType !== 'tenant' && subdomainType !== 'student') {
+        console.log('❌ Access denied: Student trying to login on wrong subdomain');
+        return res.status(403).json({ 
+          message: "Access denied. Students can only login on tenant.enromatics.com",
+          hint: `Please visit ${user.tenantId || 'yourtenant'}.enromatics.com`
+        });
+      }
+      console.log('✅ Student login on tenant subdomain');
+    }
+    
+    // 5. Unknown role - deny access
+    else {
+      console.log('❌ Access denied: Unknown role:', userRole);
+      return res.status(403).json({ 
+        message: "Access denied. Invalid user role.",
+      });
     }
 
     console.log('✅ Login successful for:', email);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Power, Plus, X } from "lucide-react";
+import useAuth from "@/hooks/useAuth";
 
 type Tenant = {
   _id: string;
@@ -30,6 +31,7 @@ type Tenant = {
 
 export default function AdminTenantsPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +56,18 @@ export default function AdminTenantsPage() {
     country: "India",
   });
 
+  // 🔒 Role-based access control - Only SuperAdmin can see this page
   useEffect(() => {
-    fetchTenants();
-  }, []);
+    if (!authLoading && user && user.role !== "SuperAdmin") {
+      router.push("/dashboard");
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (user && user.role === "SuperAdmin") {
+      fetchTenants();
+    }
+  }, [user]);
 
   // Apply filters and sorting whenever data or filters change
   useEffect(() => {
@@ -235,7 +246,17 @@ export default function AdminTenantsPage() {
     }
   };
 
-  if (loading) return <p className="p-6 text-gray-500">Loading tenants...</p>;
+  if (authLoading || loading) return <p className="p-6 text-gray-500">Loading tenants...</p>;
+  if (!user || user.role !== "SuperAdmin") {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-red-800 font-semibold">Access Denied</h2>
+          <p className="text-red-600 mt-2">This page is only accessible to SuperAdmin users.</p>
+        </div>
+      </div>
+    );
+  }
   if (error) return <p className="p-6 text-red-600">Error: {error}</p>;
 
   return (
