@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Calling Express backend:', `${expressUrl}/api/auth/login`);
 
-    // Call Express backend
+    // Call Express backend (no subdomain header needed for public login)
     const expressResponse = await fetch(
       `${expressUrl}/api/auth/login`,
       {
