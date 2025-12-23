@@ -62,21 +62,50 @@ app.use(compression({
   }
 }));
 
-// CORS - Allow both development and production domains
+// CORS - Allow both development and production domains INCLUDING ALL SUBDOMAINS
 app.use(
   cors({
-    origin: [
-      "https://enromatics.com",
-      "https://www.enromatics.com",
-      "https://enromatics.vercel.app",
-      "https://endearing-blessing-production-c61f.up.railway.app",
-      "http://localhost:3000", 
-      "http://127.0.0.1:3000",
-      "http://localhost:3001"
-    ],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, curl)
+      if (!origin) return callback(null, true);
+      
+      // Allowed domains and subdomain patterns
+      const allowedPatterns = [
+        // Exact domains
+        'https://enromatics.com',
+        'https://www.enromatics.com',
+        'https://enromatics.vercel.app',
+        'https://endearing-blessing-production-c61f.up.railway.app',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:3001',
+        // Subdomain patterns for production
+        /^https:\/\/[\w-]+\.enromatics\.com$/,           // e.g., client.enromatics.com
+        /^https:\/\/[\w-]+\.[\w-]+\.enromatics\.com$/,  // e.g., admin.client.enromatics.com
+        // Subdomain patterns for localhost testing
+        /^http:\/\/[\w-]+\.localhost:3000$/,             // e.g., client.localhost:3000
+        /^http:\/\/[\w-]+\.[\w-]+\.localhost:3000$/,    // e.g., admin.client.localhost:3000
+        /^http:\/\/[\w-]+\.lvh\.me:3000$/,               // e.g., client.lvh.me:3000
+      ];
+      
+      // Check if origin matches any pattern
+      const isAllowed = allowedPatterns.some(pattern => {
+        if (pattern instanceof RegExp) {
+          return pattern.test(origin);
+        }
+        return pattern === origin;
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Tenant-Guard"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Tenant-Guard", "X-Tenant-Subdomain", "Cookie"],
   })
 );
 
