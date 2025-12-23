@@ -12,12 +12,12 @@ const router = express.Router();
 /**
  * @route POST /api/students/bulk-upload
  * @desc Bulk upload students from CSV
- * @access Private - tenantAdmin only
+ * @access Private - tenantAdmin and staff roles
  */
 router.post(
   "/bulk-upload",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
   requirePermission("canAccessStudents"),
   bulkUploadStudents
 );
@@ -30,7 +30,7 @@ router.post(
 router.post(
   "/",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
   requirePermission("canAccessStudents"),
   addStudent
 );
@@ -43,7 +43,7 @@ router.post(
 router.get(
   "/",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
   requirePermission("canAccessStudents"),
   getStudents
 );
@@ -52,7 +52,7 @@ router.get(
 router.get(
   "/:id",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
   requirePermission("canAccessStudents"),
   getStudentById
 );
@@ -61,7 +61,7 @@ router.get(
 router.put(
   "/:id",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
   requirePermission("canAccessStudents"),
   updateStudent
 );

@@ -20,6 +20,51 @@ const generatePassword = () => {
 };
 
 /* ================================================================
+   🔹 Get Tenant by Subdomain (PUBLIC - for login page branding)
+================================================================ */
+export const getTenantBySubdomain = async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    console.log('🎨 Fetching tenant by subdomain:', subdomain);
+
+    // Find tenant by subdomain
+    const tenant = await Tenant.findOne({ subdomain });
+
+    if (!tenant) {
+      console.log('❌ Tenant not found for subdomain:', subdomain);
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    console.log('✅ Tenant found:', tenant.instituteName || tenant.name);
+
+    // Return only public branding information (no sensitive data)
+    return res.status(200).json({
+      subdomain: tenant.subdomain,
+      tenantId: tenant.tenantId,
+      instituteName: tenant.instituteName || tenant.name,
+      name: tenant.name,
+      branding: {
+        logo: tenant.branding?.logo || null,
+        primaryColor: tenant.branding?.primaryColor || '#3B82F6',
+        secondaryColor: tenant.branding?.secondaryColor || '#6366F1',
+      },
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching tenant by subdomain:', error.message);
+    return res.status(500).json({ 
+      message: "Error fetching tenant information",
+      error: error.message 
+    });
+  }
+};
+
+/* ================================================================
    🔹 1. Upgrade Tenant Plan
 ================================================================ */
 export const upgradeTenantPlan = async (req, res) => {

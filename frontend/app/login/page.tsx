@@ -1,10 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authService } from "@/lib/authService";
+
+interface TenantBranding {
+  instituteName: string;
+  logo?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+}
+
+// Helper to get cookie value
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +28,43 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [tenantBranding, setTenantBranding] = useState<TenantBranding | null>(null);
+  const [isTenantSubdomain, setIsTenantSubdomain] = useState(false);
+
+  // Fetch tenant branding on mount
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        // Check if we're on a tenant subdomain (NEW: only check tenant-context)
+        const tenantContext = getCookieValue('tenant-context');
+        
+        console.log('🎨 Tenant context:', tenantContext);
+        
+        if (tenantContext) {
+          setIsTenantSubdomain(true);
+          
+          // Fetch branding from API
+          const response = await fetch(`/api/tenant/branding-by-subdomain?subdomain=${tenantContext}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Tenant branding loaded:', data.instituteName);
+            setTenantBranding({
+              instituteName: data.instituteName || data.name,
+              logo: data.branding?.logo,
+              primaryColor: data.branding?.primaryColor,
+              secondaryColor: data.branding?.secondaryColor,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching tenant branding:', error);
+        // Continue with default branding
+      }
+    };
+
+    fetchBranding();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,13 +112,18 @@ export default function LoginPage() {
       
       setErrors({ success: "✅ Welcome back! Redirecting..." });
 
-      // Redirect based on role
+      // ✅ NEW: Route-based role separation
       setTimeout(() => {
         if (response.user.role === "SuperAdmin") {
           router.push("/dashboard/home");
-        } else if (response.user.role === "tenantAdmin") {
-          router.push(`/dashboard/client/${response.user.tenantId}`);
+        } else if (response.user.role === "admin" || response.user.role === "tenantAdmin") {
+          router.push("/dashboard/home"); // Admin goes to main dashboard
+        } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsManager', 'accountant', 'marketing'].includes(response.user.role)) {
+          router.push("/dashboard/home"); // Staff also goes to main dashboard (sidebar shows role-based items)
+        } else if (response.user.role === "student") {
+          router.push("/dashboard/student"); // Only students get separate portal
         } else {
+          // Fallback to root dashboard (will redirect based on role)
           router.push("/dashboard");
         }
       }, 800);
@@ -107,14 +165,34 @@ export default function LoginPage() {
         <div className="relative w-full max-w-md mx-auto">
           {/* Logo Section */}
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 shadow-lg">
-              <span className="text-2xl">📊</span>
-            </div>
+            {/* Show tenant logo if available, otherwise default icon */}
+            {tenantBranding?.logo ? (
+              <div className="inline-flex items-center justify-center mb-4">
+                <Image 
+                  src={tenantBranding.logo} 
+                  alt={tenantBranding.instituteName} 
+                  width={80} 
+                  height={80}
+                  className="rounded-xl object-contain"
+                />
+              </div>
+            ) : (
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mb-4 shadow-lg">
+                <span className="text-2xl">📊</span>
+              </div>
+            )}
+            
+            {/* Show tenant institute name or default Enromatics */}
             <h1 className="text-3xl font-light text-gray-900 dark:text-white mb-2 tracking-tight">
-              Sign in to Enromatics
+              {isTenantSubdomain && tenantBranding 
+                ? tenantBranding.instituteName 
+                : "Sign in to Enromatics"}
             </h1>
+            
             <p className="text-sm font-light text-gray-600 dark:text-gray-400">
-              Access your business dashboard
+              {isTenantSubdomain 
+                ? "Access your learning portal" 
+                : "Access your business dashboard"}
             </p>
           </div>
 
@@ -240,44 +318,53 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-8 mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+          {/* Only show register link on main domain (SuperAdmin), hide on tenant subdomains */}
+          {!isTenantSubdomain && (
+            <>
+              {/* Divider */}
+              <div className="mt-8 mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-slate-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-light">
+                      Don't have an account?
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-slate-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-light">
-                  Don't have an account?
-                </span>
-              </div>
+
+              {/* Register Link */}
+              <Link
+                href="/register"
+                className="block w-full text-center py-3 px-4 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+              >
+                Create Account
+              </Link>
+            </>
+          )}
+
+          {/* Student Login Link - Only show on main domain */}
+          {!isTenantSubdomain && (
+            <div className="mt-6 text-center">
+              <Link
+                href="/student/login"
+                className="text-sm font-light text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Student Login
+              </Link>
             </div>
-          </div>
+          )}
 
-          {/* Register Link */}
-          <Link
-            href="/register"
-            className="block w-full text-center py-3 px-4 border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
-          >
-            Create Account
-          </Link>
-
-          {/* Student Login Link */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/student/login"
-              className="text-sm font-light text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              Student Login
-            </Link>
-          </div>
-
-          {/* Footer */}
+          {/* Footer - Show tenant name or Enromatics */}
           <p className="mt-8 text-center text-xs font-light text-gray-500 dark:text-gray-500">
-            © 2025 Enromatics. All rights reserved.
+            © 2025 {isTenantSubdomain && tenantBranding 
+              ? tenantBranding.instituteName 
+              : "Enromatics"}. All rights reserved.
           </p>
         </div>
       </div>

@@ -27,15 +27,17 @@ function getCookieDomain(host: string | null): string | undefined {
 }
 
 /**
- * Subdomain Routing Middleware
+ * ✅ NEW: Simplified Subdomain Routing Middleware
  * 
- * STRICT ACCESS RULES:
- * - enromatics.com/login → SuperAdmin ONLY
- * - admin.tenant.enromatics.com → TenantAdmin ONLY
- * - staff.tenant.enromatics.com → Staff/Employee ONLY
- * - tenant.enromatics.com → Students ONLY
+ * ARCHITECTURE:
+ * - enromatics.com → SuperAdmin only (no subdomain)
+ * - tenant.enromatics.com → All roles login here
+ *   - After login, routes handle role separation:
+ *     - /dashboard/admin → Admin/TenantAdmin only
+ *     - /dashboard/staff → Staff roles only
+ *     - /dashboard/student → Students only
  * 
- * Security: Each role can ONLY access their designated subdomain
+ * Security: Tenant isolation via backend validation, route guards handle role separation
  */
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host');
@@ -59,19 +61,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Handle admin subdomain pattern (admin.tenant.enromatics.com)
-  if (subdomain.startsWith('admin.')) {
-    const tenantSubdomain = subdomain.replace('admin.', '');
-    return handleAdminSubdomain(request, tenantSubdomain);
-  }
-
-  // Handle staff subdomain pattern (staff.tenant.enromatics.com)
-  if (subdomain.startsWith('staff.')) {
-    const tenantSubdomain = subdomain.replace('staff.', '');
-    return handleStaffSubdomain(request, tenantSubdomain);
-  }
-
-  // Handle tenant subdomain (tenant.enromatics.com - student portal)
+  // Handle tenant subdomain (single level: tenant.enromatics.com)
   return handleTenantSubdomain(request, subdomain);
 }
 
@@ -90,189 +80,62 @@ function getSubdomain(host: string | null): string | null {
   const parts = hostname.split('.');
   
   // Check for lvh.me (local testing with subdomains)
-  // prasamagar.lvh.me = 3 parts, admin.prasamagar.lvh.me = 4 parts
+  // prasamagar.lvh.me = 3 parts
   if (parts.length >= 3 && parts.slice(-2).join('.') === 'lvh.me') {
-    // Handle nested subdomains (admin.prasamagar.lvh.me)
-    if (parts.length > 3) {
-      return parts.slice(0, -2).join('.');
-    }
-    return parts[0];
+    return parts[0]; // Return only first part (tenant subdomain)
   }
   
   // For enromatics.com, we expect at least 3 parts for a subdomain
   // subdomain.enromatics.com = 3 parts
   if (parts.length >= 3 && parts.slice(-2).join('.') === 'enromatics.com') {
-    // Handle nested subdomains (admin.client.enromatics.com)
-    if (parts.length > 3) {
-      return parts.slice(0, -2).join('.');
-    }
-    return parts[0];
+    return parts[0]; // Return only first part (tenant subdomain)
   }
   
   return null;
 }
 
-function handleAdminSubdomain(request: NextRequest, tenantSubdomain: string) {
-  // Admin subdomain (admin.tenant.enromatics.com)
-  // ✅ Allow /login and /dashboard/* - Block public pages
-  const pathname = request.nextUrl.pathname;
-  const host = request.headers.get('host');
-  const cookieDomain = getCookieDomain(host);
-  
-  console.log(`🔧 Admin subdomain: ${tenantSubdomain}, pathname: ${pathname}`);
-  
-  // Block public pages (about, contact, services, etc.)
-  const publicPages = ['/about', '/contact', '/services', '/privacy', '/terms', '/privacy-policy', '/terms-of-service', '/plans', '/subscribe', '/home', '/lead-form', '/leads'];
-  if (publicPages.some(page => pathname.startsWith(page))) {
-    console.log(`❌ Blocking public page ${pathname} on admin subdomain → Redirecting to /dashboard`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-  
-  // Redirect root to dashboard
-  if (pathname === '/') {
-    console.log(`✅ Redirecting root to /dashboard`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-  
-  // Allow /login, /dashboard/*, and other authenticated routes
-  const response = NextResponse.next();
-  
-  response.cookies.set('tenant-context', tenantSubdomain, {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
-  });
-  
-  response.cookies.set('subdomain-type', 'admin', {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
-  });
-  
-  return response;
-}
-
-function handleStaffSubdomain(request: NextRequest, tenantSubdomain: string) {
-  // Staff subdomain (staff.tenant.enromatics.com)
-  // ✅ Allow /login and /dashboard/* - Block public pages
-  const pathname = request.nextUrl.pathname;
-  const host = request.headers.get('host');
-  const cookieDomain = getCookieDomain(host);
-  
-  console.log(`👥 Staff subdomain: ${tenantSubdomain}, pathname: ${pathname}`);
-  
-  // Block public pages (about, contact, services, etc.)
-  const publicPages = ['/about', '/contact', '/services', '/privacy', '/terms', '/privacy-policy', '/terms-of-service', '/plans', '/subscribe', '/home', '/lead-form', '/leads'];
-  if (publicPages.some(page => pathname.startsWith(page))) {
-    console.log(`❌ Blocking public page ${pathname} on staff subdomain → Redirecting to /dashboard`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-  
-  // Redirect root to dashboard
-  if (pathname === '/') {
-    console.log(`✅ Redirecting root to /dashboard`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
-  }
-  
-  // Allow /login, /dashboard/*, and other authenticated routes
-  const response = NextResponse.next();
-  
-  response.cookies.set('tenant-context', tenantSubdomain, {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
-  });
-  
-  response.cookies.set('subdomain-type', 'staff', {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
-  });
-  
-  return response;
-}
-
 function handleTenantSubdomain(request: NextRequest, subdomain: string) {
-  // Handle regular tenant subdomain (student portal)
-  // ✅ ONLY ALLOW /login - Block ALL other routes (about, contact, services, etc.)
+  // Handle tenant subdomain - All roles login here
+  // ✅ Allow: /login, /dashboard/*, /api/*
+  // ❌ Block: Public pages (/about, /contact, etc.)
   const pathname = request.nextUrl.pathname;
   const host = request.headers.get('host');
   const cookieDomain = getCookieDomain(host);
   
-  console.log(`🌐 Tenant subdomain detected: ${subdomain}, pathname: ${pathname}`);
+  console.log(`🌐 Tenant subdomain: ${subdomain}, pathname: ${pathname}`);
   
-  // STRICT: Only allow /login route for tenant subdomain
-  if (pathname !== '/login') {
-    console.log(`❌ Blocking ${pathname} on tenant subdomain → Redirecting to /login`);
-    
-    // Redirect everything else to /login
+  // Block public/marketing pages on tenant subdomains
+  const publicPages = [
+    '/about', '/contact', '/services', '/privacy', '/terms', 
+    '/privacy-policy', '/terms-of-service', '/plans', '/subscribe', 
+    '/home', '/lead-form', '/leads'
+  ];
+  
+  if (publicPages.some(page => pathname.startsWith(page))) {
+    console.log(`❌ Blocking public page ${pathname} on tenant subdomain → Redirecting to /login`);
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    const response = NextResponse.redirect(url);
-    
-    // Set cookies even on redirect
-    response.cookies.set('tenant-context', subdomain, {
-      domain: cookieDomain,
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30
-    });
-    
-    response.cookies.set('subdomain-type', 'tenant', {
-      domain: cookieDomain,
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30
-    });
-    
-    return response;
+    return NextResponse.redirect(url);
   }
   
-  console.log(`✅ Allowing /login on tenant subdomain`);
+  // Redirect root to login
+  if (pathname === '/') {
+    console.log(`✅ Redirecting root to /login`);
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
   
-  // Allow /login - set cookies and proceed
+  // Allow /login and /dashboard/* routes
   const response = NextResponse.next();
   
+  // Set tenant context cookie for backend communication
   response.cookies.set('tenant-context', subdomain, {
     domain: cookieDomain,
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30
-  });
-  
-  response.cookies.set('subdomain-type', 'tenant', {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30
-  });
-  
-  response.cookies.set('tenant-branding-needed', 'true', {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 5
+    maxAge: 60 * 60 * 24 * 7 // 7 days
   });
   
   return response;

@@ -1,236 +1,65 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp, Users, CreditCard, BarChart3, Loader } from 'lucide-react';
-import StatCard from '@/components/dashboard/StatCard';
-import { RevenueChart, BarChartComponent, PieChartComponent, AreaChart } from '@/components/dashboard/Charts';
-import TopTenantsTable from '@/components/dashboard/TopTenantsTable';
-import RevenueBreakdown from '@/components/dashboard/RevenueBreakdown';
-import { TrialBadge } from '@/components/PlanGating';
+import { Loader } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { api, safeApiCall } from '@/lib/apiClient';
 
-interface AnalyticsData {
-  kpis: {
-    totalRevenue: number;
-    activeSubscriptions: number;
-    totalTenants: number;
-    activeUsers: number;
-    growthRate: number;
-  };
-  charts: {
-    tenantsByPlan: any[];
-    subscriptionStatus: any[];
-    revenueTrend: any[];
-    websiteVisitors: any[];
-    monthlyRevenue: any[];
-  };
-}
-
-export default function DashboardHomePage() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function HomePage() {
+  const { user, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted) {
-      fetchAnalytics();
-    }
-  }, [mounted]);
-
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Use apiClient to call BFF route
-      const [data, err] = await safeApiCall(() =>
-        api.get<AnalyticsData>('/api/dashboard/home')
-      );
-
-      if (err) {
-        // Handle unauthorized error
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          router.push('/login');
-          return;
-        }
-        setError(err.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        setAnalytics(data);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-medium">Error loading dashboard</p>
-          <p className="text-red-600 text-sm mt-1">{error}</p>
-          <button
-            onClick={fetchAnalytics}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800">No data available</p>
-        </div>
-      </div>
-    );
-  }
-
-  const kpis = analytics.kpis;
-  const charts = analytics.charts;
+  // Get role display name
+  const getRoleDisplay = (role: string) => {
+    const roleMap: { [key: string]: string } = {
+      manager: 'Manager',
+      accountant: 'Accountant',
+      teacher: 'Teacher',
+      marketing: 'Marketing',
+      staff: 'Staff',
+      employee: 'Employee',
+      counsellor: 'Counsellor',
+      adsManager: 'Ads Manager',
+      student: 'Student',
+    };
+    return roleMap[role] || role;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header with Trial Badge */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-              Dashboard
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-6">
+      <div className="max-w-4xl w-full">
+        <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+          <div className="mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 mb-6">
+              <span className="text-4xl">👋</span>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Welcome back, {user?.name}!
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Analytics & Business Metrics
+            <p className="text-xl text-gray-600">
+              {getRoleDisplay(user?.role || '')}
             </p>
           </div>
-          {user && user.role !== 'SuperAdmin' && user.createdAt && (
-            <TrialBadge trialStartISO={user.createdAt} />
-          )}
-        </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Revenue"
-            value={`₹${kpis.totalRevenue.toLocaleString()}`}
-            icon={<CreditCard />}
-            color="blue"
-            change={kpis.growthRate}
-            changeLabel="this month"
-          />
-          <StatCard
-            title="Active Subscriptions"
-            value={kpis.activeSubscriptions}
-            icon={<TrendingUp />}
-            color="green"
-          />
-          <StatCard
-            title="Total Tenants"
-            value={kpis.totalTenants}
-            icon={<Users />}
-            color="purple"
-          />
-          <StatCard
-            title="Active Users"
-            value={kpis.activeUsers}
-            icon={<BarChart3 />}
-            color="orange"
-          />
-        </div>
-
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Revenue Trend */}
-          <RevenueChart
-            data={charts.revenueTrend}
-            title="Revenue Trend (Last 30 Days)"
-            height={300}
-          />
-
-          {/* Tenants by Plan */}
-          <PieChartComponent
-            data={charts.tenantsByPlan}
-            title="Subscribers by Plan"
-            height={300}
-          />
-        </div>
-
-        {/* More Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Monthly Revenue */}
-          <BarChartComponent
-            data={charts.monthlyRevenue}
-            title="Monthly Revenue (Last 12 Months)"
-            dataKey="revenue"
-            height={300}
-          />
-
-          {/* Website Visitors */}
-          <AreaChart
-            data={charts.websiteVisitors}
-            title="New Tenants Sign-ups (Last 30 Days)"
-            height={300}
-          />
-        </div>
-
-        {/* Revenue Breakdown */}
-        <div className="grid grid-cols-1 gap-6 mb-8">
-          <RevenueBreakdown />
-        </div>
-
-        {/* Subscription Status */}
-        <div className="grid grid-cols-1 gap-6 mb-8">
-          <PieChartComponent
-            data={charts.subscriptionStatus}
-            title="Subscription Status Distribution"
-            height={300}
-          />
-        </div>
-
-        {/* Top Tenants Table */}
-        <div className="mb-8">
-          <TopTenantsTable limit={15} />
-        </div>
-
-        {/* Footer */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 text-center">
-          <p className="text-gray-600 dark:text-gray-400 text-sm">
-            Last updated: {new Date().toLocaleString('en-IN')}
-          </p>
-          <button
-            onClick={fetchAnalytics}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            Refresh Data
-          </button>
+          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+            <p className="text-gray-700 text-lg">
+              Use the sidebar to navigate through the application and access your modules.
+            </p>
+          </div>
         </div>
       </div>
     </div>

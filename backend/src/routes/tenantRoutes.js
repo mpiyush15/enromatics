@@ -15,6 +15,7 @@ import {
   createNewTenant,
   sendTenantCredentials,
   cancelSubscription,
+  getTenantBySubdomain,
 } from "../controllers/tenantController.js";
 import {
   getPaymentHistory,
@@ -27,6 +28,13 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { tenantProtect } from "../middleware/tenantProtect.js";
 
 const router = express.Router();
+
+/**
+ * @route   GET /api/tenants/by-subdomain/:subdomain
+ * @desc    Get tenant info by subdomain (for login page branding)
+ * @access  Public (no auth required for login page)
+ */
+router.get("/by-subdomain/:subdomain", getTenantBySubdomain);
 
 /**
  * @route   GET /api/tenants

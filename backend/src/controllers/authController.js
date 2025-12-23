@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Tenant from "../models/Tenant.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 
 const generateToken = (id, role, tenantId) =>
   jwt.sign({ id, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -161,7 +162,7 @@ export const registerUser = async (req, res) => {
 
 /**
  * Login User & set cookie
- * ✅ STRICT subdomain-based role enforcement for data security
+ * ✅ NEW: Route-based role separation with tenant ownership validation
  */
 export const loginUser = async (req, res) => {
   try {
@@ -169,9 +170,9 @@ export const loginUser = async (req, res) => {
 
     console.log('🔐 Login attempt for:', email);
     
-    // Extract subdomain type from request (set by frontend middleware or BFF)
-    const subdomainType = req.headers['x-subdomain-type'] || req.query.subdomainType;
-    console.log('🌐 Subdomain type:', subdomainType);
+    // Extract tenant subdomain from request (set by frontend middleware via BFF)
+    const tenantSubdomain = req.headers['x-tenant-subdomain'];
+    console.log('🌐 Tenant subdomain:', tenantSubdomain || 'NONE (main domain)');
     
     const user = await User.findOne({ email });
     if (!user) {
@@ -179,7 +180,7 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log('✓ User found, role:', user.role, 'checking password...');
+    console.log('✓ User found, role:', user.role, 'tenantId:', user.tenantId, 'checking password...');
     const isMatch = await user.matchPassword(password);
     console.log('🔑 Password match result:', isMatch);
     
@@ -188,63 +189,53 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // ✅ STRICT SUBDOMAIN-BASED ROLE ENFORCEMENT
+    // ✅ TENANT-BASED ACCESS CONTROL
     const userRole = user.role?.toLowerCase();
     
-    // 1. SuperAdmin → ONLY main domain (enromatics.com/login)
+    // 1. SuperAdmin → ONLY main domain (no subdomain)
     if (userRole === 'superadmin') {
-      if (subdomainType) {
-        console.log('❌ Access denied: SuperAdmin trying to login on subdomain');
+      if (tenantSubdomain) {
+        console.log('❌ Access denied: SuperAdmin trying to login on tenant subdomain');
         return res.status(403).json({ 
-          message: "Access denied. SuperAdmin can only login on enromatics.com",
+          message: "Access denied. SuperAdmin can only login on the main domain",
           hint: "Please visit enromatics.com/login"
         });
       }
       console.log('✅ SuperAdmin login on main domain');
     }
     
-    // 2. Admin → ONLY admin.tenant.enromatics.com
-    else if (userRole === 'admin' || userRole === 'tenantadmin') {
-      if (subdomainType !== 'admin') {
-        console.log('❌ Access denied: Admin trying to login on wrong subdomain');
-        return res.status(403).json({ 
-          message: "Access denied. Admins can only login on admin.tenant.enromatics.com",
-          hint: `Please visit admin.${user.tenantId || 'yourtenant'}.enromatics.com`
-        });
-      }
-      console.log('✅ Admin login on admin subdomain');
-    }
-    
-    // 3. Staff/Employee/Teacher/Manager/Counsellor → ONLY staff.tenant.enromatics.com
-    else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager'].includes(userRole)) {
-      if (subdomainType !== 'staff') {
-        console.log('❌ Access denied: Staff member trying to login on wrong subdomain');
-        return res.status(403).json({ 
-          message: "Access denied. Staff members can only login on staff.tenant.enromatics.com",
-          hint: `Please visit staff.${user.tenantId || 'yourtenant'}.enromatics.com`
-        });
-      }
-      console.log(`✅ ${userRole} login on staff subdomain`);
-    }
-    
-    // 4. Student → ONLY tenant.enromatics.com (no admin/staff prefix)
-    else if (userRole === 'student') {
-      if (subdomainType !== 'tenant' && subdomainType !== 'student') {
-        console.log('❌ Access denied: Student trying to login on wrong subdomain');
-        return res.status(403).json({ 
-          message: "Access denied. Students can only login on tenant.enromatics.com",
-          hint: `Please visit ${user.tenantId || 'yourtenant'}.enromatics.com`
-        });
-      }
-      console.log('✅ Student login on tenant subdomain');
-    }
-    
-    // 5. Unknown role - deny access
+    // 2. All other roles → MUST use tenant subdomain
     else {
-      console.log('❌ Access denied: Unknown role:', userRole);
-      return res.status(403).json({ 
-        message: "Access denied. Invalid user role.",
-      });
+      if (!tenantSubdomain) {
+        console.log('❌ Access denied: Non-SuperAdmin trying to login on main domain');
+        return res.status(403).json({ 
+          message: "Access denied. Please login using your tenant subdomain",
+          hint: `Visit ${user.tenantId || 'yourtenant'}.enromatics.com/login`
+        });
+      }
+      
+      // Resolve subdomain to tenantId
+      const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
+      
+      if (!resolvedTenantId) {
+        console.log('❌ Tenant not found for subdomain:', tenantSubdomain);
+        return res.status(404).json({ 
+          message: "Tenant not found",
+          hint: "Please check your subdomain URL"
+        });
+      }
+      
+      // Validate user belongs to this tenant
+      if (user.tenantId !== resolvedTenantId) {
+        console.log('❌ Access denied: User does not belong to this tenant');
+        console.log('   User tenantId:', user.tenantId, '| Subdomain tenantId:', resolvedTenantId);
+        return res.status(403).json({ 
+          message: "Access denied. You don't belong to this tenant",
+          hint: `Please visit ${user.tenantId}.enromatics.com/login`
+        });
+      }
+      
+      console.log(`✅ ${userRole} login on tenant subdomain: ${tenantSubdomain}`);
     }
 
     console.log('✅ Login successful for:', email);
@@ -288,6 +279,7 @@ export const loginUser = async (req, res) => {
       plan,
     });
   } catch (err) {
+    console.error('❌ Login error:', err);
     res.status(500).json({ message: err.message });
   }
 };

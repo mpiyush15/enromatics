@@ -3,15 +3,17 @@
  * 
  * This route:
  * 1. Receives login request from frontend
- * 2. Forwards to Express backend with subdomain type for role validation
- * 3. Express sets httpOnly cookie on response
- * 4. We forward the Set-Cookie header to browser
- * 5. Returns cleaned user data
+ * 2. Forwards to Express backend with tenant subdomain for validation
+ * 3. Express validates user belongs to tenant
+ * 4. Express sets httpOnly cookie on response
+ * 5. We forward the Set-Cookie header to browser
+ * 6. Returns cleaned user data
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { callExpressBackend, extractCookies } from '@/lib/bff-client';
+import { buildBFFHeaders } from '@/lib/bffHelpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,12 +43,11 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Calling Express backend:', `${expressUrl}/api/auth/login`);
 
-    // Get subdomain type from cookie (set by middleware)
-    const cookieStore = await cookies();
-    const subdomainType = cookieStore.get('subdomain-type')?.value;
-    console.log('🌐 Subdomain type from cookie:', subdomainType);
+    // Build headers with tenant subdomain (for tenant ownership validation)
+    const headers = await buildBFFHeaders();
+    console.log('🌐 Headers for login:', headers);
 
-    // Call Express backend (no subdomain header needed for public login)
+    // Call Express backend with tenant subdomain header
     const expressResponse = await fetch(
       `${expressUrl}/api/auth/login`,
       {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
           ...(extractCookies(request) && { 'Cookie': extractCookies(request) }), // Forward existing cookies
-          ...(subdomainType && { 'X-Subdomain-Type': subdomainType }), // Pass subdomain type for role validation
+          ...headers, // Include X-Tenant-Subdomain if present
         },
         credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
         body: JSON.stringify({ email, password }),

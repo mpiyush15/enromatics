@@ -1,14 +1,14 @@
 // backend/config/sidebarConfig.js
 
 export const sidebarLinks = [
-  // === PRIORITY 1: Dashboard Home ===
+  // === PRIORITY 1: Home (Staff & Students Only) ===
   {
     href: "/dashboard/home",
-    label: "🏠 Dashboard",
-    roles: ["SuperAdmin", "Admin", "employee", "adsManager", "student", "adsManager", "tenantAdmin", "teacher", "staff"],
+    label: "🏠 Home",
+    roles: ["manager", "accountant", "teacher", "marketing", "staff", "employee", "counsellor", "adsManager", "student"],
+    tenantSpecific: true,
   },
 
-  
   // === PRIORITY 2: Institute Overview (Tenant Admins) ===
   {
     href: "/dashboard/institute-overview",
@@ -21,12 +21,12 @@ export const sidebarLinks = [
   {
     label: "🎓 Students",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "staff", "student"],
+    roles: ["tenantAdmin", "manager", "accountant", "student"],
     tenantSpecific: true,
     children: [
-      { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "teacher", "staff"] },
-      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "teacher", "staff"] },
-      { label: "📅 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "teacher", "staff"] },
+      { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
+      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager", "accountant"] },
+      { label: "📅 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "manager"] },
       { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
   },
@@ -35,19 +35,19 @@ export const sidebarLinks = [
   {
     label: "📚 Academics",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "staff", "student"],
+    roles: ["tenantAdmin", "manager", "student"],
     tenantSpecific: true,
     children: [
-      { label: "📦 Batches", href: "/dashboard/academics/batches", roles: ["tenantAdmin"] },
+      { label: "📦 Batches", href: "/dashboard/academics/batches", roles: ["tenantAdmin", "manager"] },
       {
         label: "📝 Tests",
         href: "#",
-        roles: ["tenantAdmin", "teacher", "staff", "student"],
+        roles: ["tenantAdmin", "manager", "student"],
         children: [
-          { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "teacher", "staff"] },
-          { label: "✅ Test Attendance", href: "/dashboard/academics/attendance", roles: ["tenantAdmin", "teacher", "staff"] },
-          { label: "� Marks Entry", href: "/dashboard/academics/marks", roles: ["tenantAdmin", "teacher", "staff"] },
-          { label: "📊 Test Reports", href: "/dashboard/academics/reports", roles: ["tenantAdmin", "teacher", "staff", "student"] },
+          { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "manager"] },
+          { label: "✅ Test Attendance", href: "/dashboard/academics/attendance", roles: ["tenantAdmin", "manager"] },
+          { label: "📊 Marks Entry", href: "/dashboard/academics/marks", roles: ["tenantAdmin", "manager"] },
+          { label: "📊 Test Reports", href: "/dashboard/academics/reports", roles: ["tenantAdmin", "manager", "student"] },
           { label: "📖 My Tests", href: "/dashboard/academics/my-tests", roles: ["student"] },
         ]
       },
@@ -89,66 +89,66 @@ export const sidebarLinks = [
   {
     label: "💬 Communication",
     href: "#",
-    roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "teacher", "accountant"],
+    roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "manager", "marketing"],
     children: [
       {
         label: "💬 WhatsApp",
         href: "#",
-        roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant"],
+        roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"],
         children: [
-          { label: "📊 Dashboard", href: "/dashboard/whatsapp", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant"] },
-          { label: "📨 Campaigns", href: "/dashboard/whatsapp/campaigns", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant"] },
-          { label: "👥 Contacts", href: "/dashboard/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "teacher"] },
-          { label: "📈 Reports", href: "/dashboard/whatsapp/reports", roles: ["SuperAdmin", "tenantAdmin", "teacher", "accountant"] },
+          { label: "📊 Dashboard", href: "/dashboard/whatsapp", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "📨 Campaigns", href: "/dashboard/whatsapp/campaigns", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "👥 Contacts", href: "/dashboard/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "📈 Reports", href: "/dashboard/whatsapp/reports", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "⚙️ Settings", href: "/dashboard/whatsapp/settings", roles: ["SuperAdmin", "tenantAdmin"] },
         ],
       },
       {
         label: "📱 Social Media",
         href: "#",
-        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"],
+        roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"],
         children: [
           { 
             label: "🏠 Dashboard", 
             href: "/dashboard/social", 
             superAdminHref: "/dashboard/social",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "📊 Campaigns", 
             href: "/dashboard/client/[tenantId]/social/campaigns", 
             superAdminHref: "/dashboard/social/campaigns",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "📊 Analytics", 
             href: "/dashboard/client/[tenantId]/social/analytics", 
             superAdminHref: "/dashboard/social/analytics",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "🎯 Create Ads", 
             href: "/dashboard/client/[tenantId]/social/create-ads", 
             superAdminHref: "/dashboard/social/create-ads",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "📅 Content Planner", 
             href: "/dashboard/client/[tenantId]/social/content-planner", 
             superAdminHref: "/dashboard/social/content-planner",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "🏢 Business Assets", 
             href: "/dashboard/client/[tenantId]/social/business-assets", 
             superAdminHref: "/dashboard/social/business-assets",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
           { 
             label: "⚙️ Settings", 
             href: "/dashboard/client/[tenantId]/social/settings", 
             superAdminHref: "/dashboard/social/settings",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin"] 
+            roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "marketing"] 
           },
         ],
       },
@@ -205,11 +205,12 @@ export const sidebarLinks = [
   {
     label: "👤 Personal",
     href: "#",
-    roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin"],
+    roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"],
     children: [
-      { label: "👤 Profile", href: "/dashboard/profile" },
-      { label: "📋 View Plan", href: "/dashboard/subscription/view" },
-      { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel" },
+      { label: "👤 Profile", href: "/dashboard/profile", roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"] },
+      { label: "⚙️ Settings", href: "/dashboard/settings", roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"] },
+      { label: "📋 View Plan", href: "/dashboard/subscription/view", roles: ["tenantAdmin", "Admin"] },
+      { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel", roles: ["tenantAdmin", "Admin"] },
     ],
   },
 ];

@@ -48,7 +48,7 @@ export async function resolveTenantFromSubdomain(subdomain) {
   try {
     const tenant = await Tenant.findOne({ 
       subdomain: normalizedSubdomain,
-      isActive: true // Only active tenants
+      active: true // Only active tenants (field is 'active', not 'isActive')
     }).select("tenantId subdomain");
 
     if (!tenant) {

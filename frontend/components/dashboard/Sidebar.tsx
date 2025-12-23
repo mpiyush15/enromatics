@@ -88,7 +88,8 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   }, [pathname, user?.tenantId, user?.role]);
 
   /* ------------------------ HELPERS ------------------------ */
-  const TENANT_ROLES = ["tenantAdmin", "teacher", "staff", "accountant", "counsellor"];
+  // All tenant roles including all staff role types
+  const TENANT_ROLES = ["tenantAdmin", "admin", "staff", "employee", "teacher", "manager", "counsellor", "adsManager", "accountant", "marketing"];
 
   // Debug: Log user state
   console.log("🔍 Sidebar render - User:", user?.email, "Role:", user?.role, "TenantID:", user?.tenantId, "Loading:", loading);

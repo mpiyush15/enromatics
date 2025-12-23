@@ -1,17 +1,51 @@
+'use client';
 
+import useAuth from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-import { redirect } from "next/navigation";
+/**
+ * Dashboard Root - Redirects to role-specific dashboard
+ * 
+ * Routes:
+ * - SuperAdmin → /dashboard/tenants (or stays for now)
+ * - Admin/TenantAdmin → /dashboard/admin
+ * - Staff roles → /dashboard/staff
+ * - Student → /dashboard/student
+ */
+export default function DashboardRoot() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('🔄 Redirecting user based on role:', user.role);
+      
+      if (user.role === 'SuperAdmin') {
+        // SuperAdmin can stay at /dashboard or go to /dashboard/tenants
+        console.log('✅ SuperAdmin - redirecting to /dashboard/home');
+        router.push('/dashboard/home');
+      } else if (user.role === 'admin' || user.role === 'tenantAdmin') {
+        console.log('✅ Admin - redirecting to /dashboard/home');
+        router.push('/dashboard/home'); // Admin uses main dashboard with sidebar
+      } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsManager', 'accountant', 'marketing'].includes(user.role)) {
+        console.log('✅ Staff - redirecting to /dashboard/home');
+        router.push('/dashboard/home'); // Staff uses same dashboard with sidebar (role-based menu)
+      } else if (user.role === 'student') {
+        console.log('✅ Student - redirecting to /dashboard/student');
+        router.push('/dashboard/student'); // Only students get separate portal
+      } else {
+        console.log('❌ Unknown role:', user.role);
+      }
+    }
+  }, [user, loading, router]);
 
-export default function DashboardHome() {
-  
-    redirect("/dashboard/home");
-  
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">📋 Dashboard</h1>
-      <p className="mb-4">Welcome to the admin dashboard! Here you can manage all your leads.</p>
-      <p className="mb-4">Use the sidebar to navigate through different sections.</p>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-4 text-gray-600">Redirecting...</p>
+      </div>
     </div>
   );
 }
