@@ -374,38 +374,48 @@ export default function InstituteOverviewPage() {
                   <div className="text-6xl mb-4">📊</div>
                   <p>No revenue data available</p>
                   <p className="text-sm mt-2">Data will appear as payments are received</p>
+                  <p className="text-xs mt-2 text-red-500">Debug: {JSON.stringify(revenueData)}</p>
                 </div>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis 
-                    dataKey="period" 
-                    className="text-xs fill-gray-600 dark:fill-gray-400"
-                  />
-                  <YAxis 
-                    className="text-xs fill-gray-600 dark:fill-gray-400"
-                    tickFormatter={(value) => value === 0 ? '0' : `₹${(value / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)', 
-                      border: 'none', 
-                      borderRadius: '8px',
-                      color: 'white'
-                    }}
-                    formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="revenue" 
-                    fill="#3b82f6" 
-                    name="Revenue"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="period" 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                      stroke="#9ca3af"
+                    />
+                    <YAxis 
+                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                      stroke="#9ca3af"
+                      tickFormatter={(value) => value === 0 ? '0' : `₹${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1f2937', 
+                        border: 'none', 
+                        borderRadius: '8px',
+                        color: 'white',
+                        padding: '8px 12px'
+                      }}
+                      formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Bar 
+                      dataKey="revenue" 
+                      fill="#3b82f6" 
+                      name="Revenue"
+                      radius={[8, 8, 0, 0]}
+                      animationDuration={1000}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Data points: {revenueData.length}
+                </p>
+              </>
             )}
           </div>
           
