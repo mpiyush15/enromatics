@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import { api, safeApiCall } from "@/lib/apiClient";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface DashboardStats {
   totalStudents: number;
@@ -51,10 +52,55 @@ export default function InstituteOverviewPage() {
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revenueView, setRevenueView] = useState<'quarterly' | 'annual'>('quarterly');
+  const [revenueLoading, setRevenueLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
   }, [user, tenantId]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRevenueData();
+    }
+  }, [revenueView, user]);
+
+  const fetchRevenueData = async () => {
+    if (!user) return;
+    
+    try {
+      setRevenueLoading(true);
+      
+      console.log('📊 Fetching revenue data, view:', revenueView);
+      
+      const [data, err] = await safeApiCall(() => 
+        api.get<any>(`/api/dashboard/revenue?view=${revenueView}`)
+      );
+
+      if (err) {
+        console.error("❌ Error fetching revenue data:", err);
+        setRevenueData([]);
+        setRevenueLoading(false);
+        return;
+      }
+
+      if (data?.success && data?.revenueData) {
+        console.log('✅ Revenue data loaded:', data.revenueData);
+        console.log('📊 Revenue data length:', data.revenueData.length);
+        console.log('📊 Revenue data:', JSON.stringify(data.revenueData, null, 2));
+        setRevenueData(data.revenueData);
+      } else {
+        console.warn('⚠️ No revenue data in response:', data);
+        setRevenueData([]);
+      }
+      
+      setRevenueLoading(false);
+    } catch (error: any) {
+      console.error("❌ Exception fetching revenue data:", error);
+      setRevenueData([]);
+      setRevenueLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     if (!user) return;
@@ -289,14 +335,88 @@ export default function InstituteOverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Graph */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            💰 Revenue Overview
-          </h2>
-          <div className="h-64 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <div className="text-6xl mb-4">📊</div>
-              <p>Revenue graph coming soon</p>
-              <p className="text-sm mt-2">Monthly revenue tracking</p>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              💰 Revenue Overview
+            </h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRevenueView('quarterly')}
+                className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                  revenueView === 'quarterly'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                Quarterly
+              </button>
+              <button
+                onClick={() => setRevenueView('annual')}
+                className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                  revenueView === 'annual'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+          </div>
+          
+          <div className="h-64">
+            {revenueLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : !revenueData || revenueData.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p>No revenue data available</p>
+                  <p className="text-sm mt-2">Data will appear as payments are received</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis 
+                    dataKey="period" 
+                    className="text-xs fill-gray-600 dark:fill-gray-400"
+                  />
+                  <YAxis 
+                    className="text-xs fill-gray-600 dark:fill-gray-400"
+                    tickFormatter={(value) => value === 0 ? '0' : `₹${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+                      border: 'none', 
+                      borderRadius: '8px',
+                      color: 'white'
+                    }}
+                    formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="revenue" 
+                    fill="#3b82f6" 
+                    name="Revenue"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-xs text-gray-600 dark:text-gray-400">Total Revenue</p>
+              <p className="text-lg font-bold text-blue-600">₹{stats.totalRevenue.toLocaleString()}</p>
+            </div>
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <p className="text-xs text-gray-600 dark:text-gray-400">Pending Fees</p>
+              <p className="text-lg font-bold text-green-600">₹{stats.pendingFees.toLocaleString()}</p>
             </div>
           </div>
         </div>

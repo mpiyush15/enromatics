@@ -76,3 +76,101 @@ export const getInstituteOverview = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+export const getRevenueData = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(400).json({ message: "Tenant ID missing" });
+
+    const { view } = req.query; // 'quarterly' or 'annual'
+
+    console.log("Fetching revenue data for tenant:", tenantId, "View:", view);
+
+    let revenueData = [];
+
+    if (view === 'quarterly') {
+      // Get quarterly data for current year (2025)
+      const currentYear = new Date().getFullYear();
+      
+      for (let quarter = 1; quarter <= 4; quarter++) {
+        const startMonth = (quarter - 1) * 3;
+        const endMonth = startMonth + 3;
+        
+        const startDate = new Date(currentYear, startMonth, 1);
+        const endDate = new Date(currentYear, endMonth, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        const payments = await Payment.aggregate([
+          {
+            $match: {
+              tenantId,
+              status: "success",
+              $or: [
+                { date: { $gte: startDate, $lte: endDate } },
+                { createdAt: { $gte: startDate, $lte: endDate } }
+              ]
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              revenue: { $sum: "$amount" }
+            }
+          }
+        ]);
+
+        revenueData.push({
+          period: `Q${quarter} ${currentYear}`,
+          revenue: payments[0]?.revenue || 0,
+          target: 0, // Can be set from settings
+          fees: payments[0]?.revenue || 0
+        });
+      }
+    } else {
+      // Get annual data for last 4 years
+      const currentYear = new Date().getFullYear();
+      
+      for (let i = 3; i >= 0; i--) {
+        const year = currentYear - i;
+        const startDate = new Date(year, 0, 1);
+        const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+
+        const payments = await Payment.aggregate([
+          {
+            $match: {
+              tenantId,
+              status: "success",
+              $or: [
+                { date: { $gte: startDate, $lte: endDate } },
+                { createdAt: { $gte: startDate, $lte: endDate } }
+              ]
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              revenue: { $sum: "$amount" }
+            }
+          }
+        ]);
+
+        revenueData.push({
+          period: `${year}`,
+          revenue: payments[0]?.revenue || 0,
+          target: 0, // Can be set from settings
+          fees: payments[0]?.revenue || 0
+        });
+      }
+    }
+
+    console.log('✅ Revenue data generated:', revenueData);
+
+    return res.status(200).json({
+      success: true,
+      revenueData
+    });
+  } catch (error) {
+    console.error("Revenue data error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
