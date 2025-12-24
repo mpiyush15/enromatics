@@ -23,8 +23,6 @@ import {
   Clock,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-
 interface Exam {
   _id: string;
   examName: string;
@@ -78,8 +76,8 @@ interface RecentRegistration {
 export default function ExamDashboard() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
-  const examId = params.examId as string;
+  const tenantId = (params?.tenantId as string) || "";
+  const examId = (params?.examId as string) || "";
 
   const [exam, setExam] = useState<Exam | null>(null);
   const [recentRegistrations, setRecentRegistrations] = useState<RecentRegistration[]>([]);
@@ -93,8 +91,8 @@ export default function ExamDashboard() {
     try {
       setLoading(true);
 
-      // Fetch exam details
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
+      // Fetch exam details using BFF route
+      const examResponse = await fetch(`/api/scholarship-exams/${examId}`, {
         credentials: "include",
       });
       if (examResponse.ok) {
@@ -102,8 +100,8 @@ export default function ExamDashboard() {
         setExam(examData.exam);
       }
 
-      // Fetch recent registrations
-      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations?limit=5`, {
+      // Fetch recent registrations using BFF route
+      const regResponse = await fetch(`/api/scholarship-exams/${examId}/registrations?limit=5`, {
         credentials: "include",
       });
       if (regResponse.ok) {

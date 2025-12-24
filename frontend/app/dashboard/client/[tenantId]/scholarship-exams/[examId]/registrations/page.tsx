@@ -123,11 +123,9 @@ export default function RegistrationsPage() {
   const fetchExamAndRegistrations = async () => {
     try {
       setLoading(true);
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
       
-      // Fetch exam details
-      const examResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}`, {
+      // Fetch exam details using BFF route
+      const examResponse = await fetch(`/api/scholarship-exams/${examId}`, {
         credentials: "include",
       });
       if (examResponse.ok) {
@@ -135,8 +133,8 @@ export default function RegistrationsPage() {
         setExam(examData.exam);
       }
 
-      // Fetch registrations
-      const regResponse = await fetch(`${API_URL}/api/scholarship-exams/${examId}/registrations`, {
+      // Fetch registrations using BFF route
+      const regResponse = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
       if (regResponse.ok) {

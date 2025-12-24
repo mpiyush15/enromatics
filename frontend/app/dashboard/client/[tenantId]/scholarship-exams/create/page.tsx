@@ -4,8 +4,6 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Save, Eye } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://enromatics.com";
-
 interface Reward {
   rankFrom: number;
   rankTo: number;
@@ -35,7 +33,7 @@ interface LandingPage {
 export default function CreateExamPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params.tenantId as string;
+  const tenantId = (params?.tenantId as string) || "";
 
   const [loading, setLoading] = useState(false);
   const [currentTab, setCurrentTab] = useState<"basic" | "landing" | "rewards" | "form">("basic");
@@ -171,9 +169,9 @@ export default function CreateExamPage() {
       };
 
       console.log("🚀 Creating exam with data:", examData);
-      console.log("📡 API URL:", `${API_URL}/api/scholarship-exams`);
+      console.log("📡 Using BFF route: /api/scholarship-exams");
       
-      const response = await fetch(`${API_URL}/api/scholarship-exams`, {
+      const response = await fetch(`/api/scholarship-exams`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
