@@ -95,50 +95,47 @@ function getSubdomain(host: string | null): string | null {
 }
 
 function handleTenantSubdomain(request: NextRequest, subdomain: string) {
-  // Handle tenant subdomain - All roles login here
-  // ✅ Allow: /login, /dashboard/*, /api/*
-  // ❌ Block: Public pages (/about, /contact, etc.)
   const pathname = request.nextUrl.pathname;
   const host = request.headers.get('host');
   const cookieDomain = getCookieDomain(host);
   
   console.log(`🌐 Tenant subdomain: ${subdomain}, pathname: ${pathname}`);
   
-  // Block public/marketing pages on tenant subdomains
-  const publicPages = [
-    '/about', '/contact', '/services', '/privacy', '/terms', 
-    '/privacy-policy', '/terms-of-service', '/plans', '/subscribe', 
-    '/home', '/lead-form', '/leads'
-  ];
+  // ✅ ONLY ALLOW: /tenant/login and /api/* routes
+  // ❌ BLOCK: Everything else and redirect to /tenant/login
   
-  if (publicPages.some(page => pathname.startsWith(page))) {
-    console.log(`❌ Blocking public page ${pathname} on tenant subdomain → Redirecting to /login`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  // Allow API routes
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    response.cookies.set('tenant-context', subdomain, {
+      domain: cookieDomain,
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7
+    });
+    return response;
   }
   
-  // Redirect root to login
-  if (pathname === '/') {
-    console.log(`✅ Redirecting root to /login`);
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  // Allow ONLY /tenant/login route
+  if (pathname === '/tenant/login') {
+    console.log(`✅ Allowing /tenant/login`);
+    const response = NextResponse.next();
+    response.cookies.set('tenant-context', subdomain, {
+      domain: cookieDomain,
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7
+    });
+    return response;
   }
   
-  // Allow /login and /dashboard/* routes
-  const response = NextResponse.next();
-  
-  // Set tenant context cookie for backend communication
-  response.cookies.set('tenant-context', subdomain, {
-    domain: cookieDomain,
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7 // 7 days
-  });
-  
-  return response;
+  // Block EVERYTHING else and redirect to /tenant/login
+  console.log(`❌ Blocking ${pathname} on tenant subdomain → Redirecting to /tenant/login`);
+  const url = request.nextUrl.clone();
+  url.pathname = '/tenant/login';
+  return NextResponse.redirect(url);
 }
 
 // Configure which paths the middleware should run on
