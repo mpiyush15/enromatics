@@ -116,10 +116,10 @@ export default function Navbar() {
                     <Link href="/services/student-management" onClick={() => setIsServicesOpen(false)}>Student Management</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/scholarship-exams" onClick={() => setIsServicesOpen(false)}>Scholarship Exams</Link>
+                    <Link href="/services/test-management" onClick={() => setIsServicesOpen(false)}>Test Management</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Link href="/services/video-editing" onClick={() => setIsServicesOpen(false)}>Video Editing</Link>
+                    <Link href="/services/revenue-payments" onClick={() => setIsServicesOpen(false)}>Revenue & Payments</Link>
                   </li>
                   <li className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Link href="/services/facebook-marketing" onClick={() => setIsServicesOpen(false)}>Facebook Marketing</Link>
@@ -198,18 +198,18 @@ export default function Navbar() {
                   Student Management
                 </Link>
                 <Link 
-                  href="/services/scholarship-exams" 
+                  href="/services/test-management" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                   onClick={handleServiceLinkClick}
                 >
-                  Scholarship Exams
+                  Test Management
                 </Link>
                 <Link 
-                  href="/services/video-editing" 
+                  href="/services/revenue-payments" 
                   className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition"
                   onClick={handleServiceLinkClick}
                 >
-                  Video Editing
+                  Revenue & Payments
                 </Link>
                 <Link 
                   href="/services/facebook-marketing" 

@@ -1,9 +1,12 @@
 "use client";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import BookDemoModal from "@/components/BookDemoModal";
 
 export default function Home() {
   const router = useRouter();
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   const features = [
     {
@@ -130,12 +133,12 @@ export default function Home() {
                 </motion.button>
 
                 <motion.button
-                  onClick={() => router.push("/login")}
+                  onClick={() => setShowDemoModal(true)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="px-8 py-4 bg-white dark:bg-gray-900 border-2 border-slate-300 dark:border-gray-700 text-slate-900 dark:text-white rounded-xl font-bold hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all duration-300 shadow-sm"
                 >
-                  Watch Demo
+                  Book Demo
                 </motion.button>
               </div>
 
@@ -395,14 +398,15 @@ export default function Home() {
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
                 <motion.button
+                  onClick={() => router.push("/plans")}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold overflow-hidden shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    Download App
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    Create your own app
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </span>
                 </motion.button>
@@ -770,6 +774,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Book Demo Modal */}
+      {showDemoModal && <BookDemoModal onClose={() => setShowDemoModal(false)} />}
     </main>
   );
 }

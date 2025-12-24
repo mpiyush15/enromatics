@@ -53,6 +53,12 @@ export default function LandingPage() {
                   >
                     📅 Book Demo
                   </button>
+                  <Link 
+                    href="/home"
+                    className="px-4 sm:px-6 lg:px-5 py-2 sm:py-3 lg:py-2 border-2 border-blue-400 text-blue-400 font-bold rounded-lg hover:bg-blue-400/10 transition text-sm sm:text-base lg:text-sm text-center w-full sm:w-auto lg:w-auto flex items-center justify-center gap-2"
+                  >
+                    Explore now <FaChevronRight className="text-xs" />
+                  </Link>
                 </div>
 
                 {/* Mobile Dashboard Image - Show on small devices */}

@@ -1,8 +1,10 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Contact() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -50,13 +52,13 @@ export default function Contact() {
       icon: "📱",
       title: "WhatsApp",
       description: "Chat with us on WhatsApp for instant support",
-      value: "+91-XXXXXXXXXX"
+      value: "+91 9766504856"
     },
     {
       icon: "📞",
       title: "Phone",
       description: "Call us during business hours (9 AM - 6 PM IST)",
-      value: "+91-XXXXXXXXXX"
+      value: "+91 8087131777"
     },
     {
       icon: "🏢",
@@ -68,28 +70,36 @@ export default function Contact() {
 
   const faqs = [
     {
-      q: "How long does implementation take?",
-      a: "On average, our implementation takes 1-2 weeks depending on your institute size and requirements. We provide dedicated support throughout the process."
+      q: "How quickly can I start using Enromatics?",
+      a: "Instantly! As a SaaS platform, we deliver access immediately after signup. You can go digital in less than 30 minutes - just sign up, configure your institute details, and start using all features right away."
     },
     {
-      q: "Do you offer training for staff?",
-      a: "Yes! We provide comprehensive training sessions for all staff members. We offer both online and on-site training depending on your preference."
+      q: "Do I need any technical knowledge to set up?",
+      a: "Not at all! Our platform is designed to be user-friendly. The initial setup takes less than 30 minutes and requires no technical expertise. We guide you through every step."
     },
     {
-      q: "What if I need custom features?",
-      a: "We can develop custom features tailored to your institute's specific needs. Contact our sales team to discuss your requirements."
+      q: "Is there any installation or hardware required?",
+      a: "Zero installation needed! Enromatics is a cloud-based SaaS application. Just open your browser or mobile app and start working. No servers, no hardware, no IT team required."
     },
     {
-      q: "Is data migration from my current system included?",
-      a: "Yes, we handle complete data migration from your existing system at no extra cost. Our team ensures zero data loss during the process."
+      q: "How long does it take to migrate my existing data?",
+      a: "We handle complete data migration from your existing system within 24-48 hours at no extra cost. Our team ensures zero data loss and validates everything before you go live."
     },
     {
-      q: "What kind of support do you provide?",
-      a: "We provide 24/7 email support, priority WhatsApp support, and dedicated account managers for enterprise plans."
+      q: "Can I try before committing to a paid plan?",
+      a: "Absolutely! We offer a 14-day free trial with full access to all features. No credit card required to start. Experience everything before making a decision."
+    },
+    {
+      q: "What kind of support do you provide after signup?",
+      a: "We provide 24/7 email support, priority WhatsApp support (+91 9766504856), phone support (+91 8087131777), and dedicated account managers for enterprise plans. Our team is always ready to help."
     },
     {
       q: "Can I cancel my subscription anytime?",
-      a: "Yes, you can cancel your subscription anytime without any penalties or long-term contracts."
+      a: "Yes, you can cancel anytime without any penalties or long-term contracts. We believe in earning your business every month, not locking you in."
+    },
+    {
+      q: "Do you offer training for my staff?",
+      a: "Yes! We provide comprehensive online training sessions for all staff members. Plus, our intuitive interface means most features are self-explanatory and easy to learn."
     }
   ];
 
@@ -429,17 +439,23 @@ export default function Contact() {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Ready to Transform Your Institute?
+              Ready to Go Digital in 30 Minutes?
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join 500+ coaching institutes that are already using Enro Matics to streamline operations and grow faster.
+              Join 500+ institutes that transformed their operations instantly with Enromatics. Start now and go digital today!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="px-10 py-5 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-lg">
-                Start Free Trial
+              <button 
+                onClick={() => router.push("/plans")}
+                className="px-10 py-5 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition shadow-xl text-lg"
+              >
+                Start Free Trial - Go Digital Now
               </button>
-              <button className="px-10 py-5 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl font-bold hover:bg-white/20 transition text-lg">
-                Schedule Demo
+              <button 
+                onClick={() => window.open(`https://wa.me/919766504856?text=Hi, I want to schedule a demo for Enromatics`, '_blank')}
+                className="px-10 py-5 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl font-bold hover:bg-white/20 transition text-lg"
+              >
+                WhatsApp Us for Demo
               </button>
             </div>
           </motion.div>

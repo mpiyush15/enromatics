@@ -1,7 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+import BookDemoModal from '@/components/BookDemoModal'
 import { 
   GraduationCap, 
   Users, 
@@ -34,6 +36,9 @@ const staggerContainer = {
 }
 
 export default function AboutPage() {
+  const router = useRouter()
+  const [showDemoModal, setShowDemoModal] = useState(false)
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-900">
       {/* Hero Section */}
@@ -483,6 +488,7 @@ export default function AboutPage() {
                 Join hundreds of educational institutions that have already revolutionized their operations with Enromatics.
               </p>
               <motion.button 
+                onClick={() => router.push('/plans')}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl transition-shadow"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -519,6 +525,7 @@ export default function AboutPage() {
             viewport={{ once: true }}
           >
             <motion.button 
+              onClick={() => setShowDemoModal(true)}
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
               variants={fadeInUp}
               whileHover={{ scale: 1.05 }}
@@ -526,17 +533,12 @@ export default function AboutPage() {
             >
               Schedule a Demo
             </motion.button>
-            <motion.button 
-              className="border border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-colors"
-              variants={fadeInUp}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Contact Sales
-            </motion.button>
           </motion.div>
         </motion.div>
       </section>
+
+      {/* Book Demo Modal */}
+      {showDemoModal && <BookDemoModal onClose={() => setShowDemoModal(false)} />}
     </div>
   )
 }

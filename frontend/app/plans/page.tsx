@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { subscriptionPlans } from '@/data/plans';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function PlansPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [showComparison, setShowComparison] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
@@ -141,6 +142,279 @@ export default function PlansPage() {
             );
           })}
         </div>
+
+        {/* Compare Plans Button */}
+        <div className="text-center mb-16">
+          <button
+            onClick={() => setShowComparison(!showComparison)}
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <span>{showComparison ? 'Hide' : 'Compare Plans'} - Detailed Features</span>
+            {showComparison ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Detailed Comparison Table */}
+        {showComparison && (
+          <div className="mb-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 overflow-x-auto">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+              Complete Feature Comparison
+            </h2>
+
+            {/* Core Features */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b-2 border-blue-500">
+                Core Platform Features
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-white">Features</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Basic</th>
+                      <th className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Pro ⭐</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Enterprise</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Web Portal (Admin / Staff / Student)</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Secure Institute Subdomain</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300 font-semibold">Student Limit</td>
+                      <td className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Up to 100</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20 font-semibold text-blue-600 dark:text-blue-400">Up to 300</td>
+                      <td className="text-center py-4 px-4 font-semibold text-green-600 dark:text-green-400">Unlimited</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300 font-semibold">Staff Accounts</td>
+                      <td className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Up to 5</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20 font-semibold text-green-600 dark:text-green-400">Unlimited</td>
+                      <td className="text-center py-4 px-4 font-semibold text-green-600 dark:text-green-400">Unlimited</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Role-Based Access Control</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Attendance Management</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Fees Management & Receipts</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Email Notifications</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Exams & Results Management</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Advanced Reports & Analytics</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Audit Logs & Data Backup</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Multi-Branch Management</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile App Features */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b-2 border-purple-500">
+                Mobile App Features
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-white">Mobile App</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Basic</th>
+                      <th className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Pro ⭐</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Enterprise</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Student Mobile App</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅ <span className="text-xs text-gray-500">(Basic App)</span></td>
+                      <td className="text-center py-4 px-4">✅ <span className="text-xs text-green-600">(Full App)</span></td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Parent Mobile App</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Push Notifications</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Custom Branding (App)</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Play Store / App Store Publishing</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Automation & Marketing */}
+            <div className="mb-12">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b-2 border-green-500">
+                Automation & Marketing
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-white">Automation & Marketing</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Basic</th>
+                      <th className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Pro ⭐</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Enterprise</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">WhatsApp Business Automation (WABA)</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">🟡 <span className="text-xs text-orange-600">Beta</span></td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Automated Fee Reminders</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">🟡 <span className="text-xs text-orange-600">Beta</span></td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Social Media Marketing Tools</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">🟡 <span className="text-xs text-orange-600">Beta</span></td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Ads Management Dashboard</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">🟡 <span className="text-xs text-orange-600">Beta</span></td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Lead & Enquiry Management</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Support */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b-2 border-orange-500">
+                Support & Services
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-900 dark:text-white">Support</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Basic</th>
+                      <th className="text-center py-4 px-4 font-semibold text-blue-600 dark:text-blue-400">Pro ⭐</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-900 dark:text-white">Enterprise</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Standard Support</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">✅</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Priority Support</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Dedicated Account Manager</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">Custom Domain Support</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-4 text-gray-700 dark:text-gray-300">SLA Commitment</td>
+                      <td className="text-center py-4 px-4">❌</td>
+                      <td className="text-center py-4 px-4 bg-blue-50 dark:bg-blue-900/20">❌</td>
+                      <td className="text-center py-4 px-4">✅</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                <span className="font-semibold">Legend:</span> ✅ = Available  |  ❌ = Not Available  |  🟡 = Beta (In Testing)
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* FAQ Section */}
         <div className="max-w-4xl mx-auto py-16">
