@@ -55,6 +55,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const hideNavAndFooter =
     pathname === "/" ||
     pathname?.startsWith("/login") ||
+    pathname?.startsWith("/tenant/login") ||
     pathname?.startsWith("/landing") ||
     pathname?.startsWith("/dashboard") ||
     pathname?.startsWith("/student") ||

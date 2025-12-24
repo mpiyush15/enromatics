@@ -101,11 +101,15 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   
   console.log(`🌐 Tenant subdomain: ${subdomain}, pathname: ${pathname}`);
   
-  // ✅ ONLY ALLOW: /tenant/login and /api/* routes
-  // ❌ BLOCK: Everything else and redirect to /tenant/login
+  // Check if user is authenticated (has token in cookies)
+  const token = request.cookies.get('token')?.value;
+  const isAuthenticated = !!token;
   
-  // Allow API routes
-  if (pathname.startsWith('/api/')) {
+  console.log(`🔐 Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`);
+  
+  // Allow /tenant/login route always
+  if (pathname === '/tenant/login' || pathname.startsWith('/tenant/login/')) {
+    console.log(`✅ Allowing /tenant/login for tenant subdomain`);
     const response = NextResponse.next();
     response.cookies.set('tenant-context', subdomain, {
       domain: cookieDomain,
@@ -117,9 +121,9 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
     return response;
   }
   
-  // Allow ONLY /tenant/login route
-  if (pathname === '/tenant/login') {
-    console.log(`✅ Allowing /tenant/login`);
+  // Allow dashboard and student routes if authenticated
+  if (isAuthenticated && (pathname.startsWith('/dashboard') || pathname.startsWith('/student'))) {
+    console.log(`✅ Allowing ${pathname} for authenticated user`);
     const response = NextResponse.next();
     response.cookies.set('tenant-context', subdomain, {
       domain: cookieDomain,
@@ -131,7 +135,7 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
     return response;
   }
   
-  // Block EVERYTHING else and redirect to /tenant/login
+  // Block everything else (/, /login, /about, etc.) and redirect to /tenant/login
   console.log(`❌ Blocking ${pathname} on tenant subdomain → Redirecting to /tenant/login`);
   const url = request.nextUrl.clone();
   url.pathname = '/tenant/login';
