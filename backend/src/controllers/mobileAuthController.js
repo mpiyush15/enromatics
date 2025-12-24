@@ -158,11 +158,10 @@ const loginMobileUser = async (req, res) => {
       });
     }
 
-    // Find user by email and tenantId
+    // Find user by email and tenantId - Allow all roles (student, tenantAdmin, staff, teacher, etc.)
     const user = await User.findOne({ 
       email, 
       tenantId,
-      role: 'student',
       status: 'active'
     });
 
@@ -172,6 +171,12 @@ const loginMobileUser = async (req, res) => {
         message: 'Invalid credentials'
       });
     }
+    
+    console.log('✅ Mobile login - User found:', { 
+      email: user.email, 
+      role: user.role, 
+      tenantId: user.tenantId 
+    });
 
     // Check password
     const isPasswordValid = await user.matchPassword(password);
