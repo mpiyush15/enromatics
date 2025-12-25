@@ -1,14 +1,14 @@
 import express from "express";
 import Offer from "../models/Offer.js";
-import { authenticate, authorizeRoles } from "../middleware/auth.js";
-import Subscription from "../models/Subscription.js";
+import { protect } from "../middleware/authMiddleware.js";
+import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
 // ============================================
 // SUPERADMIN: CREATE OFFER
 // ============================================
-router.post("/", authenticate, authorizeRoles("superadmin"), async (req, res) => {
+router.post("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
   try {
     const {
       name,
@@ -104,7 +104,7 @@ router.post("/", authenticate, authorizeRoles("superadmin"), async (req, res) =>
 // ============================================
 // GET ALL OFFERS (Superadmin)
 // ============================================
-router.get("/", authenticate, authorizeRoles("superadmin"), async (req, res) => {
+router.get("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
   try {
     const { page = 1, limit = 10, status, isActive } = req.query;
 
@@ -143,7 +143,7 @@ router.get("/", authenticate, authorizeRoles("superadmin"), async (req, res) => 
 // ============================================
 // GET SINGLE OFFER
 // ============================================
-router.get("/:id", authenticate, authorizeRoles("superadmin"), async (req, res) => {
+router.get("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id)
       .populate("planIds", "name")
@@ -172,7 +172,7 @@ router.get("/:id", authenticate, authorizeRoles("superadmin"), async (req, res) 
 // ============================================
 // UPDATE OFFER
 // ============================================
-router.put("/:id", authenticate, authorizeRoles("superadmin"), async (req, res) => {
+router.put("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
   try {
     const { name, description, discountType, discountValue, maxDiscountAmount, validUntil, isActive, planIds } = req.body;
 
@@ -214,7 +214,7 @@ router.put("/:id", authenticate, authorizeRoles("superadmin"), async (req, res) 
 // ============================================
 // DELETE OFFER
 // ============================================
-router.delete("/:id", authenticate, authorizeRoles("superadmin"), async (req, res) => {
+router.delete("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
   try {
     const offer = await Offer.findByIdAndDelete(req.params.id);
 
@@ -307,7 +307,7 @@ router.post("/validate/:code", async (req, res) => {
 // ============================================
 // APPLY OFFER (During subscription)
 // ============================================
-router.post("/apply/:code", authenticate, async (req, res) => {
+router.post("/apply/:code", protect, async (req, res) => {
   try {
     const { code } = req.params;
     const { planId, totalAmount } = req.body;
