@@ -37,6 +37,7 @@ import storageRoutes from './routes/storageRoutes.js';
 import videoRoutes from './routes/videoRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import subscriptionCheckoutRoutes from './routes/subscriptionCheckoutRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
@@ -100,7 +101,7 @@ app.use(
         callback(null, true);
       } else {
         console.warn(`CORS blocked origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
+        callback(null, false);  // Return false instead of throwing error
       }
     },
     credentials: true,
@@ -140,6 +141,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/subscription', subscriptionCheckoutRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
 app.use('/api/mobile-scholarship', mobileScholarshipRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/demo-requests', demoRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
@@ -147,6 +149,15 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
+
+// 🚀 Health check endpoint for Railway warm-up (fast response, no DB query)
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ 
+    status: "ok", 
+    timestamp: Date.now(),
+    uptime: process.uptime()
+  });
+});
 
 // Test endpoint for POST
 app.post("/api/test-post", (req, res) => {
@@ -159,25 +170,60 @@ app.get("/api/test-cookie", (req, res) => {
   res.json({ cookies: req.cookies });
 });
 
+// 404 Handler - Catch all unmatched routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
+// Global error handler - Prevent unhandled errors from crashing
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    path: req.originalUrl
+  });
+});
+
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
   
   // Run migrations on startup (after DB is connected)
   setTimeout(async () => {
-    console.log('🔧 Running database migrations...');
-    await dropOldStaffIndexes();
+    try {
+      console.log('🔧 Running database migrations...');
+      await dropOldStaffIndexes();
+      console.log('✅ Database migrations completed');
+    } catch (err) {
+      console.error('❌ Migration failed:', err.message);
+      // Don't crash - continue running
+    }
   }, 3000);
   
   // Run auto-cancel for stale pending payments on startup
   setTimeout(async () => {
-    console.log('⏰ Running initial stale payment cleanup...');
-    await autoCancelStalePendingPayments(10); // 10 minute timeout
+    try {
+      console.log('⏰ Running initial stale payment cleanup...');
+      await autoCancelStalePendingPayments(10); // 10 minute timeout
+      console.log('✅ Initial stale payment cleanup completed');
+    } catch (err) {
+      console.error('❌ Auto-cancel failed:', err.message);
+      // Don't crash - continue running
+    }
   }, 5000);
   
   // Run auto-cancel every 10 minutes
   setInterval(async () => {
-    console.log('⏰ Running scheduled stale payment cleanup...');
-    await autoCancelStalePendingPayments(10);
+    try {
+      console.log('⏰ Running scheduled stale payment cleanup...');
+      await autoCancelStalePendingPayments(10);
+    } catch (err) {
+      console.error('❌ Scheduled auto-cancel failed:', err.message);
+      // Don't crash - continue running
+    }
   }, 10 * 60 * 1000); // Every 10 minutes
 });

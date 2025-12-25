@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 export default function ExpensesPage() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -56,22 +57,39 @@ export default function ExpensesPage() {
 
       const data = await res.json();
       if (data.success) {
-        setExpenses(data.expenses);
+        // Sort expenses by date in descending order (newest first)
+        const sortedExpenses = [...data.expenses].sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+        setExpenses(sortedExpenses);
+      } else {
+        console.error("Failed to fetch expenses:", data.message);
+        setExpenses([]);
       }
     } catch (err) {
       console.error("Failed to fetch expenses:", err);
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch expenses on component mount and when tenantId or filters change
   useEffect(() => {
-    fetchExpenses();
-  }, [filters]);
+    if (tenantId) {
+      fetchExpenses();
+    }
+  }, [tenantId, filters]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Validate form
+      if (!form.amount || !form.description) {
+        alert("⚠️ Please fill in amount and description");
+        return;
+      }
+
       // Use BFF route
       const res = await fetch(`/api/accounts/expenses`, {
         method: "POST",
@@ -85,6 +103,7 @@ export default function ExpensesPage() {
 
       const data = await res.json();
       if (data.success) {
+        console.log("✅ Expense recorded:", data.expense);
         alert("✅ Expense recorded successfully!");
         setShowForm(false);
         setForm({
@@ -98,13 +117,14 @@ export default function ExpensesPage() {
           remarks: "",
           status: "paid"
         });
-        fetchExpenses();
+        // Refresh expenses list after successful submission
+        setTimeout(() => fetchExpenses(), 500);
       } else {
         alert("❌ " + (data.message || "Failed to record expense"));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Expense error:", err);
-      alert("❌ Error recording expense");
+      alert("❌ Error recording expense: " + err.message);
     }
   };
 

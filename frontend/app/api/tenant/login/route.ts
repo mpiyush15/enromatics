@@ -15,11 +15,10 @@ export async function POST(req: NextRequest) {
 
     // Call backend to authenticate tenant user
     const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-    const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/authenticate`;
+    const backendUrl = `${EXPRESS_BACKEND_URL}/api/auth/login`;
     const options = buildBackendFetchOptions(req, 'POST', {
       email,
       password,
-      subdomain,
     });
 
     const res = await fetch(backendUrl, options);

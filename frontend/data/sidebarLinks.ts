@@ -5,6 +5,11 @@ export const sidebarLinks = [
     roles: ["SuperAdmin","admin", "user", "subscriber"],
   },
   {
+    href: "/dashboard/analytics",
+    label: "📊 Analytics",
+    roles: ["tenantAdmin", "SuperAdmin", "admin"],
+  },
+  {
     href: "/dashboard/lead",
     label: "📋 Leads",
     roles: ["SuperAdmin","admin"],

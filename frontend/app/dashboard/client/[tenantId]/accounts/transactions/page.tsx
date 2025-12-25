@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import FeeReceipt from "@/components/accounts/FeeReceipt";
 
 interface Transaction {
   _id: string;
@@ -39,6 +40,9 @@ export default function AllTransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -57,6 +61,27 @@ export default function AllTransactionsPage() {
   // Sorting state
   const [sortField, setSortField] = useState<string>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Fetch tenant info on mount
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/tenant/${tenantId}`, {
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant);
+        }
+      } catch (err) {
+        console.error("Failed to fetch tenant info:", err);
+      }
+    };
+    
+    if (tenantId) {
+      fetchTenantInfo();
+    }
+  }, [tenantId]);
 
   // Load batches
   useEffect(() => {
@@ -141,52 +166,60 @@ export default function AllTransactionsPage() {
     setCurrentPage(1);
   };
 
-  const handleViewReceipt = async (transactionId: string) => {
+  const handleViewReceipt = async (paymentId: string) => {
     try {
-      const res = await fetch(`/api/accounts/receipts/generate/${transactionId}`, {
+      const res = await fetch(`/api/accounts/receipts/generate/${paymentId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ deliveryMethod: "hand" }),
+        body: JSON.stringify({ deliveryMethod: "hand" })
       });
 
       const data = await res.json();
       if (data.success) {
-        // Open receipt in new window or show modal
-        alert("✅ Receipt generated! (Add receipt modal here)");
+        // Show the receipt modal
+        setSelectedPayment(data.payment);
+        setShowReceiptModal(true);
       } else {
-        alert("❌ " + (data.message || "Failed to generate receipt"));
+        alert('❌ ' + (data.message || 'Failed to generate receipt'));
       }
-    } catch (err) {
-      console.error("Generate receipt error:", err);
-      alert("❌ Error generating receipt");
+    } catch (err: any) {
+      console.error("❌ Generate receipt error:", err);
+      alert('❌ Error generating receipt: ' + err.message);
     }
   };
 
-  const handleDelete = async (transactionId: string, type: string) => {
-    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
-
+  const handleDownloadReceipt = async (paymentId: string) => {
     try {
-      const endpoint =
-        type === "payment"
-          ? `/api/accounts/payments/${transactionId}`
-          : `/api/accounts/refunds/${transactionId}`;
-
-      const res = await fetch(endpoint, {
-        method: "DELETE",
-        credentials: "include",
+      // Use existing PDF receipt endpoint
+      const res = await fetch(`/api/payments/${paymentId}/receipt`, {
+        method: "GET",
+        credentials: "include"
       });
 
-      const data = await res.json();
-      if (data.success) {
-        alert(`✅ ${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
-        fetchTransactions();
+      if (res.ok) {
+        // Get receipt number from response headers or generate from payment
+        const filename = `Receipt-${paymentId}.pdf`;
+        
+        // Create blob from PDF response
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        console.log("✅ Receipt PDF downloaded successfully!");
       } else {
-        alert("❌ " + (data.message || "Failed to delete"));
+        const errorData = await res.json();
+        alert('❌ ' + (errorData.message || 'Failed to download receipt'));
       }
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("❌ Error deleting transaction");
+    } catch (err: any) {
+      console.error("❌ Download receipt error:", err);
+      alert('❌ Error downloading receipt: ' + err.message);
     }
   };
 
@@ -624,9 +657,6 @@ export default function AllTransactionsPage() {
                         )}
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Batch
-                    </th>
                     <th
                       onClick={() => handleSort("amount")}
                       className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -688,11 +718,6 @@ export default function AllTransactionsPage() {
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           Roll: {transaction.studentId.rollNumber}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg text-xs font-semibold">
-                          {transaction.studentId.batchName}
-                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div
@@ -761,7 +786,7 @@ export default function AllTransactionsPage() {
                           {/* Download Receipt */}
                           {transaction.receiptGenerated && (
                             <button
-                              onClick={() => handleViewReceipt(transaction._id)}
+                              onClick={() => handleDownloadReceipt(transaction._id)}
                               className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors group relative"
                               title="Download Receipt"
                             >
@@ -785,18 +810,6 @@ export default function AllTransactionsPage() {
                               Edit
                             </span>
                           </button>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => handleDelete(transaction._id, transaction.type)}
-                            className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors group relative"
-                            title="Delete Transaction"
-                          >
-                            <span className="text-lg">🗑️</span>
-                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              Delete
-                            </span>
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -818,6 +831,18 @@ export default function AllTransactionsPage() {
           )}
         </div>
       </div>
+
+      {/* Receipt Modal */}
+      {showReceiptModal && selectedPayment && (
+        <FeeReceipt
+          payment={selectedPayment}
+          tenantInfo={tenantInfo}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setSelectedPayment(null);
+          }}
+        />
+      )}
     </div>
   );
 }

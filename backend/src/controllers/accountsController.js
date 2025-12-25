@@ -9,12 +9,31 @@ export const getAccountsOverview = async (req, res) => {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    const { startDate, endDate, academicYear } = req.query;
+    const { startDate, endDate, academicYear, period = "monthly" } = req.query;
 
-    // Build date filter
-    const dateFilter = {};
-    if (startDate) dateFilter.$gte = new Date(startDate);
-    if (endDate) dateFilter.$lte = new Date(endDate);
+    // Build date filter based on period
+    let dateFilter = {};
+    const now = new Date();
+    
+    if (startDate || endDate) {
+      // Use custom dates if provided
+      if (startDate) dateFilter.$gte = new Date(startDate);
+      if (endDate) dateFilter.$lte = new Date(endDate);
+    } else {
+      // Use period-based filtering
+      const startOfRange = new Date();
+      
+      if (period === "monthly") {
+        startOfRange.setMonth(startOfRange.getMonth() - 1);
+      } else if (period === "quarterly") {
+        startOfRange.setMonth(startOfRange.getMonth() - 3);
+      } else if (period === "annual") {
+        startOfRange.setFullYear(startOfRange.getFullYear() - 1);
+      }
+      
+      dateFilter.$gte = startOfRange;
+      dateFilter.$lte = now;
+    }
 
     const match = { tenantId };
     if (Object.keys(dateFilter).length > 0) {
@@ -151,6 +170,23 @@ export const generateReceipt = async (req, res) => {
 
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
+    // Generate receipt number if not already generated
+    if (!payment.receiptNumber) {
+      try {
+        const counter = await Counter.findByIdAndUpdate(
+          "receiptNumber",
+          { $inc: { sequence_value: 1 } },
+          { new: true, upsert: true }
+        );
+        const receiptNumber = `RCP-${tenantId.substring(0, 3).toUpperCase()}-${String(counter.sequence_value).padStart(6, '0')}`;
+        payment.receiptNumber = receiptNumber;
+      } catch (err) {
+        console.error("Error generating receipt number:", err);
+        // Fallback: use payment ID
+        payment.receiptNumber = `RCP-${paymentId.substring(0, 8).toUpperCase()}`;
+      }
+    }
+
     // Update payment with receipt info
     payment.receiptGenerated = true;
     payment.receiptGeneratedAt = new Date();
@@ -171,7 +207,11 @@ export const generateReceipt = async (req, res) => {
     });
   } catch (err) {
     console.error("Generate receipt error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -715,3 +755,547 @@ export const getAllTransactions = async (req, res) => {
     });
   }
 };
+
+// Get revenue trend by month
+export const getRevenueTrendByMonth = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { months = 6, period = "monthly" } = req.query;
+    const monthsCount = parseInt(months) || 6;
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsCount);
+
+    // Group by period (monthly, quarterly, or annual)
+    let groupExpression;
+    let dateFormatExpression;
+
+    if (period === "quarterly") {
+      groupExpression = {
+        year: { $year: "$date" },
+        quarter: { $ceil: { $divide: [{ $month: "$date" }, 3] } }
+      };
+      dateFormatExpression = {
+        $concat: [
+          "Q",
+          { $toString: { $ceil: { $divide: [{ $month: "$date" }, 3] } } },
+          " ",
+          { $toString: { $year: "$date" } }
+        ]
+      };
+    } else if (period === "annual") {
+      groupExpression = {
+        year: { $year: "$date" }
+      };
+      dateFormatExpression = { $toString: { $year: "$date" } };
+    } else {
+      // monthly (default)
+      groupExpression = {
+        year: { $year: "$date" },
+        month: { $month: "$date" }
+      };
+      dateFormatExpression = {
+        $concat: [
+          { $arrayElemAt: [["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], { $month: "$date" }] },
+          " ",
+          { $toString: { $year: "$date" } }
+        ]
+      };
+    }
+
+    // Get payments grouped by period
+    const pipeline = [
+      {
+        $match: {
+          tenantId,
+          status: "success",
+          date: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: groupExpression,
+          revenue: { $sum: "$amount" },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id.year": 1, ...(period !== "annual" && { "_id.month": 1, "_id.quarter": 1 }) } }
+    ];
+
+    const revenueData = await Payment.aggregate(pipeline);
+
+    // Format for frontend
+    const formattedData = revenueData.map((item, index) => {
+      let month;
+      if (period === "quarterly") {
+        month = `Q${item._id.quarter} ${item._id.year}`;
+      } else if (period === "annual") {
+        month = `${item._id.year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        month = `${monthNames[item._id.month - 1]} ${item._id.year}`;
+      }
+
+      return {
+        month,
+        revenue: item.revenue,
+        transactions: item.count,
+        date: period === "quarterly" ? `${item._id.year}-Q${item._id.quarter}` : 
+              period === "annual" ? `${item._id.year}` :
+              `${item._id.year}-${String(item._id.month).padStart(2, '0')}`
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedData,
+      period,
+      total: formattedData.reduce((sum, item) => sum + item.revenue, 0),
+      average: formattedData.length > 0 ? Math.round(formattedData.reduce((sum, item) => sum + item.revenue, 0) / formattedData.length) : 0
+    });
+  } catch (err) {
+    console.error("❌ Get revenue trend error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// Get pending fees trend by month
+export const getPendingFeesTrendByMonth = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { months = 6, period = "monthly" } = req.query;
+    const monthsCount = parseInt(months) || 6;
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsCount);
+
+    // Get all students with pending fees
+    const students = await Student.find({ tenantId });
+    
+    // Calculate current pending fees
+    const totalPending = students.reduce((sum, s) => {
+      const fees = s.fees || 0;
+      const balance = s.balance || 0;
+      return sum + Math.max(0, fees - balance);
+    }, 0);
+
+    // Build monthly data based on student enrollment dates
+    const monthlyData = {};
+    
+    students.forEach(student => {
+      const enrollDate = new Date(student.createdAt || new Date());
+      const year = enrollDate.getFullYear();
+      const month = enrollDate.getMonth();
+      
+      let key;
+      if (period === "quarterly") {
+        const quarter = Math.ceil((month + 1) / 3);
+        key = `Q${quarter} ${year}`;
+      } else if (period === "annual") {
+        key = `${year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        key = `${monthNames[month]} ${year}`;
+      }
+      
+      if (!monthlyData[key]) {
+        monthlyData[key] = { amount: 0, count: 0 };
+      }
+      
+      // Add pending fees for this student
+      const pending = Math.max(0, (student.fees || 0) - (student.balance || 0));
+      monthlyData[key].amount += pending;
+      monthlyData[key].count += 1;
+    });
+
+    // Convert to array format
+    const formattedData = Object.entries(monthlyData)
+      .map(([month, data]) => ({
+        month,
+        amount: data.amount,
+        count: data.count
+      }))
+      .sort((a, b) => {
+        // Sort chronologically
+        const dateA = new Date(a.month);
+        const dateB = new Date(b.month);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    res.json({
+      success: true,
+      data: formattedData,
+      period,
+      total: formattedData.reduce((sum, item) => sum + item.amount, 0),
+      average: formattedData.length > 0 ? Math.round(formattedData.reduce((sum, item) => sum + item.amount, 0) / formattedData.length) : 0
+    });
+  } catch (err) {
+    console.error("❌ Get pending fees trend error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// Get enrollment trend by month
+export const getEnrollmentTrendByMonth = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { months = 6, period = "monthly" } = req.query;
+    const monthsCount = parseInt(months) || 6;
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsCount);
+
+    // Get students within date range and all students for total
+    const newStudents = await Student.find({
+      tenantId,
+      createdAt: { $gte: startDate, $lte: endDate }
+    });
+
+    const allStudents = await Student.find({ tenantId });
+
+    // Build monthly data
+    const monthlyData = {};
+    
+    // First, populate with all months in range (with 0 new enrollments)
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      let key;
+      if (period === "quarterly") {
+        const quarter = Math.ceil((month + 1) / 3);
+        key = `Q${quarter} ${year}`;
+      } else if (period === "annual") {
+        key = `${year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        key = `${monthNames[month]} ${year}`;
+      }
+      
+      if (!monthlyData[key]) {
+        monthlyData[key] = { new: 0, total: 0 };
+      }
+      
+      if (period === "monthly") {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      } else if (period === "quarterly") {
+        currentDate.setMonth(currentDate.getMonth() + 3);
+      } else {
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+      }
+    }
+
+    // Add new enrollments
+    newStudents.forEach(student => {
+      const enrollDate = new Date(student.createdAt);
+      const year = enrollDate.getFullYear();
+      const month = enrollDate.getMonth();
+      
+      let key;
+      if (period === "quarterly") {
+        const quarter = Math.ceil((month + 1) / 3);
+        key = `Q${quarter} ${year}`;
+      } else if (period === "annual") {
+        key = `${year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        key = `${monthNames[month]} ${year}`;
+      }
+      
+      if (monthlyData[key]) {
+        monthlyData[key].new += 1;
+      }
+    });
+
+    // Calculate cumulative total for each period
+    let cumulativeTotal = 0;
+    const periodStartDate = new Date(startDate);
+    periodStartDate.setMonth(periodStartDate.getMonth() - monthsCount); // Go back further to get accurate total
+
+    allStudents.forEach(student => {
+      const enrollDate = new Date(student.createdAt);
+      if (enrollDate <= endDate) {
+        const year = enrollDate.getFullYear();
+        const month = enrollDate.getMonth();
+        
+        let key;
+        if (period === "quarterly") {
+          const quarter = Math.ceil((month + 1) / 3);
+          key = `Q${quarter} ${year}`;
+        } else if (period === "annual") {
+          key = `${year}`;
+        } else {
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          key = `${monthNames[month]} ${year}`;
+        }
+        
+        if (monthlyData[key]) {
+          monthlyData[key].total = (monthlyData[key].total || 0) + 1;
+        }
+      }
+    });
+
+    // Convert to array format and sort
+    const formattedData = Object.entries(monthlyData)
+      .map(([month, data]) => ({
+        month,
+        new: data.new,
+        total: data.total,
+        cumulativeNew: data.new
+      }))
+      .sort((a, b) => {
+        const dateA = new Date(a.month);
+        const dateB = new Date(b.month);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+    res.json({
+      success: true,
+      data: formattedData,
+      period,
+      totalNewEnrollments: formattedData.reduce((sum, item) => sum + item.new, 0),
+      totalStudents: allStudents.length
+    });
+  } catch (err) {
+    console.error("❌ Get enrollment trend error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// Get enrollment by batch
+export const getEnrollmentByBatch = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    // Get all students grouped by batch
+    const students = await Student.find({ tenantId });
+
+    // Group students by batch
+    const batchData = {};
+    
+    students.forEach(student => {
+      const batchName = student.batch || 'Unassigned';
+      
+      if (!batchData[batchName]) {
+        batchData[batchName] = {
+          batch: batchName,
+          students: 0,
+          active: 0,
+          fees: 0,
+          collected: 0,
+          pending: 0
+        };
+      }
+      
+      const fees = student.fees || 0;
+      const balance = student.balance || 0;
+      const pendingAmount = Math.max(0, fees - balance);
+      const collectedAmount = fees - pendingAmount;
+      
+      batchData[batchName].students += 1;
+      batchData[batchName].fees += fees;
+      batchData[batchName].collected += collectedAmount;
+      batchData[batchName].pending += pendingAmount;
+      
+      // Count active students (those with enrollment status = active or ongoing)
+      if (student.status === 'active' || student.status === 'ongoing') {
+        batchData[batchName].active += 1;
+      }
+    });
+
+    // Convert to array and sort by student count (descending)
+    const formattedData = Object.values(batchData)
+      .sort((a, b) => b.students - a.students)
+      .slice(0, 10); // Top 10 batches
+
+    res.json({
+      success: true,
+      data: formattedData,
+      totalBatches: Object.keys(batchData).length,
+      totalStudents: students.length
+    });
+  } catch (err) {
+    console.error("❌ Get enrollment by batch error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// Get enrollment by course (Admissions count by course)
+export const getEnrollmentByCourse = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    // Get all students
+    const students = await Student.find({ tenantId });
+
+    // Group students by course
+    const courseData = {};
+    
+    students.forEach(student => {
+      const courseName = student.course || 'Unassigned';
+      
+      if (!courseData[courseName]) {
+        courseData[courseName] = {
+          course: courseName,
+          students: 0,
+          active: 0
+        };
+      }
+      
+      courseData[courseName].students += 1;
+      
+      // Count active students
+      if (student.status === 'active' || student.status === 'ongoing') {
+        courseData[courseName].active += 1;
+      }
+    });
+
+    // Convert to array and sort by student count (descending)
+    const formattedData = Object.values(courseData).sort((a, b) => b.students - a.students);
+
+    res.json({
+      success: true,
+      data: formattedData,
+      totalCourses: formattedData.length,
+      totalStudents: students.length
+    });
+  } catch (err) {
+    console.error("❌ Get enrollment by course error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// Get expenses trend by month
+export const getExpensesTrendByMonth = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { months = 6, period = "monthly" } = req.query;
+    const monthsCount = parseInt(months) || 6;
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsCount);
+
+    // Get expenses within date range
+    const expenses = await Expense.find({
+      tenantId,
+      date: { $gte: startDate, $lte: endDate }
+    });
+
+    // Build monthly data
+    const monthlyData = {};
+    
+    // First, populate with all months in range (with 0 expenses)
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      let key;
+      if (period === "quarterly") {
+        const quarter = Math.ceil((month + 1) / 3);
+        key = `Q${quarter} ${year}`;
+      } else if (period === "annual") {
+        key = `${year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        key = `${monthNames[month]} ${year}`;
+      }
+      
+      if (!monthlyData[key]) {
+        monthlyData[key] = { month: key, expenses: 0 };
+      }
+      
+      // Only increment month for monthly period
+      if (period === "monthly") {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      } else if (period === "quarterly") {
+        currentDate.setMonth(currentDate.getMonth() + 3);
+      } else {
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+      }
+    }
+
+    // Add expenses to respective months
+    expenses.forEach(expense => {
+      const expenseDate = new Date(expense.date);
+      const year = expenseDate.getFullYear();
+      const month = expenseDate.getMonth();
+      
+      let key;
+      if (period === "quarterly") {
+        const quarter = Math.ceil((month + 1) / 3);
+        key = `Q${quarter} ${year}`;
+      } else if (period === "annual") {
+        key = `${year}`;
+      } else {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        key = `${monthNames[month]} ${year}`;
+      }
+      
+      if (monthlyData[key]) {
+        monthlyData[key].expenses += expense.amount || 0;
+      }
+    });
+
+    // Convert to array format and sort
+    const formattedData = Object.values(monthlyData).sort((a, b) => {
+      const dateA = new Date(a.month);
+      const dateB = new Date(b.month);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    res.json({
+      success: true,
+      data: formattedData,
+      period,
+      totalExpenses: formattedData.reduce((sum, item) => sum + item.expenses, 0)
+    });
+  } catch (err) {
+    console.error("❌ Get expenses trend error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+

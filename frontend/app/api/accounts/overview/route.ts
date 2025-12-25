@@ -21,21 +21,7 @@ function getCacheKey(req: NextRequest): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const cacheKey = getCacheKey(request);
-
-    // Check Redis cache
-    const cached = await redisCache.get<any>(cacheKey);
-    if (cached) {
-      console.log('[BFF] Accounts Overview Cache HIT');
-      
-      const response = NextResponse.json(cached);
-      response.headers.set('X-Cache', 'HIT');
-      response.headers.set('X-Cache-Type', redisCache.isConnected() ? 'REDIS' : 'MEMORY');
-      response.headers.set('Cache-Control', 'public, max-age=300');
-      return response;
-    }
-
-    // Cache miss - fetch from backend
+    // Skip Redis cache - fetch fresh data every time for real-time accuracy
     const url = new URL(request.url);
     const backendUrl = new URL("/api/accounts/overview", BACKEND_URL);
     
@@ -54,6 +40,7 @@ export async function GET(request: NextRequest) {
         'Cookie': cookies,
       },
       credentials: 'include',
+      cache: 'no-store', // Force fresh fetch from backend
     });
 
     if (!backendResponse.ok) {
@@ -66,15 +53,11 @@ export async function GET(request: NextRequest) {
 
     const data = await backendResponse.json();
 
-    // Cache the response
-    if (data.success) {
-      await redisCache.set(cacheKey, data, CACHE_TTL.MEDIUM);
-      console.log('[BFF] Accounts Overview Cache MISS - cached for 5 min');
-    }
-
+    // Return fresh data without caching
     const response = NextResponse.json(data);
-    response.headers.set('X-Cache', 'MISS');
-    response.headers.set('Cache-Control', 'public, max-age=300');
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
 
   } catch (error: any) {

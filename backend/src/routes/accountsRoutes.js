@@ -11,7 +11,13 @@ import {
   updateRefundStatus,
   getFinancialReports,
   getFeesPendingStudents,
-  getAllTransactions
+  getAllTransactions,
+  getRevenueTrendByMonth,
+  getPendingFeesTrendByMonth,
+  getEnrollmentTrendByMonth,
+  getEnrollmentByBatch,
+  getEnrollmentByCourse,
+  getExpensesTrendByMonth
 } from "../controllers/accountsController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -28,6 +34,24 @@ router.use(authorizeRoles("tenantAdmin", "accountant", "teacher"));
 
 // Accounts overview/dashboard
 router.get("/overview", getAccountsOverview);
+
+// Revenue trend by month
+router.get("/revenue-trend", getRevenueTrendByMonth);
+
+// Pending fees trend by month
+router.get("/pending-fees-trend", getPendingFeesTrendByMonth);
+
+// Enrollment trend by month
+router.get("/enrollment-trend", getEnrollmentTrendByMonth);
+
+// Enrollment by batch
+router.get("/enrollment-by-batch", getEnrollmentByBatch);
+
+// Enrollment by course
+router.get("/enrollment-by-course", getEnrollmentByCourse);
+
+// Expenses trend by month
+router.get("/expenses-trend", getExpensesTrendByMonth);
 
 // Financial reports (Profit & Loss)
 router.get("/reports", getFinancialReports);

@@ -17,6 +17,7 @@ interface BuildFetchOptionsParams {
  * 
  * Automatically includes:
  * - Cookies from incoming request
+ * - X-Tenant-Subdomain header (extracted from Host header)
  * - Proper headers
  * - Request body if provided
  * 
@@ -34,12 +35,35 @@ export function buildBackendFetchOptions(
 ): RequestInit {
   // Extract cookies from incoming request
   const cookies = req.headers.get('cookie') || '';
+  
+  // Extract tenant subdomain from Host header
+  const host = req.headers.get('host') || '';
+  let tenantSubdomain = '';
+  
+  if (host) {
+    const hostname = host.split(':')[0]; // Remove port
+    const parts = hostname.split('.');
+    
+    // For prasamagar.lvh.me (3 parts)
+    if (hostname.includes('lvh.me') && parts.length >= 3) {
+      tenantSubdomain = parts[0];
+    }
+    // For prasamagar.enromatics.com (3 parts)
+    else if (hostname.includes('enromatics.com') && parts.length >= 3) {
+      tenantSubdomain = parts[0];
+    }
+  }
 
   // Build headers
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(customHeaders || {}),
   };
+  
+  // Add tenant subdomain header if available
+  if (tenantSubdomain) {
+    headers['X-Tenant-Subdomain'] = tenantSubdomain;
+  }
 
   // Forward cookies
   if (cookies) {

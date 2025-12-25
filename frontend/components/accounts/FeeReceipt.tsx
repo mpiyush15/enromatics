@@ -293,6 +293,18 @@ export default function FeeReceipt({ payment, tenantInfo, onClose }: ReceiptProp
                   <td className="label font-bold">Payment Method:</td>
                   <td className="value uppercase">{payment.method}</td>
                 </tr>
+                {payment.transactionId && (
+                  <tr>
+                    <td className="label font-bold">Transaction ID:</td>
+                    <td className="value font-mono text-sm">{payment.transactionId}</td>
+                  </tr>
+                )}
+                {payment.remarks && (
+                  <tr>
+                    <td className="label font-bold">Remarks:</td>
+                    <td className="value">{payment.remarks}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 

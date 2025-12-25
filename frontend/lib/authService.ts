@@ -14,11 +14,27 @@ export const authService = {
   // Login user - Now through BFF layer
   async login(email: string, password: string) {
     try {
+      // Extract subdomain from current URL
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+      let subdomain = '';
+      
+      if (hostname.includes('lvh.me')) {
+        const parts = hostname.split('.');
+        if (parts.length >= 3) {
+          subdomain = parts[0]; // e.g., 'prasamagar' from 'prasamagar.lvh.me'
+        }
+      } else if (hostname.includes('enromatics.com')) {
+        const parts = hostname.split('.');
+        if (parts.length >= 3) {
+          subdomain = parts[0]; // e.g., 'prasamagar' from 'prasamagar.enromatics.com'
+        }
+      }
+      
       const res = await fetch(`${BFF_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // ✅ BFF handles cookie forwarding
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, subdomain }),
       });
 
       const data = await res.json();
