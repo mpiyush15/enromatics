@@ -106,16 +106,22 @@ export default function AllTransactionsPage() {
     fetchTransactions();
   }, []);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (retryCount = 0) => {
+    const MAX_RETRIES = 3;
     try {
       setLoading(true);
       
-      console.log("🔍 Fetching all transactions...");
+      console.log("🔍 Fetching all transactions...", { attempt: retryCount + 1 });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
 
       const res = await fetch(`/api/accounts/transactions`, {
         credentials: "include",
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       console.log("📥 Response status:", res.status);
 
       const data = await res.json();
@@ -130,11 +136,29 @@ export default function AllTransactionsPage() {
         setTransactions(data.transactions || []);
       } else {
         console.error("❌ Failed to load transactions:", data.message);
-        alert(`❌ Failed to load transactions: ${data.message}`);
+        // Retry on server errors
+        if (res.status >= 500 && retryCount < MAX_RETRIES) {
+          console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+          setTimeout(() => fetchTransactions(retryCount + 1), 2000);
+        } else {
+          alert(`❌ Failed to load transactions: ${data.message}`);
+        }
       }
     } catch (err: any) {
       console.error("❌ Error loading transactions:", err);
-      alert(`❌ Error loading transactions: ${err.message}`);
+      
+      if (err.name === 'AbortError') {
+        console.error("Request timeout - server took too long to respond");
+        // Retry on timeout
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying after timeout... (${retryCount + 1}/${MAX_RETRIES})`);
+          setTimeout(() => fetchTransactions(retryCount + 1), 2000);
+        } else {
+          alert("❌ Server timeout - please try again later");
+        }
+      } else {
+        alert(`❌ Error loading transactions: ${err.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
