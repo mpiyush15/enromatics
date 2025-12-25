@@ -16,14 +16,17 @@ export const markAttendance = async (req, res) => {
     }
 
     const bulkOps = records.map(({ studentId, date, status, remarks }) => {
-      // Parse date as YYYY-MM-DD and create date at midnight UTC to avoid timezone shifts
+      // Parse date string and create date in IST timezone (UTC+5:30)
       const dateStr = date.includes('T') ? date.split('T')[0] : date;
       const [year, month, day] = dateStr.split('-').map(Number);
-      const utcDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      
+      // Create date at midnight IST
+      // IST = UTC + 5:30, so subtract 5:30 from local midnight to get UTC equivalent
+      const istDate = new Date(year, month - 1, day, 0, 0, 0, 0);
       
       return {
         updateOne: {
-          filter: { tenantId, studentId, date: utcDate },
+          filter: { tenantId, studentId, date: istDate },
           update: {
             $set: {
               status: status || "present",
@@ -31,7 +34,7 @@ export const markAttendance = async (req, res) => {
               markedBy: req.user._id,
               tenantId,
               studentId,
-              date: utcDate
+              date: istDate
             }
           },
           upsert: true
@@ -62,12 +65,13 @@ export const getAttendanceByDate = async (req, res) => {
     const { date, batch, course } = req.query;
     if (!date) return res.status(400).json({ message: "Date is required" });
 
-    // Parse date as YYYY-MM-DD and create UTC date range to avoid timezone shifts
+    // Parse date string and create IST date range
     const dateStr = date.includes('T') ? date.split('T')[0] : date;
     const [year, month, day] = dateStr.split('-').map(Number);
     
-    const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-    const endDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    // Create date range for the full day in IST
+    const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
 
     // Build student filter
     const studentMatch = { tenantId };
