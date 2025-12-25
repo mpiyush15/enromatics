@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
+import NotificationCenter from "./NotificationCenter";
+import { useParams } from "next/navigation";
 
 interface TopbarProps {
   userName: string;
@@ -12,6 +14,8 @@ interface TopbarProps {
 
 export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
   const [dateTime, setDateTime] = useState("");
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
 
   useEffect(() => {
     const updateTime = () => {
@@ -72,6 +76,9 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
             <span className="hidden sm:inline">Social</span>
           </Link>
         )}
+        
+        {/* Notification Bell */}
+        <NotificationCenter tenantId={tenantId} />
         
         {/* Dark Mode Toggle */}
         <div className="px-2 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition">
