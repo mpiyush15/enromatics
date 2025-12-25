@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
 import NotificationCenter from "./NotificationCenter";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 
 interface TopbarProps {
   userName: string;
@@ -14,8 +14,11 @@ interface TopbarProps {
 
 export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
   const [dateTime, setDateTime] = useState("");
+  const pathname = usePathname();
   const params = useParams();
-  const tenantId = params?.tenantId as string;
+  
+  // Only get tenantId if we're in a dashboard route with [tenantId]
+  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
 
   useEffect(() => {
     const updateTime = () => {

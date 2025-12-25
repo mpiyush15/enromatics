@@ -352,7 +352,7 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handleDeletePayment = async (paymentId: string) {
+  const handleDeletePayment = async (paymentId: string) => {
     const ok = confirm("Are you sure you want to delete this payment receipt?");
     if (!ok) return;
     try {
