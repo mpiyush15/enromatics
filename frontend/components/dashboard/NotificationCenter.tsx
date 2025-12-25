@@ -12,26 +12,55 @@ export default function NotificationCenter({ tenantId }: NotificationCenterProps
   const [showSendModal, setShowSendModal] = useState(false);
   const [notificationHistory, setNotificationHistory] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingBatches, setLoadingBatches] = useState(false);
   
   // Form state
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("general");
   const [priority, setPriority] = useState("medium");
+  const [selectedBatch, setSelectedBatch] = useState<string | undefined>(undefined);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [sendToAll, setSendToAll] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Fetch students when modal opens
-  const fetchStudents = async () => {
+  // Fetch batches when modal opens
+  const fetchBatches = async () => {
+    if (!tenantId) return;
+    setLoadingBatches(true);
+    try {
+      const [data, err] = await safeApiCall(() =>
+        api.get<any>(`/api/batches?tenantId=${tenantId}`)
+      );
+      if (!err && data?.batches) {
+        setBatches(data.batches);
+      }
+    } catch (error) {
+      console.error("Error fetching batches:", error);
+    } finally {
+      setLoadingBatches(false);
+    }
+  };
+
+  // Fetch students when batch is selected or modal opens
+  const fetchStudents = async (batchId?: string) => {
     if (!tenantId) return;
     setLoading(true);
     try {
+      let url = `/api/students?tenantId=${tenantId}`;
+      if (batchId) {
+        url += `&batchId=${batchId}`;
+        console.log(`🔍 Fetching students for batch: ${batchId}`);
+      } else {
+        console.log('🔍 Fetching all students (no batch filter)');
+      }
       const [data, err] = await safeApiCall(() =>
-        api.get<any>(`/api/students?tenantId=${tenantId}`)
+        api.get<any>(url)
       );
       if (!err && data?.students) {
+        console.log(`✅ Fetched ${data.students.length} students`);
         setStudents(data.students);
       }
     } catch (error) {
@@ -43,9 +72,27 @@ export default function NotificationCenter({ tenantId }: NotificationCenterProps
 
   useEffect(() => {
     if (showSendModal) {
-      fetchStudents();
+      fetchBatches();
+      // Don't fetch students initially - wait for batch selection
+      setStudents([]);
+      setSelectedStudents([]);
     }
   }, [showSendModal, tenantId]);
+
+  // Fetch students when batch changes
+  useEffect(() => {
+    if (showSendModal && selectedBatch !== undefined) {
+      console.log(`📊 Batch changed to: ${selectedBatch}`);
+      if (selectedBatch === "all") {
+        // "All Batches" selected
+        fetchStudents();
+      } else {
+        // Specific batch selected
+        fetchStudents(selectedBatch);
+      }
+      setSelectedStudents([]); // Clear selected students when batch changes
+    }
+  }, [selectedBatch, showSendModal]);
 
   const handleSendNotification = async () => {
     if (!title || !message) {
@@ -94,6 +141,7 @@ export default function NotificationCenter({ tenantId }: NotificationCenterProps
     setMessage("");
     setType("general");
     setPriority("medium");
+    setSelectedBatch(undefined);
     setSelectedStudents([]);
     setSendToAll(false);
   };
@@ -282,6 +330,40 @@ export default function NotificationCenter({ tenantId }: NotificationCenterProps
                 </div>
               </div>
 
+              {/* Batch Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Select Batch *
+                </label>
+                <select
+                  value={selectedBatch ?? ""}
+                  onChange={(e) => setSelectedBatch(e.target.value || undefined)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">-- Select a batch --</option>
+                  <option value="all">All Batches</option>
+                  {loadingBatches ? (
+                    <option value="" disabled>Loading batches...</option>
+                  ) : (
+                    batches.map((batch) => (
+                      <option key={batch._id} value={batch._id}>
+                        {batch.name} {batch.course ? `- ${batch.course}` : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {selectedBatch && selectedBatch !== "all" && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Showing students from selected batch only
+                  </p>
+                )}
+                {selectedBatch === "all" && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Showing all students from all batches
+                  </p>
+                )}
+              </div>
+
               {/* Student Selection */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -321,7 +403,11 @@ export default function NotificationCenter({ tenantId }: NotificationCenterProps
                     {loading ? (
                       <p className="text-sm text-gray-500 text-center py-4">Loading students...</p>
                     ) : students.length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">No students found</p>
+                      <div className="text-center py-4">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {selectedBatch === undefined ? "Please select a batch to view students" : "No students found in this batch"}
+                        </p>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         {students.map((student) => (
