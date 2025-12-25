@@ -169,10 +169,13 @@ export default function OffersManagement() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">💰 Offers Management</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">💰 Offers Management</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">Create and manage promotional offers for your plans</p>
+        </div>
         <button
           onClick={() => {
             setShowForm(!showForm);
@@ -195,7 +198,7 @@ export default function OffersManagement() {
               });
             }
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors font-medium"
         >
           <Plus size={20} /> Create Offer
         </button>
@@ -203,15 +206,15 @@ export default function OffersManagement() {
 
       {/* Create/Edit Form */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 mb-6 border border-slate-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">
             {editingOffer ? 'Edit Offer' : 'Create New Offer'}
           </h2>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Offer Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -219,13 +222,13 @@ export default function OffersManagement() {
                 placeholder="e.g., Summer Sale 2025"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Code */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Offer Code <span className="text-red-500">*</span>
               </label>
               <input
@@ -235,25 +238,25 @@ export default function OffersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, code: e.target.value.toUpperCase() })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 uppercase"
               />
             </div>
 
             {/* Description */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Description</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Description</label>
               <textarea
                 placeholder="Offer description..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Discount Type */}
             <div>
-              <label className="block text-sm font-medium mb-2">Discount Type</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Discount Type</label>
               <select
                 value={formData.discountType}
                 onChange={(e) =>
@@ -262,7 +265,7 @@ export default function OffersManagement() {
                     discountType: e.target.value as 'percentage' | 'flat',
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="percentage">Percentage (%)</option>
                 <option value="flat">Flat Amount (₹)</option>
@@ -271,7 +274,7 @@ export default function OffersManagement() {
 
             {/* Discount Value */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Discount Value {formData.discountType === 'percentage' ? '(%)' : '(₹)'}
               </label>
               <input
@@ -281,14 +284,14 @@ export default function OffersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, discountValue: Number(e.target.value) })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Max Discount (for percentage) */}
             {formData.discountType === 'percentage' && (
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                   Max Discount Amount (₹) (Optional)
                 </label>
                 <input
@@ -298,40 +301,40 @@ export default function OffersManagement() {
                   onChange={(e) =>
                     setFormData({ ...formData, maxDiscountAmount: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
               </div>
             )}
 
             {/* Valid From */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Valid From <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={formData.validFrom}
                 onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Valid Until */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Valid Until <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={formData.validUntil}
                 onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Applicable To */}
             <div>
-              <label className="block text-sm font-medium mb-2">Applicable To</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Applicable To</label>
               <select
                 value={formData.applicableTo}
                 onChange={(e) =>
@@ -340,7 +343,7 @@ export default function OffersManagement() {
                     applicableTo: e.target.value as 'all_plans' | 'specific_plans',
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="all_plans">All Plans</option>
                 <option value="specific_plans">Specific Plans</option>
@@ -349,7 +352,7 @@ export default function OffersManagement() {
 
             {/* Minimum Order Value */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Minimum Order Value (₹) (Optional)
               </label>
               <input
@@ -359,13 +362,13 @@ export default function OffersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, minimumOrderValue: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Max Usage Count */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
                 Max Usage Count (Optional)
               </label>
               <input
@@ -375,13 +378,13 @@ export default function OffersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, maxUsageCount: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
             {/* Max Usage Per User */}
             <div>
-              <label className="block text-sm font-medium mb-2">Max Usage Per User</label>
+              <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">Max Usage Per User</label>
               <input
                 type="number"
                 min="1"
@@ -389,7 +392,7 @@ export default function OffersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, maxUsagePerUser: Number(e.target.value) })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
 
@@ -397,7 +400,7 @@ export default function OffersManagement() {
             <div className="md:col-span-2 flex gap-4">
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                className="flex-1 px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors font-medium"
               >
                 {editingOffer ? 'Update Offer' : 'Create Offer'}
               </button>
@@ -407,7 +410,7 @@ export default function OffersManagement() {
                   setShowForm(false);
                   setEditingOffer(null);
                 }}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 font-medium"
+                className="flex-1 px-4 py-2 bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg hover:bg-slate-400 dark:hover:bg-slate-600 transition-colors font-medium"
               >
                 Cancel
               </button>
@@ -417,78 +420,78 @@ export default function OffersManagement() {
       )}
 
       {/* Offers List */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden border border-slate-200 dark:border-slate-700">
         {loading ? (
-          <div className="p-6 text-center">Loading offers...</div>
+          <div className="p-6 text-center text-slate-600 dark:text-slate-400">Loading offers...</div>
         ) : offers.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No offers created yet</div>
+          <div className="p-6 text-center text-slate-500 dark:text-slate-400">No offers created yet</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-100 border-b">
+              <thead className="bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold">Code</th>
-                  <th className="px-6 py-3 text-left font-semibold">Name</th>
-                  <th className="px-6 py-3 text-left font-semibold">Discount</th>
-                  <th className="px-6 py-3 text-left font-semibold">Valid Till</th>
-                  <th className="px-6 py-3 text-left font-semibold">Status</th>
-                  <th className="px-6 py-3 text-left font-semibold">Usage</th>
-                  <th className="px-6 py-3 text-left font-semibold">Discount Given</th>
-                  <th className="px-6 py-3 text-left font-semibold">Actions</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Code</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Name</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Discount</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Valid Till</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Status</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Usage</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Discount Given</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-white">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {offers.map((offer) => (
-                  <tr key={offer._id} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-4 font-bold text-blue-600">{offer.code}</td>
+                  <tr key={offer._id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                    <td className="px-6 py-4 font-bold text-blue-600 dark:text-blue-400">{offer.code}</td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="font-medium">{offer.name}</p>
+                        <p className="font-medium text-slate-900 dark:text-white">{offer.name}</p>
                         {offer.description && (
-                          <p className="text-sm text-gray-500">{offer.description}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{offer.description}</p>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-slate-900 dark:text-white">
                       {offer.discountType === 'percentage'
                         ? `${offer.discountValue}%`
                         : `₹${offer.discountValue}`}
                       {offer.maxDiscountAmount && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                           Max: ₹{offer.maxDiscountAmount}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">
                       {new Date(offer.validUntil).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           offer.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
                         }`}
                       >
                         {offer.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">
                       {offer.usageCount}
                       {offer.maxUsageCount && ` / ${offer.maxUsageCount}`}
                     </td>
-                    <td className="px-6 py-4 font-medium">₹{offer.totalDiscountGiven}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">₹{offer.totalDiscountGiven}</td>
                     <td className="px-6 py-4 flex gap-2">
                       <button
                         onClick={() => handleEdit(offer)}
-                        className="p-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                        className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                         title="Edit"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(offer._id)}
-                        className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                        className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={18} />

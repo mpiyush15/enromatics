@@ -155,10 +155,17 @@ export const sidebarLinks = [
     ],
   },
 
+  // === PRIORITY 7A: SuperAdmin Only - Overview ===
+  {
+    href: "/dashboard/superadmin",
+    label: "📊 SuperAdmin Overview",
+    roles: ["SuperAdmin"],
+  },
+
   // === PRIORITY 8: SuperAdmin Only - Leads ===
   {
     href: "/dashboard/lead",
-    label: "� Leads",
+    label: "👥 Leads",
     roles: ["SuperAdmin", "Admin"],
   },
   
@@ -182,14 +189,25 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 11: SuperAdmin Only - Demo Requests ===
+  // === PRIORITY 11: SuperAdmin Only - Offers & Promotions ===
+  {
+    label: "🎁 Offers & Promotions",
+    href: "#",
+    roles: ["SuperAdmin"],
+    children: [
+      { label: "📋 All Offers", href: "/dashboard/admin/offers", roles: ["SuperAdmin"] },
+      { label: "➕ Create Offer", href: "/dashboard/admin/offers/create", roles: ["SuperAdmin"] },
+    ],
+  },
+
+  // === PRIORITY 12: SuperAdmin Only - Demo Requests ===
   {
     href: "/dashboard/demo-requests",
     label: "📅 Demo Requests",
     roles: ["SuperAdmin"],
   },
 
-  // === PRIORITY 12: Institute Settings (Staff + Billing) ===
+  // === PRIORITY 13: Institute Settings (Staff + Billing) ===
   {
     label: "⚙️ Institute Settings",
     href: "#",
@@ -201,7 +219,7 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 13: Personal Settings (Profile + Plan) ===
+  // === PRIORITY 14: Personal Settings (Profile + Plan) ===
   {
     label: "👤 Personal",
     href: "#",
