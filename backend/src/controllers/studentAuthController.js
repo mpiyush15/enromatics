@@ -191,3 +191,126 @@ export const getStudentPayments = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const getStudentNotifications = async (req, res) => {
+  try {
+    if (!req.student) return res.status(401).json({ message: "Not authenticated" });
+
+    const notifications = [];
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    // 1. Fetch upcoming tests
+    try {
+      const Test = await import("../models/Test.js");
+      const upcomingTests = await Test.default
+        .find({
+          tenantId: req.student.tenantId,
+          date: { $gte: now, $lte: thirtyDaysFromNow },
+          isActive: true
+        })
+        .sort({ date: 1 })
+        .limit(3)
+        .lean();
+
+      upcomingTests.forEach(test => {
+        const daysLeft = Math.ceil((new Date(test.date) - now) / (1000 * 60 * 60 * 24));
+        notifications.push({
+          id: `test_${test._id}`,
+          type: 'test',
+          emoji: '📝',
+          label: 'Upcoming Test',
+          title: test.name || test.subject || 'Test',
+          date: test.date,
+          badge: daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : `${daysLeft} days left`,
+          priority: daysLeft <= 3 ? 'high' : 'medium'
+        });
+      });
+    } catch (err) {
+      console.log('No tests found:', err.message);
+    }
+
+    // 2. Check for pending payments/fees
+    try {
+      const Payment = await import("../models/Payment.js");
+      const totalPaid = await Payment.default.aggregate([
+        { 
+          $match: { 
+            studentId: req.student._id,
+            status: 'success'
+          } 
+        },
+        { 
+          $group: { 
+            _id: null, 
+            total: { $sum: "$amount" } 
+          } 
+        }
+      ]);
+
+      const paidAmount = totalPaid.length > 0 ? totalPaid[0].total : 0;
+      const totalFees = req.student.fees || 0;
+      const remainingAmount = totalFees - paidAmount;
+
+      if (remainingAmount > 0) {
+        notifications.push({
+          id: `fee_${req.student._id}`,
+          type: 'fee',
+          emoji: '💰',
+          label: 'Fee Reminder',
+          title: 'Pending Payment',
+          amount: remainingAmount,
+          badge: 'Due Soon',
+          priority: 'high'
+        });
+      }
+    } catch (err) {
+      console.log('Error checking payments:', err.message);
+    }
+
+    // 3. Check recent attendance (if low, add alert)
+    try {
+      const Attendance = await import("../models/Attendance.js");
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      const recentAttendance = await Attendance.default.find({
+        studentId: req.student._id,
+        date: { $gte: thirtyDaysAgo, $lte: now }
+      }).lean();
+
+      if (recentAttendance.length > 0) {
+        const presentCount = recentAttendance.filter(r => r.status === 'present' || r.status === 'late').length;
+        const percentage = (presentCount / recentAttendance.length) * 100;
+
+        if (percentage < 75) {
+          notifications.push({
+            id: `attendance_${req.student._id}`,
+            type: 'attendance',
+            emoji: '⚠️',
+            label: 'Attendance Alert',
+            title: 'Low Attendance',
+            date: now,
+            badge: `${percentage.toFixed(0)}%`,
+            priority: 'high'
+          });
+        }
+      }
+    } catch (err) {
+      console.log('Error checking attendance:', err.message);
+    }
+
+    // Sort by priority and date
+    notifications.sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+
+    res.status(200).json({
+      success: true,
+      notifications: notifications.slice(0, 5) // Limit to 5 most important
+    });
+  } catch (err) {
+    console.error("Get student notifications error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

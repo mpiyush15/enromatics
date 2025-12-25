@@ -26,6 +26,12 @@ export default function StudentProfilePage() {
   const [paymentRemarks, setPaymentRemarks] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState("general");
+  const [notificationPriority, setNotificationPriority] = useState("medium");
+  const [sendingNotification, setSendingNotification] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "attendance" | "progress">("overview");
   const [batches, setBatches] = useState<any[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
@@ -300,7 +306,53 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
+  const handleSendNotification = async () => {
+    if (!notificationTitle || !notificationMessage) {
+      setStatus("❌ Please fill in title and message");
+      return;
+    }
+
+    setSendingNotification(true);
+    setStatus("Sending notification...");
+    
+    try {
+      const [data, err] = await safeApiCall(() =>
+        api.post<any>(`/api/notifications/create`, {
+          title: notificationTitle,
+          message: notificationMessage,
+          type: notificationType,
+          priority: notificationPriority,
+          studentIds: [studentId],
+          tenantId: tenantId
+        })
+      );
+
+      if (err) {
+        setStatus("❌ " + (err.message || "Failed to send notification"));
+        setSendingNotification(false);
+        return;
+      }
+
+      if (data && data.success) {
+        setStatus(`✅ Notification sent successfully to ${student?.name}!`);
+        setShowNotificationModal(false);
+        setNotificationTitle("");
+        setNotificationMessage("");
+        setNotificationType("general");
+        setNotificationPriority("medium");
+        setTimeout(() => setStatus(""), 3000);
+      } else {
+        setStatus("❌ " + (data?.message || "Failed to send notification"));
+      }
+    } catch (err: any) {
+      console.error("Send notification error:", err);
+      setStatus("❌ " + (err.message || "Error sending notification"));
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) {
     const ok = confirm("Are you sure you want to delete this payment receipt?");
     if (!ok) return;
     try {
@@ -432,6 +484,15 @@ export default function StudentProfilePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                       </svg>
                       Reset
+                    </button>
+                    <button
+                      onClick={() => setShowNotificationModal(true)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      Send Notification
                     </button>
                   </>
                 ) : (
@@ -1325,6 +1386,118 @@ export default function StudentProfilePage() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
               >
                 Add Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {showNotificationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Send Notification to {student?.name}
+              </h3>
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={notificationTitle}
+                  onChange={(e) => setNotificationTitle(e.target.value)}
+                  placeholder="Enter notification title"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Message <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  placeholder="Enter notification message"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
+                <select
+                  value={notificationType}
+                  onChange={(e) => setNotificationType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="general">General</option>
+                  <option value="announcement">Announcement</option>
+                  <option value="fee">Fee Reminder</option>
+                  <option value="test">Test/Exam</option>
+                  <option value="attendance">Attendance Alert</option>
+                  <option value="result">Result</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={notificationPriority}
+                  onChange={(e) => setNotificationPriority(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                disabled={sendingNotification}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendNotification}
+                disabled={!notificationTitle || !notificationMessage || sendingNotification}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {sendingNotification ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  "Send Notification"
+                )}
               </button>
             </div>
           </div>

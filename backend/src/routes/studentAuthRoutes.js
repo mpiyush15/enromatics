@@ -5,7 +5,8 @@ import {
   logoutStudent, 
   getStudentAttendance,
   updateStudentProfile,
-  getStudentPayments
+  getStudentPayments,
+  getStudentNotifications
 } from "../controllers/studentAuthController.js";
 import { protectStudent } from "../middleware/protectStudent.js";
 
@@ -16,6 +17,7 @@ router.get("/me", protectStudent, getCurrentStudent);
 router.put("/update-profile", protectStudent, updateStudentProfile);
 router.get("/attendance", protectStudent, getStudentAttendance);
 router.get("/payments", protectStudent, getStudentPayments);
+router.get("/notifications", protectStudent, getStudentNotifications);
 router.post("/logout", protectStudent, logoutStudent);
 
 export default router;
