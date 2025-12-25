@@ -38,6 +38,7 @@ import videoRoutes from './routes/videoRoutes.js';
 import onboardingRoutes from './routes/onboardingRoutes.js';
 import subscriptionCheckoutRoutes from './routes/subscriptionCheckoutRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import offersRoutes from './routes/offersRoutes.js';
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
@@ -142,6 +143,7 @@ app.use('/api/subscription', subscriptionCheckoutRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
 app.use('/api/mobile-scholarship', mobileScholarshipRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/offers', offersRoutes);
 app.use('/api/demo-requests', demoRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);

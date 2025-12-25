@@ -1,0 +1,19 @@
+{
+  "services": {
+    "backend": {
+      "runtime": "nodejs",
+      "startCommand": "cd backend && npm install && npm run start",
+      "envs": {
+        "NODE_ENV": "production",
+        "PORT": "5050"
+      }
+    },
+    "frontend": {
+      "runtime": "nodejs",
+      "startCommand": "cd frontend && npm install && npm run build && npm run start",
+      "envs": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
