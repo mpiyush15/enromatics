@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     // 2️⃣ Get backend URL
     const expressUrl = process.env.EXPRESS_BACKEND_URL || 
                       process.env.NEXT_PUBLIC_BACKEND_URL || 
-                      'https://endearing-blessing-production-c61f.up.railway.app';
+                      'http://localhost:5050';
 
     if (!expressUrl) {
       console.error('❌ EXPRESS_BACKEND_URL not configured');

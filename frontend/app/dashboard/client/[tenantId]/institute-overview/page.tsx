@@ -205,7 +205,7 @@ export default function InstituteOverviewPage() {
         </button>
 
         <button
-          onClick={() => router.push(`/dashboard/client/${tenantId}/payments`)}
+          onClick={() => router.push(`/dashboard/client/${tenantId}/accounts/transactions`)}
           className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg transition-all transform hover:scale-105"
         >
           <span className="text-2xl">💰</span>
