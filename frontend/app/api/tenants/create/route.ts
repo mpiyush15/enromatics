@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward request to Express backend
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
     const response = await fetch(`${backendUrl}/api/tenants/create`, {
       method: "POST",
       headers: {
