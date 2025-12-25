@@ -15,22 +15,29 @@ export const markAttendance = async (req, res) => {
       return res.status(400).json({ message: "Records array is required" });
     }
 
-    const bulkOps = records.map(({ studentId, date, status, remarks }) => ({
-      updateOne: {
-        filter: { tenantId, studentId, date: new Date(date) },
-        update: {
-          $set: {
-            status: status || "present",
-            remarks: remarks || "",
-            markedBy: req.user._id,
-            tenantId,
-            studentId,
-            date: new Date(date)
-          }
-        },
-        upsert: true
-      }
-    }));
+    const bulkOps = records.map(({ studentId, date, status, remarks }) => {
+      // Parse date as YYYY-MM-DD and create date at midnight UTC to avoid timezone shifts
+      const dateStr = date.includes('T') ? date.split('T')[0] : date;
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const utcDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+      
+      return {
+        updateOne: {
+          filter: { tenantId, studentId, date: utcDate },
+          update: {
+            $set: {
+              status: status || "present",
+              remarks: remarks || "",
+              markedBy: req.user._id,
+              tenantId,
+              studentId,
+              date: utcDate
+            }
+          },
+          upsert: true
+        }
+      };
+    });
 
     const result = await Attendance.bulkWrite(bulkOps);
 
@@ -55,10 +62,12 @@ export const getAttendanceByDate = async (req, res) => {
     const { date, batch, course } = req.query;
     if (!date) return res.status(400).json({ message: "Date is required" });
 
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    // Parse date as YYYY-MM-DD and create UTC date range to avoid timezone shifts
+    const dateStr = date.includes('T') ? date.split('T')[0] : date;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    
+    const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
     // Build student filter
     const studentMatch = { tenantId };
