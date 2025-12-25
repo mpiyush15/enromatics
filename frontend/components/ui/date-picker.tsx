@@ -23,15 +23,22 @@ export function DatePicker({
   maxDate,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  
+  // Parse date string as local date to avoid timezone shift
+  const parseDateString = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
   const [selectedDate, setSelectedDate] = React.useState<Date>(
-    value ? new Date(value) : new Date()
+    value ? parseDateString(value) : new Date()
   );
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
   // Update selected date when value prop changes
   React.useEffect(() => {
     if (value) {
-      setSelectedDate(new Date(value));
+      setSelectedDate(parseDateString(value));
     }
   }, [value]);
 
@@ -54,7 +61,11 @@ export function DatePicker({
 
   const handleSelect = (date: Date) => {
     setSelectedDate(date);
-    const isoDate = date.toISOString().split("T")[0]; // Convert to YYYY-MM-DD
+    // Convert to YYYY-MM-DD using local date, not UTC
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const isoDate = `${year}-${month}-${day}`;
     onChange(isoDate);
     setIsOpen(false);
   };
