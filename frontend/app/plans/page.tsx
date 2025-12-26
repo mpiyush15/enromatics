@@ -115,7 +115,7 @@ export default function PlansPage() {
             >
               Annual
               <span className="ml-2 text-xs bg-green-500/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full">
-                Save 30%
+                Save now
               </span>
             </button>
           </div>
