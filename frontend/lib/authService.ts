@@ -18,17 +18,30 @@ export const authService = {
       const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
       let subdomain = '';
       
+      // Non-tenant subdomains that should be treated as main domain
+      const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
+      
       if (hostname.includes('lvh.me')) {
         const parts = hostname.split('.');
         if (parts.length >= 3) {
-          subdomain = parts[0]; // e.g., 'prasamagar' from 'prasamagar.lvh.me'
+          const potentialSubdomain = parts[0];
+          // Only set subdomain if it's not a reserved/system subdomain
+          if (!nonTenantSubdomains.includes(potentialSubdomain.toLowerCase())) {
+            subdomain = potentialSubdomain;
+          }
         }
       } else if (hostname.includes('enromatics.com')) {
         const parts = hostname.split('.');
         if (parts.length >= 3) {
-          subdomain = parts[0]; // e.g., 'prasamagar' from 'prasamagar.enromatics.com'
+          const potentialSubdomain = parts[0];
+          // Only set subdomain if it's not a reserved/system subdomain
+          if (!nonTenantSubdomains.includes(potentialSubdomain.toLowerCase())) {
+            subdomain = potentialSubdomain;
+          }
         }
       }
+      
+      console.log('🌐 Login hostname:', hostname, '→ subdomain:', subdomain || 'NONE (main domain)');
       
       const res = await fetch(`${BFF_BASE}/login`, {
         method: "POST",

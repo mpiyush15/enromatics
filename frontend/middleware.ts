@@ -56,9 +56,12 @@ export function middleware(request: NextRequest) {
   // Extract subdomain
   const subdomain = getSubdomain(host);
   
-  // Handle main domain (no subdomain) - SuperAdmin login only
+  // Handle main domain (no subdomain or www) - SuperAdmin login only
   if (!subdomain || subdomain === 'www') {
-    return NextResponse.next();
+    // Clear tenant-context cookie on main domain to prevent stale data
+    const response = NextResponse.next();
+    response.cookies.delete('tenant-context');
+    return response;
   }
 
   // Handle tenant subdomain (single level: tenant.enromatics.com)
