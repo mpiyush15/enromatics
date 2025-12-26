@@ -544,8 +544,8 @@ function CheckoutPageContent() {
               <div className="space-y-2 text-sm text-gray-600">
                 <p>✓ Up to {plan.maxStudents} students</p>
                 <p>✓ Up to {plan.maxStaff} staff</p>
-                {plan.features?.slice(0, 3).map((feature, i) => (
-                  <p key={i}>✓ {feature}</p>
+                {plan.features?.slice(2, 5).map((feature, i) => (
+                  <p key={i}>✓ {feature.replace('✓ ', '')}</p>
                 ))}
               </div>
             </CardContent>

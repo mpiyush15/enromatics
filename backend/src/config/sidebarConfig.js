@@ -162,6 +162,18 @@ export const sidebarLinks = [
     roles: ["SuperAdmin"],
   },
 
+  // === PRIORITY 7B: SuperAdmin Only - Plans & Offers (Unified) ===
+  {
+    label: "💰 Plans & Offers",
+    href: "#",
+    roles: ["SuperAdmin"],
+    children: [
+      { label: "📋 Plans Management", href: "/dashboard/superadmin/plans", roles: ["SuperAdmin"] },
+      { label: "🎁 All Offers", href: "/dashboard/admin/offers", roles: ["SuperAdmin"] },
+      { label: "➕ Create Offer", href: "/dashboard/admin/offers/create", roles: ["SuperAdmin"] },
+    ],
+  },
+
   // === PRIORITY 8: SuperAdmin Only - Leads ===
   {
     href: "/dashboard/lead",
@@ -186,17 +198,6 @@ export const sidebarLinks = [
       { label: "💰 Payments", href: "/dashboard/payments", roles: ["SuperAdmin"] },
       { label: "📊 Subscribers", href: "/dashboard/subscribers", roles: ["SuperAdmin"] },
       { label: "💾 Storage Usage", href: "/dashboard/storage", roles: ["SuperAdmin"] },
-    ],
-  },
-
-  // === PRIORITY 11: SuperAdmin Only - Offers & Promotions ===
-  {
-    label: "🎁 Offers & Promotions",
-    href: "#",
-    roles: ["SuperAdmin"],
-    children: [
-      { label: "📋 All Offers", href: "/dashboard/admin/offers", roles: ["SuperAdmin"] },
-      { label: "➕ Create Offer", href: "/dashboard/admin/offers/create", roles: ["SuperAdmin"] },
     ],
   },
 

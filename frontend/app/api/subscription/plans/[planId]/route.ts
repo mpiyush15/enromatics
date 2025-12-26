@@ -37,8 +37,9 @@ export async function GET(
       annualPrice: annualPrice,
       billingCycle: "monthly",
       features: planData.features.map(f => f.replace('✓ ', '')),
-      maxStudents: planData.id === 'starter' ? 100 : planData.id === 'professional' ? 500 : 10000,
-      maxStaff: planData.id === 'starter' ? 5 : planData.id === 'professional' ? 50 : 500,
+      maxStudents: planData.quotas?.students || 100,
+      maxStaff: planData.quotas?.staff || 5,
+      quotas: planData.quotas,
       popular: planData.popular,
       buttonLabel: planData.buttonLabel,
       isFree: isFree, // Explicitly set isFree flag

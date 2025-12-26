@@ -2,13 +2,14 @@ import express from "express";
 import Offer from "../models/Offer.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import Subscription from "../models/Subscription.js";
 
 const router = express.Router();
 
 // ============================================
 // SUPERADMIN: CREATE OFFER
 // ============================================
-router.post("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.post("/", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const {
       name,
@@ -104,7 +105,7 @@ router.post("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // GET ALL OFFERS (Superadmin)
 // ============================================
-router.get("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.get("/", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const { page = 1, limit = 10, status, isActive } = req.query;
 
@@ -143,7 +144,7 @@ router.get("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // GET SINGLE OFFER
 // ============================================
-router.get("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.get("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id)
       .populate("planIds", "name")
@@ -172,7 +173,7 @@ router.get("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // UPDATE OFFER
 // ============================================
-router.put("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.put("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const { name, description, discountType, discountValue, maxDiscountAmount, validUntil, isActive, planIds } = req.body;
 
@@ -214,7 +215,7 @@ router.put("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // DELETE OFFER
 // ============================================
-router.delete("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.delete("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const offer = await Offer.findByIdAndDelete(req.params.id);
 
