@@ -80,8 +80,8 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
           </Link>
         )}
         
-        {/* Notification Bell */}
-        <NotificationCenter tenantId={tenantId} />
+        {/* Notification Bell - Only show for tenant dashboards (not superadmin) */}
+        {tenantId && <NotificationCenter tenantId={tenantId} />}
         
         {/* Dark Mode Toggle */}
         <div className="px-2 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition">
