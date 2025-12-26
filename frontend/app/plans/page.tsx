@@ -2,12 +2,78 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { subscriptionPlans } from '@/data/plans';
-import { CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
+import useSWR from 'swr';
+
+// Import unified types - SINGLE SOURCE OF TRUTH
+import { 
+  SubscriptionPlan, 
+  PlansApiResponse,
+  getFeatureText, 
+  isFeatureEnabled,
+  formatPrice,
+  calculateSavings,
+  PLAN_IDS
+} from '@/types/subscription-plan';
+
+// SWR fetcher - no cache, always fresh data
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { 
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch');
+  return res.json();
+};
 
 export default function PlansPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [showComparison, setShowComparison] = useState(false);
+
+  // SWR for live data - revalidates on focus, every 30 seconds, and no cache
+  const { data, error, isLoading, mutate } = useSWR<PlansApiResponse>(
+    '/api/subscription-plans/public',
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 30000, // Refresh every 30 seconds
+      dedupingInterval: 5000,
+    }
+  );
+
+  // Sort plans by displayOrder
+  const plans = data?.plans?.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) || [];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading plans...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 mb-4">Failed to load plans</p>
+          <button 
+            onClick={() => mutate()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-slate-900 dark:to-gray-900">
@@ -57,7 +123,7 @@ export default function PlansPage() {
 
   {/* Plans Grid */}
   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-16">
-          {subscriptionPlans.map((plan) => {
+          {plans.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
             return (
               <div
@@ -127,13 +193,13 @@ export default function PlansPage() {
                   )}
                 </div>
 
-                {/* Features */}
+                {/* Features - only show enabled features */}
                 <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-8">
-                  {plan.features.map((feature, idx) => (
+                  {plan.features.filter(isFeatureEnabled).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {feature}
+                        {getFeatureText(feature)}
                       </span>
                     </div>
                   ))}

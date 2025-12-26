@@ -19,34 +19,16 @@ import {
   X,
 } from "lucide-react";
 
-// Feature can be string (old) or object with name/enabled (new)
-interface FeatureItem {
-  name: string;
-  enabled: boolean;
-}
-
-interface SubscriptionPlan {
-  _id: string;
-  id: string;
-  name: string;
-  description: string;
-  monthlyPrice: number | string;
-  annualPrice: number | string;
-  quotas: {
-    students: number | string;
-    staff: number | string;
-    storage: string;
-    concurrentTests: number;
-  };
-  features: string[] | FeatureItem[];
-  highlightFeatures: string[];
-  buttonLabel: string;
-  popular: boolean;
-  status: string;
-  isVisible: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+// Import unified types - SINGLE SOURCE OF TRUTH
+import { 
+  SubscriptionPlan, 
+  FeatureItem,
+  PlansApiResponse,
+  PlanUpdateResponse,
+  PlanUpdatePayload,
+  normalizeFeatures,
+  getFeatureText,
+} from "@/types/subscription-plan";
 
 interface EditingPrice {
   [key: string]: {
@@ -58,19 +40,6 @@ interface EditingPrice {
 interface EditingFeatures {
   [key: string]: FeatureItem[];
 }
-
-// Helper to convert features to consistent format
-const normalizeFeatures = (features: string[] | FeatureItem[]): FeatureItem[] => {
-  if (!features || features.length === 0) return [];
-  
-  // Check if already in object format
-  if (typeof features[0] === 'object' && 'name' in features[0]) {
-    return features as FeatureItem[];
-  }
-  
-  // Convert string array to object format
-  return (features as string[]).map(f => ({ name: f, enabled: true }));
-};
 
 export default function PlansManagement() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);

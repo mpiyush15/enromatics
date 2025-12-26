@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
+// Use environment variable, fallback to localhost for development
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.EXPRESS_BACKEND_URL || "http://localhost:5050";
 const FETCH_TIMEOUT = 20000;
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeout: number) {
@@ -113,6 +114,59 @@ export async function PUT(
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("[BFF] ❌ Error updating plan:", error);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: error.message || "Failed to update plan",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/subscription-plans/[id] - Partial update plan (pricing, features, visibility)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const cookies = request.headers.get('cookie') || '';
+
+    console.log("[BFF] 🔧 PATCH updating plan:", id, body);
+
+    const response = await fetchWithTimeout(
+      `${BACKEND_URL}/api/subscription-plans/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Cookie": cookies,
+          "User-Agent": "Pixels-BFF/1.0",
+        },
+        body: JSON.stringify(body),
+        credentials: "include",
+      },
+      FETCH_TIMEOUT
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: data.message || "Failed to update plan",
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error("[BFF] ❌ Error PATCH updating plan:", error);
     
     return NextResponse.json(
       { 

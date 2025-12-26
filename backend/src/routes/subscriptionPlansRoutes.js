@@ -251,9 +251,17 @@ router.patch("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => 
     if (updateData.status !== undefined) plan.status = updateData.status;
     if (updateData.highlightFeatures !== undefined) plan.highlightFeatures = updateData.highlightFeatures;
 
-    plan.updatedBy = req.user._id;
+    // Safely set updatedBy if user exists
+    if (req.user && req.user._id) {
+      plan.updatedBy = req.user._id;
+    }
 
     await plan.save();
+
+    console.log("✅ Plan updated successfully:", plan.name, { 
+      monthlyPrice: plan.monthlyPrice, 
+      annualPrice: plan.annualPrice 
+    });
 
     res.status(200).json({
       success: true,
@@ -311,7 +319,9 @@ router.get("/public/all", async (req, res) => {
       isVisible: true,
     })
       .select("-createdBy -updatedBy -__v")
-      .sort({ createdAt: 1 });
+      .sort({ displayOrder: 1, createdAt: 1 }); // Sort by displayOrder first
+
+    console.log("[Public Plans] Returning", plans.length, "plans");
 
     res.status(200).json({
       success: true,

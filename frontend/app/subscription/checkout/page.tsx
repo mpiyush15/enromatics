@@ -132,8 +132,13 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams?.get("planId") ?? null;
+  const initialCycle = (searchParams?.get("cycle") as "monthly" | "annual") || "monthly";
 
-  const [plan, setPlan] = useState<SubscriptionPlan | null>(null);
+  // Keep selected billing cycle from query param (defaults to monthly)
+  const [selectedCycle, setSelectedCycle] = useState<"monthly" | "annual">(initialCycle);
+
+  // Plan may come from old schema (price) or new schema (monthlyPrice/annualPrice)
+  const [plan, setPlan] = useState<any | null>(null);
   const [isFree, setIsFree] = useState(false); // Detect from plan data
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>("choose-type");
@@ -153,7 +158,7 @@ function CheckoutPageContent() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [signupComplete, setSignupComplete] = useState(false); // Track signup completion for redirect message
 
-  // Fetch plan details
+  // Fetch plan details - supports both old (price) and new (monthlyPrice/annualPrice) schemas
   useEffect(() => {
     if (!planId) {
       router.push("/subscription/plans");
@@ -165,11 +170,22 @@ function CheckoutPageContent() {
         const res = await fetch(`/api/subscription/plans/${planId}`);
         if (res.ok) {
           const data = await res.json();
-          console.log("Plan fetched:", data.plan); // Debug log
-          setPlan(data.plan);
-          // Detect if plan is free (price = 0)
-          const isFreeValue = data.plan.price === 0 || data.plan.isFree === true;
-          console.log("isFree set to:", isFreeValue); // Debug log
+          const p = data.plan || data;
+          console.log("Plan fetched:", p); // Debug log
+          setPlan(p);
+
+          // Determine price according to selected cycle
+          const priceForCycle = selectedCycle === "monthly"
+            ? (p.monthlyPrice ?? p.price ?? null)
+            : (p.annualPrice ?? p.price ?? null);
+
+          const isFreeValue = (
+            (typeof priceForCycle === "number" && priceForCycle === 0) ||
+            (typeof priceForCycle === "string" && String(priceForCycle).toLowerCase() === "free") ||
+            p.isFree === true
+          );
+
+          console.log("isFree set to:", isFreeValue, "(cycle:", selectedCycle, ", price:", priceForCycle, ")");
           setIsFree(isFreeValue);
         } else {
           toast.error("Plan not found");
@@ -184,7 +200,7 @@ function CheckoutPageContent() {
     };
 
     fetchPlan();
-  }, [planId, router]);
+  }, [planId, router, selectedCycle]);
 
   // Resend timer countdown
   useEffect(() => {
@@ -537,17 +553,35 @@ function CheckoutPageContent() {
               <CardDescription>{plan.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600 mb-4">
-                ₹{plan.price}
-                <span className="text-sm font-normal text-gray-500">/{plan.billingCycle}</span>
-              </div>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>✓ Up to {plan.maxStudents} students</p>
-                <p>✓ Up to {plan.maxStaff} staff</p>
-                {plan.features?.slice(2, 5).map((feature, i) => (
-                  <p key={i}>✓ {feature.replace('✓ ', '')}</p>
-                ))}
-              </div>
+              {plan ? (
+                (() => {
+                  const priceRaw = selectedCycle === "monthly"
+                    ? (plan.monthlyPrice ?? plan.price ?? 0)
+                    : (plan.annualPrice ?? plan.price ?? 0);
+                  const priceText = typeof priceRaw === "string"
+                    ? priceRaw
+                    : `₹${Number(priceRaw).toLocaleString('en-IN')}`;
+                  const cycleLabel = selectedCycle === "monthly" ? "month" : "year";
+
+                  return (
+                    <>
+                      <div className="text-3xl font-bold text-blue-600 mb-4">
+                        {priceText}
+                        <span className="text-sm font-normal text-gray-500">/{cycleLabel}</span>
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <p>✓ Up to {plan.maxStudents ?? plan.quotas?.students ?? '—'} students</p>
+                        <p>✓ Up to {plan.maxStaff ?? plan.quotas?.staff ?? '—'} staff</p>
+                        {plan.features?.slice(2, 5).map((feature: any, i: number) => (
+                          <p key={i}>✓ {typeof feature === 'string' ? feature.replace('✓ ', '') : feature.name}</p>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()
+              ) : (
+                <div className="text-sm text-gray-500">Loading plan...</div>
+              )}
             </CardContent>
           </Card>
 

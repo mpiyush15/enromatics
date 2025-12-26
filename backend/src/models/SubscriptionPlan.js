@@ -1,19 +1,31 @@
 import mongoose from "mongoose";
 
+/**
+ * SUBSCRIPTION PLAN SCHEMA
+ * ========================
+ * This schema matches the frontend types in /types/subscription-plan.ts
+ * 
+ * Fields:
+ * - id: Plan slug (trial, basic, pro, enterprise)
+ * - name: Display name
+ * - monthlyPrice/annualPrice: Number or "Free" or "Custom"
+ * - features: Array of strings OR {name, enabled} objects
+ * - isVisible: Controls public /plans page visibility
+ * - status: active/inactive/archived
+ */
+
 const subscriptionPlanSchema = new mongoose.Schema(
   {
     // Basic Info
     name: {
       type: String,
       required: [true, "Plan name is required"],
-      unique: true,
       trim: true,
       enum: ["Trial", "Basic", "Pro", "Enterprise"],
     },
     id: {
       type: String,
       required: [true, "Plan ID is required"],
-      unique: true,
       lowercase: true,
       enum: ["trial", "basic", "pro", "enterprise"],
     },
@@ -22,20 +34,20 @@ const subscriptionPlanSchema = new mongoose.Schema(
       required: [true, "Plan description is required"],
     },
 
-    // Pricing
+    // Pricing - Mixed type allows Number, "Free", or "Custom"
     monthlyPrice: {
       type: mongoose.Schema.Types.Mixed,
-      default: 0, // Can be number or "Free" or "Custom"
+      default: 0,
     },
     annualPrice: {
       type: mongoose.Schema.Types.Mixed,
-      default: 0, // Can be number or "Free" or "Custom"
+      default: 0,
     },
 
     // Quotas
     quotas: {
       students: mongoose.Schema.Types.Mixed, // number or "Unlimited" or "Trial Access"
-      staff: mongoose.Schema.Types.Mixed, // number or "Unlimited" or "Trial Access"
+      staff: mongoose.Schema.Types.Mixed,    // number or "Unlimited" or "Trial Access"
       storage: {
         type: String,
         default: "Standard", // Standard, Enhanced, Unlimited
@@ -47,7 +59,7 @@ const subscriptionPlanSchema = new mongoose.Schema(
     },
 
     // Features - Can be strings OR objects with {name, enabled}
-    // String format: ["Feature A", "Feature B"] (old)
+    // String format: ["Feature A", "Feature B"] (legacy)
     // Object format: [{name: "Feature A", enabled: true}] (new - toggleable)
     features: {
       type: mongoose.Schema.Types.Mixed,
@@ -68,6 +80,14 @@ const subscriptionPlanSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
+    cta: {
+      type: String,
+      default: "",
+    },
 
     // Status
     status: {
@@ -80,11 +100,11 @@ const subscriptionPlanSchema = new mongoose.Schema(
       default: true,
     },
 
-    // Metadata
+    // Metadata - Optional (plans can be seeded without user)
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -96,9 +116,12 @@ const subscriptionPlanSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
-subscriptionPlanSchema.index({ id: 1 });
+// Create compound unique index for id and name
+// Using schema.index() only - no duplicate "unique: true" in field definition
+subscriptionPlanSchema.index({ id: 1 }, { unique: true });
+subscriptionPlanSchema.index({ name: 1 }, { unique: true });
 subscriptionPlanSchema.index({ status: 1 });
-subscriptionPlanSchema.index({ name: 1 });
+subscriptionPlanSchema.index({ isVisible: 1 });
+subscriptionPlanSchema.index({ displayOrder: 1 });
 
 export default mongoose.model("SubscriptionPlan", subscriptionPlanSchema);
