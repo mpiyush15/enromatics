@@ -65,6 +65,11 @@ export async function GET(
       const trialStart = new Date(subscription.trialStartDate);
       calculatedEndDate = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
     }
+    // If both endDate and trialStartDate are missing, use tenant createdAt for trial calculation
+    else if (!subscription.endDate && !subscription.trialStartDate && tenant.createdAt) {
+      const createdAt = new Date(tenant.createdAt);
+      calculatedEndDate = new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    }
     
     if (calculatedEndDate) {
       const endDate = new Date(calculatedEndDate);

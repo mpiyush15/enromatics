@@ -8,9 +8,11 @@ export async function GET(
 ) {
   try {
     const { tenantId } = await params;
-    // Headers now built with buildBFFHeaders() including subdomain
+    
+    // Get cookie header from request
+    const cookieHeader = request.headers.get('cookie');
 
-    if (!cookieHeader || !cookieHeader.includes('token=')) {
+    if (!cookieHeader || !cookieHeader.includes('jwt=')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 

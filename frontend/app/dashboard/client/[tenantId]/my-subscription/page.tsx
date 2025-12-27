@@ -163,15 +163,30 @@ export default function MySubscriptionPage() {
         return;
       }
 
-      // Open Cashfree checkout for paid plans
+      // Open Cashfree checkout for paid plans in a modal/popup
       console.log("Opening Cashfree checkout with sessionId:", data.paymentSessionId);
       const cashfree = await (window as any).Cashfree({
         mode: "production",
       });
 
+      // Use modal so user stays on same page and returns to dashboard
       await cashfree.checkout({
         paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_self",
+        redirectTarget: "_modal", // Opens as popup modal, stays on same page
+        onSuccess: (paymentData: any) => {
+          console.log("Payment successful:", paymentData);
+          toast.success("Payment successful! Updating subscription...");
+          refreshSubscription(); // Refresh via SWR to show updated plan
+        },
+        onFailure: (error: any) => {
+          console.log("Payment failed or cancelled:", error);
+          toast.error("Payment was cancelled or failed. Please try again.");
+        },
+        onClose: () => {
+          console.log("Payment modal closed");
+          // User closed the modal - refresh to check if payment was made
+          refreshSubscription();
+        },
       });
     } catch (error: any) {
       console.error("Upgrade error:", error);

@@ -5,10 +5,10 @@ const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearin
 
 export async function GET(request: NextRequest) {
   try {
-    // Get cookie header from request (same pattern as working routes)
-    // Headers now built with buildBFFHeaders() including subdomain
+    // Get cookie header from request
+    const cookieHeader = request.headers.get('cookie');
 
-    if (!cookieHeader || !cookieHeader.includes('token=')) {
+    if (!cookieHeader || !cookieHeader.includes('jwt=')) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 

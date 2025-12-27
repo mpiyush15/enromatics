@@ -59,8 +59,20 @@ export function middleware(request: NextRequest) {
   // Handle main domain (no subdomain or www) - SuperAdmin login only
   if (!subdomain || subdomain === 'www') {
     // Clear tenant-context cookie on main domain to prevent stale data
+    // IMPORTANT: Must specify same domain used when setting the cookie
     const response = NextResponse.next();
-    response.cookies.delete('tenant-context');
+    const cookieDomain = getCookieDomain(host);
+    
+    // Delete cookie with proper domain to clear cross-subdomain cookie
+    response.cookies.set('tenant-context', '', {
+      domain: cookieDomain,
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 0, // Expire immediately
+      path: '/',
+    });
+    
     return response;
   }
 

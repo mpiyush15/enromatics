@@ -45,14 +45,23 @@ export async function POST(request: NextRequest) {
     console.log('🌐 Subdomain from request:', subdomain || 'NONE (main domain)');
     console.log('🎯 Login purpose:', purpose || 'default');
 
-    // Build headers with tenant subdomain (for tenant ownership validation)
+    // Non-tenant subdomains that should NOT be sent to backend
+    const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
+    const isValidTenantSubdomain = subdomain && !nonTenantSubdomains.includes(subdomain.toLowerCase());
+
+    // Build headers - but we'll handle subdomain separately to avoid duplicates
     const headers = await buildBFFHeaders();
+    // Remove any existing X-Tenant-Subdomain from buildBFFHeaders (we'll set it explicitly)
+    delete (headers as Record<string, string>)['X-Tenant-Subdomain'];
+    
     console.log('🌐 Base headers for login:', headers);
     
-    // Add subdomain header if provided by frontend
-    if (subdomain) {
+    // Add subdomain header ONLY if it's a valid tenant subdomain
+    if (isValidTenantSubdomain) {
       (headers as Record<string, string>)['X-Tenant-Subdomain'] = subdomain;
       console.log('🌐 Added X-Tenant-Subdomain header:', subdomain);
+    } else {
+      console.log('🌐 No tenant subdomain (main domain login)');
     }
 
     // Create abort controller with 30 second timeout
