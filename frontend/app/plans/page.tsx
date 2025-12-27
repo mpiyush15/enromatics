@@ -509,6 +509,18 @@ export default function PlansPage() {
                 q: 'Can I cancel my subscription?',
                 a: 'Yes, you can cancel anytime. Your access will continue until the end of your billing period.',
               },
+              {
+                q: 'Do your prices cover WhatsApp (WABA) message costs and Meta Ad costs?',
+                a: 'No, those costs are not included in our pricing. WhatsApp Business API (WABA) message costs and Meta advertising costs depend on your monthly usage and are paid directly to Meta.',
+              },
+              {
+                q: 'What can I do with WhatsApp & Social Media integration?',
+                a: 'Our platform lets you connect your WhatsApp Business Account (WABA) and social media (Facebook, Instagram) to: send bulk WhatsApp messages & templates, automate follow-up reminders, capture leads from Facebook/Instagram ads directly into CRM, schedule & publish social media posts, track engagement analytics, and manage all conversations in one inbox.',
+              },
+              {
+                q: 'What is the CRM / Lead Manager feature?',
+                a: 'The CRM / Lead Manager helps you track and convert enquiries into students. Features include: lead pipeline with stages (New → Contacted → Interested → Follow-up → Negotiation → Converted), call logging with outcomes & notes, follow-up scheduling with reminders, lead source tracking (website, WhatsApp, walk-in, social media, referral), counsellor assignment & performance analytics, priority tagging, and conversion tracking with expected vs actual fees.',
+              },
             ].map((item, idx) => (
               <div
                 key={idx}

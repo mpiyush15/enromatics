@@ -157,9 +157,11 @@ export default function TenantLoginPage() {
           priority
         />
         <div className="absolute bottom-0 left-0 right-0 p-12 z-20 text-white">
-          <h2 className="text-4xl font-light mb-4">Welcome back</h2>
+          <h2 className="text-4xl font-light mb-4">
+            Welcome back to {tenantBranding?.instituteName || "your portal"}
+          </h2>
           <p className="text-lg font-light text-white/90">
-            {tenantBranding?.instituteName || "Access your learning portal"}
+            Sign in to access your learning dashboard
           </p>
         </div>
       </div>
@@ -198,7 +200,7 @@ export default function TenantLoginPage() {
             </h1>
             
             <p className="text-sm font-light text-gray-600 dark:text-gray-400">
-              Access your learning portal
+              Welcome back! Sign in to continue
             </p>
           </div>
 

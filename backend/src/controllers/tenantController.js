@@ -178,6 +178,7 @@ export const getTenantInfo = async (req, res) => {
       tenant: {
         tenantId: tenant.tenantId,
         name: tenant.name,
+        instituteName: tenant.instituteName,
         email: tenant.email,
         plan: tenant.plan,
         subscription: tenant.subscription,
@@ -234,13 +235,14 @@ export const getSuperAdminTenantDetail = async (req, res) => {
 export const updateTenantProfile = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const { name, email, contact, active } = req.body;
+    const { name, instituteName, email, contact, active } = req.body;
 
     const tenant = await Tenant.findOne({ tenantId });
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
     // Only allow updating specific fields
     if (name) tenant.name = name;
+    if (instituteName) tenant.instituteName = instituteName;
     if (email) tenant.email = email;
     if (contact) {
       tenant.contact = {
@@ -271,12 +273,12 @@ export const updateTenantProfile = async (req, res) => {
     if (process.env.SUPER_ADMIN_EMAIL) {
       sendEmail({
         to: process.env.SUPER_ADMIN_EMAIL,
-        subject: `Tenant Profile Updated: ${tenant.name}`,
-        html: `<p>Tenant <strong>${tenant.name}</strong> updated their profile.</p>`
+        subject: `Tenant Profile Updated: ${tenant.instituteName || tenant.name}`,
+        html: `<p>Tenant <strong>${tenant.instituteName || tenant.name}</strong> updated their profile.</p>`
       }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
     }
 
-    console.log("✅ Tenant profile updated:", tenant.name);
+    console.log("✅ Tenant profile updated:", tenant.instituteName || tenant.name);
 
     res.status(200).json({
       success: true,
@@ -284,6 +286,7 @@ export const updateTenantProfile = async (req, res) => {
       tenant: {
         tenantId: tenant.tenantId,
         name: tenant.name,
+        instituteName: tenant.instituteName,
         email: tenant.email,
         plan: tenant.plan,
         subscription: tenant.subscription,

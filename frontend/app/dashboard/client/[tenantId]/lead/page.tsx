@@ -94,6 +94,7 @@ export default function TenantLeadsCRMPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCallModal, setShowCallModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showCallHistoryModal, setShowCallHistoryModal] = useState(false);
   
   // View mode
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
@@ -469,9 +470,16 @@ export default function TenantLeadsCRMPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                      <button
+                        className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:underline cursor-pointer"
+                        onClick={() => {
+                          setSelectedLead(lead);
+                          setShowCallHistoryModal(true);
+                        }}
+                        title="View Call History"
+                      >
                         📞 {lead.totalCalls || 0}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -552,6 +560,17 @@ export default function TenantLeadsCRMPage() {
             setSelectedLead(null);
           }}
           onUpdate={(status, reason) => updateStatus(selectedLead._id, status, reason)}
+        />
+      )}
+
+      {/* Call History Modal */}
+      {showCallHistoryModal && selectedLead && (
+        <CallHistoryModal
+          lead={selectedLead}
+          onClose={() => {
+            setShowCallHistoryModal(false);
+            setSelectedLead(null);
+          }}
         />
       )}
     </div>
@@ -835,6 +854,164 @@ function StatusUpdateModal({
                 Update Status
               </Button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Call History Modal Component
+interface CallLog {
+  _id: string;
+  callDate: string;
+  callType: string;
+  callDuration?: number;
+  outcome: string;
+  notes?: string;
+  counsellorName?: string;
+  previousStatus?: string;
+  newStatus?: string;
+  nextFollowUpDate?: string;
+}
+
+function CallHistoryModal({
+  lead,
+  onClose,
+}: {
+  lead: Lead;
+  onClose: () => void;
+}) {
+  const [callLogs, setCallLogs] = useState<CallLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCallHistory = async () => {
+      try {
+        const res = await fetch(`/api/leads/${lead._id}`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("📞 Call history data:", data);
+          // Backend returns callHistory, not callLogs
+          setCallLogs(data.callHistory || data.callLogs || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch call history:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCallHistory();
+  }, [lead._id]);
+
+  const formatDateTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getOutcomeEmoji = (outcome: string) => {
+    const outcomes: Record<string, string> = {
+      interested: "✅",
+      callback: "📞",
+      "not-interested": "❌",
+      "no-answer": "📵",
+      busy: "⏳",
+      "wrong-number": "❓",
+    };
+    return outcomes[outcome] || "📋";
+  };
+
+  const getCallTypeIcon = (type: string) => {
+    const types: Record<string, string> = {
+      outbound: "📤",
+      inbound: "📥",
+      missed: "📵",
+    };
+    return types[type] || "📞";
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-xl font-bold">📞 Call History - {lead.name}</h2>
+              <p className="text-sm text-gray-500">{lead.phone}</p>
+            </div>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">✕</button>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : callLogs.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-4xl mb-2">📞</p>
+              <p>No call history found for this lead.</p>
+              <p className="text-sm mt-1">Log your first call to start tracking!</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
+              {callLogs.map((log, idx) => (
+                <div
+                  key={log._id || idx}
+                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{getCallTypeIcon(log.callType)}</span>
+                      <span className="text-sm font-medium capitalize">{log.callType} Call</span>
+                      {log.callDuration && (
+                        <span className="text-xs text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded">
+                          {log.callDuration} min
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500">{formatDateTime(log.callDate)}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{getOutcomeEmoji(log.outcome)}</span>
+                    <span className="text-sm font-medium capitalize">{log.outcome.replace("-", " ")}</span>
+                  </div>
+
+                  {log.notes && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 p-2 rounded border mt-2">
+                      💬 {log.notes}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                    {log.counsellorName && (
+                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        👤 {log.counsellorName}
+                      </span>
+                    )}
+                    {log.previousStatus && log.newStatus && log.previousStatus !== log.newStatus && (
+                      <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                        Status: {log.previousStatus} → {log.newStatus}
+                      </span>
+                    )}
+                    {log.nextFollowUpDate && (
+                      <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                        📅 Follow-up: {new Date(log.nextFollowUpDate).toLocaleDateString("en-IN")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t mt-4">
+            <Button onClick={onClose}>Close</Button>
           </div>
         </div>
       </div>

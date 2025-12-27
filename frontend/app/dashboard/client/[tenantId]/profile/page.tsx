@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 
 interface FormData {
   name: string;
+  instituteName: string;
   email: string;
   phone: string;
   address: string;
@@ -21,7 +22,8 @@ interface StaffForm {
 }
 
 export default function TenantProfilePage() {
-  const { tenantId } = useParams();
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
   const [tenant, setTenant] = useState<any>(null);
   const [staff, setStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ export default function TenantProfilePage() {
 
   const [form, setForm] = useState<FormData>({
     name: "",
+    instituteName: "",
     email: "",
     phone: "",
     address: "",
@@ -71,6 +74,7 @@ export default function TenantProfilePage() {
       setTenant(data.tenant);
       setForm({
         name: data.tenant.name || "",
+        instituteName: data.tenant.instituteName || "",
         email: data.tenant.email || "",
         phone: data.tenant.contact?.phone || "",
         address: data.tenant.contact?.address || "",
@@ -119,6 +123,7 @@ export default function TenantProfilePage() {
         credentials: "include",
         body: JSON.stringify({
           name: form.name,
+          instituteName: form.instituteName,
           email: form.email,
           contact: {
             phone: form.phone,
@@ -264,7 +269,7 @@ export default function TenantProfilePage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold">{tenant.name}</h2>
+              <h2 className="text-xl font-bold">{tenant.instituteName || tenant.name}</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">{tenant.email}</p>
             </div>
             {!isEditing ? (
@@ -282,8 +287,12 @@ export default function TenantProfilePage() {
           {isEditing && (
             <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold mb-2">Institute Name</label>
+                <label className="block text-sm font-semibold mb-2">Owner/Contact Name</label>
                 <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Institute Name</label>
+                <input type="text" value={form.instituteName} onChange={(e) => setForm({ ...form, instituteName: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Email</label>
