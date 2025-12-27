@@ -477,8 +477,9 @@ function CheckoutPageContent() {
         : (plan.annualPrice ?? plan.price ?? 0);
 
       // Initiate payment with billing cycle
+      // Use plan.id (e.g., "basic", "pro") not plan._id (MongoDB ObjectId)
       const payload = {
-        planId: plan._id,
+        planId: plan.id || plan._id, // ✅ Use string identifier, fallback to _id
         name: formData.name,
         instituteName: formData.instituteName,
         email: verifiedEmail,

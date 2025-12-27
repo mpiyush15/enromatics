@@ -39,8 +39,26 @@ const detectPlanFromAmount = (amount) => {
 export const initiateSubscriptionPayment = async (req, res) => {
   try {
     const { tenantId, planId, email, phone: reqPhone, billingCycle, instituteName, name, amount } = req.body;
-    const plan = PLANS.find(p => p.id === planId);
-    if (!plan) return res.status(400).json({ message: 'Invalid plan selected' });
+    
+    // Find plan in static config first, then try database
+    let plan = PLANS.find(p => p.id === planId || p.id === planId?.toLowerCase());
+    
+    // If not found in static config and we have dynamic amount, create a dynamic plan object
+    if (!plan && amount && amount > 0) {
+      console.log('💰 Plan not in static config, using dynamic pricing. planId:', planId, 'amount:', amount);
+      plan = {
+        id: planId,
+        name: planId.charAt(0).toUpperCase() + planId.slice(1), // Capitalize
+        priceMonthly: billingCycle === 'monthly' ? amount : 0,
+        priceAnnual: billingCycle === 'annual' ? amount : 0,
+        description: 'Dynamic plan from database'
+      };
+    }
+    
+    if (!plan) {
+      console.error('❌ Plan not found:', planId, 'Available plans:', PLANS.map(p => p.id));
+      return res.status(400).json({ message: 'Invalid plan selected', planId, availablePlans: PLANS.map(p => p.id) });
+    }
 
     // Generate a unique tenantId if not provided
     const finalTenantId = tenantId || `tenant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
