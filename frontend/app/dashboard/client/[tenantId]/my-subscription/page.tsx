@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
+import useSWR from "swr";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,14 +17,31 @@ import {
   Sparkles,
   ArrowUpCircle,
   Zap,
-  Star
+  Star,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
-import { subscriptionPlans } from "@/data/plans";
 import { useSubscription } from "@/lib/hooks/use-subscription";
+// Import unified types - SINGLE SOURCE OF TRUTH for plans
+import { 
+  SubscriptionPlan, 
+  PlansApiResponse,
+  getFeatureText, 
+  isFeatureEnabled,
+} from "@/types/subscription-plan";
 
 // Plan hierarchy for filtering
 const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
+
+// SWR fetcher - no cache, always fresh data
+const plansFetcher = async (url: string) => {
+  const res = await fetch(url, { 
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch plans');
+  return res.json();
+};
 
 interface UpgradePlan {
   _id: string;
@@ -34,6 +52,7 @@ interface UpgradePlan {
   annualPrice?: number;
   features: string[];
   popular?: boolean;
+  isContactSales?: boolean;
 }
 
 export default function MySubscriptionPage() {
@@ -43,16 +62,34 @@ export default function MySubscriptionPage() {
   // Use SWR for caching - data persists across navigation
   const { tenant, isLoading: loading, refresh: refreshSubscription } = useSubscription(tenantId);
   
+  // Fetch dynamic plans from API (same as /plans page)
+  const { data: plansData, error: plansError, isLoading: plansLoading, mutate: refreshPlans } = useSWR<PlansApiResponse>(
+    '/api/subscription-plans/public',
+    plansFetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 60000, // Refresh every 60 seconds
+      dedupingInterval: 10000,
+    }
+  );
+  
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
 
-  // Get upgrade plans based on current plan (using local data)
-  const getUpgradePlansForPlan = useCallback((currentPlan: string, subscriptionStatus?: string) => {
+  // Get available plans from API
+  const availablePlans = useMemo(() => {
+    return plansData?.plans?.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) || [];
+  }, [plansData]);
+
+  // Get upgrade plans based on current plan (using dynamic API data)
+  const upgradePlans = useMemo((): UpgradePlan[] => {
+    const subscriptionStatus = tenant?.subscription?.status;
+    
     // If subscription status is pending, treat as previous active plan (trial)
-    // Don't use the pending plan for filtering
-    let planLower = (currentPlan || "trial").toLowerCase();
+    let planLower = (tenant?.plan || "trial").toLowerCase();
     
     // If status is pending or inactive, user is still on trial
     if (subscriptionStatus === "pending" || subscriptionStatus === "inactive") {
@@ -61,31 +98,28 @@ export default function MySubscriptionPage() {
     
     const currentPlanIndex = PLAN_HIERARCHY.indexOf(planLower);
     
-    return subscriptionPlans
-      .filter((plan) => {
+    return availablePlans
+      .filter((plan: SubscriptionPlan) => {
         const planIndex = PLAN_HIERARCHY.indexOf(plan.id.toLowerCase());
         // Show plans that are higher in hierarchy and are not trial/free
         // Also exclude enterprise (Custom pricing - Contact Sales)
         return planIndex > currentPlanIndex && plan.id !== "trial" && plan.id !== "enterprise";
       })
-      .map((plan) => ({
-        _id: plan.id,
+      .map((plan: SubscriptionPlan) => ({
+        _id: plan._id || plan.id,
         planId: plan.id,
         name: plan.name,
         description: plan.description,
         price: typeof plan.monthlyPrice === "number" ? plan.monthlyPrice : 0,
         annualPrice: typeof plan.annualPrice === "number" ? plan.annualPrice : 0,
-        features: plan.features,
+        // Convert features to string array (handle both string and object format)
+        features: plan.features
+          .filter(isFeatureEnabled)
+          .map(getFeatureText),
         popular: plan.popular || false,
         isContactSales: plan.monthlyPrice === "Custom",
       }));
-  }, []);
-
-  // Memoize upgrade plans based on tenant data
-  const upgradePlans = useMemo(() => {
-    const subscriptionStatus = tenant?.subscription?.status;
-    return getUpgradePlansForPlan(tenant?.plan || "trial", subscriptionStatus);
-  }, [tenant?.plan, tenant?.subscription?.status, getUpgradePlansForPlan]);
+  }, [tenant?.plan, tenant?.subscription?.status, availablePlans]);
 
   const handleCancelSubscription = async () => {
     setCancelling(true);

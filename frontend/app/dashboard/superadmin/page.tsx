@@ -1,34 +1,60 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import useSWR from 'swr';
 import useAuth from '@/hooks/useAuth';
-import { Users, Building2, TrendingUp, DollarSign, Zap, AlertCircle } from 'lucide-react';
+import { Users, Building2, TrendingUp, DollarSign, Zap, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-interface Stats {
-  totalTenants: number;
-  totalSubscriptions: number;
-  totalRevenue: number;
-  activeOffers: number;
-  monthlyRecurringRevenue: number;
-  expiredOffers: number;
-}
+// SWR fetcher - no cache for real-time data
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { 
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch');
+  return res.json();
+};
 
 export default function SuperAdminOverview() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<Stats>({
-    totalTenants: 0,
-    totalSubscriptions: 0,
-    totalRevenue: 0,
-    activeOffers: 0,
-    monthlyRecurringRevenue: 0,
-    expiredOffers: 0,
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Fetch admin stats using SWR for real-time updates
+  const { data: statsData, error: statsError, isLoading: statsLoading, mutate: refreshStats } = useSWR(
+    user?.role === 'SuperAdmin' ? '/api/admin/stats' : null,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 30000, // Refresh every 30 seconds
+      dedupingInterval: 5000,
+    }
+  );
+
+  // Fetch tenants count
+  const { data: tenantsData } = useSWR(
+    user?.role === 'SuperAdmin' ? '/api/tenants' : null,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      refreshInterval: 60000,
+    }
+  );
+
+  // Fetch offers
+  const { data: offersData } = useSWR(
+    user?.role === 'SuperAdmin' ? '/api/offers?page=1&limit=100' : null,
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      refreshInterval: 60000,
+    }
+  );
 
   // Redirect non-superadmins immediately
-  useEffect(() => {
+  React.useEffect(() => {
     if (!loading) {
       if (!user || user.role !== 'SuperAdmin') {
         console.warn('Access denied: User is not SuperAdmin');
@@ -37,64 +63,32 @@ export default function SuperAdminOverview() {
     }
   }, [user, loading, router]);
 
-  // Fetch stats
-  useEffect(() => {
-    if (!loading && user?.role === 'SuperAdmin') {
-      fetchStats();
-    }
-  }, [loading, user]);
+  // Calculate stats from API responses
+  const stats = React.useMemo(() => {
+    const apiStats = statsData?.stats || {};
+    const tenants = tenantsData?.data || [];
+    const offers = offersData?.offers || [];
+    
+    const activeOffers = offers.filter((offer: any) => 
+      offer.isActive && new Date(offer.validUntil) > new Date()
+    ).length;
+    
+    const expiredOffers = offers.filter((offer: any) => 
+      !offer.isActive || new Date(offer.validUntil) <= new Date()
+    ).length;
 
-  const fetchStats = async () => {
-    try {
-      setStatsLoading(true);
-      
-      let totalTenants = 0;
-      let activeOffers = 0;
-      let expiredOffers = 0;
-
-      // Fetch tenants
-      try {
-        const tenantsRes = await fetch('/api/tenants', {
-          credentials: 'include',
-        });
-        if (tenantsRes.ok) {
-          const tenantsData = await tenantsRes.json();
-          totalTenants = tenantsData.data?.length || 0;
-        }
-      } catch (error) {
-        console.warn('Warning: Could not fetch tenants:', error);
-      }
-
-      // Fetch offers
-      try {
-        const offersRes = await fetch('/api/offers?page=1&limit=100', {
-          credentials: 'include',
-        });
-        if (offersRes.ok) {
-          const offersData = await offersRes.json();
-          const offers = offersData.offers || [];
-          activeOffers = offers.filter((offer: any) => offer.isActive && new Date(offer.validUntil) > new Date()).length;
-          expiredOffers = offers.filter((offer: any) => !offer.isActive || new Date(offer.validUntil) <= new Date()).length;
-        }
-      } catch (error) {
-        console.warn('Warning: Could not fetch offers:', error);
-      }
-
-      // Set stats with defaults
-      setStats({
-        totalTenants: totalTenants,
-        totalSubscriptions: 0, // Placeholder
-        totalRevenue: 0, // Placeholder
-        activeOffers: activeOffers,
-        monthlyRecurringRevenue: 0, // Placeholder
-        expiredOffers: expiredOffers,
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+    return {
+      totalTenants: apiStats.totalTenants || tenants.length || 0,
+      activeSubscriptions: apiStats.activeSubscriptions || 0,
+      expiredSubscriptions: apiStats.expiredSubscriptions || 0,
+      totalRevenue: apiStats.totalRevenue || 0,
+      monthlyRecurringRevenue: apiStats.monthlyRecurringRevenue || 0,
+      recentPayments: apiStats.recentPayments || 0,
+      planDistribution: apiStats.planDistribution || {},
+      activeOffers,
+      expiredOffers,
+    };
+  }, [statsData, tenantsData, offersData]);
 
   if (loading) {
     return (
@@ -161,13 +155,25 @@ export default function SuperAdminOverview() {
   return (
     <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
-          🎯 SuperAdmin Dashboard
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Welcome back, {user.name}. Here's your platform overview.
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+            🎯 SuperAdmin Dashboard
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Welcome back, {user.name}. Here's your platform overview.
+          </p>
+        </div>
+        <button
+          onClick={() => refreshStats()}
+          disabled={statsLoading}
+          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {statsLoading ? 'Refreshing...' : 'Refresh'}
+          </span>
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -175,7 +181,7 @@ export default function SuperAdminOverview() {
         <StatCard
           icon={Building2}
           label="Total Tenants"
-          value={stats.totalTenants}
+          value={statsLoading ? '...' : stats.totalTenants}
           subtext="Active institutions"
           bgColor="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
           href="/dashboard/tenants"
@@ -184,7 +190,7 @@ export default function SuperAdminOverview() {
         <StatCard
           icon={Users}
           label="Active Subscriptions"
-          value={stats.totalSubscriptions}
+          value={stats.activeSubscriptions}
           subtext="Paying customers"
           bgColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
           href="/dashboard/subscribers"

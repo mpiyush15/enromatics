@@ -923,6 +923,42 @@ export const getSubscriptionStats = async (req, res) => {
       ]
     });
 
+    // Calculate Total Revenue from SubscriptionPayment (successful payments only)
+    const revenueResult = await SubscriptionPayment.aggregate([
+      { $match: { status: 'success' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+    const totalRevenue = revenueResult[0]?.total || 0;
+
+    // Calculate Monthly Recurring Revenue (MRR) - active monthly subscriptions
+    // Get tenants with active monthly subscriptions and sum their amounts
+    const mrrResult = await Tenant.aggregate([
+      { 
+        $match: { 
+          'subscription.status': 'active',
+          'subscription.billingCycle': 'monthly',
+          plan: { $nin: ['trial', 'free'] }
+        } 
+      },
+      { $group: { _id: null, total: { $sum: '$subscription.amount' } } }
+    ]);
+    
+    // For yearly subscriptions, divide by 12 to get monthly equivalent
+    const yearlyMrrResult = await Tenant.aggregate([
+      { 
+        $match: { 
+          'subscription.status': 'active',
+          'subscription.billingCycle': { $in: ['yearly', 'annual'] },
+          plan: { $nin: ['trial', 'free'] }
+        } 
+      },
+      { $group: { _id: null, total: { $sum: { $divide: ['$subscription.amount', 12] } } } }
+    ]);
+    
+    const monthlyRecurringRevenue = Math.round(
+      (mrrResult[0]?.total || 0) + (yearlyMrrResult[0]?.total || 0)
+    );
+
     res.status(200).json({
       success: true,
       stats: {
@@ -930,6 +966,8 @@ export const getSubscriptionStats = async (req, res) => {
         activeSubscriptions,
         expiredSubscriptions,
         recentPayments,
+        totalRevenue,
+        monthlyRecurringRevenue,
         planDistribution: planCounts.reduce((acc, item) => {
           acc[item._id || 'free'] = item.count;
           return acc;
