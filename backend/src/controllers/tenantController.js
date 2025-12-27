@@ -451,6 +451,19 @@ export const sendTenantCredentials = async (req, res) => {
       return res.status(404).json({ message: "Tenant not found" });
     }
 
+    // Auto-generate clean subdomain if not set or if it's an ugly auto-generated one
+    if (!tenant.subdomain || tenant.subdomain.startsWith('tenant_')) {
+      const baseName = tenant.instituteName || tenant.name || tenant.email?.split('@')[0] || 'tenant';
+      const cleanSubdomain = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric
+        .substring(0, 30);
+      const suffix = Math.random().toString(36).substr(2, 4);
+      tenant.subdomain = `${cleanSubdomain}${suffix}`;
+      await tenant.save();
+      console.log('✅ Auto-generated clean subdomain:', tenant.subdomain);
+    }
+
     // Find or create user for this tenant
     let user = await User.findOne({ email: tenant.email });
     let generatedPassword = null;
