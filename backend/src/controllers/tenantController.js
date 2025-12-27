@@ -485,6 +485,12 @@ export const sendTenantCredentials = async (req, res) => {
       });
     }
 
+    // Build login URL with tenant subdomain
+    const baseUrl = process.env.FRONTEND_URL || 'https://enromatics.com';
+    // Extract base domain (e.g., enromatics.com from https://www.enromatics.com)
+    const baseDomain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+    const loginUrl = `https://${tenant.tenantId}.${baseDomain}/login`;
+
     // Send credentials email
     await sendCredentialsEmail({
       to: tenant.email,
@@ -492,7 +498,7 @@ export const sendTenantCredentials = async (req, res) => {
       instituteName: tenant.instituteName || tenant.name,
       email: tenant.email,
       password: generatedPassword,
-      loginUrl: `${process.env.FRONTEND_URL}/login`,
+      loginUrl: loginUrl,
       tenantId: tenant.tenantId,
       userId: user._id
     });

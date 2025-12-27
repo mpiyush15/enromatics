@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildBFFHeaders } from "@/lib/bffHelpers";
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
@@ -10,8 +9,8 @@ export async function POST(
   try {
     const { tenantId } = await params;
     
-    // Get cookie header from request (same pattern as working routes)
-    // Headers now built with buildBFFHeaders() including subdomain
+    // Get cookie header from request
+    const cookieHeader = request.headers.get("cookie");
 
     if (!cookieHeader || !cookieHeader.includes("token=")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
