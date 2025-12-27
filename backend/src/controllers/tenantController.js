@@ -213,6 +213,7 @@ export const getSuperAdminTenantDetail = async (req, res) => {
         name: tenant.name,
         email: tenant.email,
         instituteName: tenant.instituteName,
+        subdomain: tenant.subdomain,
         plan: tenant.plan,
         subscription: tenant.subscription,
         active: tenant.active,
@@ -572,6 +573,67 @@ export const cancelSubscription = async (req, res) => {
     });
   } catch (err) {
     console.error("Cancel Subscription Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔹 11. Update Tenant Subdomain (SuperAdmin only)
+================================================================ */
+export const updateTenantSubdomain = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { subdomain } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    if (!subdomain || !subdomain.trim()) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+
+    // Validate subdomain format (lowercase alphanumeric only)
+    const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (cleanSubdomain.length < 3) {
+      return res.status(400).json({ message: "Subdomain must be at least 3 characters" });
+    }
+
+    if (cleanSubdomain.length > 30) {
+      return res.status(400).json({ message: "Subdomain must be 30 characters or less" });
+    }
+
+    // Check if subdomain is already taken by another tenant
+    const existingTenant = await Tenant.findOne({ 
+      subdomain: cleanSubdomain, 
+      tenantId: { $ne: tenantId } 
+    });
+
+    if (existingTenant) {
+      return res.status(400).json({ message: "This subdomain is already taken. Please choose another." });
+    }
+
+    // Update tenant with new subdomain
+    const tenant = await Tenant.findOneAndUpdate(
+      { tenantId },
+      { subdomain: cleanSubdomain },
+      { new: true }
+    );
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    console.log(`Subdomain updated for tenant ${tenantId}: ${cleanSubdomain}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Subdomain updated successfully",
+      subdomain: cleanSubdomain,
+      loginUrl: `https://${cleanSubdomain}.enromatics.com/tenant/login`
+    });
+  } catch (err) {
+    console.error("Update Subdomain Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

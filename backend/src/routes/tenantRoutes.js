@@ -16,6 +16,7 @@ import {
   sendTenantCredentials,
   cancelSubscription,
   getTenantBySubdomain,
+  updateTenantSubdomain,
 } from "../controllers/tenantController.js";
 import {
   getPaymentHistory,
@@ -82,6 +83,18 @@ router.put(
   protect,
   authorizeRoles("SuperAdmin"),
   updateTenantProfile
+);
+
+/**
+ * @route   PATCH /api/tenants/admin/:tenantId/subdomain
+ * @desc    Update tenant subdomain (for login URL) - SuperAdmin only
+ * @access  Private – superadmin only
+ */
+router.patch(
+  "/admin/:tenantId/subdomain",
+  protect,
+  authorizeRoles("SuperAdmin"),
+  updateTenantSubdomain
 );
 
 /**

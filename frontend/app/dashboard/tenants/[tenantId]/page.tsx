@@ -21,6 +21,7 @@ type Tenant = {
   name: string;
   email: string;
   instituteName?: string;
+  subdomain?: string;
   plan: string;
   active: boolean;
   contact?: {
@@ -339,6 +340,9 @@ export default function TenantDetailPage() {
               </div>
             </div>
 
+            {/* Login URL Card */}
+            <LoginUrlCard tenant={tenant} onUpdate={(updatedTenant) => setTenant(updatedTenant)} />
+
             {/* Contact Information Card */}
             {tenant.contact && (tenant.contact.phone || tenant.contact.address || tenant.contact.city || tenant.contact.state || tenant.contact.country) && (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">
@@ -512,6 +516,181 @@ export default function TenantDetailPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// LoginUrlCard Component
+function LoginUrlCard({ tenant, onUpdate }: { tenant: Tenant; onUpdate: (t: Tenant) => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [subdomain, setSubdomain] = useState(tenant.subdomain || "");
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Generate subdomain from institute name
+  const generateSubdomain = () => {
+    const name = tenant.instituteName || tenant.name || "";
+    // Remove special characters, spaces, and make lowercase
+    let generated = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "")
+      .slice(0, 20);
+    // Add random suffix for uniqueness
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    generated = `${generated}${randomSuffix}`;
+    setSubdomain(generated);
+  };
+
+  const saveSubdomain = async () => {
+    if (!subdomain.trim()) return;
+    
+    setSaving(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/tenants/admin/${tenant.tenantId}/subdomain`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ subdomain: subdomain.trim().toLowerCase() }),
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        onUpdate({ ...tenant, subdomain: data.subdomain || subdomain.trim().toLowerCase() });
+        setIsEditing(false);
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || "Failed to save subdomain");
+      }
+    } catch (err) {
+      console.error("Error saving subdomain:", err);
+      alert("Failed to save subdomain");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loginUrl = tenant.subdomain 
+    ? `https://${tenant.subdomain}.enromatics.com/tenant/login`
+    : null;
+
+  const copyUrl = () => {
+    if (loginUrl) {
+      navigator.clipboard.writeText(loginUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <span className="text-2xl">🔗</span> Tenant Login URL
+      </h2>
+      
+      {tenant.subdomain && !isEditing ? (
+        <div className="space-y-3">
+          <div>
+            <label className="font-medium text-gray-600 dark:text-gray-400 text-sm">
+              Subdomain
+            </label>
+            <p className="text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg mt-1">
+              {tenant.subdomain}
+            </p>
+          </div>
+          
+          <div>
+            <label className="font-medium text-gray-600 dark:text-gray-400 text-sm">
+              Login URL
+            </label>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                value={loginUrl || ""}
+                readOnly
+                className="flex-1 font-mono text-sm bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded-lg"
+              />
+              <button
+                onClick={copyUrl}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  copied 
+                    ? "bg-green-500 text-white" 
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+                }`}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400"
+          >
+            Edit subdomain
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            {tenant.subdomain 
+              ? "Edit the subdomain for this tenant:"
+              : "Generate a subdomain to create the tenant's login URL:"}
+          </p>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={subdomain}
+              onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
+              placeholder="Enter subdomain"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <span className="text-gray-500 dark:text-gray-400">.enromatics.com</span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={generateSubdomain}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Auto-generate
+            </button>
+            
+            <button
+              onClick={saveSubdomain}
+              disabled={saving || !subdomain.trim()}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              {saving && <Loader className="w-4 h-4 animate-spin" />}
+              {saving ? "Saving..." : "Save Subdomain"}
+            </button>
+            
+            {tenant.subdomain && (
+              <button
+                onClick={() => {
+                  setSubdomain(tenant.subdomain || "");
+                  setIsEditing(false);
+                }}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+          
+          {subdomain && (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Preview: <span className="font-mono text-purple-600 dark:text-purple-400">
+                https://{subdomain}.enromatics.com/tenant/login
+              </span>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
