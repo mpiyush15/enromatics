@@ -665,7 +665,8 @@ export const sendCredentialsEmail = async ({
         </html>
     `;
 
-    return sendEmail({ to, subject, html, tenantId, userId, type: 'credentials' });
+    // Use 'welcome' type as it's the closest match from allowed enum values
+    return sendEmail({ to, subject, html, tenantId, userId, type: 'welcome' });
 };
 
 /**
