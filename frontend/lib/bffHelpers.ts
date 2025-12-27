@@ -42,12 +42,19 @@ export async function extractTenantSubdomain(): Promise<string | null> {
   }
 
   // Production: admin.prasamagar.enromatics.com → 'prasamagar'
+  // Non-tenant subdomains that should be treated as main domain
+  const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
+
   if (cleanHostname.includes("enromatics.com")) {
     const parts = cleanHostname.split(".");
 
     // prasamagar.enromatics.com (3 parts)
     if (parts.length === 3) {
       const subdomain = parts[0];
+      // Skip if it's a system subdomain
+      if (nonTenantSubdomains.includes(subdomain.toLowerCase())) {
+        return null;
+      }
       return subdomain;
     }
 
