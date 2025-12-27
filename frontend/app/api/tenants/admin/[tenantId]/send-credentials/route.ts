@@ -12,8 +12,9 @@ export async function POST(
     // Get cookie header from request
     const cookieHeader = request.headers.get("cookie");
 
-    if (!cookieHeader || !cookieHeader.includes("token=")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Check for jwt cookie (used by auth system)
+    if (!cookieHeader || !cookieHeader.includes("jwt=")) {
+      return NextResponse.json({ error: "Unauthorized - Please login again" }, { status: 401 });
     }
 
     // Get request body
