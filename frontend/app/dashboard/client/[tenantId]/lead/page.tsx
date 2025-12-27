@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -71,7 +72,10 @@ const CALL_OUTCOMES = [
   { value: "wrong-number", label: "❓ Wrong Number" },
 ];
 
-export default function LeadsCRMPage() {
+export default function TenantLeadsCRMPage() {
+  const params = useParams();
+  const tenantId = params?.tenantId as string;
+  
   // State
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -217,7 +221,7 @@ export default function LeadsCRMPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📋 Lead Management (CRM)</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📋 CRM / Lead Management</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Manage leads, track follow-ups, and convert prospects
           </p>

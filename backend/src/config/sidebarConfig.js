@@ -174,11 +174,12 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 8: SuperAdmin Only - Leads ===
+  // === PRIORITY 8: CRM / Lead Management ===
   {
     href: "/dashboard/lead",
-    label: "👥 Leads",
-    roles: ["SuperAdmin", "Admin"],
+    label: "� CRM / Leads",
+    roles: ["SuperAdmin", "Admin", "tenantAdmin", "manager", "counsellor"],
+    tenantSpecific: true,
   },
   
   // === PRIORITY 9: SuperAdmin Only - Tenants ===
