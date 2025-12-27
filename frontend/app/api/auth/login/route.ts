@@ -18,7 +18,7 @@ import { buildBFFHeaders } from '@/lib/bffHelpers';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, subdomain } = body;
+    const { email, password, subdomain, purpose } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Calling Express backend:', `${expressUrl}/api/auth/login`);
     console.log('🌐 Subdomain from request:', subdomain || 'NONE (main domain)');
+    console.log('🎯 Login purpose:', purpose || 'default');
 
     // Build headers with tenant subdomain (for tenant ownership validation)
     const headers = await buildBFFHeaders();
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
             ...headers, // Include X-Tenant-Subdomain if present
           },
           credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, purpose }), // ✅ Pass purpose to backend
           signal: controller.signal,
         }
       );

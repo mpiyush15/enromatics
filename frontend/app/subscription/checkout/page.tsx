@@ -438,6 +438,7 @@ function CheckoutPageContent() {
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          purpose: "checkout", // ✅ Allow login on main domain for checkout/upgrade
         }),
       });
 
@@ -446,16 +447,18 @@ function CheckoutPageContent() {
       if (res.ok) {
         toast.success("Login successful");
         setVerifiedEmail(formData.email);
-        setTenantId(data.tenant?._id || data.tenantId);
+        // Get tenantId from user object (returned by login API)
+        setTenantId(data.user?.tenantId || data.tenantId);
         setFormData(prev => ({
           ...prev,
-          name: data.tenant?.adminName || data.user?.name || prev.name,
-          instituteName: data.tenant?.instituteName || prev.instituteName,
-          phone: data.tenant?.phone || data.user?.phone || prev.phone,
+          name: data.user?.name || prev.name,
+          instituteName: data.user?.tenant?.instituteName || prev.instituteName,
+          phone: data.user?.phone || data.user?.tenant?.contact?.phone || prev.phone,
         }));
+        setIsNewTenant(false); // Mark as existing customer for upgrade
         setStep("payment");
       } else {
-        toast.error(data.error || "Invalid credentials");
+        toast.error(data.message || data.error || "Invalid credentials");
       }
     } catch {
       toast.error("Login failed");

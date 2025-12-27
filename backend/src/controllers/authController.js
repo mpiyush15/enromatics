@@ -166,9 +166,9 @@ export const registerUser = async (req, res) => {
  */
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, purpose } = req.body;
 
-    console.log('🔐 Login attempt for:', email);
+    console.log('🔐 Login attempt for:', email, 'Purpose:', purpose || 'default');
     
     // Extract tenant subdomain from request (set by frontend middleware via BFF)
     const tenantSubdomain = req.headers['x-tenant-subdomain'];
@@ -192,6 +192,9 @@ export const loginUser = async (req, res) => {
     // ✅ TENANT-BASED ACCESS CONTROL
     const userRole = user.role?.toLowerCase();
     
+    // Check if this is a checkout/upgrade login (allows tenant users on main domain)
+    const isCheckoutLogin = purpose === 'checkout' || purpose === 'upgrade';
+    
     // 1. SuperAdmin → ONLY main domain (no subdomain)
     if (userRole === 'superadmin') {
       if (tenantSubdomain) {
@@ -204,9 +207,9 @@ export const loginUser = async (req, res) => {
       console.log('✅ SuperAdmin login on main domain');
     }
     
-    // 2. All other roles → MUST use tenant subdomain
+    // 2. All other roles → MUST use tenant subdomain (UNLESS checkout/upgrade purpose)
     else {
-      if (!tenantSubdomain) {
+      if (!tenantSubdomain && !isCheckoutLogin) {
         console.log('❌ Access denied: Non-SuperAdmin trying to login on main domain');
         return res.status(403).json({ 
           message: "Access denied. Please login using your tenant subdomain",
@@ -214,28 +217,33 @@ export const loginUser = async (req, res) => {
         });
       }
       
-      // Resolve subdomain to tenantId
-      const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
-      
-      if (!resolvedTenantId) {
-        console.log('❌ Tenant not found for subdomain:', tenantSubdomain);
-        return res.status(404).json({ 
-          message: "Tenant not found",
-          hint: "Please check your subdomain URL"
-        });
+      // For checkout login on main domain, skip subdomain validation
+      if (isCheckoutLogin && !tenantSubdomain) {
+        console.log('✅ Checkout login allowed on main domain for tenant user:', user.email);
+      } else if (tenantSubdomain) {
+        // Resolve subdomain to tenantId
+        const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
+        
+        if (!resolvedTenantId) {
+          console.log('❌ Tenant not found for subdomain:', tenantSubdomain);
+          return res.status(404).json({ 
+            message: "Tenant not found",
+            hint: "Please check your subdomain URL"
+          });
+        }
+        
+        // Validate user belongs to this tenant
+        if (user.tenantId !== resolvedTenantId) {
+          console.log('❌ Access denied: User does not belong to this tenant');
+          console.log('   User tenantId:', user.tenantId, '| Subdomain tenantId:', resolvedTenantId);
+          return res.status(403).json({ 
+            message: "Access denied. You don't belong to this tenant",
+            hint: `Please visit ${user.tenantId}.enromatics.com/login`
+          });
+        }
+        
+        console.log(`✅ ${userRole} login on tenant subdomain: ${tenantSubdomain}`);
       }
-      
-      // Validate user belongs to this tenant
-      if (user.tenantId !== resolvedTenantId) {
-        console.log('❌ Access denied: User does not belong to this tenant');
-        console.log('   User tenantId:', user.tenantId, '| Subdomain tenantId:', resolvedTenantId);
-        return res.status(403).json({ 
-          message: "Access denied. You don't belong to this tenant",
-          hint: `Please visit ${user.tenantId}.enromatics.com/login`
-        });
-      }
-      
-      console.log(`✅ ${userRole} login on tenant subdomain: ${tenantSubdomain}`);
     }
 
     console.log('✅ Login successful for:', email);

@@ -281,7 +281,8 @@ export const verifySubscriptionPayment = async (req, res) => {
         console.log('Order meta:', JSON.stringify(orderMeta));
         console.log('Order amount:', orderAmount, 'Detected plan:', planId);
         
-        const plan = PLANS.find(p => p.id === planId) || { id: planId, name: planId };
+        // Case-insensitive plan lookup
+        const plan = PLANS.find(p => p.id.toLowerCase() === planId?.toLowerCase()) || { id: planId, name: planId };
         tenant.plan = planId;
         
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
@@ -487,7 +488,8 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
         
         console.log('Webhook: Order amount:', orderAmount, 'Detected plan:', planId);
         
-        const plan = PLANS.find(p => p.id === planId) || { name: planId };
+        // Case-insensitive plan lookup
+        const plan = PLANS.find(p => p.id.toLowerCase() === planId?.toLowerCase()) || { name: planId, id: planId };
         let duration = 30 * 24 * 60 * 60 * 1000; // monthly
         if (billingCycle === 'annual') {
           duration = 365 * 24 * 60 * 60 * 1000;
@@ -654,7 +656,8 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
         // Log the failed/cancelled payment
         try {
           const pendingPlan = tenant.subscription?.pendingPlan || orderMeta.plan_id || tenant.plan;
-          const plan = PLANS.find(p => p.id === pendingPlan) || { name: pendingPlan, id: pendingPlan };
+          // Case-insensitive plan lookup
+          const plan = PLANS.find(p => p.id.toLowerCase() === pendingPlan?.toLowerCase()) || { name: pendingPlan, id: pendingPlan };
           
           // Update existing pending payment to failed (or create if not found)
           const existingPayment = await SubscriptionPayment.findOne({ 
