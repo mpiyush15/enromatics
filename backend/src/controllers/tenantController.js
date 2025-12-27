@@ -32,8 +32,13 @@ export const getTenantBySubdomain = async (req, res) => {
 
     console.log('🎨 Fetching tenant by subdomain:', subdomain);
 
-    // Find tenant by subdomain
-    const tenant = await Tenant.findOne({ subdomain });
+    // Find tenant by subdomain OR tenantId (since tenantId is used as subdomain in URLs)
+    const tenant = await Tenant.findOne({ 
+      $or: [
+        { subdomain: subdomain },
+        { tenantId: subdomain }
+      ]
+    });
 
     if (!tenant) {
       console.log('❌ Tenant not found for subdomain:', subdomain);
@@ -489,7 +494,9 @@ export const sendTenantCredentials = async (req, res) => {
     const baseUrl = process.env.FRONTEND_URL || 'https://enromatics.com';
     // Extract base domain (e.g., enromatics.com from https://www.enromatics.com)
     const baseDomain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-    const loginUrl = `https://${tenant.tenantId}.${baseDomain}/login`;
+    // Use subdomain field if set, otherwise fallback to tenantId
+    const subdomainForUrl = tenant.subdomain || tenant.tenantId;
+    const loginUrl = `https://${subdomainForUrl}.${baseDomain}/login`;
 
     // Send credentials email
     await sendCredentialsEmail({

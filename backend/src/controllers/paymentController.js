@@ -60,8 +60,25 @@ export const initiateSubscriptionPayment = async (req, res) => {
       return res.status(400).json({ message: 'Invalid plan selected', planId, availablePlans: PLANS.map(p => p.id) });
     }
 
-    // Generate a unique tenantId if not provided
-    const finalTenantId = tenantId || `tenant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate a clean subdomain from institute name or email
+    const generateSubdomain = (instituteName, email) => {
+      // Use institute name if provided, otherwise use email prefix
+      const baseName = instituteName || email?.split('@')[0] || 'tenant';
+      
+      // Clean up: lowercase, remove special chars, replace spaces with nothing
+      let subdomain = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric
+        .substring(0, 30); // Max 30 chars
+      
+      // Add random suffix to ensure uniqueness
+      const suffix = Math.random().toString(36).substr(2, 4);
+      return `${subdomain}${suffix}`;
+    };
+
+    // Generate subdomain if not provided
+    const generatedSubdomain = generateSubdomain(instituteName, email);
+    const finalTenantId = tenantId || generatedSubdomain;
 
     // Determine billing cycle
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
@@ -80,6 +97,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
       // Create new tenant record - this is a new signup
       tenant = await Tenant.create({
         tenantId: finalTenantId,
+        subdomain: finalTenantId, // Set subdomain same as tenantId for URL access
         name: name || instituteName || email.split('@')[0],
         instituteName: instituteName || null,
         email: email,
@@ -98,7 +116,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
           pendingPlan: planId // Store the plan they're trying to upgrade to
         }
       });
-      console.log('Created new tenant:', tenant.tenantId, 'Pending plan:', planId);
+      console.log('Created new tenant:', tenant.tenantId, 'Subdomain:', tenant.subdomain, 'Pending plan:', planId);
     } else {
       // Existing tenant - DON'T change plan yet, just mark as pending upgrade
       // Store the pending plan in subscription metadata
