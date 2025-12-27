@@ -1,7 +1,15 @@
 // ...existing code...
 // Subscription plans config
-// Each plan has monthly and annual pricing (annual = ~15% discount for annual)
+// Each plan has monthly and annual pricing
+// ✅ UPDATED: Prices synced with database (SuperAdmin dynamic pricing)
 export const PLANS = [
+  {
+    id: 'trial',
+    name: 'Trial',
+    priceMonthly: 0,
+    priceAnnual: 0,
+    description: '14-day free trial',
+  },
   {
     id: 'test',
     name: 'Test Plan',
@@ -13,14 +21,14 @@ export const PLANS = [
     id: 'basic',
     name: 'Basic',
     priceMonthly: 999,
-    priceAnnual: 9999, // ~15% discount
+    priceAnnual: 8999, // ~25% savings
     description: 'Perfect for small coaching institutes',
   },
   {
     id: 'pro',
     name: 'Pro',
-    priceMonthly: 1999,
-    priceAnnual: 19999, // ~15% discount
+    priceMonthly: 2499,
+    priceAnnual: 14999, // Save ₹15,000/year (50% off)
     description: 'For growing educational institutions',
   },
   {
@@ -35,14 +43,14 @@ export const PLANS = [
     id: 'starter',
     name: 'Starter',
     priceMonthly: 999,
-    priceAnnual: 9999,
+    priceAnnual: 8999,
     description: 'Basic features for small institutes (legacy)',
   },
   {
     id: 'professional',
     name: 'Professional',
-    priceMonthly: 1999,
-    priceAnnual: 19999,
+    priceMonthly: 2499,
+    priceAnnual: 14999,
     description: 'Advanced features for growing institutes (legacy)',
   }
 ];

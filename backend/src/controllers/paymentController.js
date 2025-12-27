@@ -38,7 +38,7 @@ const detectPlanFromAmount = (amount) => {
  */
 export const initiateSubscriptionPayment = async (req, res) => {
   try {
-    const { tenantId, planId, email, phone: reqPhone, billingCycle, instituteName, name } = req.body;
+    const { tenantId, planId, email, phone: reqPhone, billingCycle, instituteName, name, amount } = req.body;
     const plan = PLANS.find(p => p.id === planId);
     if (!plan) return res.status(400).json({ message: 'Invalid plan selected' });
 
@@ -47,6 +47,8 @@ export const initiateSubscriptionPayment = async (req, res) => {
 
     // Determine billing cycle
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+
+    console.log('💰 Payment request:', { planId, cycle, frontendAmount: amount });
 
     // Check if tenant exists, if not create one
     let tenant = await Tenant.findOne({ 
@@ -99,10 +101,16 @@ export const initiateSubscriptionPayment = async (req, res) => {
     const phone = reqPhone || tenant?.contact?.phone || '9999999999';
     console.log('Using phone for payment:', phone);
 
-    // Determine price based on billing cycle
-    let orderAmount = plan.priceMonthly;
-    if (cycle === 'annual') {
-      orderAmount = plan.priceAnnual;
+    // ✅ Determine price: Use frontend amount (from DB) OR fallback to static config
+    let orderAmount;
+    if (amount && amount > 0) {
+      // Frontend sent the dynamic price from database
+      orderAmount = Number(amount);
+      console.log('💰 Using frontend dynamic price:', orderAmount);
+    } else {
+      // Fallback to static config
+      orderAmount = cycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+      console.log('💰 Using static config price:', orderAmount);
     }
 
     // Create order in Cashfree

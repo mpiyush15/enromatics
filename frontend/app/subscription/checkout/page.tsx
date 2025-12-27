@@ -471,7 +471,12 @@ function CheckoutPageContent() {
     setStep("processing");
 
     try {
-      // Initiate payment
+      // Calculate correct price based on selected cycle
+      const amount = selectedCycle === "monthly"
+        ? (plan.monthlyPrice ?? plan.price ?? 0)
+        : (plan.annualPrice ?? plan.price ?? 0);
+
+      // Initiate payment with billing cycle
       const payload = {
         planId: plan._id,
         name: formData.name,
@@ -480,7 +485,11 @@ function CheckoutPageContent() {
         phone: formData.phone,
         isNewTenant,
         tenantId: tenantId || undefined,
+        billingCycle: selectedCycle, // ✅ CRITICAL: Send selected billing cycle
+        amount: Number(amount),      // ✅ CRITICAL: Send correct amount
       };
+
+      console.log("💰 Payment payload:", payload); // Debug log
 
       const res = await fetch("/api/subscription/checkout", {
         method: "POST",
@@ -915,28 +924,42 @@ function CheckoutPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Billing:</span>
-                        <span className="font-medium capitalize">{plan.billingCycle}</span>
+                        <span className="font-medium capitalize">{selectedCycle === "annual" ? "Annual" : "Monthly"}</span>
                       </div>
                       <hr className="my-2" />
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Total:</span>
-                        <span className="text-blue-600">₹{plan.price}</span>
-                      </div>
+                      {(() => {
+                        const displayPrice = selectedCycle === "monthly"
+                          ? (plan.monthlyPrice ?? plan.price ?? 0)
+                          : (plan.annualPrice ?? plan.price ?? 0);
+                        return (
+                          <div className="flex justify-between text-lg font-bold">
+                            <span>Total:</span>
+                            <span className="text-blue-600">₹{Number(displayPrice).toLocaleString('en-IN')}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  <Button
-                    onClick={handlePayment}
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    size="lg"
-                  >
-                    {isSubmitting ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
-                    ) : (
-                      <>Pay ₹{plan.price} <CreditCard className="h-4 w-4 ml-2" /></>
-                    )}
-                  </Button>
+                  {(() => {
+                    const payAmount = selectedCycle === "monthly"
+                      ? (plan.monthlyPrice ?? plan.price ?? 0)
+                      : (plan.annualPrice ?? plan.price ?? 0);
+                    return (
+                      <Button
+                        onClick={handlePayment}
+                        disabled={isSubmitting}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                        size="lg"
+                      >
+                        {isSubmitting ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+                        ) : (
+                          <>Pay ₹{Number(payAmount).toLocaleString('en-IN')} <CreditCard className="h-4 w-4 ml-2" /></>
+                        )}
+                      </Button>
+                    );
+                  })()}
 
                   <p className="text-center text-xs text-gray-500 mt-4">
                     Secure payment powered by Cashfree. Your payment information is encrypted and secure.

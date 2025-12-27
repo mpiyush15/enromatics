@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://endearing-bl
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { planId, name, instituteName, email, phone, isNewTenant, tenantId } = body;
+    const { planId, name, instituteName, email, phone, isNewTenant, tenantId, billingCycle, amount } = body;
 
     console.log("Checkout request body:", JSON.stringify(body, null, 2));
 
@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
         phone,
         isNewTenant,
         tenantId,
+        billingCycle: billingCycle || "monthly", // ✅ Pass billing cycle (monthly/annual)
+        amount: amount || undefined,              // ✅ Pass calculated amount
       }),
     });
 
