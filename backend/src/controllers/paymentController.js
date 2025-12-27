@@ -395,10 +395,19 @@ export const verifySubscriptionPayment = async (req, res) => {
       // Send email for failed payment
       const tenant = await Tenant.findOne({ tenantId: order.customer_details.customer_id });
       if (tenant) {
+        // Get the plan they were trying to purchase (from pendingPlan or order_meta)
+        const orderMeta = order.order_meta || {};
+        const attemptedPlanId = tenant.subscription?.pendingPlan || orderMeta.plan_id || tenant.plan;
+        const attemptedPlan = PLANS.find(p => p.id === attemptedPlanId) || { name: attemptedPlanId, id: attemptedPlanId };
+        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        const orderAmount = order.order_amount || 0;
+        
         await sendEmail({
           to: tenant.email,
-          subject: `Payment Failed for ${tenant.plan}`,
-          html: `<p>Your payment for the ${tenant.plan} plan was not successful. Please try again.</p>`
+          subject: `Payment Failed for ${attemptedPlan.name} Plan (${billingCycle})`,
+          html: `<p>Your payment of ₹${orderAmount} for the <strong>${attemptedPlan.name}</strong> plan (${billingCycle}) was not successful.</p>
+                 <p>Your current subscription remains unchanged. Please try again when you're ready.</p>
+                 <p>If you continue to face issues, please contact support.</p>`
         });
       }
     }
@@ -698,11 +707,16 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           console.log('Webhook: Reset pending upgrade for tenant:', tenantId);
         }
         
-        // Send notification email
+        // Send notification email with dynamic plan details
+        const billingCycle = orderMeta.billing_cycle || tenant.subscription?.billingCycle || 'monthly';
+        const eventType = event === 'order.cancelled' ? 'Cancelled' : 'Failed';
+        
         await sendEmail({
           to: tenant.email,
-          subject: `Payment ${event === 'order.cancelled' ? 'Cancelled' : 'Failed'}`,
-          html: `<p>Your payment for the upgrade was not successful. Your current subscription remains unchanged. Please try again when you're ready.</p>`
+          subject: `Payment ${eventType} for ${plan.name} Plan (${billingCycle})`,
+          html: `<p>Your payment of ₹${orderAmount} for the <strong>${plan.name}</strong> plan (${billingCycle}) was ${eventType.toLowerCase()}.</p>
+                 <p>Your current subscription remains unchanged. Please try again when you're ready.</p>
+                 <p>If you continue to face issues, please contact support at support@enromatics.com</p>`
         });
       }
     }
