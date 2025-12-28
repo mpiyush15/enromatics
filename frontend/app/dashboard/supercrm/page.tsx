@@ -24,15 +24,33 @@ interface CRMStats {
   sources: Record<string, number>;
 }
 
+interface LiveStats {
+  liveCount: number;
+  activePages: { page: string; count: number }[];
+}
+
+interface AnalyticsStats {
+  today: { views: number; visitors: number };
+  week: { views: number; visitors: number };
+}
+
 export default function SuperCRMDashboard() {
   const [stats, setStats] = useState<CRMStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentDemos, setRecentDemos] = useState<any[]>([]);
+  const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
+  const [analyticsStats, setAnalyticsStats] = useState<AnalyticsStats | null>(null);
 
   useEffect(() => {
     fetchStats();
     fetchRecentData();
+    fetchLiveStats();
+    fetchAnalyticsStats();
+    
+    // Refresh live stats every 30 seconds
+    const interval = setInterval(fetchLiveStats, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchStats = async () => {
@@ -46,6 +64,30 @@ export default function SuperCRMDashboard() {
       console.error("Error fetching CRM stats:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLiveStats = async () => {
+    try {
+      const res = await fetch("/api/analytics/live", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setLiveStats(data);
+      }
+    } catch (err) {
+      console.debug("Error fetching live stats:", err);
+    }
+  };
+
+  const fetchAnalyticsStats = async () => {
+    try {
+      const res = await fetch("/api/analytics/stats", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsStats(data);
+      }
+    } catch (err) {
+      console.debug("Error fetching analytics stats:", err);
     }
   };
 
@@ -158,6 +200,73 @@ export default function SuperCRMDashboard() {
           </div>
           <div className="mt-3 text-sm text-purple-100">
             Total converted leads
+          </div>
+        </div>
+      </div>
+
+      {/* Live Website Analytics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Live Visitors */}
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-5 text-white relative overflow-hidden">
+          <div className="absolute top-2 right-2">
+            <span className="flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-100 text-sm">Live Now</p>
+              <p className="text-3xl font-bold mt-1">{liveStats?.liveCount || 0}</p>
+            </div>
+            <span className="text-4xl">👁️</span>
+          </div>
+          <div className="mt-3 text-sm text-emerald-100">
+            Visitors on website
+          </div>
+        </div>
+
+        {/* Today's Visitors */}
+        <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-cyan-100 text-sm">Today</p>
+              <p className="text-3xl font-bold mt-1">{analyticsStats?.today.visitors || 0}</p>
+            </div>
+            <span className="text-4xl">📊</span>
+          </div>
+          <div className="mt-3 text-sm text-cyan-100">
+            {analyticsStats?.today.views || 0} page views
+          </div>
+        </div>
+
+        {/* This Week Visitors */}
+        <div className="bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-indigo-100 text-sm">This Week</p>
+              <p className="text-3xl font-bold mt-1">{analyticsStats?.week.visitors || 0}</p>
+            </div>
+            <span className="text-4xl">📈</span>
+          </div>
+          <div className="mt-3 text-sm text-indigo-100">
+            {analyticsStats?.week.views || 0} page views
+          </div>
+        </div>
+
+        {/* Active Pages */}
+        <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-pink-100 text-sm">Top Page Now</p>
+              <p className="text-xl font-bold mt-1 truncate">
+                {liveStats?.activePages?.[0]?.page || "—"}
+              </p>
+            </div>
+            <span className="text-4xl">🔥</span>
+          </div>
+          <div className="mt-3 text-sm text-pink-100">
+            {liveStats?.activePages?.[0]?.count || 0} active viewers
           </div>
         </div>
       </div>

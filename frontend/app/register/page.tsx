@@ -2,8 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 export default function RegisterPage() {
+  // Track page view
+  usePageTracking("register");
+  
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",

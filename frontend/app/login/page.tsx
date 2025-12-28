@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authService } from "@/lib/authService";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 interface TenantBranding {
   instituteName: string;
@@ -23,6 +24,9 @@ function getCookieValue(name: string): string | null {
 }
 
 export default function LoginPage() {
+  // Track page view
+  usePageTracking("login");
+  
   const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});

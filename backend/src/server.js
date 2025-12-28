@@ -42,6 +42,7 @@ import subscriptionPlansRoutes from './routes/subscriptionPlansRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import offersRoutes from './routes/offersRoutes.js';
 import supercrmRoutes from './routes/supercrmRoutes.js';
+import websiteAnalyticsRoutes from './routes/websiteAnalyticsRoutes.js';
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
@@ -151,6 +152,7 @@ app.use('/api/offers', offersRoutes);
 app.use('/api/demo-requests', demoRoutes);
 app.use('/api/form-leads', formLeadRoutes);
 app.use('/api/supercrm', supercrmRoutes);
+app.use('/api/website-analytics', websiteAnalyticsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);

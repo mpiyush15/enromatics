@@ -5,8 +5,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { FaGraduationCap, FaFileInvoiceDollar, FaChartBar, FaBook, FaUsers as FaParents, FaCalendarAlt, FaFacebook, FaInstagram, FaWhatsapp, FaChevronRight } from "react-icons/fa";
 import BookDemoModal from "@/components/BookDemoModal";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 export default function TryPage() {
+  // Track page view
+  usePageTracking("try");
+  
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showQuestionnaireModal, setShowQuestionnaireModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
