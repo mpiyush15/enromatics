@@ -24,7 +24,7 @@ export default function LeadFormPage() {
     setStatus("Submitting...");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/leads/add`, {
+      const res = await fetch(`${API_BASE_URL}/api/form-leads`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

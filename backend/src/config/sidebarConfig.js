@@ -174,18 +174,18 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 8: CRM / Lead Management ===
+  // === PRIORITY 8: CRM / Lead Management (Tenant-specific only) ===
   {
     href: "/dashboard/lead",
-    label: "� CRM / Leads",
-    roles: ["SuperAdmin", "Admin", "tenantAdmin", "manager", "counsellor"],
+    label: "📊 CRM / Leads",
+    roles: ["tenantAdmin", "manager", "counsellor"],
     tenantSpecific: true,
   },
   
   // === PRIORITY 9: SuperAdmin Only - Tenants ===
   {
     href: "/dashboard/tenants",
-    label: "� Tenants",
+    label: "🏢 Tenants",
     roles: ["SuperAdmin", "Admin"],
   },
 
@@ -202,11 +202,17 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 12: SuperAdmin Only - Demo Requests ===
+  // === PRIORITY 12: SuperAdmin Only - SuperCRM (Sales Management) ===
   {
-    href: "/dashboard/demo-requests",
-    label: "📅 Demo Requests",
+    label: "🚀 SuperCRM",
+    href: "#",
     roles: ["SuperAdmin"],
+    children: [
+      { label: "📊 CRM Dashboard", href: "/dashboard/supercrm", roles: ["SuperAdmin"] },
+      { label: "📝 Form Leads", href: "/dashboard/supercrm/form-leads", roles: ["SuperAdmin"] },
+      { label: "📅 Demo Requests", href: "/dashboard/supercrm/demo-requests", roles: ["SuperAdmin"] },
+      { label: "📋 All Leads", href: "/dashboard/supercrm/all-leads", roles: ["SuperAdmin"] },
+    ],
   },
 
   // === PRIORITY 13: Institute Settings (Staff + Billing) ===

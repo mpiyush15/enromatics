@@ -369,16 +369,15 @@ function SignUpModal({ onClose, onSuccess, questAnswers, recommendedPlan }: { on
         const leadData = {
           name: formData.name,
           email: formData.email,
-          mobile: formData.mobile,
-          coachingName: formData.coachingName,
-          source: "landing_page_questionnaire", // Track source
-          questionnaire: questAnswers,
-          recommendedPlan: recommendedPlan,
-          createdAt: new Date().toISOString()
+          phone: formData.mobile,
+          institute: formData.coachingName,
+          source: "landing-page",
+          plan: recommendedPlan,
+          notes: `Questionnaire: Students: ${questAnswers.students}, Type: ${questAnswers.coachingType}, Current: ${questAnswers.currentManagement}`
         };
 
-        // Create lead using form submission endpoint
-        await fetch("/api/form/submit", {
+        // Create lead using form-leads endpoint (public)
+        await fetch("/api/public/form-leads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(leadData)
