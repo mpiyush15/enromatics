@@ -45,6 +45,42 @@ const pageViewSchema = new mongoose.Schema(
     sessionStart: { type: Date },
     duration: { type: Number, default: 0 }, // in seconds
 
+    // Phase 1: Engagement Metrics
+    bounced: { 
+      type: Boolean, 
+      default: false // true if user leaves without interaction in 30 sec
+    },
+    interactions: { 
+      type: Number, 
+      default: 0 // count of clicks, scrolls, inputs
+    },
+    scrollDepth: { 
+      type: Number, 
+      default: 0, // 0-100 percentage of page scrolled
+      min: 0,
+      max: 100
+    },
+    timeOnPage: { 
+      type: Number, 
+      default: 0 // seconds spent on this specific page
+    },
+    entryPage: { 
+      type: Boolean, 
+      default: false // true if first page in session
+    },
+    exitPage: { 
+      type: Boolean, 
+      default: false // true if last page in session
+    },
+    
+    // Phase 2: Goal & Event Tracking (Pre-added for future use)
+    goalId: { type: mongoose.Schema.Types.ObjectId, ref: "Goal" },
+    eventType: { 
+      type: String, 
+      enum: ["pageview", "click", "form_submit", "video_play", "download", "custom"]
+    },
+    eventMetadata: { type: mongoose.Schema.Types.Mixed }, // Flexible for custom data
+
     // Geo (optional - can add later)
     country: { type: String },
     city: { type: String },
