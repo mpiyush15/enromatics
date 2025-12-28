@@ -49,6 +49,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClientLayout>{children}</ClientLayout>
+        <script src="/analytics-phase1-tracking.js" async></script>
       </body>
     </html>
   );

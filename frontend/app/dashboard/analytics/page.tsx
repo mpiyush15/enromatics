@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { Loader } from 'lucide-react';
 import useAuth from '@/hooks/useAuth';
 import AnalyticsOverview from './AnalyticsOverview';
+import Phase1Dashboard from '@/components/analytics/phase1/Phase1Dashboard';
 
 export default function AnalyticsPage() {
   const { user, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'phase1'>('overview');
 
   useEffect(() => {
     setMounted(true);
@@ -33,8 +35,36 @@ export default function AnalyticsPage() {
           <p className="text-gray-600">Real-time insights and performance metrics</p>
         </div>
 
-        {/* Analytics Component */}
-        <AnalyticsOverview tenantId={user?.tenantId || ''} />
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'overview'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('phase1')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'phase1'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Engagement Metrics
+          </button>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'overview' ? (
+          <AnalyticsOverview tenantId={user?.tenantId || ''} />
+        ) : (
+          <Phase1Dashboard />
+        )}
       </div>
     </div>
   );
