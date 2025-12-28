@@ -66,8 +66,10 @@ function detectSource(referrer) {
 router.post("/track", async (req, res) => {
   try {
     const { page, path, sessionId, referrer, utmSource, utmMedium, utmCampaign } = req.body;
+    console.log("📊 [Backend] Track endpoint hit - body:", { page, path, sessionId, referrer });
     
     if (!page || !sessionId) {
+      console.warn("❌ [Backend] Missing required fields - page or sessionId");
       return res.status(400).json({ success: false, message: "page and sessionId required" });
     }
 
@@ -106,10 +108,12 @@ router.post("/track", async (req, res) => {
       sessionStart: existingSession ? existingSession.sessionStart : new Date(),
     });
 
+    console.log(`✅ [Backend] PageView saved (${pageView._id}) - session:${sessionId}, page:${page}`);
+
     // Return minimal response (fast)
     res.status(201).json({ success: true, id: pageView._id });
   } catch (err) {
-    console.error("❌ Analytics track error:", err.message);
+    console.error("❌ [Backend] Analytics track error:", err.message);
     // Don't expose errors to public
     res.status(500).json({ success: false });
   }

@@ -29,23 +29,30 @@ export function usePageTracking(pageName: string) {
         const utmMedium = params.get("utm_medium") || undefined;
         const utmCampaign = params.get("utm_campaign") || undefined;
 
+        const trackingData = {
+          page: pageName,
+          path: window.location.pathname,
+          sessionId,
+          referrer: document.referrer || undefined,
+          utmSource,
+          utmMedium,
+          utmCampaign,
+        };
+
+        console.log(`📊 [Analytics] Tracking page: ${pageName}`, trackingData);
+
         // Send tracking data
-        await fetch("/api/analytics/track", {
+        const response = await fetch("/api/analytics/track", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            page: pageName,
-            path: window.location.pathname,
-            sessionId,
-            referrer: document.referrer || undefined,
-            utmSource,
-            utmMedium,
-            utmCampaign,
-          }),
+          body: JSON.stringify(trackingData),
         });
+
+        const result = await response.json();
+        console.log(`📊 [Analytics] Track response (${response.status}):`, result);
       } catch (error) {
         // Silent fail - don't break the page if tracking fails
-        console.debug("Analytics tracking failed:", error);
+        console.error("❌ [Analytics] Tracking failed:", error);
       }
     };
 

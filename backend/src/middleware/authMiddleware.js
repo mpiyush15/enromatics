@@ -4,19 +4,28 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   let token;
 
-  // ✅ Support both Bearer header & Cookie
+  // ✅ Priority 1: Authorization Bearer header (best practice)
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-    console.log("✅ Token from Bearer header");
-  } else if (req.cookies?.jwt) {
+    console.log("✅ Token from Authorization Bearer header");
+  } 
+  // ✅ Priority 2: jwt cookie (NextJS/Vercel)
+  else if (req.cookies?.jwt) {
     token = req.cookies.jwt;
-    console.log("✅ Token from cookie");
-  } else {
-    console.warn("⚠️ No token found - Headers:", Object.keys(req.headers));
-    console.warn("⚠️ Cookies:", req.cookies);
+    console.log("✅ Token from jwt cookie");
+  }
+  // ✅ Priority 3: token cookie (fallback for compatibility)
+  else if (req.cookies?.token) {
+    token = req.cookies.token;
+    console.log("✅ Token from token cookie (legacy)");
+  }
+  else {
+    console.warn("⚠️ No token found");
+    console.warn("⚠️ Auth Headers:", req.headers.authorization ? "Present" : "Missing");
+    console.warn("⚠️ Cookies available:", Object.keys(req.cookies || {}));
   }
 
   if (!token) {

@@ -215,11 +215,11 @@ export const sidebarLinks = [
     ],
   },
 
-  // === PRIORITY 12A: SuperAdmin Only - Website Analytics ===
+  // === PRIORITY 12A: Website Analytics (SuperAdmin & Admins) ===
   {
     href: "/dashboard/website-analytics",
     label: "📈 Website Analytics",
-    roles: ["SuperAdmin"],
+    roles: ["SuperAdmin", "Admin"],
   },
 
   // === PRIORITY 13: Institute Settings (Staff + Billing) ===
