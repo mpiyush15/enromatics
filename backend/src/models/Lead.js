@@ -3,22 +3,29 @@ import mongoose from "mongoose";
 
 const leadSchema = new mongoose.Schema(
   {
-    // Tenant isolation
+    // Tenant isolation (optional for SuperAdmin/public leads)
     tenantId: {
       type: String,
-      required: true,
+      required: false,  // Made optional for SuperAdmin leads
       index: true,
+      default: null,
     },
 
     // Basic Info
     name: { type: String, required: true },
-    phone: { type: String, required: true },
+    phone: { type: String, required: false },  // Made optional for registration leads
     email: { type: String, lowercase: true },
     
     // Lead Source
     source: {
       type: String,
-      enum: ["website", "whatsapp", "walk-in", "facebook", "instagram", "referral", "scholarship-exam", "phone-call", "other"],
+      enum: [
+        "website", "whatsapp", "walk-in", "facebook", "instagram", "referral", 
+        "scholarship-exam", "phone-call", "other",
+        // New sources for SuperAdmin tracking
+        "public-form", "lead-form", "website-form", "landing-page", 
+        "find-your-plan", "register-page", "checkout", "demo-request"
+      ],
       default: "other",
     },
     sourceDetails: { type: String }, // e.g., "Facebook Ad Campaign March 2025"

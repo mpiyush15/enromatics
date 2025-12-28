@@ -72,7 +72,7 @@ router.get(
  */
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone, mobile, institute, plan, message } = req.body;
+    const { name, email, phone, mobile, institute, plan, message, notes, source } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Name is required" });
@@ -86,12 +86,12 @@ router.post("/", async (req, res) => {
       phone: leadPhone,
       institute,
       plan,
-      notes: message,
-      source: "public-form",
+      notes: notes || message,
+      source: source || "public-form",  // Use source from request, fallback to public-form
       status: "new",
     });
 
-    console.log(`✅ Public form lead created: ${name} - ${leadPhone}`);
+    console.log(`✅ Form lead created: ${name} - ${leadPhone} - Source: ${source || "public-form"}`);
 
     res.status(201).json({
       success: true,
