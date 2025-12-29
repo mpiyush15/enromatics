@@ -1,6 +1,7 @@
 import express from 'express';
 import whatsappController from '../controllers/whatsappController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
@@ -43,12 +44,12 @@ router.get('/debug-api', protect, whatsappController.debugMetaAPI);
 router.get('/debug-messages', protect, whatsappController.debugMessages);
 router.get('/debug-tenant-data', protect, whatsappController.debugTenantData);
 
-// Inbox routes
-router.get('/inbox/conversations', protect, whatsappController.getInboxConversations);
-router.get('/inbox/conversation/:conversationId', protect, whatsappController.getConversation);
-router.post('/inbox/conversation/:conversationId/read', protect, whatsappController.markConversationRead);
-router.post('/inbox/conversation/:conversationId/reply', protect, whatsappController.replyToConversation);
-router.get('/inbox/stats', protect, whatsappController.getInboxStats);
-router.get('/inbox/search', protect, whatsappController.searchInbox);
+// 🔐 Inbox routes - Restricted to SuperAdmin and tenantAdmin only
+router.get('/inbox/conversations', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.getInboxConversations);
+router.get('/inbox/conversation/:conversationId', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.getConversation);
+router.post('/inbox/conversation/:conversationId/read', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.markConversationRead);
+router.post('/inbox/conversation/:conversationId/reply', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.replyToConversation);
+router.get('/inbox/stats', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.getInboxStats);
+router.get('/inbox/search', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.searchInbox);
 
 export default router;

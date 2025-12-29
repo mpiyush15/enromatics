@@ -8,10 +8,7 @@ const connectDB = async () => {
   console.log("All env keys:", Object.keys(process.env).filter(k => k.includes('MONGO')));
   
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ MongoDB Connected");
     console.log("📦 Using database:", mongoose.connection.name);
 

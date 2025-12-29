@@ -27,7 +27,10 @@ const whatsAppMessageSchema = new mongoose.Schema({
     mediaUrl: String,
     mediaType: String
   },
-  waMessageId: String,
+  waMessageId: {
+    type: String,
+    index: true
+  },
   status: {
     type: String,
     enum: ['queued', 'sent', 'delivered', 'read', 'failed'],
@@ -79,6 +82,5 @@ whatsAppMessageSchema.index({ tenantId: 1, createdAt: -1 });
 whatsAppMessageSchema.index({ tenantId: 1, status: 1 });
 whatsAppMessageSchema.index({ tenantId: 1, recipientPhone: 1 });
 whatsAppMessageSchema.index({ tenantId: 1, campaign: 1 });
-whatsAppMessageSchema.index({ waMessageId: 1 });
 
 export default mongoose.model('WhatsAppMessage', whatsAppMessageSchema);

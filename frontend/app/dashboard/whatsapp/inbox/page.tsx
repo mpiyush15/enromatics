@@ -66,23 +66,119 @@ export default function WhatsAppInboxPage() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]); // New: store approved templates
+  const [templatesLoading, setTemplatesLoading] = useState(false); // New: loading state for templates
   
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const lastSyncRef = React.useRef<string>(new Date().toISOString());
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (smooth: boolean = true) => {
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+      }, 0);
+    }
+  };
+
+  // Optimized real-time sync: Only fetch and update new/changed conversations
+  const syncConversationsIncremental = async () => {
+    try {
+      const response = await fetch(
+        `/api/whatsapp/inbox/conversations?since=${encodeURIComponent(lastSyncRef.current)}`,
+        { credentials: 'include' }
+      );
+      
+      if (!response.ok) return;
+      
+      const data = await response.json();
+      if (data.success && data.conversations.length > 0) {
+        let hasChangedConversations = false;
+        
+        // Update only conversations that have changed
+        setConversations(prev => {
+          const conversationMap = new Map(prev.map(c => [c.conversationId, c]));
+          data.conversations.forEach((newConv: Conversation) => {
+            const oldConv = conversationMap.get(newConv.conversationId);
+            // Check if message count or last message time changed
+            if (!oldConv || oldConv.unreadCount !== newConv.unreadCount || oldConv.lastMessageTime !== newConv.lastMessageTime) {
+              hasChangedConversations = true;
+            }
+            conversationMap.set(newConv.conversationId, newConv);
+          });
+          return Array.from(conversationMap.values());
+        });
+        
+        // Update stats
+        const statsRes = await fetch(`/api/whatsapp/inbox/stats`, {
+          credentials: 'include'
+        });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (statsData.success) {
+            setStats(statsData.stats);
+          }
+        }
+        
+        // Update last sync time
+        lastSyncRef.current = new Date().toISOString();
+        
+        // If viewing a conversation and it has new messages, refresh immediately
+        if (selectedConversation && hasChangedConversations) {
+          const updatedConv = data.conversations.find(
+            (c: Conversation) => c.conversationId === selectedConversation
+          );
+          if (updatedConv) {
+            console.log('🔄 New message detected in selected conversation, auto-fetching...');
+            // Use a small delay to ensure state updates are processed
+            setTimeout(() => {
+              fetchConversationMessages(selectedConversation, true);
+            }, 100);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Incremental sync failed:', error);
+    }
   };
 
   useEffect(() => {
     fetchInboxData(true); // Initial load
+    fetchApprovedTemplates(); // New: fetch templates on page load
     
-    // Auto-refresh every 5 seconds to sync with Meta webhook
+    // Auto-refresh every 2 seconds for faster real-time updates (optimized)
     const refreshInterval = setInterval(() => {
-      fetchInboxData(false); // Silent refresh
-    }, 5000);
+      syncConversationsIncremental(); // Incremental sync instead of full fetch
+    }, 2000);
 
     return () => clearInterval(refreshInterval);
-  }, []);
+  }, [selectedConversation]); // Re-run when conversation changes
+
+  // New: Fetch approved templates from backend
+  const fetchApprovedTemplates = async () => {
+    try {
+      setTemplatesLoading(true);
+      const response = await fetch('/api/whatsapp/templates', {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        console.warn('Failed to fetch templates:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success && data.templates) {
+        console.log('📋 Fetched approved templates:', data.templates);
+        // Filter only approved templates
+        const approvedTemplates = data.templates.filter((t: any) => t.status === 'APPROVED');
+        setTemplates(approvedTemplates);
+      }
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
 
   useEffect(() => {
     // When filter changes, only update conversations without full page reload
@@ -92,8 +188,21 @@ export default function WhatsAppInboxPage() {
   }, [filter]);
 
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      // Use non-smooth scroll for instant positioning
+      scrollToBottom(false);
+    }
   }, [messages]);
+
+  // Auto-select most recent conversation on initial load
+  useEffect(() => {
+    if (conversations.length > 0 && !selectedConversation) {
+      // Auto-select the first (most recent) conversation
+      const mostRecentConversation = conversations[0];
+      setSelectedConversation(mostRecentConversation.conversationId);
+      console.log('📌 Auto-selected most recent conversation:', mostRecentConversation.conversationId);
+    }
+  }, [conversations, selectedConversation]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -155,19 +264,33 @@ export default function WhatsAppInboxPage() {
       // Use separate loading state for messages to avoid full page reload
       if (!silent) setMessagesLoading(true);
       
+      // Load last 50 messages only (not full history) - limit=50 gets most recent
       const response = await fetch(
-        `/api/whatsapp/inbox/conversation/${conversationId}?limit=100`,
+        `/api/whatsapp/inbox/conversation/${conversationId}?limit=50`,
         { credentials: 'include' }
       );
       
       const data = await response.json();
       if (data.success) {
+        console.log('📥 Fetched messages for conversation:', {
+          conversationId,
+          count: data.messages.length,
+          firstMsg: data.messages[0] ? new Date(data.messages[0].createdAt || data.messages[0].timestamp).toLocaleString() : null,
+          lastMsg: data.messages[data.messages.length - 1] ? new Date(data.messages[data.messages.length - 1].createdAt || data.messages[data.messages.length - 1].timestamp).toLocaleString() : null
+        });
+
         // Batch all state updates to minimize re-renders
         const conversation = conversations.find(c => c.conversationId === conversationId);
         const unreadCount = conversation?.unreadCount || 0;
         
-        // Update all related states in one batch
-        setMessages(data.messages);
+        // ALWAYS update messages - don't skip even if silent
+        if (data.messages && data.messages.length > 0) {
+          setMessages(data.messages);
+          // Auto-scroll to bottom when new messages arrive
+          setTimeout(() => scrollToBottom(false), 50);
+        }
+        
+        // Update conversation unread count
         setConversations(prev => prev.map(conv => 
           conv.conversationId === conversationId 
             ? { ...conv, unreadCount: 0 }
@@ -181,9 +304,14 @@ export default function WhatsAppInboxPage() {
             unreadMessages: Math.max(0, prev.unreadMessages - unreadCount)
           } : null);
         }
+      } else {
+        console.error('Failed to fetch messages - success is false:', data);
       }
     } catch (error) {
       console.error('Failed to fetch conversation messages:', error);
+      if (!silent) {
+        alert('Failed to load messages. Please try again.');
+      }
     } finally {
       if (!silent) setMessagesLoading(false);
     }
@@ -197,7 +325,8 @@ export default function WhatsAppInboxPage() {
       const requestBody = templateName ? {
         messageType: 'template',
         templateName: templateName,
-        templateParams: [] // Add parameters if needed
+        templateParams: [], // Add parameters if needed
+        message: `Template: ${templateName}` // Include message field for compatibility
       } : {
         message: replyText,
         messageType: 'text'
@@ -637,17 +766,44 @@ export default function WhatsAppInboxPage() {
                       onKeyPress={(e) => e.key === 'Enter' && !sending && sendReply()}
                       disabled={sending}
                     />
-                    <button
-                      onClick={() => sendReply('template', 'hello_world')}
-                      disabled={sending}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      title="Send template message (works anytime)"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Template
-                    </button>
+                    
+                    {/* Template Dropdown - New */}
+                    {templates.length > 0 && (
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            sendReply('template', e.target.value);
+                            e.target.value = ''; // Reset dropdown
+                          }
+                        }}
+                        disabled={sending || templatesLoading}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        title="Send an approved template message"
+                      >
+                        <option value="">📋 Templates ({templates.length})</option>
+                        {templates.map((template: any) => (
+                          <option key={template.name} value={template.name}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    
+                    {/* Fallback: Simple Template Button */}
+                    {templates.length === 0 && (
+                      <button
+                        onClick={() => sendReply('template', 'hello_world')}
+                        disabled={sending}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title="Send template message (works anytime)"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Template
+                      </button>
+                    )}
+                    
                     <button
                       onClick={() => sendReply()}
                       disabled={!replyText.trim() || sending}

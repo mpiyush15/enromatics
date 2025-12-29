@@ -1324,33 +1324,40 @@ export const getConversation = async (req, res) => {
   try {
     const tenantId = getTenantId(req);
     const { conversationId } = req.params;
-    const { limit = 100, page = 1 } = req.query;
+    const { limit = 50 } = req.query;
+    const limitNum = parseInt(limit);
 
     console.log('💬 Getting conversation:', conversationId, 'for tenant:', tenantId);
-    console.log('📄 Requested limit:', limit, 'page:', page);
+    console.log('📄 Requested limit:', limitNum);
 
-    // Get messages with higher limit and include both inbox and sent messages
-    const messages = await WhatsAppInbox.find({ tenantId, conversationId })
-      .sort({ createdAt: 1 }) // Oldest first for conversation view
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
+    // Get ALL messages (inbox + sent) for this conversation to find the most recent ones
+    const inboxMessages = await WhatsAppInbox.find({ tenantId, conversationId })
       .populate('readBy', 'name email')
       .populate('repliedBy', 'name email')
       .lean();
 
-    // Also get sent messages from WhatsAppMessage collection for complete history
+    console.log('📥 Inbox messages found:', inboxMessages.length, 'for conversationId:', conversationId);
+
+    // Get sent messages from WhatsAppMessage collection for complete history
+    const senderPhone = conversationId.replace(`${tenantId}_`, '');
+    
+    // Try multiple phone formats in case of +/formatting variations
     const sentMessages = await WhatsAppMessage.find({ 
-      tenantId, 
-      recipientPhone: conversationId.replace(`${tenantId}_`, '')
+      tenantId,
+      $or: [
+        { recipientPhone: senderPhone },
+        { recipientPhone: `+${senderPhone}` },
+        { recipientPhone: senderPhone.replace(/^\+/, '') }
+      ]
     })
-      .sort({ createdAt: 1 })
-      .limit(parseInt(limit))
       .populate('sentBy', 'name email')
       .lean();
 
-    // Combine and sort all messages by timestamp
+    console.log('📤 Sent messages found:', sentMessages.length, 'for phone:', senderPhone, '(trying multiple formats)');
+
+    // Combine all messages with consistent structure
     const allMessages = [
-      ...messages.map(msg => ({
+      ...inboxMessages.map(msg => ({
         ...msg,
         direction: 'inbound',
         displayName: msg.senderName || msg.senderProfileName || `+${msg.senderPhone}`
@@ -1371,7 +1378,9 @@ export const getConversation = async (req, res) => {
         direction: 'outbound',
         status: msg.status
       }))
-    ].sort((a, b) => new Date(a.createdAt || a.timestamp).getTime() - new Date(b.createdAt || b.timestamp).getTime());
+    ]
+      .sort((a, b) => new Date(a.createdAt || a.timestamp).getTime() - new Date(b.createdAt || b.timestamp).getTime())
+      .slice(-limitNum); // Get last N messages (most recent)
 
     // Mark inbox messages as read when viewing conversation
     await WhatsAppInbox.updateMany(
@@ -1389,8 +1398,20 @@ export const getConversation = async (req, res) => {
       success: true,
       messages: allMessages,
       conversationId,
+      count: allMessages.length
+    });
+    
+    console.log('✅ Returning conversation messages:', {
+      conversationId,
       count: allMessages.length,
-      hasMore: allMessages.length === parseInt(limit) // Indicates if there are more messages
+      firstMsg: allMessages[0] ? {
+        timestamp: allMessages[0].createdAt || allMessages[0].timestamp,
+        direction: allMessages[0].direction
+      } : null,
+      lastMsg: allMessages[allMessages.length - 1] ? {
+        timestamp: allMessages[allMessages.length - 1].createdAt || allMessages[allMessages.length - 1].timestamp,
+        direction: allMessages[allMessages.length - 1].direction
+      } : null
     });
   } catch (error) {
     console.error('Get conversation error:', error);

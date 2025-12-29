@@ -14,11 +14,11 @@ export async function POST(
   try {
     const { id: conversationId } = params;
     const body = await request.json();
-    const { message, messageType = 'text' } = body;
+    const { message, messageType = 'text', templateName, templateParams } = body;
 
-    if (!message) {
+    if (!message && !templateName) {
       return NextResponse.json(
-        { error: 'Message is required' },
+        { error: 'Message or template name is required' },
         { status: 400 }
       );
     }
@@ -30,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`💬 Sending reply to ${conversationId}`);
+    console.log(`💬 Sending reply to ${conversationId}`, { messageType, templateName });
 
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/whatsapp/inbox/conversation/${conversationId}/reply`,
@@ -43,6 +43,8 @@ export async function POST(
         body: JSON.stringify({
           message,
           messageType,
+          templateName,
+          templateParams: templateParams || [],
         }),
       }
     );

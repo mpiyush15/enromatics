@@ -7,10 +7,7 @@ const seedUtkarshScholarships = async () => {
     console.log('🌱 Seeding Utkarsh Education scholarship exams...');
 
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/enromatics', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/enromatics');
 
     console.log('✅ Connected to MongoDB');
 
