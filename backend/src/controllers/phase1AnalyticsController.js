@@ -406,35 +406,68 @@ export const getEntryExitPages = async (req, res) => {
  */
 export const trackInteraction = async (req, res) => {
   try {
-    const { sessionId, page, type, element, scrollDepth } = req.body;
+    const { sessionId, page, type, element, scrollDepth, source, referrer, interactions } = req.body;
 
     if (!sessionId || !page) {
       return res.status(400).json({ success: false, message: "sessionId and page required" });
     }
 
-    // Update the pageview with interaction data
-    const updated = await PageView.findOneAndUpdate(
-      { sessionId, page, createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } },
-      {
-        $inc: { interactions: 1 },
-        $set: { 
-          bounced: false, // Not bounced anymore
-          scrollDepth: scrollDepth || 0
-        }
-      },
-      { new: true }
-    );
+    // CRITICAL FIX: Try to find pageview, create if missing (handles schema validation failures)
+    let pageView = await PageView.findOne({
+      sessionId,
+      page,
+      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
+    });
 
-    if (!updated) {
-      console.warn(`⚠️ No pageview found for interaction tracking: ${sessionId}/${page}`);
+    // If no pageview exists, CREATE it (fallback for schema-rejected inserts)
+    if (!pageView) {
+      console.log(`📝 Creating missing PageView for: ${sessionId}/${page} (source: ${source})`);
+      
+      try {
+        pageView = await PageView.create({
+          sessionId,
+          page,
+          source: source || 'direct',
+          referrer: referrer || '',
+          device: 'unknown',
+          interactions: interactions || 1,
+          scrollDepth: scrollDepth || 0,
+          bounced: false,
+          entryPage: true,
+          exitPage: false
+        });
+      } catch (createError) {
+        console.error("❌ Failed to create PageView:", createError.message);
+        // Still return success to not block frontend
+        return res.status(200).json({ success: true, created: false, error: "PageView creation failed" });
+      }
+    } else {
+      // Update existing pageview
+      pageView = await PageView.findOneAndUpdate(
+        { sessionId, page, createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } },
+        {
+          $inc: { interactions: 1 },
+          $set: { 
+            bounced: false,
+            scrollDepth: scrollDepth || 0,
+            source: source || pageView.source,
+            referrer: referrer || pageView.referrer
+          }
+        },
+        { new: true }
+      );
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ 
+      success: true, 
+      created: !!pageView,
+      source: pageView?.source || source || 'direct'
+    });
   } catch (error) {
     console.error("❌ Track interaction error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
-};
+};;
 
 /**
  * Helper: Calculate median

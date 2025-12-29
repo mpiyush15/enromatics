@@ -1,6 +1,8 @@
 /**
  * Analytics Phase 1: Interaction Tracking Script
  * Tracks user interactions (clicks, scrolls, form inputs) for engagement metrics
+ * 
+ * FIXED: Properly detects traffic source from referrer
  */
 
 (function () {
@@ -19,10 +21,50 @@
     return window.location.pathname;
   };
 
+  // Detect traffic source from referrer (CRITICAL FIX)
+  const detectSource = () => {
+    const referrer = document.referrer || '';
+    
+    // Check for paid ad platforms (highest priority)
+    if (referrer.includes('facebook.com') || referrer.includes('m.facebook.com')) {
+      return 'facebook';
+    }
+    if (referrer.includes('instagram.com') || referrer.includes('m.instagram.com')) {
+      return 'instagram';
+    }
+    if (referrer.includes('l.facebook.com')) {
+      // Facebook click tracking URL
+      return 'facebook';
+    }
+    if (referrer.includes('google.') || referrer.includes('google.com')) {
+      return 'google';
+    }
+    if (referrer.includes('linkedin')) {
+      return 'linkedin';
+    }
+    if (referrer.includes('twitter') || referrer.includes('x.com')) {
+      return 'twitter';
+    }
+    
+    // Check UTM parameters
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get('utm_source');
+    if (utmSource) {
+      return utmSource.toLowerCase().replace('_', '-');
+    }
+    
+    // Default
+    return referrer ? 'referral' : 'direct';
+  };
+
   let scrollDepth = 0;
   let interactions = 0;
   const sessionId = getSessionId();
   const page = getPageName();
+  const source = detectSource();
+  const referrer = document.referrer;
+
+  console.log('📊 Analytics initialized:', { sessionId, page, source, referrer });
 
   // Track scroll depth
   window.addEventListener('scroll', () => {
@@ -43,8 +85,11 @@
       body: JSON.stringify({
         sessionId,
         page,
+        source,
+        referrer,
         type: 'interaction',
         scrollDepth,
+        interactions,
       }),
     }).catch((err) => console.error('Analytics tracking error:', err));
   };
@@ -72,8 +117,11 @@
       body: JSON.stringify({
         sessionId,
         page,
+        source,
+        referrer,
         type: 'session_end',
         scrollDepth,
+        interactions,
       }),
       keepalive: true, // Ensure it completes even if page unloads
     }).catch((err) => console.error('Final analytics tracking error:', err));
