@@ -1,6 +1,7 @@
 import axios from 'axios';
 import WhatsAppConfig from '../models/WhatsAppConfig.js';
 import WhatsAppMessage from '../models/WhatsAppMessage.js';
+import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
 import WhatsAppContact from '../models/WhatsAppContact.js';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
@@ -215,8 +216,39 @@ class WhatsAppService {
       console.log('📋 ========== SENDING TEMPLATE MESSAGE ==========');
       console.log('Template Name:', templateName);
       console.log('Recipient Phone:', cleanPhone);
-      console.log('Parameters:', params);
+      console.log('Parameters Provided:', params.length, 'params');
       console.log('Campaign:', metadata.campaign);
+
+      // CRITICAL: Fetch template metadata to validate variables
+      const template = await WhatsAppTemplate.findOne({ 
+        tenantId, 
+        name: templateName,
+        deleted: { $ne: true }
+      });
+
+      if (!template) {
+        throw new Error(`Template "${templateName}" not found`);
+      }
+
+      const templateVariableCount = template.variables?.length || 0;
+      console.log('Template Variables Required:', templateVariableCount);
+
+      // MANDATORY VALIDATION: Prevent silent failure by WhatsApp
+      // If template has variables but no parameters provided, abort with clear error
+      if (templateVariableCount > 0 && (!params || params.length === 0)) {
+        const errorMsg = `❌ VALIDATION FAILED: Template "${templateName}" requires ${templateVariableCount} parameter(s) but none were provided. This would cause silent message drop by WhatsApp.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // VALIDATION: Parameter count must match variable count
+      if (templateVariableCount > 0 && params.length !== templateVariableCount) {
+        const errorMsg = `❌ PARAMETER MISMATCH: Template "${templateName}" has ${templateVariableCount} variable(s) but ${params.length} parameter(s) provided. Counts must match exactly.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('✅ Validation passed - template variables match parameters');
       console.log('Tenant Config:', { phoneNumberId: config.phoneNumberId, wabaId: config.wabaId });
 
       const message = new WhatsAppMessage({
@@ -234,24 +266,47 @@ class WhatsAppService {
       });
 
       // Build template components
-      const components = params.length > 0 ? [{
-        type: 'body',
-        parameters: params.map(p => ({ type: 'text', text: String(p) }))
-      }] : [];
+      // After validation above, we know: if template has variables, params will match count
+      let components = [];
       
-      console.log('📝 Template Components:', JSON.stringify(components, null, 2));
+      if (params && params.length > 0) {
+        components = [{
+          type: 'body',
+          parameters: params.map(p => ({ type: 'text', text: String(p) }))
+        }];
+        console.log('✅ Building components with', params.length, 'parameters');
+      } else {
+        // No parameters needed - template has no variables
+        console.log('📝 Template has no variables - sending without components');
+      }
+      
+      console.log('📝 Final Components:', JSON.stringify(components, null, 2));
+
+      // Build template payload - CRITICAL: only include components if they exist
+      const templatePayload = {
+        name: templateName,
+        language: { code: 'en' }
+      };
+
+      // Only attach components if parameters exist
+      // IMPORTANT: Sending empty components [] will cause silent failure if template has variables
+      if (Array.isArray(components) && components.length > 0) {
+        templatePayload.components = components;
+        console.log('✅ Adding components to payload:', components.length, 'body parameters');
+      } else {
+        console.warn('⚠️  IMPORTANT: Sending template WITHOUT components array');
+        console.warn('   This is CORRECT ONLY if template has NO body variables');
+        console.warn('   If template has {{1}}, {{2}}, etc., message will be SILENTLY DROPPED');
+      }
 
       console.log('📤 Sending to Meta API:', {
         url: `${GRAPH_API_URL}/${config.phoneNumberId}/messages`,
+        method: 'POST',
         payload: {
           messaging_product: 'whatsapp',
           to: cleanPhone,
           type: 'template',
-          template: {
-            name: templateName,
-            language: { code: 'en' },
-            components
-          }
+          template: templatePayload
         }
       });
 
@@ -261,11 +316,7 @@ class WhatsAppService {
           messaging_product: 'whatsapp',
           to: cleanPhone,
           type: 'template',
-          template: {
-            name: templateName,
-            language: { code: 'en' },
-            components
-          }
+          template: templatePayload
         },
         {
           headers: {
@@ -276,6 +327,29 @@ class WhatsAppService {
       );
 
       console.log('✅ Meta API Response:', response.data);
+      console.log('✅ WAMID:', response.data.messages[0].id);
+
+      // CRITICAL: "accepted" does NOT mean "delivered" 
+      // Meta only validates: template name, language, basic structure
+      // Meta does NOT validate: required variables, parameter count
+      // If variables mismatch, WhatsApp drops message SILENTLY
+      if (components.length === 0) {
+        console.warn('\n⚠️  ⚠️  ⚠️  CRITICAL WARNING ⚠️  ⚠️  ⚠️');
+        console.warn('Message was ACCEPTED by Meta but may NOT BE DELIVERED to user');
+        console.warn('');
+        console.warn('Reason: You sent components: [] (empty)');
+        console.warn('');
+        console.warn('If template "' + templateName + '" has body variables {{1}}, {{2}}, etc.:');
+        console.warn('  ❌ WhatsApp SILENTLY DROPS the message');
+        console.warn('  ✅ You receive NO ERROR from Meta API');
+        console.warn('  ❌ User sees NOTHING on their phone');
+        console.warn('  ❌ Status webhook shows "delivered" but user never got it');
+        console.warn('');
+        console.warn('CHECK: (1) Template variables? (2) All parameters provided? (3) Parameter count matches?');
+        console.warn('⚠️  ⚠️  ⚠️  END WARNING ⚠️  ⚠️  ⚠️\n');
+      } else {
+        console.log('✅ Components included: Message should deliver correctly');
+      }
 
       message.waMessageId = response.data.messages[0].id;
       message.status = 'sent';

@@ -749,6 +749,10 @@ export const syncTemplatesFromMeta = async (req, res) => {
           deleted: false // Ensure it's marked as not deleted
         };
 
+        const variableCount = templateData.variables?.length || 0;
+        const statusBadge = metaTemplate.status === 'APPROVED' ? '✅' : metaTemplate.status === 'PENDING' ? '⏳' : '❌';
+        console.log(`${statusBadge} Template: ${metaTemplate.name} | Status: ${metaTemplate.status} | Variables: ${variableCount}`);
+
         // Upsert template
         const existing = await WhatsAppTemplate.findOne({ 
           tenantId, 

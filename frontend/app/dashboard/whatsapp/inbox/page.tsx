@@ -317,20 +317,108 @@ export default function WhatsAppInboxPage() {
     }
   };
 
-  const sendReply = async (messageType: string = 'text', templateName: string | null = null) => {
-    if (!selectedConversation || (!replyText.trim() && !templateName)) return;
+  const sendReply = async (messageType: string = 'text', templateNameOrObj: string | any = null) => {
+    if (!selectedConversation || (!replyText.trim() && !templateNameOrObj)) return;
 
     try {
       setSending(true);
-      const requestBody = templateName ? {
-        messageType: 'template',
-        templateName: templateName,
-        templateParams: [], // Add parameters if needed
-        message: `Template: ${templateName}` // Include message field for compatibility
-      } : {
-        message: replyText,
-        messageType: 'text'
-      };
+      
+      let requestBody: any;
+      
+      if (messageType === 'template' && templateNameOrObj) {
+        // Handle both legacy string format and new object format
+        let templateName: string;
+        let templateParams: string[] = [];
+        let templateVariables: string[] = [];
+        
+        if (typeof templateNameOrObj === 'string') {
+          // Legacy: just template name
+          templateName = templateNameOrObj;
+        } else {
+          // New: template object with full metadata
+          templateName = templateNameOrObj.name;
+          templateVariables = templateNameOrObj.variables || [];
+          
+          console.log('📋 Template selected:', {
+            name: templateName,
+            hasVariables: templateVariables.length > 0,
+            variableCount: templateVariables.length,
+            variables: templateVariables
+          });
+          
+          // If template has variables, we need to get values
+          if (templateVariables.length > 0) {
+            console.log(`⚠️  Template has ${templateVariables.length} variables - auto-filling from contact`);
+            
+            // Get contact details from the selected conversation
+            const selectedConv = conversations.find(c => c.conversationId === selectedConversation);
+            const contactName = selectedConv?.senderName || selectedConv?.senderProfileName || 'User';
+            const contactPhone = selectedConv?.senderPhone || '';
+            
+            console.log('📞 Contact details:', { contactName, contactPhone });
+            
+            // Auto-fill template parameters from contact data
+            const autoFilledParams: string[] = [];
+            for (let i = 0; i < templateVariables.length; i++) {
+              let paramValue = '';
+              
+              // Smart auto-fill based on variable position/name
+              // Variable {{1}} → contact name
+              // Variable {{2}} → school/organization (ask user)
+              // etc.
+              if (i === 0) {
+                // First variable → use contact name
+                paramValue = contactName;
+              } else if (i === 1) {
+                // Second variable → might be school name, ask user
+                paramValue = prompt(
+                  `Enter value for parameter ${i + 1}${templateVariables[i] ? ` (${templateVariables[i]})` : ''}:`,
+                  `Value${i + 1}`
+                ) || `Value${i + 1}`;
+              } else {
+                // Other variables → ask user
+                paramValue = prompt(
+                  `Enter value for parameter ${i + 1}${templateVariables[i] ? ` (${templateVariables[i]})` : ''}:`,
+                  `Value${i + 1}`
+                ) || `Value${i + 1}`;
+              }
+              
+              if (paramValue) {
+                autoFilledParams.push(paramValue);
+              }
+            }
+            
+            templateParams = autoFilledParams;
+            
+            console.log('✅ Parameters auto-filled:', {
+              template: templateName,
+              variables: templateVariables.length,
+              params: templateParams,
+              autoFilled: [contactName, ...templateParams.slice(1)]
+            });
+          } else {
+            console.log(`✅ Template has NO variables - sending without parameters`);
+          }
+        }
+        
+        requestBody = {
+          messageType: 'template',
+          templateName: templateName,
+          templateParams: templateParams,
+          message: `Template: ${templateName}`
+        };
+        
+        console.log('📤 Sending template with params:', {
+          templateName,
+          paramCount: templateParams.length,
+          params: templateParams
+        });
+      } else {
+        requestBody = {
+          message: replyText,
+          messageType: 'text'
+        };
+      }
 
       const response = await fetch(
         `/api/whatsapp/inbox/conversation/${selectedConversation}/reply`,
@@ -346,6 +434,14 @@ export default function WhatsAppInboxPage() {
       if (data.success) {
         setReplyText('');
         
+        // Get template name for display
+        let displayTemplateName = '';
+        if (messageType === 'template' && templateNameOrObj) {
+          displayTemplateName = typeof templateNameOrObj === 'string' 
+            ? templateNameOrObj 
+            : templateNameOrObj.name;
+        }
+        
         // Add the sent message to local state immediately for better UX
         const newMessage: InboxMessage = {
           _id: `temp_${Date.now()}`,
@@ -354,7 +450,7 @@ export default function WhatsAppInboxPage() {
           senderName: 'You',
           displayName: 'You',
           messageType: messageType,
-          content: templateName ? { text: `Template: ${templateName}` } : { text: replyText },
+          content: displayTemplateName ? { text: `Template: ${displayTemplateName}` } : { text: replyText },
           timestamp: new Date().toISOString(),
           isRead: true,
           replied: false,
@@ -399,8 +495,8 @@ export default function WhatsAppInboxPage() {
       console.error('Failed to send reply:', error);
       const errorMessage = 'Network error: Could not send reply. Please check your internet connection and try again.';
       if (confirm(`❌ ${errorMessage}\n\nWould you like to retry?`)) {
-        // Retry sending
-        setTimeout(() => sendReply(messageType, templateName), 1000);
+        // Retry sending - pass the original template object if it was a template message
+        setTimeout(() => sendReply(messageType, templateNameOrObj), 1000);
       }
     } finally {
       setSending(false);
@@ -772,7 +868,11 @@ export default function WhatsAppInboxPage() {
                       <select
                         onChange={(e) => {
                           if (e.target.value) {
-                            sendReply('template', e.target.value);
+                            // Find the selected template object to get its full structure
+                            const selectedTemplate = templates.find((t: any) => t.name === e.target.value);
+                            if (selectedTemplate) {
+                              sendReply('template', selectedTemplate);
+                            }
                             e.target.value = ''; // Reset dropdown
                           }
                         }}
@@ -783,7 +883,7 @@ export default function WhatsAppInboxPage() {
                         <option value="">📋 Templates ({templates.length})</option>
                         {templates.map((template: any) => (
                           <option key={template.name} value={template.name}>
-                            {template.name}
+                            {template.name} {template.variables?.length > 0 && `(${template.variables.length} params)`}
                           </option>
                         ))}
                       </select>
