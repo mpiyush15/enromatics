@@ -66,8 +66,8 @@ export default function Home() {
   ];
 
   const stats = [
-    { value: "10,000+", label: "Active Students" },
-    { value: "500+", label: "Institutes" },
+    { value: "3000+", label: "Active Students" },
+    { value: "50+", label: "Institutes" },
     { value: "99.9%", label: "Uptime" },
     { value: "24/7", label: "Support" }
   ];

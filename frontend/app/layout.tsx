@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Enro Matics",
   description: "AI-powered SaaS for Coaching Institutes",
+  icons: {
+    icon: "https://ik.imagekit.io/qujrbo6v2/site%20icon.png",
+  },
 };
 
 export default function RootLayout({
