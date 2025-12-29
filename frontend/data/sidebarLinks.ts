@@ -91,23 +91,23 @@ export const sidebarLinks = [
     roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
     children: [
       {
-        label: "� Inbox",
+        label: "Inbox",
         href: "/dashboard/whatsapp/inbox",
       },
       {
-        label: "�📨 Campaigns",
+        label: "Campaigns",
         href: "/dashboard/whatsapp/campaigns",
       },
       {
-        label: "👥 Contacts",
+        label: "Contacts",
         href: "/dashboard/whatsapp/contacts",
       },
       {
-        label: "📈 Reports",
+        label: "Reports",
         href: "/dashboard/whatsapp/reports",
       },
       {
-        label: "⚙️ Settings",
+        label: "Settings",
         href: "/dashboard/whatsapp/settings",
       },
     ],

@@ -75,6 +75,13 @@ export default function WhatsAppInboxPage() {
 
   useEffect(() => {
     fetchInboxData(true); // Initial load
+    
+    // Auto-refresh every 5 seconds to sync with Meta webhook
+    const refreshInterval = setInterval(() => {
+      fetchInboxData(false); // Silent refresh
+    }, 5000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   useEffect(() => {
@@ -111,8 +118,15 @@ export default function WhatsAppInboxPage() {
         })
       ]);
 
-      const conversationsData = await conversationsRes.json();
-      const statsData = await statsRes.json();
+      if (!conversationsRes.ok) {
+        console.error('Conversations API error:', conversationsRes.status, conversationsRes.statusText);
+      }
+      if (!statsRes.ok) {
+        console.error('Stats API error:', statsRes.status, statsRes.statusText);
+      }
+
+      const conversationsData = conversationsRes.ok ? await conversationsRes.json() : { conversations: [] };
+      const statsData = statsRes.ok ? await statsRes.json() : { stats: null };
 
       // Batch state updates to prevent multiple re-renders
       if (conversationsData.success && statsData.success) {
