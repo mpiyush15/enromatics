@@ -169,8 +169,8 @@ export default function WhatsAppInboxPage() {
       const data = await response.json();
       if (data.success && data.templates) {
         console.log('📋 Fetched approved templates:', data.templates);
-        // Filter only approved templates
-        const approvedTemplates = data.templates.filter((t: any) => t.status === 'APPROVED');
+        // Filter only approved templates (case-insensitive)
+        const approvedTemplates = data.templates.filter((t: any) => t.status?.toLowerCase() === 'approved');
         setTemplates(approvedTemplates);
       }
     } catch (error) {

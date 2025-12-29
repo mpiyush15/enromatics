@@ -671,8 +671,8 @@ export const getTemplates = async (req, res) => {
     const tenantId = getTenantId(req);
     const { status, useCase } = req.query;
 
-    const query = { tenantId, deleted: { $ne: true } }; // Exclude deleted templates
-    if (status) query.status = status;
+    const query = { tenantId, deleted: { $ne: true }, status: 'approved' }; // Only approved templates
+    if (status) query.status = status; // Allow override if explicitly requested
     if (useCase) query.useCase = useCase;
 
     const templates = await WhatsAppTemplate.find(query).sort({ createdAt: -1 });
