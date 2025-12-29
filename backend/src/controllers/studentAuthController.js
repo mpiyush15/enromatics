@@ -1,8 +1,8 @@
 import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 
-const generateToken = (id, tenantId) =>
-  jwt.sign({ id, role: "student", tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const generateToken = (id, email, tenantId) =>
+  jwt.sign({ id, email, role: "student", tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 export const loginStudent = async (req, res) => {
   try {
@@ -45,7 +45,7 @@ export const loginStudent = async (req, res) => {
     
     console.log("✅ Login successful for student:", student.name);
 
-    const token = generateToken(student._id, student.tenantId);
+    const token = generateToken(student._id, student.email, student.tenantId);
 
     res.cookie("jwt", token, {
       httpOnly: true,

@@ -100,6 +100,7 @@ const registerMobileUser = async (req, res) => {
     const token = jwt.sign(
       { 
         userId: user._id, 
+        email: user.email,
         tenantId: user.tenantId,
         role: user.role,
         studentId: student._id
@@ -201,6 +202,7 @@ const loginMobileUser = async (req, res) => {
     const token = jwt.sign(
       { 
         userId: user._id, 
+        email: user.email,
         tenantId: user.tenantId,
         role: user.role,
         studentId: student?._id

@@ -4,8 +4,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 
-const generateToken = (id, role, tenantId) =>
-  jwt.sign({ id, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const generateToken = (id, email, role, tenantId) =>
+  jwt.sign({ id, email, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 /**
  * Check if email is already registered (for signup form)
@@ -134,7 +134,7 @@ export const registerUser = async (req, res) => {
 
     // Generate token for immediate auth (especially important for trial signup)
     console.log('📝 [SIGNUP] Generating token...');
-    const token = generateToken(user._id, user.role, newTenantId);
+    const token = generateToken(user._id, user.email, user.role, newTenantId);
     console.log('✅ [SIGNUP] Token generated, sending response...');
 
     res.status(201).json({
@@ -261,7 +261,7 @@ export const loginUser = async (req, res) => {
 
     // ✅ Include sessionId in JWT token
     const token = jwt.sign(
-      { id: user._id, role: user.role, tenantId: user.tenantId, sessionId },
+      { id: user._id, email: user.email, role: user.role, tenantId: user.tenantId, sessionId },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
