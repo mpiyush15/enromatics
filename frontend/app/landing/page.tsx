@@ -87,8 +87,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-
-      <section className="bg-gradient-to-br from-white via-orange-50/30 to-amber-50/50 py-12 flex items-center justify-center px-4">
+      <section className="bg-gradient-to-br from-white via-indigo-50/30 to-blue-50/50 py-12 flex items-center justify-center px-4">
         <div className="w-full text-center">
           {/* Content - Center Aligned */}
           <div className="mb-8 max-w-4xl mx-auto">
@@ -130,7 +129,7 @@ export default function LandingPage() {
           </div>
 
           {/* Big Centered Image */}
-          <div className="relative group w-full px-4 md:px-8 lg:px-16">
+          <div className="relative group w-full">
             <div className="relative rounded-3xl shadow-2xl overflow-hidden w-full">
               <img 
                 src="https://ik.imagekit.io/qujrbo6v2/landing%20page%20main%20iamge%20ad.png" 
@@ -275,7 +274,7 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-shadow">
-              <div className="text-5xl mb-4">👤</div>
+              <div className="text-5xl mb-4">�</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Student Management</h3>
               <p className="text-gray-700 text-sm leading-relaxed">
                 Complete student profiles. Attendance tracking. Performance analytics. Parent communication tools.
@@ -299,7 +298,7 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-lg transition-shadow">
-              <div className="text-5xl mb-4">💬</div>
+              <div className="text-5xl mb-4">�</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">WhatsApp Automation</h3>
               <p className="text-gray-700 text-sm leading-relaxed">
                 Automated campaigns. Template messages. Bulk messaging. Two-way conversations with parents.
