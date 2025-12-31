@@ -36,6 +36,26 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   const pathname = usePathname();
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Load expanded state from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarExpandedState');
+    if (saved) {
+      try {
+        setExpanded(new Set(JSON.parse(saved)));
+      } catch (e) {
+        console.error('Failed to load sidebar state:', e);
+      }
+    }
+    setHasInitialized(true);
+  }, []);
+
+  // Save expanded state to localStorage whenever it changes
+  useEffect(() => {
+    if (!hasInitialized) return;
+    localStorage.setItem('sidebarExpandedState', JSON.stringify(Array.from(expanded)));
+  }, [expanded, hasInitialized]);
 
   /* ------------------------ SWR ------------------------ */
   const { data: fetchedLinks = [], isLoading } = useSWR<SidebarLink[]>(
@@ -51,46 +71,73 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   const links = isExternal ? externalLinks! : fetchedLinks;
 
-  /* ------------------------ AUTO EXPAND ACTIVE ------------------------ */
-  useEffect(() => {
-    if (!pathname || !user) return;
-    if (links.length === 0) return;
+  // All tenant roles including all staff role types
+  const TENANT_ROLES = ["tenantAdmin", "admin", "staff", "employee", "teacher", "manager", "counsellor", "adsManager", "accountant", "marketing"];
 
-    const open = new Set<string>();
+  // Helper: build href with tenant context
+  const buildHrefLocal = (href: string) => {
+    if (href.includes("/client/")) return href;
+    if (
+      user?.tenantId &&
+      TENANT_ROLES.includes(user.role) &&
+      href.startsWith("/dashboard")
+    ) {
+      return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+    }
+    return href;
+  };
 
-    // Build href locally to avoid dependency issues
-    const buildHrefLocal = (href: string) => {
-      if (href.includes("/client/")) return href;
-      if (
-        user?.tenantId &&
-        TENANT_ROLES.includes(user.role) &&
-        href.startsWith("/dashboard")
-      ) {
-        return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
-      }
-      return href;
-    };
-
+  // Helper: find which dropdowns are parents of current active route
+  const getRequiredOpenDropdowns = () => {
+    const requiredOpen = new Set<string>();
+    
     const walk = (items: SidebarLink[], parents: string[] = []) => {
       for (const item of items) {
         if (item.href && pathname === buildHrefLocal(item.href)) {
-          parents.forEach(p => open.add(p));
+          parents.forEach(p => requiredOpen.add(p));
         }
         if (item.children) {
           walk(item.children, [...parents, item.label]);
         }
       }
     };
-
+    
     walk(links);
-    setExpanded(open);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, user?.tenantId, user?.role]);
+    return requiredOpen;
+  };
+
+  /* ======================== AUTO-CLOSE UNRELATED DROPDOWNS ON NAVIGATION ======================== */
+  /* When user navigates to a different page, close dropdowns that aren't parents of the new page.    */
+  /* This prevents old dropdowns from staying open when you click a different nav link.              */
+  useEffect(() => {
+    if (!pathname || !user) return;
+    if (links.length === 0) return;
+    if (!hasInitialized) return;
+
+    const requiredOpen = getRequiredOpenDropdowns();
+    
+    // Close dropdowns not needed for this page; keep only required ones
+    setExpanded(requiredOpen);
+  }, [pathname, user?.tenantId, user?.role, hasInitialized, links]);
+
+  /* ======================== ENSURE ACTIVE PAGE DROPDOWNS STAY OPEN ======================== */
+  /* Safety: if a dropdown is needed for the current page but somehow closed, open it again.   */
+  useEffect(() => {
+    if (!pathname || !user) return;
+    if (links.length === 0) return;
+    if (!hasInitialized) return;
+
+    const requiredOpen = getRequiredOpenDropdowns();
+    
+    // Add required dropdowns in case they're missing
+    setExpanded(prev => {
+      const next = new Set(prev);
+      requiredOpen.forEach(p => next.add(p));
+      return next;
+    });
+  }, [pathname, user?.tenantId, user?.role, hasInitialized, links]);
 
   /* ------------------------ HELPERS ------------------------ */
-  // All tenant roles including all staff role types
-  const TENANT_ROLES = ["tenantAdmin", "admin", "staff", "employee", "teacher", "manager", "counsellor", "adsManager", "accountant", "marketing"];
-
   // Debug: Log user state
   console.log("🔍 Sidebar render - User:", user?.email, "Role:", user?.role, "TenantID:", user?.tenantId, "Loading:", loading);
 

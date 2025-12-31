@@ -33,7 +33,7 @@ const pageViewSchema = new mongoose.Schema(
     referrer: { type: String },
     source: {
       type: String,
-      enum: ["direct", "google", "facebook", "instagram", "linkedin", "twitter", "email", "meta", "fb", "ig", "paid", "other"],
+      enum: ["direct", "google", "facebook", "instagram", "linkedin", "twitter", "email", "meta", "fb", "ig", "paid", "referral", "organic", "social", "other"],
       default: "direct",
     },
     utmSource: { type: String },

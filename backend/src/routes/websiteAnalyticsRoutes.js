@@ -55,7 +55,8 @@ function detectSource(referrer) {
   if (ref.includes("linkedin")) return "linkedin";
   if (ref.includes("twitter") || ref.includes("t.co")) return "twitter";
   if (ref.includes("mail") || ref.includes("outlook")) return "email";
-  return "other";
+  // Any other domain referrer is treated as referral
+  return "referral";
 }
 
 /**

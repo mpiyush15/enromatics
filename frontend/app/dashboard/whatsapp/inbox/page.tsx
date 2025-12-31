@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 
 interface InboxMessage {
@@ -52,6 +52,208 @@ interface InboxStats {
   responseRate: string;
 }
 
+// Memoized Messages Display Component - Only updates when messages or selectedConversation changes
+const MessagesDisplay = React.memo(function MessagesDisplay({
+  messages,
+  messagesLoading,
+  selectedConversation,
+  replyText,
+  sending,
+  templates,
+  templatesLoading,
+  onReplyChange,
+  onSendReply,
+  onTemplateSelect,
+  conversations,
+  getDisplayName,
+  formatTime,
+  renderMessageContent
+}: {
+  messages: InboxMessage[];
+  messagesLoading: boolean;
+  selectedConversation: string | null;
+  replyText: string;
+  sending: boolean;
+  templates: any[];
+  templatesLoading: boolean;
+  onReplyChange: (text: string) => void;
+  onSendReply: (type?: string, template?: any) => void;
+  onTemplateSelect: (template: any) => void;
+  conversations: Conversation[];
+  getDisplayName: (conv: Conversation) => string;
+  formatTime: (ts: string) => string;
+  renderMessageContent: (msg: any) => React.ReactNode;
+}) {
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 0);
+    }
+  }, [messages]);
+
+  if (!selectedConversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">💬</div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Select a Conversation
+          </h3>
+          <p className="text-gray-500">
+            Choose a conversation from the list to view messages and reply
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Messages Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              {messages.length > 0 && getDisplayName({
+                senderName: messages[0].senderName,
+                senderProfileName: messages[0].senderProfileName,
+                senderPhone: messages[0].senderPhone
+              } as Conversation)}
+            </h3>
+            <p className="text-sm text-gray-500">
+              +{messages.length > 0 && messages[0].senderPhone}
+            </p>
+          </div>
+          <div className="text-sm text-gray-500">
+            {messages.length} messages
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messagesLoading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-green-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-500">Loading messages...</p>
+            </div>
+          </div>
+        ) : (
+          messages.map((message: any) => {
+            const isOutgoing = message.direction === 'outbound' || message.senderPhone === 'You';
+            
+            return (
+              <div
+                key={message._id}
+                className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    isOutgoing
+                      ? 'bg-green-600 text-white rounded-br-none'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none'
+                  }`}
+                >
+                  {renderMessageContent(message)}
+                  <p className={`text-xs mt-1 ${isOutgoing ? 'text-green-100' : 'text-gray-500'}`}>
+                    {formatTime(message.timestamp)}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Reply Input */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={replyText}
+            onChange={(e) => onReplyChange(e.target.value)}
+            placeholder="Type your reply..."
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            onKeyPress={(e) => e.key === 'Enter' && !sending && onSendReply()}
+            disabled={sending}
+          />
+          
+          {/* Template Dropdown */}
+          {templates.length > 0 && (
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  const selectedTemplate = templates.find((t: any) => t.name === e.target.value);
+                  if (selectedTemplate) {
+                    onTemplateSelect(selectedTemplate);
+                  }
+                  e.target.value = '';
+                }
+              }}
+              disabled={sending || templatesLoading}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Send an approved template message"
+            >
+              <option value="">📋 Templates ({templates.length})</option>
+              {templates.map((template: any) => (
+                <option key={template.name} value={template.name}>
+                  {template.name} {template.variables?.length > 0 && `(${template.variables.length} params)`}
+                </option>
+              ))}
+            </select>
+          )}
+          
+          {/* Fallback: Simple Template Button */}
+          {templates.length === 0 && (
+            <button
+              onClick={() => onSendReply('template', { name: 'hello_world' })}
+              disabled={sending}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title="Send template message (works anytime)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Template
+            </button>
+          )}
+          
+          <button
+            onClick={() => onSendReply()}
+            disabled={!replyText.trim() || sending}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {sending ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Send
+              </>
+            )}
+          </button>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          💡 Use "Template" button if regular messages fail due to 24-hour rule
+        </div>
+      </div>
+    </>
+  );
+});
+
 export default function WhatsAppInboxPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
@@ -69,16 +271,80 @@ export default function WhatsAppInboxPage() {
   const [templates, setTemplates] = useState<any[]>([]); // New: store approved templates
   const [templatesLoading, setTemplatesLoading] = useState(false); // New: loading state for templates
   
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const lastSyncRef = React.useRef<string>(new Date().toISOString());
 
-  const scrollToBottom = (smooth: boolean = true) => {
-    if (messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
-      }, 0);
+  // Smart polling state: only refresh when user is active
+  const [isUserActive, setIsUserActive] = useState(true);
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const inactivityTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const refreshIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  // Config: how long before we consider user inactive (5 minutes)
+  const INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+  // Config: polling interval when user is active (10 seconds - increased from 2)
+  const ACTIVE_POLL_INTERVAL = 10 * 1000; // 10 seconds
+
+  // Track user activity (mouse, keyboard, scroll, touch)
+  useEffect(() => {
+    const handleActivity = () => {
+      setIsUserActive(true);
+      setLastActivityTime(Date.now());
+      
+      // Clear existing inactivity timeout
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+      
+      // Set new inactivity timeout
+      inactivityTimeoutRef.current = setTimeout(() => {
+        console.log('⏸️ User inactive - pausing inbox polling');
+        setIsUserActive(false);
+      }, INACTIVITY_THRESHOLD);
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle page visibility (pause polling when tab is not visible)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('📵 Tab hidden - pausing inbox polling');
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+      } else {
+        console.log('📱 Tab visible - resuming inbox polling');
+        setIsUserActive(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Memoize conversation selection handler to prevent re-renders
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    if (selectedConversation !== conversationId) {
+      setSelectedConversation(conversationId);
     }
-  };
+  }, [selectedConversation]);
+
 
   // Optimized real-time sync: Only fetch and update new/changed conversations
   const syncConversationsIncremental = async () => {
@@ -142,16 +408,45 @@ export default function WhatsAppInboxPage() {
   };
 
   useEffect(() => {
-    fetchInboxData(true); // Initial load
-    fetchApprovedTemplates(); // New: fetch templates on page load
-    
-    // Auto-refresh every 2 seconds for faster real-time updates (optimized)
-    const refreshInterval = setInterval(() => {
-      syncConversationsIncremental(); // Incremental sync instead of full fetch
-    }, 2000);
+    // Initial load (run once)
+    fetchInboxData(true);
+    fetchApprovedTemplates();
 
-    return () => clearInterval(refreshInterval);
-  }, [selectedConversation]); // Re-run when conversation changes
+    // Set up smart polling: only poll when user is active AND tab is visible
+    const setupPolling = () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+
+      if (!isUserActive || document.hidden) {
+        console.log('⏸️ Polling paused - user inactive or tab hidden');
+        return;
+      }
+
+      console.log('▶️ Starting smart polling (every 10 seconds)');
+      refreshIntervalRef.current = setInterval(() => {
+        if (isUserActive && !document.hidden) {
+          console.log('🔄 Smart sync - polling active inbox');
+          syncConversationsIncremental();
+        }
+      }, ACTIVE_POLL_INTERVAL);
+    };
+
+    setupPolling();
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [isUserActive]);
+
+  // Manual refresh button handler
+  const handleManualRefresh = useCallback(async () => {
+    console.log('🔁 Manual refresh triggered');
+    await fetchInboxData(false);
+    await syncConversationsIncremental();
+  }, []);
 
   // New: Fetch approved templates from backend
   const fetchApprovedTemplates = async () => {
@@ -187,12 +482,7 @@ export default function WhatsAppInboxPage() {
     }
   }, [filter]);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Use non-smooth scroll for instant positioning
-      scrollToBottom(false);
-    }
-  }, [messages]);
+  // Messages auto-scroll handled inside the memoized MessagesDisplay component
 
   // Auto-select most recent conversation on initial load
   useEffect(() => {
@@ -259,7 +549,7 @@ export default function WhatsAppInboxPage() {
     }
   };
 
-  const fetchConversationMessages = async (conversationId: string, silent: boolean = false) => {
+  const fetchConversationMessages = useCallback(async (conversationId: string, silent: boolean = false) => {
     try {
       // Use separate loading state for messages to avoid full page reload
       if (!silent) setMessagesLoading(true);
@@ -286,8 +576,7 @@ export default function WhatsAppInboxPage() {
         // ALWAYS update messages - don't skip even if silent
         if (data.messages && data.messages.length > 0) {
           setMessages(data.messages);
-          // Auto-scroll to bottom when new messages arrive
-          setTimeout(() => scrollToBottom(false), 50);
+          // MessagesDisplay component will auto-scroll to bottom when messages change
         }
         
         // Update conversation unread count
@@ -315,7 +604,7 @@ export default function WhatsAppInboxPage() {
     } finally {
       if (!silent) setMessagesLoading(false);
     }
-  };
+  }, [setMessages, setConversations, setStats, stats]);
 
   const sendReply = async (messageType: string = 'text', templateNameOrObj: string | any = null) => {
     if (!selectedConversation || (!replyText.trim() && !templateNameOrObj)) return;
@@ -502,91 +791,108 @@ export default function WhatsAppInboxPage() {
       setSending(false);
     }
   };
+    // Keep a ref to the latest sendReply so we can provide a stable callback
+    // to the memoized MessagesDisplay component (avoids re-renders due to
+    // changing function identity).
+    const sendReplyRef = React.useRef(sendReply);
+    React.useEffect(() => {
+      sendReplyRef.current = sendReply;
+    }, [sendReply]);
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('en-IN', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    const onSendReply = useCallback((type?: string, template?: any) => {
+      return sendReplyRef.current(type, template);
+    }, []);
 
-  const getDisplayName = (conversation: Conversation) => {
-    return conversation.senderName || 
-           conversation.senderProfileName || 
-           `+${conversation.senderPhone}`;
-  };
+    const onTemplateSelect = useCallback((template: any) => {
+      return onSendReply('template', template);
+    }, [onSendReply]);
 
-  const renderMessageContent = (message: any) => {
-    const { content, messageType } = message;
+    const onReplyChange = useCallback((text: string) => setReplyText(text), []);
+
+    const formatTime = useCallback((timestamp: string) => {
+      return new Date(timestamp).toLocaleString('en-IN', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }, []);
+
+    const getDisplayName = useCallback((conversation: Conversation) => {
+      return conversation.senderName ||
+             conversation.senderProfileName ||
+             `+${conversation.senderPhone}`;
+    }, []);
+
+    const renderMessageContent = useCallback((message: any) => {
+      const { content, messageType } = message;
     
-    switch (messageType) {
-      case 'text':
-        return <p className="text-gray-800 dark:text-gray-200">{content.text}</p>;
+      switch (messageType) {
+        case 'text':
+          return <p className="text-gray-800 dark:text-gray-200">{content.text}</p>;
       
-      case 'template':
-        return (
-          <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800 font-medium">Template: {content.templateName}</p>
-            {content.templateParams && content.templateParams.length > 0 && (
-              <p className="text-xs text-green-600 mt-1">
-                Params: {content.templateParams.join(', ')}
+        case 'template':
+          return (
+            <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 font-medium">Template: {content.templateName}</p>
+              {content.templateParams && content.templateParams.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  Params: {content.templateParams.join(', ')}
+                </p>
+              )}
+            </div>
+          );
+      
+        case 'image':
+          return (
+            <div>
+              {content.mediaUrl && (
+                <img src={content.mediaUrl} alt="Image" className="max-w-xs rounded-lg mb-2" />
+              )}
+              {content.caption && <p className="text-sm text-gray-600">{content.caption}</p>}
+            </div>
+          );
+      
+        case 'document':
+          return (
+            <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="text-sm">Document</span>
+            </div>
+          );
+      
+        case 'audio':
+          return (
+            <div className="flex items-center gap-2 p-2 bg-green-100 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span className="text-sm">Voice Message</span>
+            </div>
+          );
+      
+        case 'interactive':
+          return (
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Selected: {content.buttonText || content.listTitle}
               </p>
-            )}
-          </div>
-        );
+            </div>
+          );
       
-      case 'image':
-        return (
-          <div>
-            {content.mediaUrl && (
-              <img src={content.mediaUrl} alt="Image" className="max-w-xs rounded-lg mb-2" />
-            )}
-            {content.caption && <p className="text-sm text-gray-600">{content.caption}</p>}
-          </div>
-        );
+        case 'reaction':
+          return (
+            <div className="text-2xl">
+              {content.reactionEmoji} <span className="text-sm text-gray-600">reacted</span>
+            </div>
+          );
       
-      case 'document':
-        return (
-          <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
-            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-sm">Document</span>
-          </div>
-        );
-      
-      case 'audio':
-        return (
-          <div className="flex items-center gap-2 p-2 bg-green-100 rounded-lg">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            <span className="text-sm">Voice Message</span>
-          </div>
-        );
-      
-      case 'interactive':
-        return (
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              Selected: {content.buttonText || content.listTitle}
-            </p>
-          </div>
-        );
-      
-      case 'reaction':
-        return (
-          <div className="text-2xl">
-            {content.reactionEmoji} <span className="text-sm text-gray-600">reacted</span>
-          </div>
-        );
-      
-      default:
-        return <p className="text-gray-500 italic">Unsupported message type: {messageType}</p>;
-    }
-  };
+        default:
+          return <p className="text-gray-500 italic">Unsupported message type: {messageType}</p>;
+      }
+    }, []);
 
   if (loading) {
     return (
@@ -600,9 +906,9 @@ export default function WhatsAppInboxPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-green-50 to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 shadow-lg">
+      <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 shadow-lg flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -618,33 +924,56 @@ export default function WhatsAppInboxPage() {
             </div>
             
             {stats && (
-              <div className="flex gap-4 text-white">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{stats.unreadMessages}</div>
-                  <div className="text-sm text-green-100">Unread</div>
+              <div className="flex gap-6 items-center text-white">
+                <div className="flex gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{stats.unreadMessages}</div>
+                    <div className="text-sm text-green-100">Unread</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{stats.uniqueConversations}</div>
+                    <div className="text-sm text-green-100">Conversations</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{stats.responseRate}</div>
+                    <div className="text-sm text-green-100">Response Rate</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{stats.uniqueConversations}</div>
-                  <div className="text-sm text-green-100">Conversations</div>
+
+                {/* Activity Status Indicator */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/20 rounded-lg">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${isUserActive && !document.hidden ? 'bg-green-300' : 'bg-yellow-300'}`}></div>
+                  <span className="text-sm text-green-100">
+                    {isUserActive && !document.hidden ? 'Polling Active' : 'Paused'}
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{stats.responseRate}</div>
-                  <div className="text-sm text-green-100">Response Rate</div>
-                </div>
+
+                {/* Manual Refresh Button */}
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={loading}
+                  className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium flex items-center gap-2"
+                  title="Manually refresh inbox data"
+                >
+                  <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+      {/* Main Content - Takes remaining vertical space */}
+      <div className="flex-1 overflow-hidden p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
           
           {/* Conversations List */}
-          <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+          <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col">
             {/* Conversations Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Conversations
@@ -688,8 +1017,8 @@ export default function WhatsAppInboxPage() {
               </div>
             </div>
 
-            {/* Conversations List */}
-            <div className="overflow-y-auto h-full">
+            {/* Conversations List - Scrollable */}
+            <div className="overflow-y-auto flex-1">
               {conversations.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">💬</div>
@@ -709,12 +1038,7 @@ export default function WhatsAppInboxPage() {
                     .map((conversation) => (
                       <button
                         key={conversation.conversationId}
-                        onClick={() => {
-                          // Only change if different conversation is selected
-                          if (selectedConversation !== conversation.conversationId) {
-                            setSelectedConversation(conversation.conversationId);
-                          }
-                        }}
+                        onClick={() => handleSelectConversation(conversation.conversationId)}
                         className={`w-full p-3 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                           selectedConversation === conversation.conversationId
                             ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-600'
@@ -755,196 +1079,24 @@ export default function WhatsAppInboxPage() {
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col">
-            {selectedConversation ? (
-              <>
-                {/* Messages Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
-                        {messages.length > 0 && getDisplayName({
-                          senderName: messages[0].senderName,
-                          senderProfileName: messages[0].senderProfileName,
-                          senderPhone: messages[0].senderPhone
-                        } as Conversation)}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        +{messages.length > 0 && messages[0].senderPhone}
-                      </p>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {messages.length} messages
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messagesLoading ? (
-                    <div className="flex items-center justify-center h-32">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-green-600 mx-auto mb-2"></div>
-                        <p className="text-sm text-gray-500">Loading messages...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    messages.map((message: any) => {
-                    const isOutgoing = message.direction === 'outbound' || message.senderPhone === 'You';
-                    
-                    return (
-                      <div key={message._id} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-md rounded-lg p-3 ${
-                          isOutgoing 
-                            ? 'bg-green-500 text-white ml-12' 
-                            : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 mr-12'
-                        }`}>
-                          <div className="flex items-start justify-between mb-2">
-                            <span className={`text-xs font-medium ${
-                              isOutgoing 
-                                ? 'text-green-100' 
-                                : 'text-blue-600 dark:text-blue-400'
-                            }`}>
-                              {isOutgoing ? 'You' : (message.displayName || `+${message.senderPhone}`)}
-                            </span>
-                            <span className={`text-xs ml-2 ${
-                              isOutgoing 
-                                ? 'text-green-200' 
-                                : 'text-gray-500'
-                            }`}>
-                              {formatTime(message.timestamp || message.createdAt)}
-                            </span>
-                          </div>
-                          
-                          <div className={isOutgoing ? 'text-white' : ''}>
-                            {renderMessageContent(message)}
-                          </div>
-                          
-                          <div className="flex items-center gap-2 mt-2">
-                            {isOutgoing && message.status && (
-                              <span className={`text-xs ${
-                                message.status === 'sent' ? 'text-green-200' :
-                                message.status === 'delivered' ? 'text-green-100' :
-                                message.status === 'read' ? 'text-green-100' :
-                                message.status === 'failed' ? 'text-red-200' :
-                                'text-green-200'
-                              }`}>
-                                {message.status === 'sent' && '✓'}
-                                {message.status === 'delivered' && '✓✓'}
-                                {message.status === 'read' && '✓✓'}
-                                {message.status === 'failed' && '✗'}
-                                {' '}{message.status}
-                              </span>
-                            )}
-                            {!isOutgoing && message.isRead && (
-                              <span className="text-xs text-green-600">✓ Read</span>
-                            )}
-                            {!isOutgoing && message.replied && (
-                              <span className="text-xs text-blue-600">↩ Replied</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>                {/* Reply Input */}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Type your reply..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      onKeyPress={(e) => e.key === 'Enter' && !sending && sendReply()}
-                      disabled={sending}
-                    />
-                    
-                    {/* Template Dropdown - New */}
-                    {templates.length > 0 && (
-                      <select
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            // Find the selected template object to get its full structure
-                            const selectedTemplate = templates.find((t: any) => t.name === e.target.value);
-                            if (selectedTemplate) {
-                              sendReply('template', selectedTemplate);
-                            }
-                            e.target.value = ''; // Reset dropdown
-                          }
-                        }}
-                        disabled={sending || templatesLoading}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        title="Send an approved template message"
-                      >
-                        <option value="">📋 Templates ({templates.length})</option>
-                        {templates.map((template: any) => (
-                          <option key={template.name} value={template.name}>
-                            {template.name} {template.variables?.length > 0 && `(${template.variables.length} params)`}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    
-                    {/* Fallback: Simple Template Button */}
-                    {templates.length === 0 && (
-                      <button
-                        onClick={() => sendReply('template', 'hello_world')}
-                        disabled={sending}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        title="Send template message (works anytime)"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Template
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => sendReply()}
-                      disabled={!replyText.trim() || sending}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {sending ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                          Send
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    💡 Use "Template" button if regular messages fail due to 24-hour rule
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">💬</div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    Select a Conversation
-                  </h3>
-                  <p className="text-gray-500">
-                    Choose a conversation from the list to view messages and reply
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* Messages Area - Memoized Component */}
+          <div className="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden flex flex-col">
+            <MessagesDisplay
+              messages={messages}
+              messagesLoading={messagesLoading}
+              selectedConversation={selectedConversation}
+              replyText={replyText}
+              sending={sending}
+              templates={templates}
+              templatesLoading={templatesLoading}
+              onReplyChange={onReplyChange}
+              onSendReply={onSendReply}
+              onTemplateSelect={onTemplateSelect}
+              conversations={conversations}
+              getDisplayName={getDisplayName}
+              formatTime={formatTime}
+              renderMessageContent={renderMessageContent}
+            />
           </div>
         </div>
       </div>
