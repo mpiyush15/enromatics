@@ -275,10 +275,12 @@ export const deleteWorkflow = async (req, res) => {
       });
     }
 
+    // ✅ Soft delete - mark workflow as inactive (don't permanently remove)
     workflow.status = "inactive";
+    workflow.isPublished = false; // Also unpublish it
     await workflow.save();
 
-    console.log(`✅ Workflow deleted (soft) - ID: ${workflowId}`);
+    console.log(`✅ Workflow marked as inactive - ID: ${workflowId} - Name: ${workflow.name}`);
 
     res.json({
       success: true,
