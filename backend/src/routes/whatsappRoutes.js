@@ -2,12 +2,25 @@ import express from 'express';
 import whatsappController from '../controllers/whatsappController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
+import {
+  getWorkflows,
+  getWorkflow,
+  createWorkflow,
+  updateWorkflow,
+  deleteWorkflow,
+  publishWorkflow,
+  getTemplates,
+  getTemplate,
+  createWorkflowFromTemplate,
+  getWorkflowAnalytics,
+} from '../controllers/automationController.js';
 
 const router = express.Router();
 
 // Configuration routes
 router.post('/config', protect, whatsappController.saveConfig);
 router.get('/config', protect, whatsappController.getConfig);
+router.get('/linked-phone-number', protect, whatsappController.getLinkedPhoneNumber);
 router.delete('/config', protect, whatsappController.removeConfig);
 router.post('/test-connection', protect, whatsappController.testConnection);
 
@@ -51,5 +64,40 @@ router.post('/inbox/conversation/:conversationId/read', protect, authorizeRoles(
 router.post('/inbox/conversation/:conversationId/reply', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.replyToConversation);
 router.get('/inbox/stats', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.getInboxStats);
 router.get('/inbox/search', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), whatsappController.searchInbox);
+
+/**
+ * ==================== AUTOMATION WORKFLOWS ====================
+ * These routes are nested under /api/whatsapp/automation
+ */
+
+// Create workflow from template (MUST BE BEFORE :workflowId routes)
+router.post('/automation/workflows/from-template/:templateId', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), createWorkflowFromTemplate);
+
+// Get all workflows for tenant
+router.get('/automation/workflows', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), getWorkflows);
+
+// Create new workflow
+router.post('/automation/workflows', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), createWorkflow);
+
+// Get specific workflow
+router.get('/automation/workflows/:workflowId', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), getWorkflow);
+
+// Update workflow
+router.put('/automation/workflows/:workflowId', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), updateWorkflow);
+
+// Delete workflow (soft delete)
+router.delete('/automation/workflows/:workflowId', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), deleteWorkflow);
+
+// Publish workflow
+router.post('/automation/workflows/:workflowId/publish', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), publishWorkflow);
+
+// Get workflow analytics
+router.get('/automation/workflows/:workflowId/analytics', protect, authorizeRoles('SuperAdmin', 'tenantAdmin'), getWorkflowAnalytics);
+
+// Get public templates
+router.get('/automation/templates', protect, getTemplates);
+
+// Get specific template
+router.get('/automation/templates/:templateId', protect, getTemplate);
 
 export default router;

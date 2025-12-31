@@ -8,6 +8,8 @@
  * Created: 21 Dec 2025
  */
 
+import { API_BASE_URL } from './apiConfig';
+
 export interface ApiResponse<T = any> {
   success?: boolean;
   data?: T;
@@ -33,15 +35,19 @@ export async function apiClient<T = any>(
 ): Promise<T> {
   const { skipAuth = false, timeout = 30000, ...fetchOptions } = options;
 
-  // Ensure endpoint starts with /
-  const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  // Construct full URL with API_BASE_URL
+  const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const fullUrl = `${baseUrl}${cleanEndpoint}`;
+
+  console.log('🔗 API Request:', { method: fetchOptions.method || 'GET', url: fullUrl });
 
   // Create abort controller for timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(fullUrl, {
       credentials: skipAuth ? 'omit' : 'include',
       headers: {
         'Content-Type': 'application/json',

@@ -96,8 +96,9 @@ export const sidebarLinks = [
         href: "#",
         roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"],
         children: [
-          { label: "� Inbox", href: "/dashboard/whatsapp/inbox", roles: ["SuperAdmin", "tenantAdmin"] },
-          { label: "�📊 Dashboard", href: "/dashboard/whatsapp", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "🤖 Automation", href: "/dashboard/whatsapp/automation", roles: ["SuperAdmin", "tenantAdmin"] },
+          { label: "📧 Inbox", href: "/dashboard/whatsapp/inbox", roles: ["SuperAdmin", "tenantAdmin"] },
+          { label: "📊 Dashboard", href: "/dashboard/whatsapp", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "📨 Campaigns", href: "/dashboard/whatsapp/campaigns", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "👥 Contacts", href: "/dashboard/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "📈 Reports", href: "/dashboard/whatsapp/reports", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },

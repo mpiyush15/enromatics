@@ -44,11 +44,14 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "User not found" });
     }
     
-    console.log("✅ User authenticated:", { email: req.user.email, role: req.user.role });
+    console.log("✅ User authenticated:", { email: req.user.email, role: req.user.role, tenantId: req.user.tenantId });
     
     // Add additional mobile-specific data to req.user for mobile endpoints
     if (decoded.tenantId) {
       req.user.tenantId = decoded.tenantId;
+      console.log("✅ Set tenantId from token:", decoded.tenantId);
+    } else if (!req.user.tenantId) {
+      console.warn("⚠️ WARNING: No tenantId in token or user document!");
     }
     if (decoded.studentId) {
       req.user.studentId = decoded.studentId;

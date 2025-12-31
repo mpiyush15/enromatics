@@ -4,6 +4,8 @@ import WhatsAppMessage from '../models/WhatsAppMessage.js';
 import WhatsAppContact from '../models/WhatsAppContact.js';
 import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
 import WhatsAppInbox from '../models/WhatsAppInbox.js';
+import AutomationWorkflow from '../models/AutomationWorkflow.js';
+import WorkflowConversation from '../models/WorkflowConversation.js';
 import User from '../models/User.js';
 
 // Helper function to get tenantId (supports SuperAdmin accessing any tenant)
@@ -150,6 +152,40 @@ export const removeConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('Remove config error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Get the linked WhatsApp phone number for the tenant
+ * Used by automation workflows to auto-select the phone number
+ * Returns phoneNumberId (Meta ID), not the display phone number
+ */
+export const getLinkedPhoneNumber = async (req, res) => {
+  try {
+    const tenantId = getTenantId(req);
+    
+    const config = await WhatsAppConfig.findOne({ tenantId });
+    
+    if (!config) {
+      return res.json({ 
+        linkedPhoneNumber: null,
+        phoneNumberId: null,
+        message: 'No WhatsApp configuration found' 
+      });
+    }
+
+    // Return the phoneNumberId (Meta ID) - this is what workflows should use
+    // NOT the display phone number
+    return res.json({
+      linkedPhoneNumber: config.phoneNumberId,
+      phoneNumberId: config.phoneNumberId,
+      wabaId: config.wabaId,
+      businessName: config.businessName,
+      displayPhoneNumber: null // Will try to fetch if needed in future
+    });
+  } catch (error) {
+    console.error('Get linked phone number error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -435,8 +471,207 @@ export const verifyWebhook = (req, res) => {
   }
 };
 
+/**
+ * Check if incoming message triggers any automation workflow
+ * Matches trigger keyword and phone number
+ */
+const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, senderPhone) => {
+  try {
+    if (!messageText || !messageText.trim()) {
+      console.log('⚠️ No message text to check for automation triggers');
+      return null;
+    }
+
+    // Find all published workflows for this tenant (both active and inactive)
+    // They will trigger based on keyword match
+    const workflows = await AutomationWorkflow.find({
+      tenantId,
+      isPublished: true,
+      // Include both active and inactive - let keyword matching determine trigger
+    });
+
+    console.log(`🔍 Checking ${workflows.length} published workflows for triggers`);
+
+    for (const workflow of workflows) {
+      // Check if this workflow is configured for this phone number
+      if (workflow.linkedPhoneNumber && workflow.linkedPhoneNumber !== phoneNumberId) {
+        console.log(`⏭️  Workflow "${workflow.name}" is not linked to phone ${phoneNumberId}, skipping`);
+        continue;
+      }
+
+      // Check if message matches trigger keyword(s)
+      // Split by comma and check if ANY keyword matches
+      const triggerKeywords = (workflow.triggerKeyword || 'hi')
+        .split(',')
+        .map(k => k.toLowerCase().trim())
+        .filter(k => k.length > 0);
+      
+      const incomingMessage = messageText.toLowerCase().trim();
+      
+      // Check if incoming message contains ANY of the trigger keywords
+      const keywordMatched = triggerKeywords.some(keyword => 
+        incomingMessage.includes(keyword)
+      );
+
+      if (keywordMatched) {
+        const matchedKeyword = triggerKeywords.find(keyword => 
+          incomingMessage.includes(keyword)
+        );
+        console.log(`✅ AUTOMATION TRIGGER MATCHED!`);
+        console.log(`  - Workflow: ${workflow.name}`);
+        console.log(`  - Trigger keyword: "${matchedKeyword}" from [${triggerKeywords.join(', ')}]`);
+        console.log(`  - Message: "${incomingMessage}"`);
+
+        // Create a workflow conversation record
+        const conversationId = `${tenantId}_${senderPhone}`;
+        
+        // Close any previous conversation for this user
+        const previousConversation = await WorkflowConversation.findOne({
+          tenantId,
+          conversationId,
+          status: 'active',
+        });
+        
+        if (previousConversation) {
+          console.log(`⚠️  Closing previous conversation and starting new one`);
+          previousConversation.status = 'abandoned';
+          previousConversation.abandonedAt = new Date();
+          await previousConversation.save();
+        }
+        
+        const workflowConversation = new WorkflowConversation({
+          tenantId,
+          workflowId: workflow._id,
+          conversationId,
+          senderPhone,
+          currentQuestionIndex: 0,
+          answers: [],
+          status: 'active',
+          startedAt: new Date(),
+        });
+
+        await workflowConversation.save();
+        console.log(`✅ Created workflow conversation: ${workflowConversation._id}`);
+
+        // Update workflow conversation count
+        workflow.conversationCount = (workflow.conversationCount || 0) + 1;
+        await workflow.save();
+
+        return {
+          workflow,
+          conversation: workflowConversation,
+          firstQuestion: workflow.questions && workflow.questions.length > 0 ? workflow.questions[0] : null,
+        };
+      }
+    }
+
+    console.log('ℹ️ No automation triggers matched');
+    return null;
+  } catch (error) {
+    console.error('❌ Error checking automation triggers:', error);
+    return null;
+  }
+};
+
+/**
+ * Handle ongoing workflow conversation
+ * Processes user answers and moves to next question
+ */
+const handleWorkflowConversationMessage = async (tenantId, senderPhone, messageText) => {
+  try {
+    if (!messageText || !messageText.trim()) {
+      console.log('⚠️ No message text to process for workflow');
+      return null;
+    }
+
+    // Find existing workflow conversation for this user
+    const conversationId = `${tenantId}_${senderPhone}`;
+    const conversation = await WorkflowConversation.findOne({
+      tenantId,
+      conversationId,
+      status: 'active',
+    }).populate('workflowId');
+
+    if (!conversation) {
+      console.log(`ℹ️ No active workflow conversation found for ${senderPhone}`);
+      return null;
+    }
+
+    const workflow = conversation.workflowId;
+    console.log(`🔄 Processing answer for workflow: ${workflow.name}`);
+    console.log(`  - Current question index: ${conversation.currentQuestionIndex}`);
+    console.log(`  - User answer: ${messageText}`);
+
+    // Get current question
+    const currentQuestion = workflow.questions[conversation.currentQuestionIndex];
+    
+    if (!currentQuestion) {
+      console.log('✅ All questions completed!');
+      conversation.status = 'completed';
+      conversation.completedAt = new Date();
+      await conversation.save();
+
+      // Update workflow completion count
+      workflow.completionCount = (workflow.completionCount || 0) + 1;
+      await workflow.save();
+
+      return {
+        conversation,
+        workflow,
+        isComplete: true,
+        message: 'Thank you! Your responses have been recorded.',
+      };
+    }
+
+    // Store the answer
+    conversation.answers.push({
+      questionId: currentQuestion.id,
+      questionText: currentQuestion.text,
+      answer: messageText,
+      timestamp: new Date(),
+    });
+
+    // If this is a name field, extract and store
+    if (currentQuestion.isNameField) {
+      conversation.extractedData = conversation.extractedData || {};
+      conversation.extractedData.name = messageText;
+    }
+
+    // If this is a mobile field, extract and store
+    if (currentQuestion.isMobileField) {
+      conversation.extractedData = conversation.extractedData || {};
+      conversation.extractedData.phone = messageText;
+    }
+
+    // Move to next question
+    conversation.currentQuestionIndex = (conversation.currentQuestionIndex || 0) + 1;
+    await conversation.save();
+
+    // Get next question
+    const nextQuestion = workflow.questions[conversation.currentQuestionIndex];
+
+    console.log(`✅ Answer recorded. Moving to question ${conversation.currentQuestionIndex + 1}/${workflow.questions.length}`);
+
+    return {
+      conversation,
+      workflow,
+      currentQuestion,
+      nextQuestion,
+      isComplete: !nextQuestion,
+      message: nextQuestion 
+        ? nextQuestion.text 
+        : 'Thank you for completing the workflow!',
+    };
+  } catch (error) {
+    console.error('❌ Error handling workflow conversation:', error);
+    return null;
+  }
+};
+
 // Webhook handler (POST)
 export const handleWebhook = async (req, res) => {
+  console.log('\n🔔🔔🔔 WEBHOOK HIT! 🔔🔔🔔 Timestamp:', new Date().toISOString());
+  
   try {
     const body = req.body;
 
@@ -527,14 +762,22 @@ export const handleWebhook = async (req, res) => {
                   console.log('From:', message.from);
                   console.log('Type:', message.type);
                   console.log('Timestamp:', message.timestamp);
+                  console.log('🔍 Debug - value.metadata:', JSON.stringify(value.metadata, null, 2));
+                  console.log('🔍 Debug - entry.id:', entry.id);
                   
                   // Get tenant ID from phone number configuration
+                  const phoneNumberId = value.metadata?.phone_number_id || entry.id;
+                  console.log('📞 Looking for config with phoneNumberId:', phoneNumberId);
+                  
                   const config = await WhatsAppConfig.findOne({ 
-                    phoneNumberId: value.metadata?.phone_number_id || entry.id 
+                    phoneNumberId: phoneNumberId
                   });
                   
                   if (!config) {
-                    console.log('⚠️ No config found for phone number ID:', value.metadata?.phone_number_id);
+                    console.log('⚠️ No config found for phone number ID:', phoneNumberId);
+                    console.log('⚠️ Attempting fallback search in WhatsAppConfig collection');
+                    const allConfigs = await WhatsAppConfig.find({}, 'phoneNumberId tenantId');
+                    console.log('📋 Available configs:', allConfigs);
                     continue;
                   }
                   
@@ -639,6 +882,35 @@ export const handleWebhook = async (req, res) => {
                   console.log(`  - Content: ${JSON.stringify(content, null, 2)}`);
                   console.log(`  - Conversation: ${conversationId}`);
                   
+                  // Check for automation workflow triggers (only for text messages)
+                  if (message.type === 'text' && content.text) {
+                    // Priority 1: Check for NEW workflow triggers FIRST
+                    // This allows re-triggering even if user is in an active conversation
+                    let automationResult = await checkAndTriggerAutomation(
+                      tenantId,
+                      config.phoneNumberId,
+                      content.text,
+                      message.from
+                    );
+                    
+                    // Priority 2: If no trigger matched, check if user is in ongoing conversation
+                    if (!automationResult) {
+                      automationResult = await handleWorkflowConversationMessage(
+                        tenantId,
+                        message.from,
+                        content.text
+                      );
+                    }
+                    
+                    if (automationResult) {
+                      console.log(`🤖 Automation result:`, {
+                        isNewTrigger: automationResult.workflow && !automationResult.conversation,
+                        isOngoing: automationResult.conversation && automationResult.conversation._id,
+                        isComplete: automationResult.isComplete,
+                        nextQuestion: automationResult.nextQuestion?.text || 'Workflow complete',
+                      });
+                    }
+                  }
                 } catch (messageError) {
                   console.error('❌ Error processing incoming message:', messageError);
                   console.error('Message data:', JSON.stringify(message, null, 2));
@@ -1794,6 +2066,7 @@ export const debugTenantData = async (req, res) => {
 export default {
   saveConfig,
   getConfig,
+  getLinkedPhoneNumber,
   removeConfig,
   testConnection,
   sendMessage,
