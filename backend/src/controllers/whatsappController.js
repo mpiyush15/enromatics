@@ -652,25 +652,48 @@ const handleWorkflowConversationMessage = async (tenantId, senderPhone, messageT
       conversation.extractedData.phone = messageText;
     }
 
-    // Move to next question
-    conversation.currentQuestionIndex = (conversation.currentQuestionIndex || 0) + 1;
-    await conversation.save();
+    // ✅ FIX: Check if this is the last question BEFORE incrementing
+    const isLastQuestion = conversation.currentQuestionIndex === workflow.questions.length - 1;
+    
+    if (isLastQuestion) {
+      // This is the final answer - mark as complete
+      console.log(`✅ Final answer received. Workflow complete!`);
+      conversation.currentQuestionIndex = conversation.currentQuestionIndex; // Keep at last index
+      conversation.status = 'completed';
+      conversation.completedAt = new Date();
+      await conversation.save();
 
-    // Get next question
-    const nextQuestion = workflow.questions[conversation.currentQuestionIndex];
+      // Update workflow completion count
+      workflow.completionCount = (workflow.completionCount || 0) + 1;
+      await workflow.save();
 
-    console.log(`✅ Answer recorded. Moving to question ${conversation.currentQuestionIndex + 1}/${workflow.questions.length}`);
+      return {
+        conversation,
+        workflow,
+        currentQuestion,
+        nextQuestion: null,
+        isComplete: true,
+        message: 'Thank you for completing the workflow!',
+      };
+    } else {
+      // Move to next question
+      conversation.currentQuestionIndex = (conversation.currentQuestionIndex || 0) + 1;
+      await conversation.save();
 
-    return {
-      conversation,
-      workflow,
-      currentQuestion,
-      nextQuestion,
-      isComplete: !nextQuestion,
-      message: nextQuestion 
-        ? nextQuestion.text 
-        : 'Thank you for completing the workflow!',
-    };
+      // Get next question
+      const nextQuestion = workflow.questions[conversation.currentQuestionIndex];
+
+      console.log(`✅ Answer recorded. Moving to question ${conversation.currentQuestionIndex + 1}/${workflow.questions.length}`);
+
+      return {
+        conversation,
+        workflow,
+        currentQuestion,
+        nextQuestion,
+        isComplete: false,
+        message: nextQuestion.text,
+      };
+    }
   } catch (error) {
     console.error('❌ Error handling workflow conversation:', error);
     return null;
