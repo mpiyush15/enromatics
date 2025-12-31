@@ -953,6 +953,53 @@ export const handleWebhook = async (req, res) => {
                         isComplete: automationResult.isComplete,
                         nextQuestion: automationResult.nextQuestion?.text || 'Workflow complete',
                       });
+
+                      // ✅ CRITICAL: Send the appropriate message to WhatsApp
+                      let messageToSend = null;
+                      let phoneNumberToSendTo = message.from;
+
+                      // Check if this is a NEW workflow trigger
+                      if (automationResult.firstQuestion && automationResult.workflow) {
+                        console.log('\n💌💌💌 NEW WORKFLOW TRIGGERED - SENDING FIRST QUESTION 💌💌💌');
+                        console.log(`  - Workflow: ${automationResult.workflow.name}`);
+                        console.log(`  - First Question: ${automationResult.firstQuestion.text}`);
+                        
+                        messageToSend = automationResult.firstQuestion.text;
+                      } 
+                      // Or if this is an ongoing conversation with a next question
+                      else if (automationResult.nextQuestion) {
+                        console.log('\n💬 ONGOING CONVERSATION - SENDING NEXT QUESTION 💬');
+                        console.log(`  - Question ${automationResult.conversation?.currentQuestionIndex + 1}: ${automationResult.nextQuestion.text}`);
+                        
+                        messageToSend = automationResult.nextQuestion.text;
+                      }
+                      // Or if workflow is complete
+                      else if (automationResult.isComplete) {
+                        console.log('\n✅ WORKFLOW COMPLETED - SENDING COMPLETION MESSAGE ✅');
+                        console.log(`  - Workflow: ${automationResult.workflow?.name}`);
+                        
+                        messageToSend = automationResult.workflow?.completionMessage || 
+                                       automationResult.message || 
+                                       'Thank you for your responses!';
+                      }
+
+                      // Send the message if we have one
+                      if (messageToSend) {
+                        try {
+                          console.log(`📤 Sending WhatsApp message to ${phoneNumberToSendTo}...`);
+                          await sendWhatsAppMessage(
+                            phoneNumberToSendTo,
+                            messageToSend,
+                            config.phoneNumberId,
+                            config.accessToken
+                          );
+                          console.log(`✅ Message sent successfully!`);
+                        } catch (sendError) {
+                          console.error(`❌ Failed to send WhatsApp message:`, sendError.message);
+                        }
+                      } else {
+                        console.log('⚠️ No message to send for automation result');
+                      }
                     }
                   }
                 } catch (messageError) {
