@@ -529,7 +529,7 @@ const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, s
         const previousConversation = await WorkflowConversation.findOne({
           tenantId,
           conversationId,
-          status: 'active',
+          status: { $in: ['triggered', 'in_progress'] }, // Match either status
         });
         
         if (previousConversation) {
@@ -546,7 +546,7 @@ const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, s
           senderPhone,
           currentQuestionIndex: 0,
           answers: [],
-          status: 'active',
+          status: 'triggered', // ✅ Use "triggered" instead of "active"
           startedAt: new Date(),
         });
 
@@ -589,7 +589,7 @@ const handleWorkflowConversationMessage = async (tenantId, senderPhone, messageT
     const conversation = await WorkflowConversation.findOne({
       tenantId,
       conversationId,
-      status: 'active',
+      status: { $in: ['triggered', 'in_progress'] }, // Match either status
     }).populate('workflowId');
 
     if (!conversation) {
