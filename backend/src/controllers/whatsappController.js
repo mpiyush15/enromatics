@@ -987,13 +987,19 @@ export const handleWebhook = async (req, res) => {
                       if (messageToSend) {
                         try {
                           console.log(`📤 Sending WhatsApp message to ${phoneNumberToSendTo}...`);
-                          await sendWhatsAppMessage(
+                          const metadata = {
+                            source: 'automation',
+                            workflowId: automationResult.workflow?._id,
+                            conversationId: automationResult.conversation?._id,
+                          };
+                          
+                          await whatsappService.sendTextMessage(
+                            tenantId,
                             phoneNumberToSendTo,
                             messageToSend,
-                            config.phoneNumberId,
-                            config.accessToken
+                            metadata
                           );
-                          console.log(`✅ Message sent successfully!`);
+                          console.log(`✅ WhatsApp message sent successfully!`);
                         } catch (sendError) {
                           console.error(`❌ Failed to send WhatsApp message:`, sendError.message);
                         }
