@@ -87,6 +87,8 @@ app.use(
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
+        // Vercel deployment domains
+        /^https:\/\/[\w-]+\.vercel\.app$/,               // All vercel.app subdomains
         // Subdomain patterns for production
         /^https:\/\/[\w-]+\.enromatics\.com$/,           // e.g., client.enromatics.com
         /^https:\/\/[\w-]+\.[\w-]+\.enromatics\.com$/,  // e.g., admin.client.enromatics.com
