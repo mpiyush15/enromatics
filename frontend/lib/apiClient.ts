@@ -35,12 +35,22 @@ export async function apiClient<T = any>(
 ): Promise<T> {
   const { skipAuth = false, timeout = 30000, ...fetchOptions } = options;
 
-  // Construct full URL with API_BASE_URL
-  const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const fullUrl = `${baseUrl}${cleanEndpoint}`;
-
-  console.log('🔗 API Request:', { method: fetchOptions.method || 'GET', url: fullUrl });
+  // ✅ Route automation and phone number endpoints through BFF (same domain)
+  // This ensures cookies are properly forwarded without CORS issues
+  let fullUrl: string;
+  
+  if (endpoint.includes('/api/whatsapp/automation') || endpoint.includes('/api/whatsapp/linked-phone-number')) {
+    // Use local BFF routes (same domain - no CORS needed)
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    fullUrl = cleanEndpoint;
+    console.log('🔗 BFF Request (local):', { method: fetchOptions.method || 'GET', url: fullUrl });
+  } else {
+    // Use backend directly for other endpoints
+    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    fullUrl = `${baseUrl}${cleanEndpoint}`;
+    console.log('🔗 Backend Request:', { method: fetchOptions.method || 'GET', url: fullUrl });
+  }
 
   // Create abort controller for timeout
   const controller = new AbortController();

@@ -98,12 +98,20 @@ export default function CreateWorkflowPage() {
           }
         } else {
           console.warn('⚠️ Could not fetch phone number:', err?.message);
+          // It's okay if phone number fetch fails - user can enter it manually
         }
       } catch (error) {
         console.warn('⚠️ Could not fetch linked phone number:', error);
+        // Silently fail - phone number will be filled in manually by user
       }
     };
-    fetchLinkedPhoneNumber();
+    
+    // Wait a bit for auth to be fully established before fetching phone number
+    const timer = setTimeout(() => {
+      fetchLinkedPhoneNumber();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
