@@ -483,6 +483,12 @@ export const verifyWebhook = (req, res) => {
  */
 const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, senderPhone) => {
   try {
+    console.log('\n🚀🚀🚀 CHECKING AUTOMATION TRIGGERS 🚀🚀🚀');
+    console.log(`  - TenantId: ${tenantId}`);
+    console.log(`  - PhoneNumberId: ${phoneNumberId}`);
+    console.log(`  - Message: "${messageText}"`);
+    console.log(`  - SenderPhone: ${senderPhone}`);
+    
     if (!messageText || !messageText.trim()) {
       console.log('⚠️ No message text to check for automation triggers');
       return null;
@@ -496,7 +502,7 @@ const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, s
       // Include both active and inactive - let keyword matching determine trigger
     });
 
-    console.log(`🔍 Checking ${workflows.length} published workflows for triggers`);
+    console.log(`🔍 Found ${workflows.length} published workflows to check`);
 
     for (const workflow of workflows) {
       // ✅ Filter workflows by phone_number_id
@@ -919,6 +925,9 @@ export const handleWebhook = async (req, res) => {
                   
                   // Check for automation workflow triggers (only for text messages)
                   if (message.type === 'text' && content.text) {
+                    console.log('\n📲📲📲 TEXT MESSAGE RECEIVED - CHECKING AUTOMATION 📲📲📲');
+                    console.log(`Content.text: "${content.text}"`);
+                    
                     // Priority 1: Check for NEW workflow triggers FIRST
                     // This allows re-triggering even if user is in an active conversation
                     let automationResult = await checkAndTriggerAutomation(
