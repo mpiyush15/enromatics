@@ -175,14 +175,20 @@ export const getLinkedPhoneNumber = async (req, res) => {
       });
     }
 
-    // Return the phoneNumberId (Meta ID) - this is what workflows should use
-    // NOT the display phone number
+    // ✅ Return phoneNumberId (Meta's internal ID)
+    // IMPORTANT: This is NOT the actual WhatsApp phone number (+91xxxxxxx)
+    // This is Meta's internal identifier used for:
+    //   - Webhook routing
+    //   - Sending messages
+    //   - Workflow filtering (linkedPhoneNumber field)
+    // Example: "889344924259692" 
+    // See: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/phone-number
     return res.json({
       linkedPhoneNumber: config.phoneNumberId,
       phoneNumberId: config.phoneNumberId,
       wabaId: config.wabaId,
       businessName: config.businessName,
-      displayPhoneNumber: null // Will try to fetch if needed in future
+      displayPhoneNumber: null // TODO: Fetch from Meta Graph API if needed for UI display
     });
   } catch (error) {
     console.error('Get linked phone number error:', error);
@@ -493,7 +499,10 @@ const checkAndTriggerAutomation = async (tenantId, phoneNumberId, messageText, s
     console.log(`🔍 Checking ${workflows.length} published workflows for triggers`);
 
     for (const workflow of workflows) {
-      // Check if this workflow is configured for this phone number
+      // ✅ Filter workflows by phone_number_id
+      // NOTE: linkedPhoneNumber stores Meta's internal Phone Number ID (e.g., "889344924259692")
+      // This ensures the workflow only triggers on messages received to THIS specific WABA number
+      // See best-practice rule: **Logic = phone_number_id, UI = display_phone_number**
       if (workflow.linkedPhoneNumber && workflow.linkedPhoneNumber !== phoneNumberId) {
         console.log(`⏭️  Workflow "${workflow.name}" is not linked to phone ${phoneNumberId}, skipping`);
         continue;
@@ -765,16 +774,19 @@ export const handleWebhook = async (req, res) => {
                   console.log('🔍 Debug - value.metadata:', JSON.stringify(value.metadata, null, 2));
                   console.log('🔍 Debug - entry.id:', entry.id);
                   
-                  // Get tenant ID from phone number configuration
+                  // ✅ Get phone_number_id from webhook metadata
+                  // NOTE: This is Meta's internal Phone Number ID, NOT the actual WhatsApp number (+91xxxxxxx)
+                  // Example: "889344924259692" (used for routing) vs "+91XXXXXXXXXX" (display only)
+                  // See: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-example
                   const phoneNumberId = value.metadata?.phone_number_id || entry.id;
-                  console.log('📞 Looking for config with phoneNumberId:', phoneNumberId);
+                  console.log('📞 Looking for config with phone_number_id:', phoneNumberId);
                   
                   const config = await WhatsAppConfig.findOne({ 
                     phoneNumberId: phoneNumberId
                   });
                   
                   if (!config) {
-                    console.log('⚠️ No config found for phone number ID:', phoneNumberId);
+                    console.log('⚠️ No config found for phone_number_id:', phoneNumberId);
                     console.log('⚠️ Attempting fallback search in WhatsAppConfig collection');
                     const allConfigs = await WhatsAppConfig.find({}, 'phoneNumberId tenantId');
                     console.log('📋 Available configs:', allConfigs);
