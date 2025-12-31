@@ -115,6 +115,20 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ Express login successful');
 
+      // ✅ CRITICAL: Set cookie on Vercel domain using Next.js cookies() API
+      // This ensures the cookie is stored for subsequent requests to the BFF
+      const cookieStore = await cookies();
+      if (data.token) {
+        console.log('🍪 Setting JWT cookie on Vercel domain (httpOnly, secure, sameSite=none)');
+        cookieStore.set('jwt', data.token, {
+          httpOnly: true,
+          secure: true, // Always secure on production
+          sameSite: 'none', // Allow cross-domain
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          path: '/',
+        });
+      }
+
       // Create BFF response with cleaned user data
       const bffResponse = NextResponse.json({
         success: true,
@@ -130,10 +144,10 @@ export async function POST(request: NextRequest) {
         message: data.message || 'Login successful',
       });
 
-      // Forward Set-Cookie header from Express to browser (for BFF routes)
+      // Also forward Set-Cookie header from Express as backup
       const setCookieHeader = expressResponse.headers.get('set-cookie');
       if (setCookieHeader) {
-        console.log('🍪 Forwarding Set-Cookie header to browser');
+        console.log('🍪 Also forwarding Set-Cookie header from Express');
         bffResponse.headers.set('set-cookie', setCookieHeader);
       }
 
