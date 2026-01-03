@@ -43,6 +43,32 @@ export default function StudentsPage() {
     fees: "all",
   });
 
+  /* ================= APPLY FILTERS MANUALLY ================= */
+  const applyFilters = () => {
+    setPage(1);
+    setAppliedFilters({
+      batch: batchFilter,
+      course: courseFilter,
+      roll: rollFilter,
+      fees: feesStatus,
+    });
+  };
+
+  /* ================= CLEAR FILTERS ================= */
+  const clearFilters = () => {
+    setBatchFilter("");
+    setCourseFilter("");
+    setRollFilter("");
+    setFeesStatus("all");
+    setPage(1);
+    setAppliedFilters({
+      batch: "",
+      course: "",
+      roll: "",
+      fees: "all",
+    });
+  };
+
   /* ================= UI ================= */
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -55,25 +81,6 @@ export default function StudentsPage() {
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
-
-  /* ================= DEBOUNCE FILTER INPUT ================= */
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setAppliedFilters({
-        batch: batchFilter,
-        course: courseFilter,
-        roll: rollFilter,
-        fees: feesStatus,
-      });
-    }, 400);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [batchFilter, courseFilter, rollFilter, feesStatus]);
 
   /* ================= FETCH STUDENTS ================= */
   const fetchStudents = async () => {
@@ -167,10 +174,22 @@ export default function StudentsPage() {
   const parseCSV = (text: string) => {
     const lines = text.trim().split(/\r?\n/);
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    
     return lines.slice(1).map(line => {
       const values = line.split(",");
       const obj: any = {};
-      headers.forEach((h, i) => (obj[h] = values[i]?.trim() || ""));
+      
+      headers.forEach((h, i) => {
+        const value = values[i]?.trim() || "";
+        
+        // Map common field variations to expected field names
+        if (h === "batchid" || h === "batch_id" || h === "batch id") {
+          obj["batchId"] = value;
+        } else {
+          obj[h] = value;
+        }
+      });
+      
       return obj;
     });
   };
@@ -203,8 +222,9 @@ export default function StudentsPage() {
   };
 
   const downloadSampleCSV = () => {
-    const csv = `name,email,phone,gender,course,batch,address,fees
-John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
+    const csv = `name,email,phone,gender,course,batch,batchid,address,fees
+John Doe,john@example.com,1234567890,Male,Mathematics,2024A,,123 Main St,5000
+Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -301,10 +321,8 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                 type="text"
                 placeholder="Enter batch..."
                 value={batchFilter}
-                onChange={(e) => {
-                  setBatchFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setBatchFilter(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition"
               />
             </div>
@@ -316,10 +334,8 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                 type="text"
                 placeholder="Enter course..."
                 value={courseFilter}
-                onChange={(e) => {
-                  setCourseFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setCourseFilter(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition"
               />
             </div>
@@ -331,10 +347,8 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                 type="text"
                 placeholder="Enter roll number..."
                 value={rollFilter}
-                onChange={(e) => {
-                  setRollFilter(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setRollFilter(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition"
               />
             </div>
@@ -344,10 +358,7 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
               </label>
               <select
                 value={feesStatus}
-                onChange={(e) => {
-                  setFeesStatus(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => setFeesStatus(e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
               >
                 <option value="all">All Students</option>
@@ -355,6 +366,24 @@ John Doe,john@example.com,1234567890,Male,Math,2024,Street 1,5000`;
                 <option value="remaining_gt_50">Remaining &gt; 50%</option>
               </select>
             </div>
+          </div>
+          
+          {/* Filter Action Buttons */}
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={applyFilters}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+            >
+              <span>🔍</span>
+              Search
+            </button>
+            <button
+              onClick={clearFilters}
+              className="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 flex items-center gap-2"
+            >
+              <span>🔄</span>
+              Clear Filters
+            </button>
           </div>
         </div>
 

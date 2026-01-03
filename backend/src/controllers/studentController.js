@@ -108,23 +108,31 @@ export const getStudents = async (req, res) => {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    const { page = 1, limit = 10, batchId, course, rollNumber, feesStatus } = req.query;
+    const { page = 1, limit = 10, batchId, batch, course, rollNumber, feesStatus } = req.query;
     const pageNum = Number(page);
     const lim = Math.min(Number(limit), 100);
 
     /* ---------------- MATCH ---------------- */
     const match = { tenantId };
 
+    // Flexible batch search - case insensitive partial match
+    if (batch) {
+      match.batch = { $regex: batch, $options: "i" };
+    }
+
+    // Exact batchId filter (if provided)
     if (batchId) {
       match.batchId = new mongoose.Types.ObjectId(batchId);
     }
 
+    // Flexible course search - case insensitive partial match
     if (course) {
       match.course = { $regex: course, $options: "i" };
     }
 
+    // Flexible roll number search - case insensitive partial match
     if (rollNumber) {
-      match.rollNumber = rollNumber;
+      match.rollNumber = { $regex: rollNumber, $options: "i" };
     }
 
     /* ---------------- PIPELINE ---------------- */
@@ -398,6 +406,17 @@ export const bulkUploadStudents = async (req, res) => {
       });
     }
 
+    // Get initial count for roll number generation
+    const currentYear = new Date().getFullYear();
+    const initialCount = await Student.countDocuments({ 
+      tenantId,
+      createdAt: {
+        $gte: new Date(`${currentYear}-01-01`),
+        $lt: new Date(`${currentYear + 1}-01-01`)
+      }
+    });
+    let rollNumberSequence = initialCount + 1;
+
     // Process each student
     for (let i = 0; i < students.length; i++) {
       const studentData = students[i];
@@ -433,22 +452,14 @@ export const bulkUploadStudents = async (req, res) => {
         // Generate password
         const studentPassword = Math.random().toString(36).slice(-8);
 
-        // 🔥 IMPROVED ROLL NUMBER LOGIC (same as addStudent)
+        // 🔥 IMPROVED ROLL NUMBER LOGIC - Unique sequence per student
         // Format: <year><batchPrefix><sequence>
-        const currentYear = new Date().getFullYear();
         const batchPrefix = (batch || "ST").substring(0, 2).toUpperCase();
-        
-        const existingCount = await Student.countDocuments({ 
-          tenantId, 
-          batchId,
-          createdAt: {
-            $gte: new Date(`${currentYear}-01-01`),
-            $lt: new Date(`${currentYear + 1}-01-01`)
-          }
-        });
-        const seq = existingCount + 1;
-        const seqStr = String(seq).padStart(3, "0");
+        const seqStr = String(rollNumberSequence).padStart(3, "0");
         const rollNumber = `${currentYear}${batchPrefix}${seqStr}`;
+        
+        // Increment sequence for next student
+        rollNumberSequence++;
 
         // Create student (check cap progressively)
         const currentBeforeCreate = await Student.countDocuments({ tenantId });

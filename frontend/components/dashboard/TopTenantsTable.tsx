@@ -74,9 +74,16 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('token');
-          setError('Session expired. Please refresh.');
-          setLoading(false);
+          const confirmLogout = window.confirm(
+            'Your session has expired. Click OK to go to login page.'
+          );
+          if (confirmLogout) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+          } else {
+            setError('Session expired. Please login again.');
+            setLoading(false);
+          }
           return;
         }
         throw new Error('Failed to fetch top tenants');

@@ -100,8 +100,13 @@ export default function InvoicesPage() {
       
       if (!res.ok) {
         if (res.status === 401) {
-          localStorage.removeItem('token');
-          router.push('/login');
+          const confirmLogout = window.confirm(
+            'Your session has expired. You will be logged out. Click OK to continue to login page.'
+          );
+          if (confirmLogout) {
+            localStorage.removeItem('token');
+            router.push('/login');
+          }
           return;
         }
         throw new Error(data.message || 'Failed to load invoices');
