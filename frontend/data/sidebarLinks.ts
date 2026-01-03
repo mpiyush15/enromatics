@@ -46,7 +46,8 @@ export const sidebarLinks = [
   {
     label: "📱 Social Media",
     href: "#",
-    roles: ["subscriber", "admin" , "user", "tenantAdmin", "SuperAdmin"],
+    // 🔒 HIDDEN FROM TENANTS - Still in development. Only SuperAdmin can access.
+    roles: ["SuperAdmin"],
     children: [
       {
         label: "📊 Dashboard",
@@ -54,12 +55,12 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/social",
       },
       {
-        label: "� Campaigns",
+        label: "📊 Campaigns",
         superAdminHref: "/dashboard/social/campaigns",
         href: "/dashboard/client/[tenantId]/social/campaigns",
       },
       {
-        label: "� Analytics",
+        label: "📊 Analytics",
         superAdminHref: "/dashboard/social/reports",
         href: "/dashboard/client/[tenantId]/social/reports",
       },
@@ -69,7 +70,7 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/social/ads",
       },
       {
-        label: "� Content Planner",
+        label: "📅 Content Planner",
         superAdminHref: "/dashboard/social/planner",
         href: "/dashboard/client/[tenantId]/social/planner",
       },
@@ -90,6 +91,11 @@ export const sidebarLinks = [
     href: "#",
     roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
     children: [
+      {
+        label: "🤖 Automation",
+        href: "/dashboard/whatsapp/automation",
+        roles: ["tenantAdmin", "SuperAdmin"], // Automation for admins
+      },
       {
         label: "📥 Inbox",
         href: "/dashboard/whatsapp/inbox",

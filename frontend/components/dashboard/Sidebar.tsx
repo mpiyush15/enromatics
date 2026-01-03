@@ -7,6 +7,21 @@ import useAuth from "@/hooks/useAuth";
 import useOptionalAuth from "@/hooks/useOptionalAuth";
 import Logout_Button from "@/app/dashboard/LogoutButton";
 import useSWR from "swr";
+import {
+  FaHome,
+  FaChartBar,
+  FaUsers,
+  FaClipboardList,
+  FaShoppingCart,
+  FaComments,
+  FaWhatsapp,
+  FaInbox,
+  FaBullhorn,
+  FaAddressBook,
+  FaCog,
+  FaCalendarAlt,
+  FaUserCircle,
+} from "react-icons/fa";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -77,6 +92,10 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   // Helper: build href with tenant context
   const buildHrefLocal = (href: string) => {
     if (href.includes("/client/")) return href;
+    
+    // ✅ EXCEPTION: WhatsApp routes are NOT tenant-specific (shared across all tenants)
+    if (href.includes("/whatsapp/")) return href;
+    
     if (
       user?.tenantId &&
       TENANT_ROLES.includes(user.role) &&
@@ -143,6 +162,10 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   function buildHref(href: string) {
     if (href.includes("/client/")) return href;
+    
+    // ✅ EXCEPTION: WhatsApp routes are NOT tenant-specific (shared across all tenants)
+    if (href.includes("/whatsapp/")) return href;
+    
     if (
       user?.tenantId &&
       TENANT_ROLES.includes(user.role) &&
@@ -167,6 +190,32 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       next.has(label) ? next.delete(label) : next.add(label);
       return next;
     });
+  }
+
+  // Map a label (or emoji) to a sensible icon fallback.
+  function getIconForLabel(label: string | undefined) {
+    if (!label) return null;
+    const text = label.toLowerCase();
+    if (text.includes("home") || text.includes("🏠")) return <FaHome className="w-4 h-4" />;
+    if (text.includes("analytics") || text.includes("chart") || text.includes("📊")) return <FaChartBar className="w-4 h-4" />;
+    if (text.includes("lead") || text.includes("leads") || text.includes("📋")) return <FaClipboardList className="w-4 h-4" />;
+    if (text.includes("tenants") || text.includes("👤") || text.includes("users")) return <FaUsers className="w-4 h-4" />;
+    if (text.includes("subscription") || text.includes("💳") || text.includes("💰")) return <FaShoppingCart className="w-4 h-4" />;
+    if (text.includes("social") || text.includes("facebook") || text.includes("instagram")) return <FaBullhorn className="w-4 h-4" />;
+    if (text.includes("whatsapp") || text.includes("📱") || text.includes("🤖")) return <FaWhatsapp className="w-4 h-4" />;
+    if (text.includes("inbox") || text.includes("📥")) return <FaInbox className="w-4 h-4" />;
+    if (text.includes("campaign") || text.includes("ads")) return <FaBullhorn className="w-4 h-4" />;
+    if (text.includes("contacts") || text.includes("👥")) return <FaAddressBook className="w-4 h-4" />;
+    if (text.includes("settings") || text.includes("⚙️") || text.includes("settings")) return <FaCog className="w-4 h-4" />;
+    if (text.includes("academics") || text.includes("📚") || text.includes("calendar")) return <FaCalendarAlt className="w-4 h-4" />;
+    if (text.includes("profile") || text.includes("🧑‍💻")) return <FaUserCircle className="w-4 h-4" />;
+    // default
+    return <FaClipboardList className="w-4 h-4" />;
+  }
+
+  // Remove emojis from label text
+  function cleanLabel(label: string) {
+    return label.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
   }
 
   function handleClick() {
@@ -234,16 +283,22 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                 <>
                   <button
                     onClick={() => toggle(section.label)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200 group"
+                    className={`w-full flex items-center justify-between transition-all duration-200 group ${
+                      expanded.has(section.label)
+                        ? "px-4 py-3 text-base font-semibold bg-gray-700/60 rounded-lg text-white shadow-inner"
+                        : "px-4 py-2.5 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg"
+                    }`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      {section.label}
+                    <span className="flex items-center gap-3">
+                      <span className="text-gray-300 group-hover:text-white transition-colors">
+                        {getIconForLabel(section.label)}
+                      </span>
+                      <span className={`${expanded.has(section.label) ? 'text-white' : 'text-gray-300'}`}>{cleanLabel(section.label)}</span>
                     </span>
-                    <svg 
-                      className={`w-4 h-4 transition-transform duration-200 ${expanded.has(section.label) ? 'rotate-180' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${expanded.has(section.label) ? 'rotate-180 text-white' : 'text-gray-300'}`}
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -257,13 +312,17 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                           <li key={child.label}>
                             <button
                               onClick={() => toggle(child.label)}
-                              className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700/30 rounded-md transition-all duration-150"
+                              className={`w-full flex items-center justify-between transition-all duration-150 ${
+                                expanded.has(child.label)
+                                  ? 'px-3 py-2.5 text-sm bg-gray-700/50 text-white rounded-md'
+                                  : 'px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700/30 rounded-md'
+                              }`}
                             >
-                              <span>{child.label}</span>
-                              <svg 
-                                className={`w-3 h-3 transition-transform duration-200 ${expanded.has(child.label) ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                stroke="currentColor" 
+                              <span className="flex items-center gap-2">{getIconForLabel(child.label)} <span>{cleanLabel(child.label)}</span></span>
+                              <svg
+                                className={`w-3 h-3 transition-transform duration-200 ${expanded.has(child.label) ? 'rotate-180 text-white' : 'text-gray-400'}`}
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -283,7 +342,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                                           : "text-gray-400 hover:text-white hover:bg-gray-700/30"
                                       }`}
                                     >
-                                      {grand.label}
+                                      <span className="flex items-center gap-2">{getIconForLabel(grand.label)} <span>{cleanLabel(grand.label)}</span></span>
                                     </Link>
                                   </li>
                                 ))}
@@ -301,7 +360,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                                   : "text-gray-400 hover:text-white hover:bg-gray-700/30"
                               }`}
                             >
-                              {child.label}
+                              <span className="flex items-center gap-2">{getIconForLabel(child.label)} <span>{cleanLabel(child.label)}</span></span>
                             </Link>
                           </li>
                         )
@@ -313,14 +372,14 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                 <Link
                   href={buildHref(section.href!)}
                   onClick={handleClick}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm rounded-lg transition-all duration-200 group ${
+                  className={`flex items-center gap-3 px-4 transition-all duration-200 group ${
                     isActive(section.href)
-                      ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-lg shadow-blue-500/30"
-                      : "text-gray-300 hover:text-white hover:bg-gray-700/50"
+                      ? "py-3 text-base bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium shadow-lg shadow-blue-500/30 rounded-lg"
+                      : "py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive(section.href) ? 'bg-white' : 'bg-blue-400 opacity-0 group-hover:opacity-100'} transition-opacity`} />
-                  {section.label}
+                  <span className="text-gray-300 group-hover:text-white transition-colors">{getIconForLabel(section.label)}</span>
+                  <span className={`${isActive(section.href) ? 'text-white' : 'text-gray-300'}`}>{cleanLabel(section.label)}</span>
                 </Link>
               )}
             </li>

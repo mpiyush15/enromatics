@@ -75,18 +75,18 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
   return (
     <div className="space-y-4">
       {questions.map((question, index) => (
-        <div key={question.id} className="border border-gray-200 rounded-lg">
+        <div key={question.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
           {/* Header */}
           <div
-            className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+            className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
             onClick={() => setExpandedId(expandedId === question.id ? null : question.id)}
           >
             <div className="flex-1">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-gray-500 w-6">Q{index + 1}</span>
+                <span className="text-sm font-bold text-gray-500 dark:text-gray-400 w-6">Q{index + 1}</span>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">{question.text || 'Untitled Question'}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-medium text-gray-900 dark:text-white">{question.text || 'Untitled Question'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {question.type === 'text' && 'Text Input'}
                     {question.type === 'choice' && `Multiple Choice (${question.options.length} options)`}
                     {question.type === 'multiselect' && `Multi-select (${question.options.length} options)`}
@@ -105,7 +105,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                   moveQuestion(question.id, 'up');
                 }}
                 disabled={index === 0}
-                className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronUp className="w-4 h-4" />
               </button>
@@ -116,7 +116,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                   moveQuestion(question.id, 'down');
                 }}
                 disabled={index === questions.length - 1}
-                className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -126,7 +126,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                   e.stopPropagation();
                   deleteQuestion(question.id);
                 }}
-                className="p-1 hover:bg-red-100 text-red-600 rounded"
+                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -135,10 +135,10 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
 
           {/* Content */}
           {expandedId === question.id && (
-            <div className="p-6 border-t border-gray-200 space-y-6">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-6">
               {/* Question Text */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Question Text *
                 </label>
                 <input
@@ -146,14 +146,14 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                   value={question.text}
                   onChange={(e) => updateQuestion(question.id, { text: e.target.value })}
                   placeholder="What would you like to ask?"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               {/* Question Type */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Question Type *
                   </label>
                   <select
@@ -164,7 +164,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                         options: e.target.value === 'text' ? [] : question.options,
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="text">Text Input</option>
                     <option value="choice">Multiple Choice</option>
@@ -180,7 +180,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                       onChange={(e) => updateQuestion(question.id, { isRequired: e.target.checked })}
                       className="w-4 h-4 rounded"
                     />
-                    <span className="text-sm font-medium text-gray-700">Required</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Required</span>
                   </label>
                 </div>
 
@@ -192,7 +192,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                       onChange={(e) => updateQuestion(question.id, { isNameField: e.target.checked })}
                       className="w-4 h-4 rounded"
                     />
-                    <span className="text-sm font-medium text-gray-700">Name Field</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Name Field</span>
                   </label>
                 </div>
               </div>
@@ -206,14 +206,14 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                     onChange={(e) => updateQuestion(question.id, { isMobileField: e.target.checked })}
                     className="w-4 h-4 rounded"
                   />
-                  <span className="text-sm font-medium text-gray-700">Mobile Number Field</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Mobile Number Field</span>
                 </label>
               </div>
 
               {/* Question Options (for choice/multiselect) */}
               {(question.type === 'choice' || question.type === 'multiselect') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                     Options *
                   </label>
                   <div className="space-y-3 mb-4">
@@ -228,12 +228,12 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                             updateQuestion(question.id, { options: newOptions });
                           }}
                           placeholder={`Option ${optionIndex + 1}`}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                         <button
                           type="button"
                           onClick={() => removeOption(question.id, optionIndex)}
-                          className="p-2 hover:bg-red-100 text-red-600 rounded"
+                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -253,7 +253,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                         }
                       }}
                       placeholder="Add new option..."
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                     <button
                       type="button"
@@ -269,7 +269,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
               {/* Placeholder & Help Text */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Placeholder Text
                   </label>
                   <input
@@ -277,12 +277,12 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                     value={question.placeholder}
                     onChange={(e) => updateQuestion(question.id, { placeholder: e.target.value })}
                     placeholder="Enter placeholder text"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     CRM Field Name
                   </label>
                   <input
@@ -290,13 +290,13 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                     value={question.crmFieldName}
                     onChange={(e) => updateQuestion(question.id, { crmFieldName: e.target.value })}
                     placeholder="e.g., courseInterest, budget"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Help Text (Optional)
                 </label>
                 <input
@@ -304,7 +304,7 @@ export default function QuestionBuilder({ questions, onChange }: QuestionBuilder
                   value={question.helpText}
                   onChange={(e) => updateQuestion(question.id, { helpText: e.target.value })}
                   placeholder="Additional guidance for the user"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>

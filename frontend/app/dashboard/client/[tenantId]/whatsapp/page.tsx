@@ -73,8 +73,7 @@ export default function WhatsAppDashboardPage() {
     return (
       <UpgradeRequired 
         featureName="WhatsApp Business API" 
-        description="Send bulk messages, automated reminders, and manage WhatsApp campaigns directly from your dashboard. This feature is available in Basic plan and above."
-        requiredPlan="Basic"
+        description="Send bulk messages, automated reminders, and manage WhatsApp campaigns directly from your dashboard. Upgrade to Pro or Enterprise plan to unlock this feature."
       />
     );
   }

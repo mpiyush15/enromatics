@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
+import useAuth from "@/hooks/useAuth";
+import UpgradeRequired from "@/components/UpgradeRequired";
 
 interface InboxMessage {
   _id: string;
@@ -257,6 +260,8 @@ const MessagesDisplay = React.memo(function MessagesDisplay({
 export default function WhatsAppInboxPage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
+  const { user, loading: authLoading } = useAuth();
+  const { hasFeature, loading: featureLoading } = useFeatureGate();
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -272,6 +277,9 @@ export default function WhatsAppInboxPage() {
   const [templatesLoading, setTemplatesLoading] = useState(false); // New: loading state for templates
   
   const lastSyncRef = React.useRef<string>(new Date().toISOString());
+
+  // SuperAdmin or user with WABA feature
+  const isSuperAdmin = user?.role === 'SuperAdmin';
 
   // Smart polling state: only refresh when user is active
   const [isUserActive, setIsUserActive] = useState(true);
@@ -894,6 +902,28 @@ export default function WhatsAppInboxPage() {
       }
     }, []);
 
+  // Check feature access - AFTER all hooks, BEFORE render
+  if (authLoading || featureLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-600 border-t-transparent mx-auto mb-3"></div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 font-light">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // SuperAdmin always has access, tenants need WABA feature
+  if (!isSuperAdmin && !hasFeature("waba")) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Inbox" 
+        description="View and respond to all your WhatsApp conversations in one place. Manage student inquiries, send templates, and track message status. Upgrade to Pro or Enterprise plan to unlock this feature."
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-teal-50">
@@ -912,8 +942,8 @@ export default function WhatsAppInboxPage() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
               </div>
@@ -952,7 +982,7 @@ export default function WhatsAppInboxPage() {
                 <button
                   onClick={handleManualRefresh}
                   disabled={loading}
-                  className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium flex items-center gap-2"
+                  className="px-4 py-2 bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium flex items-center gap-2"
                   title="Manually refresh inbox data"
                 >
                   <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -70,8 +70,7 @@ export default function SocialMediaDashboard() {
     return (
       <UpgradeRequired 
         featureName="Social Media Analytics" 
-        description="Connect your Facebook and Instagram accounts to manage ads, track performance, and grow your reach. This feature is available in Basic plan and above."
-        requiredPlan="Basic"
+        description="Connect your Facebook and Instagram accounts to manage ads, track performance, and grow your reach. Upgrade to Pro or Enterprise plan to unlock this feature."
       />
     );
   }

@@ -170,12 +170,12 @@ export default function EditWorkflowPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin mb-4">
             <Eye className="w-8 h-8 text-orange-500 mx-auto" />
           </div>
-          <p className="text-gray-600">Loading workflow...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading workflow...</p>
         </div>
       </div>
     );
@@ -183,11 +183,11 @@ export default function EditWorkflowPage() {
 
   if (!workflow) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-900 font-bold mb-2">Workflow not found</p>
-          <p className="text-gray-600 mb-4">The workflow you're looking for doesn't exist.</p>
+          <p className="text-gray-900 dark:text-white font-bold mb-2">Workflow not found</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The workflow you're looking for doesn't exist.</p>
           <Link
             href="/dashboard/whatsapp/automation"
             className="text-orange-500 hover:text-orange-600 font-medium"
@@ -205,9 +205,9 @@ export default function EditWorkflowPage() {
       : `${Math.round((workflow.completionCount / workflow.conversationCount) * 100)}%`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Link
             href="/dashboard/whatsapp/automation"
@@ -218,16 +218,16 @@ export default function EditWorkflowPage() {
           </Link>
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{workflow.name}</h1>
-              <p className="text-gray-600 mt-2">{workflow.description}</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{workflow.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">{workflow.description}</p>
             </div>
             <div className="text-right">
               <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${
                 workflow.status === 'active'
-                  ? 'bg-green-100 text-green-800'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                   : workflow.status === 'draft'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-gray-100 text-gray-800'
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
               }`}>
                 {workflow.status}
               </span>
@@ -237,7 +237,7 @@ export default function EditWorkflowPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-8">
             <Link
@@ -245,7 +245,7 @@ export default function EditWorkflowPage() {
               className={`py-4 px-2 font-medium transition-colors border-b-2 ${
                 tab === 'edit' || !tab
                   ? 'text-orange-600 border-orange-600'
-                  : 'text-gray-600 border-transparent hover:text-gray-900'
+                  : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               Edit
@@ -255,7 +255,7 @@ export default function EditWorkflowPage() {
               className={`py-4 px-2 font-medium transition-colors border-b-2 flex items-center gap-2 ${
                 tab === 'analytics'
                   ? 'text-orange-600 border-orange-600'
-                  : 'text-gray-600 border-transparent hover:text-gray-900'
+                  : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               <TrendingUp className="w-4 h-4" />
@@ -268,7 +268,7 @@ export default function EditWorkflowPage() {
       {/* Messages */}
       {error && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
             {error}
           </div>
@@ -277,7 +277,7 @@ export default function EditWorkflowPage() {
 
       {success && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg">
             {success}
           </div>
         </div>
@@ -288,29 +288,29 @@ export default function EditWorkflowPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <form className="space-y-8">
             {/* Basic Info */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Workflow Details</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Workflow Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Workflow Name
                   </label>
                   <input
                     type="text"
                     value={workflow.name}
                     onChange={(e) => handleUpdate({ name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Workflow Type
                   </label>
                   <select
                     value={workflow.type}
                     onChange={(e) => handleUpdate({ type: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
                     <option value="admission">Admission Inquiry</option>
                     <option value="demo">Demo Request</option>
@@ -321,88 +321,88 @@ export default function EditWorkflowPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description
                   </label>
                   <textarea
                     value={workflow.description}
                     onChange={(e) => handleUpdate({ description: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     WhatsApp Business Number
                   </label>
                   <input
                     type="text"
                     value={workflow.linkedPhoneNumber}
                     onChange={(e) => handleUpdate({ linkedPhoneNumber: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Trigger Keyword
                   </label>
                   <input
                     type="text"
                     value={workflow.triggerKeyword}
                     onChange={(e) => handleUpdate({ triggerKeyword: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
               </div>
             </div>
 
             {/* Messages */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Messages</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Messages</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Initial Message
                   </label>
                   <textarea
                     value={workflow.initialMessage}
                     onChange={(e) => handleUpdate({ initialMessage: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Completion Message
                   </label>
                   <textarea
                     value={workflow.completionMessage}
                     onChange={(e) => handleUpdate({ completionMessage: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Skip Message
                   </label>
                   <textarea
                     value={workflow.skipMessage}
                     onChange={(e) => handleUpdate({ skipMessage: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
               </div>
             </div>
 
             {/* Questions */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Questions ({workflow.questions.length})</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Questions ({workflow.questions.length})</h2>
               <QuestionBuilder
                 questions={workflow.questions}
                 onChange={handleQuestionsChange}
@@ -414,7 +414,7 @@ export default function EditWorkflowPage() {
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
@@ -447,24 +447,24 @@ export default function EditWorkflowPage() {
       {tab === 'analytics' && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <p className="text-gray-600 text-sm font-medium">Total Conversations</p>
-              <p className="text-4xl font-bold text-gray-900 mt-2">{workflow.conversationCount}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Conversations</p>
+              <p className="text-4xl font-bold text-gray-900 dark:text-white mt-2">{workflow.conversationCount}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <p className="text-gray-600 text-sm font-medium">Completed</p>
-              <p className="text-4xl font-bold text-green-600 mt-2">{workflow.completionCount}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Completed</p>
+              <p className="text-4xl font-bold text-green-600 dark:text-green-400 mt-2">{workflow.completionCount}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <p className="text-gray-600 text-sm font-medium">Completion Rate</p>
-              <p className="text-4xl font-bold text-orange-600 mt-2">{completionRate}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Completion Rate</p>
+              <p className="text-4xl font-bold text-orange-600 dark:text-orange-400 mt-2">{completionRate}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <p className="text-gray-600 text-sm font-medium">Abandoned</p>
-              <p className="text-4xl font-bold text-red-600 mt-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Abandoned</p>
+              <p className="text-4xl font-bold text-red-600 dark:text-red-400 mt-2">
                 {workflow.conversationCount - workflow.completionCount}
               </p>
             </div>

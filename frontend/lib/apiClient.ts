@@ -35,17 +35,17 @@ export async function apiClient<T = any>(
 ): Promise<T> {
   const { skipAuth = false, timeout = 30000, ...fetchOptions } = options;
 
-  // ✅ Route automation and phone number endpoints through BFF (same domain)
-  // This ensures cookies are properly forwarded without CORS issues
+  // ✅ Smart routing: If endpoint starts with /api/, use BFF (same domain)
+  // Otherwise, use backend directly
   let fullUrl: string;
   
-  if (endpoint.includes('/api/whatsapp/automation') || endpoint.includes('/api/whatsapp/linked-phone-number')) {
+  if (endpoint.startsWith('/api/')) {
     // Use local BFF routes (same domain - no CORS needed)
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    fullUrl = cleanEndpoint;
+    // This covers ALL /api/* endpoints: whatsapp, dashboard, auth, etc.
+    fullUrl = endpoint;
     console.log('🔗 BFF Request (local):', { method: fetchOptions.method || 'GET', url: fullUrl });
   } else {
-    // Use backend directly for other endpoints
+    // Use backend directly for endpoints without /api/ prefix
     const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     fullUrl = `${baseUrl}${cleanEndpoint}`;

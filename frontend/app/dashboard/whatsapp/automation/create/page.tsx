@@ -215,9 +215,9 @@ export default function CreateWorkflowPage() {
 
   if (preview) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Preview Header */}
-        <div className="bg-white border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <button
               onClick={() => setPreview(false)}
@@ -226,18 +226,18 @@ export default function CreateWorkflowPage() {
               <ChevronLeft className="w-5 h-5" />
               Back to Editor
             </button>
-            <h2 className="text-2xl font-bold text-gray-900">Preview Workflow</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Preview Workflow</h2>
           </div>
         </div>
 
         {/* Preview Container */}
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
             {/* Conversation Bubble - Initial Message */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="bg-gray-100 rounded-lg p-4 w-fit max-w-xs">
-                <p className="text-gray-800 text-sm">{formData.initialMessage}</p>
-                <p className="text-gray-500 text-xs mt-2">Just now</p>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 w-fit max-w-xs">
+                <p className="text-gray-800 dark:text-gray-200 text-sm">{formData.initialMessage}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">Just now</p>
               </div>
             </div>
 
@@ -245,12 +245,12 @@ export default function CreateWorkflowPage() {
             <div className="p-6">
               {currentQuestionIndex < formData.questions.length ? (
                 <div className="space-y-4">
-                  <div className="bg-gray-100 rounded-lg p-4 w-fit max-w-xs">
-                    <p className="text-gray-800 text-sm font-medium">
+                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 w-fit max-w-xs">
+                    <p className="text-gray-800 dark:text-gray-200 text-sm font-medium">
                       {formData.questions[currentQuestionIndex].text}
                     </p>
                     {formData.questions[currentQuestionIndex].helpText && (
-                      <p className="text-gray-600 text-xs mt-2">
+                      <p className="text-gray-600 dark:text-gray-400 text-xs mt-2">
                         {formData.questions[currentQuestionIndex].helpText}
                       </p>
                     )}
@@ -262,7 +262,7 @@ export default function CreateWorkflowPage() {
                       <input
                         type="text"
                         placeholder={formData.questions[currentQuestionIndex].placeholder || 'Type your answer...'}
-                        className="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full max-w-xs px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
                     </div>
@@ -273,7 +273,7 @@ export default function CreateWorkflowPage() {
                       {formData.questions[currentQuestionIndex].options.map((option, idx) => (
                         <label key={idx} className="flex items-center gap-3 cursor-pointer">
                           <input type="radio" name="choice" className="w-4 h-4" disabled />
-                          <span className="text-sm text-gray-700">{option}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
                         </label>
                       ))}
                     </div>
@@ -284,7 +284,7 @@ export default function CreateWorkflowPage() {
                       {formData.questions[currentQuestionIndex].options.map((option, idx) => (
                         <label key={idx} className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" className="w-4 h-4" disabled />
-                          <span className="text-sm text-gray-700">{option}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
                         </label>
                       ))}
                     </div>
@@ -295,7 +295,7 @@ export default function CreateWorkflowPage() {
                     {currentQuestionIndex > 0 && (
                       <button
                         onClick={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                       >
                         Previous
                       </button>
@@ -312,8 +312,8 @@ export default function CreateWorkflowPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-gray-100 rounded-lg p-4 w-fit max-w-xs">
-                    <p className="text-gray-800 text-sm">{formData.completionMessage}</p>
+                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 w-fit max-w-xs">
+                    <p className="text-gray-800 dark:text-gray-200 text-sm">{formData.completionMessage}</p>
                   </div>
                   <button
                     onClick={() => setCurrentQuestionIndex(0)}
@@ -325,11 +325,11 @@ export default function CreateWorkflowPage() {
               )}
 
               {/* Progress */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="text-sm text-gray-600 mb-2">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   Question {Math.min(currentQuestionIndex + 1, formData.questions.length)} of {formData.questions.length}
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-orange-500 h-2 rounded-full transition-all"
                     style={{
@@ -346,9 +346,9 @@ export default function CreateWorkflowPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Link
             href="/dashboard/whatsapp/automation"
@@ -357,15 +357,15 @@ export default function CreateWorkflowPage() {
             <ChevronLeft className="w-5 h-5" />
             Back to Workflows
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Workflow</h1>
-          <p className="text-gray-600 mt-2">Set up a custom WhatsApp automation workflow with your questions</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create New Workflow</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Set up a custom WhatsApp automation workflow with your questions</p>
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
             {error}
           </div>
         </div>
@@ -375,11 +375,11 @@ export default function CreateWorkflowPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form className="space-y-8">
           {/* Basic Info */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Workflow Details</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Workflow Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Workflow Name *
                 </label>
                 <input
@@ -388,19 +388,19 @@ export default function CreateWorkflowPage() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="e.g., Admission Inquiry, Demo Request"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Workflow Type *
                 </label>
                 <select
                   name="type"
                   value={formData.type}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="admission">Admission Inquiry</option>
                   <option value="demo">Demo Request</option>
@@ -411,7 +411,7 @@ export default function CreateWorkflowPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -420,12 +420,12 @@ export default function CreateWorkflowPage() {
                   onChange={handleInputChange}
                   placeholder="Brief description of this workflow"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   WhatsApp Business Number *
                 </label>
                 <input
@@ -434,12 +434,12 @@ export default function CreateWorkflowPage() {
                   value={formData.linkedPhoneNumber}
                   onChange={handleInputChange}
                   placeholder="+91 9876543210"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Trigger Keyword *
                 </label>
                 <input
@@ -448,19 +448,19 @@ export default function CreateWorkflowPage() {
                   value={formData.triggerKeyword}
                   onChange={handleInputChange}
                   placeholder="e.g., hi, demo, admission"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">User types this to start the workflow</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">User types this to start the workflow</p>
               </div>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Messages</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Messages</h2>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Initial Message
                 </label>
                 <textarea
@@ -468,12 +468,12 @@ export default function CreateWorkflowPage() {
                   value={formData.initialMessage}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Completion Message
                 </label>
                 <textarea
@@ -481,12 +481,12 @@ export default function CreateWorkflowPage() {
                   value={formData.completionMessage}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Skip Message (Optional)
                 </label>
                 <textarea
@@ -494,16 +494,16 @@ export default function CreateWorkflowPage() {
                   value={formData.skipMessage}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Questions */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Questions ({formData.questions.length})</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Questions ({formData.questions.length})</h2>
               <button
                 type="button"
                 onClick={handleAddQuestion}
@@ -525,7 +525,7 @@ export default function CreateWorkflowPage() {
             <button
               type="button"
               onClick={() => setPreview(true)}
-              className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               <Eye className="w-5 h-5" />
               Preview
@@ -534,7 +534,7 @@ export default function CreateWorkflowPage() {
               type="button"
               onClick={() => handleSubmit(false)}
               disabled={loading}
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : 'Save as Draft'}
             </button>

@@ -470,7 +470,7 @@ export const bulkUploadStudents = async (req, res) => {
           phone: phone || "",
           gender: gender || "Other",
           course: course || "",
-          batch: batchKey,
+          batch: batch || "",
           batchId: batchId || null,
           address: address || "",
           fees: fees ? Number(fees) : 0,

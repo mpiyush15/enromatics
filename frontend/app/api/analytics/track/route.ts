@@ -7,7 +7,27 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check if request has a body
+    const contentType = request.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.warn('⚠️ Analytics track called without JSON body');
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
+    // Try to parse JSON body, handle empty body gracefully
+    let body;
+    try {
+      const text = await request.text();
+      if (!text || text.trim() === '') {
+        console.warn('⚠️ Analytics track called with empty body');
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+      body = JSON.parse(text);
+    } catch (parseError) {
+      console.error('❌ JSON parse error in analytics track:', parseError);
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+
     console.log("📊 [BFF] Track request received:", body);
 
     // Forward to backend with visitor IP

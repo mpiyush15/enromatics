@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import useAuth from "@/hooks/useAuth";
 
 interface UpgradeRequiredProps {
   featureName: string;
@@ -12,10 +13,13 @@ interface UpgradeRequiredProps {
 export default function UpgradeRequired({ 
   featureName, 
   description,
-  requiredPlan = "Basic" 
+  requiredPlan = "Pro or Enterprise" 
 }: UpgradeRequiredProps) {
   const params = useParams();
-  const tenantId = params?.tenantId as string || "";
+  const { user } = useAuth();
+  
+  // Get tenantId from URL params first, then from user context
+  const tenantId = (params?.tenantId as string) || user?.tenantId || "";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
@@ -51,14 +55,14 @@ export default function UpgradeRequired({
 
         {/* Description */}
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          {description || `This feature is not available in your current plan. Upgrade to ${requiredPlan} or higher to access ${featureName}.`}
+          {description || `This feature is not available in your current plan. Upgrade to ${requiredPlan} plan to access ${featureName}.`}
         </p>
 
         {/* Plan Badge */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Required Plan:</span>
-          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-            {requiredPlan}+
+          <span className="text-sm text-gray-500 dark:text-gray-400">Upgrade to:</span>
+          <span className="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-medium">
+            {requiredPlan}
           </span>
         </div>
 
