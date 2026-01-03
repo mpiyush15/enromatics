@@ -1398,9 +1398,14 @@ export default function StudentProfilePage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Send Notification to {student?.name}
-              </h3>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Send Notification to {student?.name}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  📧 Email will be sent to: {student?.email || 'No email on file'}
+                </p>
+              </div>
               <button
                 onClick={() => setShowNotificationModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -1413,6 +1418,15 @@ export default function StudentProfilePage() {
 
             {/* Modal Body */}
             <div className="p-4 space-y-4">
+              {/* Info Banner */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200 flex items-start gap-2">
+                  <span className="text-lg">ℹ️</span>
+                  <span>
+                    This will send both an <strong>in-app notification</strong> and an <strong>email</strong> to the student.
+                  </span>
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Title <span className="text-red-500">*</span>
@@ -1496,7 +1510,10 @@ export default function StudentProfilePage() {
                     Sending...
                   </>
                 ) : (
-                  "Send Notification"
+                  <>
+                    <span>📧</span>
+                    Send Notification & Email
+                  </>
                 )}
               </button>
             </div>
