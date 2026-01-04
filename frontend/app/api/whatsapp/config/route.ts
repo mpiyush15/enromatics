@@ -138,3 +138,55 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const cookies = request.headers.get('cookie') || '';
+    const url = new URL(request.url);
+    const tenantId = url.searchParams.get('tenantId') || '';
+
+    console.log('📤 Deleting WhatsApp config via backend');
+
+    const backendResponse = await fetch(`${BACKEND_URL}/api/whatsapp/config${url.search}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookies,
+      },
+      credentials: 'include',
+    });
+
+    if (!backendResponse.ok) {
+      const errorText = await backendResponse.text();
+      console.error(`❌ Backend DELETE error: ${backendResponse.status}`, errorText);
+      
+      return NextResponse.json(
+        { 
+          message: 'Failed to delete WhatsApp config',
+          status: backendResponse.status,
+        },
+        { status: backendResponse.status }
+      );
+    }
+
+    const data = await backendResponse.json();
+
+    // Invalidate cache on delete
+    if (tenantId) {
+      await redisCache.delPattern(`whatsapp:*:${tenantId}*`);
+      console.log('[BFF] WhatsApp cache invalidated after DELETE');
+    }
+
+    console.log('✅ WhatsApp config deleted successfully');
+
+    return NextResponse.json(data, {
+      headers: { 'X-Cache': 'BYPASS' },
+    });
+  } catch (error: any) {
+    console.error('❌ WhatsApp Config DELETE Error:', error.message);
+    return NextResponse.json(
+      { message: 'Internal server error', error: error.message },
+      { status: 500 }
+    );
+  }
+}
