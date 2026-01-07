@@ -1,19 +1,43 @@
 /**
  * BFF Route: WhatsApp Conversations (Live Chat)
  * Proxies calls to external WhatsApp Platform
- * Handles cookie forwarding and authentication
+ * Uses tenant's businessAccountId
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/lib/mongodb';
 
-const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
+const WHATSAPP_PLATFORM_URL = (process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
 const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
 export async function GET(req: NextRequest) {
   try {
-    // Call WhatsApp Platform
+    const { searchParams } = new URL(req.url);
+    const tenantId = searchParams.get('tenantId');
+
+    if (!tenantId) {
+      return NextResponse.json(
+        { success: false, message: 'tenantId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get tenant config from MongoDB
+    await connectDB();
+    const db = (global as any).mongodb?.db();
+    const collection = db?.collection('whatsapp_tenant_configs');
+    const config = await collection?.findOne({ tenantId });
+
+    if (!config || !config.businessAccountId) {
+      return NextResponse.json(
+        { success: false, message: 'WhatsApp account not configured for this tenant' },
+        { status: 404 }
+      );
+    }
+
+    // Call WhatsApp Platform with tenant's businessAccountId
     const response = await fetch(
-      `${WHATSAPP_PLATFORM_URL}/api/conversations`,
+      `${WHATSAPP_PLATFORM_URL}/api/conversations?businessAccountId=${config.businessAccountId}`,
       {
         method: 'GET',
         headers: {

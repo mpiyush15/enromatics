@@ -1,17 +1,43 @@
 /**
  * BFF Route: WhatsApp Messages
  * Proxies to: POST /api/messages/send, GET /api/messages
+ * Uses tenant's businessAccountId to fetch tenant-specific data
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/lib/mongodb';
 
-const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
+const WHATSAPP_PLATFORM_URL = (process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
 const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const tenantId = searchParams.get('tenantId');
+
+    if (!tenantId) {
+      return NextResponse.json(
+        { success: false, message: 'tenantId is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get tenant config from MongoDB
+    await connectDB();
+    const db = (global as any).mongodb?.db();
+    const collection = db?.collection('whatsapp_tenant_configs');
+    const config = await collection?.findOne({ tenantId });
+
+    if (!config || !config.businessAccountId) {
+      return NextResponse.json(
+        { success: false, message: 'WhatsApp account not configured for this tenant' },
+        { status: 404 }
+      );
+    }
+
+    // Call platform with tenant's businessAccountId
     const response = await fetch(
-      `${WHATSAPP_PLATFORM_URL}/api/messages`,
+      `${WHATSAPP_PLATFORM_URL}/api/messages?businessAccountId=${config.businessAccountId}`,
       {
         method: 'GET',
         headers: {
@@ -45,17 +71,31 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { to, message } = body;
+    const { tenantId, to, message } = body;
 
-    if (!to || !message) {
+    if (!tenantId || !to || !message) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields: to, message' },
+        { success: false, message: 'Missing required fields: tenantId, to, message' },
         { status: 400 }
       );
     }
 
+    // Get tenant config from MongoDB
+    await connectDB();
+    const db = (global as any).mongodb?.db();
+    const collection = db?.collection('whatsapp_tenant_configs');
+    const config = await collection?.findOne({ tenantId });
+
+    if (!config || !config.businessAccountId) {
+      return NextResponse.json(
+        { success: false, message: 'WhatsApp account not configured for this tenant' },
+        { status: 404 }
+      );
+    }
+
+    // Send message from tenant's account
     const response = await fetch(
-      `${WHATSAPP_PLATFORM_URL}/api/messages/send`,
+      `${WHATSAPP_PLATFORM_URL}/api/messages/send?businessAccountId=${config.businessAccountId}`,
       {
         method: 'POST',
         headers: {
