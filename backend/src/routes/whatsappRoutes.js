@@ -183,8 +183,8 @@ router.post('/messages/send', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Send message via platform using tenant API key
-    const result = await whatsappClient.sendTextMessage(to, message, 'manual', config.apiKey);
+    // Send message via platform using Meta access token
+    const result = await whatsappClient.sendTextMessage(to, message, 'manual');
 
     return res.json(result);
   } catch (error) {
@@ -209,8 +209,8 @@ router.get('/conversations', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform using tenant API key
-    const conversations = await whatsappClient.getConversations(50, 0, config.apiKey);
+    // Fetch conversations from platform using Meta access token
+    const conversations = await whatsappClient.getConversations(50, 0);
 
     return res.json(conversations);
   } catch (error) {
@@ -235,8 +235,8 @@ router.get('/contacts', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch contacts from platform using tenant API key
-    const contacts = await whatsappClient.getContacts(100, 0, config.apiKey);
+    // Fetch contacts from platform using Meta access token
+    const contacts = await whatsappClient.getContacts(100, 0);
 
     return res.json(contacts);
   } catch (error) {
@@ -261,8 +261,8 @@ router.get('/stats', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch stats from platform using tenant API key
-    const stats = await whatsappClient.getStats(config.apiKey);
+    // Fetch stats from platform using Meta access token
+    const stats = await whatsappClient.getStats();
 
     return res.json(stats);
   } catch (error) {
