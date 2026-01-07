@@ -297,38 +297,23 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              {/* Platform API Key */}
-              <div>
+              {/* Platform API Key - Optional for advanced users */}
+              <div className="opacity-50 pointer-events-none">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <div className="flex items-center gap-2">
                     <Key className="h-4 w-4" />
-                    WhatsApp Platform API Key (Optional)
+                    Custom API Key (Not needed - using Meta credentials)
                   </div>
                 </label>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? "text" : "password"}
-                    value={formData.apiKey}
-                    onChange={(e) =>
-                      setFormData({ ...formData, apiKey: e.target.value })
-                    }
-                    placeholder="Paste your WhatsApp Platform API key here"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
-                  >
-                    {showApiKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={formData.apiKey}
+                  disabled
+                  placeholder="Leave empty - uses Meta WhatsApp credentials"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                />
                 <p className="text-xs text-gray-500 mt-2">
-                  Get this from your WhatsApp Platform admin dashboard. This enables per-tenant WhatsApp access.
+                  Not required. Enromatics uses Meta WhatsApp Cloud API directly.
                 </p>
               </div>
 
