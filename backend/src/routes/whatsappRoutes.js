@@ -5,6 +5,39 @@ import Tenant from '../models/Tenant.js';
 const router = express.Router();
 
 /**
+ * Helper function to get WhatsApp config for a tenant or global super admin
+ * @param {string} tenantId - Tenant identifier (can be "global:*" for super admin)
+ * @returns {Promise<object>} - WhatsApp configuration
+ */
+async function getWhatsAppConfig(tenantId) {
+  // Super admin with global config (no tenant-specific DB record needed)
+  if (tenantId.startsWith('global:')) {
+    const globalConfig = {
+      businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+      phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID,
+      isGlobal: true,
+      source: 'environment'
+    };
+    
+    if (!globalConfig.businessAccountId || !globalConfig.phoneNumberId) {
+      throw new Error('Global WhatsApp configuration not found in environment variables');
+    }
+    
+    return globalConfig;
+  }
+
+  // Regular tenant lookup
+  const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
+  
+  if (!tenant || !tenant.whatsappConfig) {
+    throw new Error('WhatsApp configuration not found for this tenant');
+  }
+  
+  return tenant.whatsappConfig;
+}
+
+/**
  * GET /api/whatsapp/config
  * Fetch tenant's WhatsApp configuration from MongoDB
  * Query params: tenantId (required)
@@ -17,7 +50,27 @@ router.get('/config', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // Fetch tenant from MongoDB
+    // Super admin with global config (no tenant-specific DB record needed)
+    if (tenantId.startsWith('global:')) {
+      const globalConfig = {
+        businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+        phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID, // Using phone number ID as fallback
+        isGlobal: true,
+        source: 'environment'
+      };
+      
+      if (!globalConfig.businessAccountId || !globalConfig.phoneNumberId) {
+        return res.status(404).json({ 
+          error: 'Global WhatsApp configuration not found',
+          message: 'Please set WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_PHONE_NUMBER_ID in environment'
+        });
+      }
+      
+      return res.json(globalConfig);
+    }
+
+    // Regular tenant lookup
     const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant) {
@@ -111,15 +164,11 @@ router.get('/messages', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // Get tenant config
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant || !tenant.whatsappConfig) {
-      return res.status(404).json({ error: 'WhatsApp configuration not found' });
-    }
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(tenantId);
 
     // Fetch messages from platform
-    const messages = await whatsappClient.getMessages(tenant.whatsappConfig.businessAccountId);
+    const messages = await whatsappClient.getMessages(config.businessAccountId);
 
     return res.json(messages);
   } catch (error) {
@@ -143,16 +192,12 @@ router.post('/messages/send', async (req, res) => {
       });
     }
 
-    // Get tenant config
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant || !tenant.whatsappConfig) {
-      return res.status(404).json({ error: 'WhatsApp configuration not found' });
-    }
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(tenantId);
 
     // Send message via platform
     const result = await whatsappClient.sendMessage(
-      tenant.whatsappConfig.businessAccountId,
+      config.businessAccountId,
       to,
       message
     );
@@ -177,16 +222,12 @@ router.get('/conversations', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // Get tenant config
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant || !tenant.whatsappConfig) {
-      return res.status(404).json({ error: 'WhatsApp configuration not found' });
-    }
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(tenantId);
 
     // Fetch conversations from platform
     const conversations = await whatsappClient.getConversations(
-      tenant.whatsappConfig.businessAccountId
+      config.businessAccountId
     );
 
     return res.json(conversations);
@@ -209,16 +250,12 @@ router.get('/contacts', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // Get tenant config
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant || !tenant.whatsappConfig) {
-      return res.status(404).json({ error: 'WhatsApp configuration not found' });
-    }
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(tenantId);
 
     // Fetch contacts from platform
     const contacts = await whatsappClient.getContacts(
-      tenant.whatsappConfig.businessAccountId
+      config.businessAccountId
     );
 
     return res.json(contacts);
@@ -241,16 +278,12 @@ router.get('/stats', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
-    // Get tenant config
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant || !tenant.whatsappConfig) {
-      return res.status(404).json({ error: 'WhatsApp configuration not found' });
-    }
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(tenantId);
 
     // Fetch stats from platform
     const stats = await whatsappClient.getStats(
-      tenant.whatsappConfig.businessAccountId
+      config.businessAccountId
     );
 
     return res.json(stats);
