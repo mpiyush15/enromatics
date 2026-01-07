@@ -7,7 +7,7 @@ const router = express.Router();
 /**
  * Helper function to get WhatsApp config for a tenant or global super admin
  * @param {string} tenantId - Tenant identifier (can be "global:*" for super admin)
- * @returns {Promise<object>} - WhatsApp configuration
+ * @returns {Promise<object>} - WhatsApp configuration with apiKey
  */
 async function getWhatsAppConfig(tenantId) {
   // Super admin with global config (no tenant-specific DB record needed)
@@ -16,6 +16,7 @@ async function getWhatsAppConfig(tenantId) {
       businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
       phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
       phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID,
+      apiKey: process.env.WHATSAPP_PLATFORM_API_KEY,
       isGlobal: true,
       source: 'environment'
     };
@@ -153,8 +154,8 @@ router.get('/messages', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch messages from platform
-    const messages = await whatsappClient.getMessages(config.businessAccountId);
+    // Fetch messages from platform using tenant API key
+    const messages = await whatsappClient.getMessages(config.businessAccountId, null, null, 50, config.apiKey);
 
     return res.json(messages);
   } catch (error) {
@@ -181,11 +182,14 @@ router.post('/messages/send', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Send message via platform
+    // Send message via platform using tenant API key
     const result = await whatsappClient.sendMessage(
       config.businessAccountId,
       to,
-      message
+      message,
+      null,
+      null,
+      config.apiKey
     );
 
     return res.json(result);
@@ -211,9 +215,13 @@ router.get('/conversations', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform
+    // Fetch conversations from platform using tenant API key
     const conversations = await whatsappClient.getConversations(
-      config.businessAccountId
+      config.businessAccountId,
+      null,
+      null,
+      50,
+      config.apiKey
     );
 
     return res.json(conversations);
@@ -239,9 +247,10 @@ router.get('/contacts', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch contacts from platform
+    // Fetch contacts from platform using tenant API key
     const contacts = await whatsappClient.getContacts(
-      config.businessAccountId
+      config.businessAccountId,
+      config.apiKey
     );
 
     return res.json(contacts);
@@ -267,9 +276,10 @@ router.get('/stats', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch stats from platform
+    // Fetch stats from platform using tenant API key
     const stats = await whatsappClient.getStats(
-      config.businessAccountId
+      config.businessAccountId,
+      config.apiKey
     );
 
     return res.json(stats);
