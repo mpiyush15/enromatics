@@ -15,7 +15,7 @@ const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
 class WhatsAppPlatformClient {
   constructor() {
-    this.baseURL = `${WHATSAPP_PLATFORM_URL}/api`;
+    this.baseURL = `${WHATSAPP_PLATFORM_URL}/api/integrations`;
     this.apiKey = WHATSAPP_PLATFORM_API_KEY;
     
     if (!this.apiKey) {
