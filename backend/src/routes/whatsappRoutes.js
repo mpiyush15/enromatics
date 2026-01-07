@@ -18,7 +18,7 @@ router.get('/config', async (req, res) => {
     }
 
     // Fetch tenant from MongoDB
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
@@ -70,8 +70,8 @@ router.post('/config', async (req, res) => {
     }
 
     // Save to MongoDB
-    const tenant = await Tenant.findByIdAndUpdate(
-      tenantId,
+    const tenant = await Tenant.findOneAndUpdate(
+      { tenantId },
       {
         whatsappConfig: {
           businessAccountId,
@@ -112,7 +112,7 @@ router.get('/messages', async (req, res) => {
     }
 
     // Get tenant config
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant || !tenant.whatsappConfig) {
       return res.status(404).json({ error: 'WhatsApp configuration not found' });
@@ -144,7 +144,7 @@ router.post('/messages/send', async (req, res) => {
     }
 
     // Get tenant config
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant || !tenant.whatsappConfig) {
       return res.status(404).json({ error: 'WhatsApp configuration not found' });
@@ -178,7 +178,7 @@ router.get('/conversations', async (req, res) => {
     }
 
     // Get tenant config
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant || !tenant.whatsappConfig) {
       return res.status(404).json({ error: 'WhatsApp configuration not found' });
@@ -210,7 +210,7 @@ router.get('/contacts', async (req, res) => {
     }
 
     // Get tenant config
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant || !tenant.whatsappConfig) {
       return res.status(404).json({ error: 'WhatsApp configuration not found' });
@@ -242,7 +242,7 @@ router.get('/stats', async (req, res) => {
     }
 
     // Get tenant config
-    const tenant = await Tenant.findById(tenantId).select('whatsappConfig');
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
 
     if (!tenant || !tenant.whatsappConfig) {
       return res.status(404).json({ error: 'WhatsApp configuration not found' });
