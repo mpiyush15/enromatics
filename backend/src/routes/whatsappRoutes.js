@@ -155,8 +155,8 @@ router.get('/messages', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch messages from platform using Meta access token
-    const messages = await whatsappClient.getMessages(50, 0);
+    // Fetch messages from platform using tenant API key
+    const messages = await whatsappClient.getMessages(50, 0, config.apiKey);
 
     return res.json(messages);
   } catch (error) {
@@ -183,8 +183,8 @@ router.post('/messages/send', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Send message via platform using Meta access token
-    const result = await whatsappClient.sendTextMessage(to, message, 'manual');
+    // Send message via platform using tenant API key
+    const result = await whatsappClient.sendTextMessage(to, message, 'manual', config.apiKey);
 
     return res.json(result);
   } catch (error) {
@@ -209,8 +209,8 @@ router.get('/conversations', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform using Meta access token
-    const conversations = await whatsappClient.getConversations(50, 0);
+    // Fetch conversations from platform using tenant API key
+    const conversations = await whatsappClient.getConversations(50, 0, config.apiKey);
 
     return res.json(conversations);
   } catch (error) {
@@ -235,8 +235,8 @@ router.get('/contacts', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch contacts from platform using Meta access token
-    const contacts = await whatsappClient.getContacts(100, 0);
+    // Fetch contacts from platform using tenant API key
+    const contacts = await whatsappClient.getContacts(100, 0, config.apiKey);
 
     return res.json(contacts);
   } catch (error) {
@@ -261,8 +261,8 @@ router.get('/stats', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch stats from platform using Meta access token
-    const stats = await whatsappClient.getStats();
+    // Fetch stats from platform using tenant API key
+    const stats = await whatsappClient.getStats(config.apiKey);
 
     return res.json(stats);
   } catch (error) {

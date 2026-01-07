@@ -5,21 +5,21 @@
  * Acts as a bridge between Pixels Dashboard and WhatsApp Platform
  * 
  * API Base URL: Configured via environment variable
- * Authentication: Meta Access Token sent in Authorization header
+ * Authentication: Platform API Key sent in Authorization header
  */
 
 import axios from 'axios';
 
 const WHATSAPP_PLATFORM_URL = process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:3000';
-const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN;
+const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
 class WhatsAppPlatformClient {
   constructor() {
     this.baseURL = `${WHATSAPP_PLATFORM_URL}/api`;
-    this.accessToken = WHATSAPP_ACCESS_TOKEN;
+    this.apiKey = WHATSAPP_PLATFORM_API_KEY;
     
-    if (!this.accessToken) {
-      console.warn('⚠️ WHATSAPP_ACCESS_TOKEN not configured. WhatsApp features will not work.');
+    if (!this.apiKey) {
+      console.warn('⚠️ WHATSAPP_PLATFORM_API_KEY not configured. WhatsApp features will not work.');
     }
   }
 
@@ -29,8 +29,9 @@ class WhatsAppPlatformClient {
  * @param {string} endpoint - API endpoint
  * @param {object} data - Request body
  * @param {object} params - Query parameters
+ * @param {string} tenantApiKey - Optional tenant-specific API key
  */
-  async request(method, endpoint, data = null, params = null) {
+  async request(method, endpoint, data = null, params = null, tenantApiKey = null) {
     try {
       const config = {
         method,
@@ -40,9 +41,12 @@ class WhatsAppPlatformClient {
         },
       };
 
-      // Use Meta access token for authorization
-      if (this.accessToken) {
-        config.headers['Authorization'] = `Bearer ${this.accessToken}`;
+      // Use tenant-specific API key if provided, otherwise fall back to default
+      const apiKeyToUse = tenantApiKey || this.apiKey;
+      
+      // Add API key if available
+      if (apiKeyToUse) {
+        config.headers['Authorization'] = `Bearer ${apiKeyToUse}`;
       }
 
       // Add data for POST/PUT/PATCH
@@ -75,11 +79,12 @@ class WhatsAppPlatformClient {
    * Get all conversations
    * @param {number} limit - Limit results
    * @param {number} skip - Skip records
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getConversations(limit = 50, skip = 0) {
+  async getConversations(limit = 50, skip = 0, tenantApiKey = null) {
     const params = { limit, skip };
 
-    return this.request('GET', '/conversations', null, params);
+    return this.request('GET', '/conversations', null, params, tenantApiKey);
   }
 
   /**
@@ -128,21 +133,23 @@ class WhatsAppPlatformClient {
    * @param {string} recipientPhone - Recipient phone number
    * @param {string} message - Message text
    * @param {string} campaign - Campaign type
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async sendTextMessage(recipientPhone, message, campaign = 'manual') {
+  async sendTextMessage(recipientPhone, message, campaign = 'manual', tenantApiKey = null) {
     const data = {
       recipientPhone,
       message,
       campaign,
     };
 
-    return this.request('POST', '/messages/send', data);
+    return this.request('POST', '/messages/send', data, null, tenantApiKey);
   }
 
   /**
    * Send template message
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async sendTemplateMessage(recipientPhone, templateName, params = [], campaign = 'manual') {
+  async sendTemplateMessage(recipientPhone, templateName, params = [], campaign = 'manual', tenantApiKey = null) {
     const data = {
       recipientPhone,
       templateName,
@@ -150,18 +157,19 @@ class WhatsAppPlatformClient {
       campaign,
     };
 
-    return this.request('POST', '/messages/send-template', data);
+    return this.request('POST', '/messages/send-template', data, null, tenantApiKey);
   }
 
   /**
    * Get messages
    * @param {number} limit - Result limit
    * @param {number} skip - Skip records
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getMessages(limit = 50, skip = 0) {
+  async getMessages(limit = 50, skip = 0, tenantApiKey = null) {
     const params = { limit, skip };
 
-    return this.request('GET', '/messages', null, params);
+    return this.request('GET', '/messages', null, params, tenantApiKey);
   }
 
   /**
@@ -177,11 +185,12 @@ class WhatsAppPlatformClient {
    * Get contacts
    * @param {number} limit - Result limit
    * @param {number} skip - Skip records
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getContacts(limit = 100, skip = 0) {
+  async getContacts(limit = 100, skip = 0, tenantApiKey = null) {
     const params = { limit, skip };
 
-    return this.request('GET', '/contacts', null, params);
+    return this.request('GET', '/contacts', null, params, tenantApiKey);
   }
 
   /**
@@ -353,9 +362,10 @@ class WhatsAppPlatformClient {
 
   /**
    * Get platform statistics
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getStats() {
-    return this.request('GET', '/stats', null, {});
+  async getStats(tenantApiKey = null) {
+    return this.request('GET', '/stats', null, {}, tenantApiKey);
   }
 
   /**
