@@ -99,6 +99,7 @@ router.get('/config', async (req, res) => {
  * Body: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
  * 
  * If apiKey is provided, verifies connection to WhatsApp Platform
+ * Creates tenant if it doesn't exist
  */
 router.post('/config', async (req, res) => {
   try {
@@ -139,7 +140,7 @@ router.post('/config', async (req, res) => {
       }
     }
 
-    // Save to MongoDB
+    // Save to MongoDB - create tenant if it doesn't exist
     const tenant = await Tenant.findOneAndUpdate(
       { tenantId },
       {
@@ -155,12 +156,10 @@ router.post('/config', async (req, res) => {
           updatedAt: new Date()
         }
       },
-      { new: true }
+      { new: true, upsert: true }
     );
 
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant not found' });
-    }
+    console.log('✅ WhatsApp config saved for tenant:', tenantId);
 
     return res.json({
       success: true,
