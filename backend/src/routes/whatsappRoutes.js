@@ -156,7 +156,7 @@ router.get('/messages', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Fetch messages from platform using tenant API key
-    const messages = await whatsappClient.getMessages(config.businessAccountId, null, null, 50, config.apiKey);
+    const messages = await whatsappClient.getMessages(50, 0, config.apiKey);
 
     return res.json(messages);
   } catch (error) {
@@ -184,14 +184,7 @@ router.post('/messages/send', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Send message via platform using tenant API key
-    const result = await whatsappClient.sendMessage(
-      config.businessAccountId,
-      to,
-      message,
-      null,
-      null,
-      config.apiKey
-    );
+    const result = await whatsappClient.sendTextMessage(to, message, 'manual', config.apiKey);
 
     return res.json(result);
   } catch (error) {
@@ -217,13 +210,7 @@ router.get('/conversations', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Fetch conversations from platform using tenant API key
-    const conversations = await whatsappClient.getConversations(
-      config.businessAccountId,
-      null,
-      null,
-      50,
-      config.apiKey
-    );
+    const conversations = await whatsappClient.getConversations(50, 0, config.apiKey);
 
     return res.json(conversations);
   } catch (error) {
@@ -249,10 +236,7 @@ router.get('/contacts', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Fetch contacts from platform using tenant API key
-    const contacts = await whatsappClient.getContacts(
-      config.businessAccountId,
-      config.apiKey
-    );
+    const contacts = await whatsappClient.getContacts(100, 0, config.apiKey);
 
     return res.json(contacts);
   } catch (error) {
@@ -278,10 +262,7 @@ router.get('/stats', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Fetch stats from platform using tenant API key
-    const stats = await whatsappClient.getStats(
-      config.businessAccountId,
-      config.apiKey
-    );
+    const stats = await whatsappClient.getStats(config.apiKey);
 
     return res.json(stats);
   } catch (error) {

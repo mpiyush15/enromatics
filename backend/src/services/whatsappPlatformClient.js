@@ -77,16 +77,12 @@ class WhatsAppPlatformClient {
 
   /**
    * Get all conversations
-   * @param {string} accountId - Business account ID
-   * @param {string} phoneNumberId - Optional phone number ID
-   * @param {string} status - Optional status filter
    * @param {number} limit - Limit results
+   * @param {number} skip - Skip records
    * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getConversations(accountId, phoneNumberId = null, status = null, limit = 50, tenantApiKey = null) {
-    const params = { accountId, limit };
-    if (phoneNumberId) params.phoneNumberId = phoneNumberId;
-    if (status) params.status = status;
+  async getConversations(limit = 50, skip = 0, tenantApiKey = null) {
+    const params = { limit, skip };
 
     return this.request('GET', '/conversations', null, params, tenantApiKey);
   }
@@ -133,18 +129,14 @@ class WhatsAppPlatformClient {
   // ============ MESSAGES ============
 
   /**
-   * Send text message
-   * @param {string} accountId - Business account ID
-   * @param {string} phoneNumberId - Phone number ID
+   * Send text message (Simplified - accountId auto-detected from API key)
    * @param {string} recipientPhone - Recipient phone number
    * @param {string} message - Message text
    * @param {string} campaign - Campaign type
    * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async sendTextMessage(accountId, phoneNumberId, recipientPhone, message, campaign = 'manual', tenantApiKey = null) {
+  async sendTextMessage(recipientPhone, message, campaign = 'manual', tenantApiKey = null) {
     const data = {
-      accountId,
-      phoneNumberId,
       recipientPhone,
       message,
       campaign,
@@ -154,33 +146,27 @@ class WhatsAppPlatformClient {
   }
 
   /**
-   * Send template message
+   * Send template message (Simplified - accountId auto-detected from API key)
    */
-  async sendTemplateMessage(accountId, phoneNumberId, recipientPhone, templateName, params = [], campaign = 'manual') {
+  async sendTemplateMessage(recipientPhone, templateName, params = [], campaign = 'manual', tenantApiKey = null) {
     const data = {
-      accountId,
-      phoneNumberId,
       recipientPhone,
       templateName,
       params,
       campaign,
     };
 
-    return this.request('POST', '/messages/send-template', data);
+    return this.request('POST', '/messages/send-template', data, null, tenantApiKey);
   }
 
   /**
-   * Get messages
-   * @param {string} accountId - Business account ID
-   * @param {string} phoneNumberId - Optional phone number ID
-   * @param {string} status - Optional status filter
+   * Get messages (Simplified - accountId auto-detected from API key)
    * @param {number} limit - Result limit
+   * @param {number} skip - Skip records
    * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getMessages(accountId, phoneNumberId = null, status = null, limit = 50, skip = 0, tenantApiKey = null) {
-    const params = { accountId, limit, skip };
-    if (phoneNumberId) params.phoneNumberId = phoneNumberId;
-    if (status) params.status = status;
+  async getMessages(limit = 50, skip = 0, tenantApiKey = null) {
+    const params = { limit, skip };
 
     return this.request('GET', '/messages', null, params, tenantApiKey);
   }
@@ -196,17 +182,12 @@ class WhatsAppPlatformClient {
 
   /**
    * Get contacts
-   * @param {string} accountId - Business account ID
-   * @param {string} type - Optional contact type
-   * @param {boolean} isOptedIn - Optional opted in filter
    * @param {number} limit - Result limit
    * @param {number} skip - Skip records
    * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getContacts(accountId, type = null, isOptedIn = null, limit = 100, skip = 0, tenantApiKey = null) {
-    const params = { accountId, limit, skip };
-    if (type) params.type = type;
-    if (isOptedIn !== null) params.isOptedIn = isOptedIn;
+  async getContacts(limit = 100, skip = 0, tenantApiKey = null) {
+    const params = { limit, skip };
 
     return this.request('GET', '/contacts', null, params, tenantApiKey);
   }
@@ -379,16 +360,11 @@ class WhatsAppPlatformClient {
   // ============ STATS ============
 
   /**
-   * Get platform statistics
-   * @param {string} accountId - Business account ID
-   * @param {string} phoneNumberId - Optional phone number ID
+   * Get platform statistics (Simplified - accountId auto-detected from API key)
    * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async getStats(accountId, phoneNumberId = null, tenantApiKey = null) {
-    const params = { accountId };
-    if (phoneNumberId) params.phoneNumberId = phoneNumberId;
-
-    return this.request('GET', '/stats', null, params, tenantApiKey);
+  async getStats(tenantApiKey = null) {
+    return this.request('GET', '/stats', null, {}, tenantApiKey);
   }
 
   /**
