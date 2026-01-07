@@ -17,11 +17,10 @@ import { useParams } from "next/navigation"
 
 interface WhatsAppConfig {
   _id: string
-  accountId: string
-  platformUrl: string
-  platformApiKey: string
-  phoneNumberId?: string
-  businessPhoneNumber?: string
+  tenantId: string
+  businessAccountId: string
+  phoneNumberId: string
+  phoneNumber: string
   isConnected: boolean
   connectedAt?: string
   connectionStatus: "connected" | "disconnected" | "error"
@@ -38,8 +37,9 @@ export default function SettingsPage() {
   const [isTesting, setIsTesting] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
   const [formData, setFormData] = useState({
-    platformUrl: "",
-    platformApiKey: "",
+    businessAccountId: "",
+    phoneNumberId: "",
+    phoneNumber: "",
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
@@ -48,18 +48,15 @@ export default function SettingsPage() {
   const fetchConfig = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/whatsapp/config?accountId=${tenantId}`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
-        },
-      })
+      const response = await fetch(`/api/whatsapp/config?tenantId=${tenantId}`)
       if (response.ok) {
         const data = await response.json()
         setConfig(data.config || null)
         if (data.config) {
           setFormData({
-            platformUrl: data.config.platformUrl || "",
-            platformApiKey: data.config.platformApiKey || "",
+            businessAccountId: data.config.businessAccountId || "",
+            phoneNumberId: data.config.phoneNumberId || "",
+            phoneNumber: data.config.phoneNumber || "",
           })
         }
       }
@@ -75,7 +72,7 @@ export default function SettingsPage() {
   }, [tenantId])
 
   const handleSave = async () => {
-    if (!formData.platformUrl.trim() || !formData.platformApiKey.trim()) {
+    if (!formData.businessAccountId.trim() || !formData.phoneNumberId.trim() || !formData.phoneNumber.trim()) {
       setErrorMessage("Please fill in all required fields")
       return
     }
@@ -89,20 +86,18 @@ export default function SettingsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
         },
         body: JSON.stringify({
-          accountId: tenantId,
-          platformUrl: formData.platformUrl,
-          platformApiKey: formData.platformApiKey,
+          tenantId: tenantId,
+          businessAccountId: formData.businessAccountId,
+          phoneNumberId: formData.phoneNumberId,
+          phoneNumber: formData.phoneNumber,
         }),
       })
 
       if (response.ok) {
         setSuccessMessage("Configuration saved successfully")
         await fetchConfig()
-        // Save API key to localStorage for BFF requests
-        localStorage.setItem("whatsapp_api_key", formData.platformApiKey)
       } else {
         const error = await response.json()
         setErrorMessage(error.message || "Failed to save configuration")
@@ -116,7 +111,7 @@ export default function SettingsPage() {
   }
 
   const handleTestConnection = async () => {
-    if (!formData.platformUrl.trim() || !formData.platformApiKey.trim()) {
+    if (!formData.businessAccountId.trim() || !formData.phoneNumberId.trim()) {
       setErrorMessage("Please fill in all required fields first")
       return
     }
@@ -126,33 +121,33 @@ export default function SettingsPage() {
       setErrorMessage("")
       setSuccessMessage("")
 
-      const response = await fetch(`/api/whatsapp/config/test`, {
+      const response = await fetch(`/api/whatsapp/config`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
         },
         body: JSON.stringify({
-          accountId: tenantId,
-          platformUrl: formData.platformUrl,
-          platformApiKey: formData.platformApiKey,
+          tenantId: tenantId,
+          businessAccountId: formData.businessAccountId,
+          phoneNumberId: formData.phoneNumberId,
+          phoneNumber: formData.phoneNumber,
         }),
       })
 
       if (response.ok) {
         setSuccessMessage(
-          "Connection test successful! Your WhatsApp platform is accessible."
+          "Configuration saved and verified! Your WhatsApp account is connected."
         )
       } else {
         const error = await response.json()
         setErrorMessage(
           error.message ||
-            "Connection test failed. Please check your credentials."
+            "Failed to connect. Please check your account details."
         )
       }
     } catch (error) {
       console.error("Error testing connection:", error)
-      setErrorMessage("Failed to test connection")
+      setErrorMessage("Failed to connect")
     } finally {
       setIsTesting(false)
     }
@@ -228,66 +223,73 @@ export default function SettingsPage() {
           {/* Configuration Form */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-6">
-              Platform Configuration
+              WhatsApp Account Configuration
             </h2>
 
             <div className="space-y-6">
-              {/* Platform URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <div className="flex items-center gap-2">
-                    <LinkIcon className="h-4 w-4" />
-                    WhatsApp Platform URL
-                  </div>
-                </label>
-                <input
-                  type="url"
-                  value={formData.platformUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, platformUrl: e.target.value })
-                  }
-                  placeholder="https://whatsapp-platform.example.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Enter the URL where your WhatsApp platform is hosted
-                </p>
-              </div>
-
-              {/* API Key */}
+              {/* Business Account ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <div className="flex items-center gap-2">
                     <Key className="h-4 w-4" />
-                    API Key
+                    Business Account ID
                   </div>
                 </label>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? "text" : "password"}
-                    value={formData.platformApiKey}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        platformApiKey: e.target.value,
-                      })
-                    }
-                    placeholder="Enter your API key"
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                  />
-                  <button
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showApiKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  value={formData.businessAccountId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, businessAccountId: e.target.value })
+                  }
+                  placeholder="e.g., 1234567890"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
                 <p className="text-xs text-gray-500 mt-2">
-                  Your API key is securely encrypted and never shared
+                  Your WhatsApp Business Account ID
+                </p>
+              </div>
+
+              {/* Phone Number ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    Phone Number ID
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  value={formData.phoneNumberId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumberId: e.target.value })
+                  }
+                  placeholder="e.g., 9876543210"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Your WhatsApp Business Phone Number ID
+                </p>
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4" />
+                    Phone Number
+                  </div>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumber: e.target.value })
+                  }
+                  placeholder="+1234567890"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Your WhatsApp Business Phone Number (with country code)
                 </p>
               </div>
 
@@ -336,9 +338,17 @@ export default function SettingsPage() {
           {isConnected && config && (
             <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Connection Information
+                Account Details
               </h2>
               <div className="grid grid-cols-2 gap-4">
+                {config.businessAccountId && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Business Account ID</p>
+                    <p className="font-semibold text-gray-900">
+                      {config.businessAccountId}
+                    </p>
+                  </div>
+                )}
                 {config.phoneNumberId && (
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Phone Number ID</p>
@@ -347,13 +357,11 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 )}
-                {config.businessPhoneNumber && (
+                {config.phoneNumber && (
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Business Phone Number
-                    </p>
+                    <p className="text-sm text-gray-600 mb-1">Phone Number</p>
                     <p className="font-semibold text-gray-900">
-                      {config.businessPhoneNumber}
+                      {config.phoneNumber}
                     </p>
                   </div>
                 )}
