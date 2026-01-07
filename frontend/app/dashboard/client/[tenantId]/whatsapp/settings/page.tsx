@@ -21,6 +21,7 @@ interface WhatsAppConfig {
   businessAccountId: string
   phoneNumberId: string
   phoneNumber: string
+  apiKey?: string
   isConnected: boolean
   connectedAt?: string
   connectionStatus: "connected" | "disconnected" | "error"
@@ -40,6 +41,7 @@ export default function SettingsPage() {
     businessAccountId: "",
     phoneNumberId: "",
     phoneNumber: "",
+    apiKey: "",
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
@@ -57,6 +59,7 @@ export default function SettingsPage() {
             businessAccountId: data.config.businessAccountId || "",
             phoneNumberId: data.config.phoneNumberId || "",
             phoneNumber: data.config.phoneNumber || "",
+            apiKey: data.config.apiKey || "",
           })
         }
       }
@@ -92,6 +95,7 @@ export default function SettingsPage() {
           businessAccountId: formData.businessAccountId,
           phoneNumberId: formData.phoneNumberId,
           phoneNumber: formData.phoneNumber,
+          apiKey: formData.apiKey || null,
         }),
       })
 
@@ -290,6 +294,41 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Your WhatsApp Business Phone Number (with country code)
+                </p>
+              </div>
+
+              {/* Platform API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    WhatsApp Platform API Key (Optional)
+                  </div>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={formData.apiKey}
+                    onChange={(e) =>
+                      setFormData({ ...formData, apiKey: e.target.value })
+                    }
+                    placeholder="Paste your WhatsApp Platform API key here"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Get this from your WhatsApp Platform admin dashboard. This enables per-tenant WhatsApp access.
                 </p>
               </div>
 

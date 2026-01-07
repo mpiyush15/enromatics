@@ -94,31 +94,15 @@ router.get('/config', async (req, res) => {
 /**
  * POST /api/whatsapp/config
  * Save or update tenant's WhatsApp configuration
- * Body: { tenantId, businessAccountId, phoneNumberId, phoneNumber }
+ * Body: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
  */
 router.post('/config', async (req, res) => {
   try {
-    const { tenantId, businessAccountId, phoneNumberId, phoneNumber } = req.body;
+    const { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey } = req.body;
 
     if (!tenantId || !businessAccountId || !phoneNumberId || !phoneNumber) {
       return res.status(400).json({ 
         error: 'Missing required fields: tenantId, businessAccountId, phoneNumberId, phoneNumber' 
-      });
-    }
-
-    // Test connection with platform before saving
-    try {
-      const testResult = await whatsappClient.testConnection(businessAccountId);
-      if (!testResult.success) {
-        return res.status(400).json({ 
-          error: 'Failed to connect to WhatsApp Platform',
-          details: testResult.message
-        });
-      }
-    } catch (platformError) {
-      return res.status(400).json({ 
-        error: 'Platform connection test failed',
-        details: platformError.message
       });
     }
 
@@ -130,6 +114,8 @@ router.post('/config', async (req, res) => {
           businessAccountId,
           phoneNumberId,
           phoneNumber,
+          apiKey: apiKey || null,
+          isConfigured: true,
           updatedAt: new Date()
         }
       },

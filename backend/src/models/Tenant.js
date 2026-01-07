@@ -127,6 +127,9 @@ const tenantSchema = new mongoose.Schema(
       businessAccountId: { type: String, default: null },
       phoneNumberId: { type: String, default: null },
       phoneNumber: { type: String, default: null },
+      apiKey: { type: String, default: null },
+      accessToken: { type: String, default: null },
+      isConfigured: { type: Boolean, default: false },
       updatedAt: { type: Date, default: null },
     },
 
