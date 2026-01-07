@@ -155,8 +155,8 @@ router.get('/messages', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch messages from platform using tenant API key
-    const messages = await whatsappClient.getMessages(50, 0, config.apiKey);
+    // Fetch messages from platform using Meta access token
+    const messages = await whatsappClient.getMessages(50, 0);
 
     return res.json(messages);
   } catch (error) {
