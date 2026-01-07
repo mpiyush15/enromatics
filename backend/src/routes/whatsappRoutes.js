@@ -57,6 +57,7 @@ router.get('/config', async (req, res) => {
         businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
         phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
         phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID, // Using phone number ID as fallback
+        apiKey: process.env.WHATSAPP_PLATFORM_API_KEY,
         isGlobal: true,
         source: 'environment'
       };
