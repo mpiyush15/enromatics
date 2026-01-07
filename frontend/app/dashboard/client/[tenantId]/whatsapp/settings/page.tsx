@@ -1,552 +1,395 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react"
+import {
+  Settings,
+  Key,
+  Link as LinkIcon,
+  CheckCircle,
+  AlertCircle,
+  Save,
+  ExternalLink,
+  Eye,
+  EyeOff,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useParams } from "next/navigation"
 
-interface ConfigForm {
-  phoneNumberId: string;
-  accessToken: string;
-  wabaId: string;
-  businessName: string;
+interface WhatsAppConfig {
+  _id: string
+  accountId: string
+  platformUrl: string
+  platformApiKey: string
+  phoneNumberId?: string
+  businessPhoneNumber?: string
+  isConnected: boolean
+  connectedAt?: string
+  connectionStatus: "connected" | "disconnected" | "error"
+  errorMessage?: string
 }
 
-export default function WhatsappSettingsPage() {
-  const { tenantId } = useParams();
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [status, setStatus] = useState("");
-  const [configured, setConfigured] = useState(false);
+export default function SettingsPage() {
+  const params = useParams()
+  const tenantId = params.tenantId as string
 
-  const [form, setForm] = useState<ConfigForm>({
-    phoneNumberId: "",
-    accessToken: "",
-    wabaId: "",
-    businessName: "",
-  });
+  const [config, setConfig] = useState<WhatsAppConfig | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [formData, setFormData] = useState({
+    platformUrl: "",
+    platformApiKey: "",
+  })
+  const [successMessage, setSuccessMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
 
-  const [testPhone, setTestPhone] = useState("");
-  const [syncingTemplates, setSyncingTemplates] = useState(false);
-  const [templateSyncStatus, setTemplateSyncStatus] = useState("");
-  const [removing, setRemoving] = useState(false);
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-
-  // Helper to get auth headers
-  const getHeaders = (): HeadersInit => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    return headers;
-  };
-
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
+  // Fetch config
   const fetchConfig = async () => {
     try {
-      const res = await fetch(`/api/whatsapp/config`, {
-        headers: getHeaders(),
-      });
-      const data = await res.json();
-
-      if (data.configured) {
-        setConfigured(true);
-        setForm({
-          phoneNumberId: data.config.phoneNumberId || "",
-          accessToken: "", // Don't show token for security
-          wabaId: data.config.wabaId || "",
-          businessName: data.config.businessName || "",
-        });
-      }
-    } catch (err) {
-      console.error("Fetch config error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setStatus("");
-
-    try {
-      const res = await fetch(`/api/whatsapp/config`, {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
-      setStatus("✅ Configuration saved successfully!");
-      setConfigured(true);
-      setTimeout(() => setStatus(""), 3000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setStatus(`❌ Error: ${errorMessage}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleTestConnection = async () => {
-    if (!testPhone) {
-      setStatus("❌ Please enter a test phone number");
-      return;
-    }
-
-    if (!form.phoneNumberId || !form.accessToken) {
-      setStatus("❌ Please fill Phone Number ID and Access Token first");
-      return;
-    }
-
-    setTesting(true);
-    setStatus("Testing connection...");
-
-    try {
-      const res = await fetch(
-        `/api/whatsapp/test-connection`,
-        {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            phoneNumberId: form.phoneNumberId,
-            accessToken: form.accessToken,
-            testPhone,
-          }),
+      setIsLoading(true)
+      const response = await fetch(`/api/whatsapp/config?accountId=${tenantId}`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setConfig(data.config || null)
+        if (data.config) {
+          setFormData({
+            platformUrl: data.config.platformUrl || "",
+            platformApiKey: data.config.platformApiKey || "",
+          })
         }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
-      setStatus("✅ Connection successful! Test message sent to " + testPhone);
-      setTimeout(() => setStatus(""), 5000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Connection failed";
-      setStatus(`❌ Connection failed: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error("Error fetching config:", error)
     } finally {
-      setTesting(false);
+      setIsLoading(false)
     }
-  };
-
-  const handleSyncTemplates = async () => {
-    setSyncingTemplates(true);
-    setTemplateSyncStatus("Fetching templates from Meta...");
-
-    try {
-      const res = await fetch(`/api/whatsapp/templates/sync`, {
-        method: "POST",
-        headers: getHeaders(),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
-      setTemplateSyncStatus(
-        `✅ ${data.message}\n📊 Approved: ${data.stats.approved}, Pending: ${data.stats.pending}, Rejected: ${data.stats.rejected}`
-      );
-      setTimeout(() => setTemplateSyncStatus(""), 8000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Sync failed";
-      setTemplateSyncStatus(`❌ Sync failed: ${errorMessage}`);
-    } finally {
-      setSyncingTemplates(false);
-    }
-  };
-
-  const handleRemoveConfig = async () => {
-    setRemoving(true);
-    setStatus("Removing WhatsApp configuration...");
-
-    try {
-      const res = await fetch(`/api/whatsapp/config`, {
-        method: "DELETE",
-        headers: getHeaders(),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message);
-
-      setStatus("✅ WhatsApp configuration removed successfully!");
-      setConfigured(false);
-      setForm({
-        phoneNumberId: "",
-        accessToken: "",
-        wabaId: "",
-        businessName: "",
-      });
-      setShowRemoveConfirm(false);
-      setTimeout(() => setStatus(""), 5000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to remove configuration";
-      setStatus(`❌ Error: ${errorMessage}`);
-    } finally {
-      setRemoving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-green-600"></div>
-      </div>
-    );
   }
 
+  useEffect(() => {
+    fetchConfig()
+  }, [tenantId])
+
+  const handleSave = async () => {
+    if (!formData.platformUrl.trim() || !formData.platformApiKey.trim()) {
+      setErrorMessage("Please fill in all required fields")
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      setErrorMessage("")
+      setSuccessMessage("")
+
+      const response = await fetch(`/api/whatsapp/config`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
+        },
+        body: JSON.stringify({
+          accountId: tenantId,
+          platformUrl: formData.platformUrl,
+          platformApiKey: formData.platformApiKey,
+        }),
+      })
+
+      if (response.ok) {
+        setSuccessMessage("Configuration saved successfully")
+        await fetchConfig()
+        // Save API key to localStorage for BFF requests
+        localStorage.setItem("whatsapp_api_key", formData.platformApiKey)
+      } else {
+        const error = await response.json()
+        setErrorMessage(error.message || "Failed to save configuration")
+      }
+    } catch (error) {
+      console.error("Error saving config:", error)
+      setErrorMessage("An error occurred while saving")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    if (!formData.platformUrl.trim() || !formData.platformApiKey.trim()) {
+      setErrorMessage("Please fill in all required fields first")
+      return
+    }
+
+    try {
+      setIsTesting(true)
+      setErrorMessage("")
+      setSuccessMessage("")
+
+      const response = await fetch(`/api/whatsapp/config/test`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
+        },
+        body: JSON.stringify({
+          accountId: tenantId,
+          platformUrl: formData.platformUrl,
+          platformApiKey: formData.platformApiKey,
+        }),
+      })
+
+      if (response.ok) {
+        setSuccessMessage(
+          "Connection test successful! Your WhatsApp platform is accessible."
+        )
+      } else {
+        const error = await response.json()
+        setErrorMessage(
+          error.message ||
+            "Connection test failed. Please check your credentials."
+        )
+      }
+    } catch (error) {
+      console.error("Error testing connection:", error)
+      setErrorMessage("Failed to test connection")
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-full bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin">
+          <Settings className="h-8 w-8 text-gray-400" />
+        </div>
+      </div>
+    )
+  }
+
+  const isConnected = config?.connectionStatus === "connected"
+
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 rounded-3xl shadow-2xl p-8 text-white">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-6xl">💬</div>
-            <div>
-              <h1 className="text-4xl font-bold">WhatsApp Business Setup</h1>
-              <p className="text-green-100 mt-2">
-                Connect your WhatsApp Business Account to send messages to
-                students & parents
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Instructions Card */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">
-            📖 How to Get Your Credentials
-          </h3>
-          <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-            <li>
-              <strong>1. Go to Meta Business Suite:</strong>{" "}
-              <a
-                href="https://business.facebook.com"
-                target="_blank"
-                className="underline"
-              >
-                business.facebook.com
-              </a>
-            </li>
-            <li>
-              <strong>2. Navigate to:</strong> Settings → Business Settings →
-              Accounts → WhatsApp Business Accounts
-            </li>
-            <li>
-              <strong>3. Copy your credentials:</strong>
-              <ul className="ml-6 mt-1 space-y-1">
-                <li>• WABA ID: Your WhatsApp Business Account ID</li>
-                <li>• Phone Number ID: From phone numbers section</li>
-                <li>
-                  • Access Token: Generate from System Users or use temporary
-                  token
-                </li>
-              </ul>
-            </li>
-            <li>
-              <strong>4. Test:</strong> Use your own WhatsApp number to test the
-              connection
-            </li>
-          </ol>
-        </div>
-
-        {/* Configuration Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-            <h2 className="text-xl font-bold">
-              {configured ? "Update" : "Configure"} WhatsApp Credentials
-            </h2>
-          </div>
-
-          <form onSubmit={handleSave} className="p-8 space-y-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Business Name (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., ABC Coaching Institute"
-                value={form.businessName}
-                onChange={(e) =>
-                  setForm({ ...form, businessName: e.target.value })
-                }
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                WhatsApp Business Account ID (WABA ID) *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g., 123456789012345"
-                value={form.wabaId}
-                onChange={(e) => setForm({ ...form, wabaId: e.target.value })}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Phone Number ID *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g., 987654321098765"
-                value={form.phoneNumberId}
-                onChange={(e) =>
-                  setForm({ ...form, phoneNumberId: e.target.value })
-                }
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Access Token {configured ? "" : "*"}
-              </label>
-              <textarea
-                required={!configured}
-                placeholder={configured ? "Leave empty to keep existing token, or paste new token to update" : "Paste your WhatsApp Access Token here..."}
-                value={form.accessToken}
-                onChange={(e) =>
-                  setForm({ ...form, accessToken: e.target.value })
-                }
-                rows={3}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-green-500 dark:bg-gray-700 font-mono text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {configured 
-                  ? "⚠️ Token is encrypted in database. Leave empty to keep current token, or paste a new one to update it."
-                  : "Get this from Meta Business → WhatsApp → API Setup"
-                }
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 font-bold text-lg disabled:opacity-50"
-            >
-              {saving ? "Saving..." : configured ? "Update Configuration" : "Save Configuration"}
-            </button>
-
-            {/* Remove Configuration Button */}
-            {configured && (
-              <div className="pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowRemoveConfirm(true)}
-                  className="w-full px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold disabled:opacity-50"
-                >
-                  🗑️ Remove WhatsApp Configuration
-                </button>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Test Connection */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-            <h2 className="text-xl font-bold">🧪 Test Connection</h2>
-          </div>
-
-          <div className="p-8 space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Send a test message to verify your WhatsApp setup is working
-              correctly.
+    <div className="h-full bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Configure your WhatsApp platform connection
             </p>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Test Phone Number (with country code)
-              </label>
-              <input
-                type="tel"
-                placeholder="e.g., 919876543210 (without + sign)"
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 font-mono"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: Country code + phone number (no spaces or symbols)
-              </p>
-            </div>
-
-            <button
-              onClick={handleTestConnection}
-              disabled={testing || !testPhone}
-              className="w-full px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold disabled:opacity-50"
-            >
-              {testing ? "Sending Test Message..." : "Send Test Message"}
-            </button>
           </div>
         </div>
+      </div>
 
-        {/* Sync Templates from Meta */}
-        {configured && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b">
-              <h2 className="text-xl font-bold">📋 Message Templates</h2>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto">
+          {/* Connection Status Card */}
+          <div
+            className={`mb-6 rounded-lg border-2 p-6 ${
+              isConnected
+                ? "bg-green-50 border-green-200"
+                : "bg-yellow-50 border-yellow-200"
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              {isConnected ? (
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              ) : (
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-6 w-6 text-yellow-600" />
+                </div>
+              )}
+              <div className="flex-1">
+                <h3 className={`text-lg font-semibold ${isConnected ? 'text-green-900' : 'text-yellow-900'}`}>
+                  {isConnected ? "Connected" : "Not Connected"}
+                </h3>
+                <p className={`text-sm mt-1 ${isConnected ? 'text-green-700' : 'text-yellow-700'}`}>
+                  {isConnected
+                    ? `Connected to WhatsApp platform since ${new Date(
+                        config?.connectedAt || ""
+                      ).toLocaleDateString()}`
+                    : "Please configure your WhatsApp platform credentials to get started"}
+                </p>
+                {config?.errorMessage && (
+                  <p className="text-sm mt-2 text-red-700">
+                    Error: {config.errorMessage}
+                  </p>
+                )}
+              </div>
             </div>
+          </div>
 
-            <div className="p-8 space-y-6">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>⚠️ Important:</strong> WhatsApp requires pre-approved message templates to send messages. 
-                  Click below to fetch your approved templates from Meta.
+          {/* Configuration Form */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6">
+              Platform Configuration
+            </h2>
+
+            <div className="space-y-6">
+              {/* Platform URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4" />
+                    WhatsApp Platform URL
+                  </div>
+                </label>
+                <input
+                  type="url"
+                  value={formData.platformUrl}
+                  onChange={(e) =>
+                    setFormData({ ...formData, platformUrl: e.target.value })
+                  }
+                  placeholder="https://whatsapp-platform.example.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Enter the URL where your WhatsApp platform is hosted
                 </p>
               </div>
 
-              <button
-                onClick={handleSyncTemplates}
-                disabled={syncingTemplates}
-                className="w-full px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-bold disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {syncingTemplates ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Syncing Templates from Meta...
-                  </>
-                ) : (
-                  <>
-                    🔄 Fetch Templates from Meta
-                  </>
-                )}
-              </button>
+              {/* API Key */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Key className="h-4 w-4" />
+                    API Key
+                  </div>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={formData.platformApiKey}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        platformApiKey: e.target.value,
+                      })
+                    }
+                    placeholder="Enter your API key"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  />
+                  <button
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Your API key is securely encrypted and never shared
+                </p>
+              </div>
 
-              {templateSyncStatus && (
-                <div
-                  className={`p-4 rounded-xl font-semibold whitespace-pre-line ${
-                    templateSyncStatus.includes("✅")
-                      ? "bg-green-100 text-green-800 border-2 border-green-200"
-                      : "bg-red-100 text-red-800 border-2 border-red-200"
-                  }`}
-                >
-                  {templateSyncStatus}
+              {/* Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {errorMessage}
+                  </p>
                 </div>
               )}
+
+              {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    {successMessage}
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleTestConnection}
+                  disabled={isTesting || isSaving}
+                  variant="outline"
+                  className="border-gray-300"
+                >
+                  {isTesting ? "Testing..." : "Test Connection"}
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || isTesting}
+                  className="bg-green-600 hover:bg-green-700 text-white ml-auto"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? "Saving..." : "Save Configuration"}
+                </Button>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Status Message */}
-        {status && (
-          <div
-            className={`p-4 rounded-xl font-semibold text-center ${
-              status.includes("✅")
-                ? "bg-green-100 text-green-800 border-2 border-green-200"
-                : status.includes("❌")
-                ? "bg-red-100 text-red-800 border-2 border-red-200"
-                : "bg-blue-100 text-blue-800 border-2 border-blue-200"
-            }`}
-          >
-            {status}
-          </div>
-        )}
-
-        {/* Next Steps */}
-        {configured && (
-          <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-green-900 dark:text-green-100 mb-3">
-              ✅ Configuration Complete! Next Steps:
-            </h3>
-            <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
-              <p>
-                • Go to{" "}
-                <button
-                  onClick={() =>
-                    router.push(`/dashboard/client/${tenantId}/whatsapp/campaigns`)
-                  }
-                  className="underline font-semibold"
-                >
-                  Campaigns
-                </button>{" "}
-                to send messages
-              </p>
-              <p>
-                • Visit{" "}
-                <button
-                  onClick={() =>
-                    router.push(
-                      `/dashboard/client/${tenantId}/whatsapp/reports`
-                    )
-                  }
-                  className="underline font-semibold"
-                >
-                  Reports
-                </button>{" "}
-                to track sent messages
-              </p>
-              <p>
-                • Manage{" "}
-                <button
-                  onClick={() =>
-                    router.push(`/dashboard/client/${tenantId}/whatsapp/contacts`)
-                  }
-                  className="underline font-semibold"
-                >
-                  Contacts
-                </button>{" "}
-                for student/parent numbers
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Remove Confirmation Modal */}
-      {showRemoveConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in fade-in zoom-in duration-200">
-            <div className="text-center mb-6">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Remove WhatsApp Configuration?
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                This will disconnect your WhatsApp Business Account from this dashboard. 
-                All message templates and contact data will be preserved, but you won't be able to send messages until you reconnect.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowRemoveConfirm(false)}
-                disabled={removing}
-                className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRemoveConfig}
-                disabled={removing}
-                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {removing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    Removing...
-                  </>
-                ) : (
-                  <>🗑️ Remove</>
+          {/* Connection Info Card */}
+          {isConnected && config && (
+            <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Connection Information
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                {config.phoneNumberId && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Phone Number ID</p>
+                    <p className="font-semibold text-gray-900">
+                      {config.phoneNumberId}
+                    </p>
+                  </div>
                 )}
-              </button>
+                {config.businessPhoneNumber && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Business Phone Number
+                    </p>
+                    <p className="font-semibold text-gray-900">
+                      {config.businessPhoneNumber}
+                    </p>
+                  </div>
+                )}
+                {config.connectedAt && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Connected Since</p>
+                    <p className="font-semibold text-gray-900">
+                      {new Date(config.connectedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* Help Section */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="font-semibold text-blue-900 mb-3">
+              Need help setting up?
+            </h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Check the WhatsApp platform documentation for detailed setup instructions.
+            </p>
+            <Button
+              onClick={() =>
+                window.open("https://github.com/mpiyush15/whatsapp-platform", "_blank")
+              }
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+            >
+              View Documentation
+              <ExternalLink className="h-4 w-4 ml-2" />
+            </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
-  );
+  )
 }

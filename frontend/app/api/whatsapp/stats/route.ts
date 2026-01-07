@@ -1,65 +1,42 @@
 /**
- * BFF Route: /api/whatsapp/stats
- * Purpose: WhatsApp messaging stats with Redis caching
- * Cache TTL: 2 minutes (stats need freshness)
+ * BFF Route: WhatsApp Stats
+ * Proxies to: GET /api/stats
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
+const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
-function getCacheKey(req: NextRequest): string {
-  const url = new URL(req.url);
-  const tenantId = url.searchParams.get('tenantId') || 'default';
-  return CACHE_KEYS.WHATSAPP_STATS(tenantId);
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const cacheKey = getCacheKey(request);
-
-    // Check Redis cache
-    const cached = await redisCache.get<any>(cacheKey);
-    if (cached) {
-      console.log('[BFF] WhatsApp Stats Cache HIT');
-      return NextResponse.json(cached, {
+    const response = await fetch(
+      `${WHATSAPP_PLATFORM_URL}/api/stats`,
+      {
+        method: 'GET',
         headers: {
-          'X-Cache': 'HIT',
-          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
         },
-      });
+      }
+    );
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, message: `Platform error: ${response.statusText}` },
+        { status: response.status }
+      );
     }
 
-    // Get cookies from request
-    const cookies = request.headers.get('cookie') || '';
+    const data = await response.json();
+    const headers = new Headers();
+    headers.set('Cache-Control', 'public, max-age=120'); // 2 min (frequent access)
 
-    // Fetch from backend
-    const backendResponse = await fetch(`${BACKEND_URL}/api/whatsapp/stats`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookies,
-      },
-      credentials: 'include',
-    });
-
-    const data = await backendResponse.json();
-
-    // Cache the response
-    if (backendResponse.ok) {
-      await redisCache.set(cacheKey, data, CACHE_TTL.SHORT);
-      console.log('[BFF] WhatsApp Stats Cache MISS - cached for 2 min');
-    }
-
-    return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
-      status: backendResponse.status,
-    });
-  } catch (error: any) {
-    console.error('Stats error:', error);
+    return NextResponse.json({ stats: data }, { headers });
+  } catch (error) {
+    console.error('❌ Stats error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch stats' },
+      { success: false, message: error instanceof Error ? error.message : 'Failed to fetch stats' },
       { status: 500 }
     );
   }

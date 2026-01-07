@@ -217,31 +217,6 @@ export function useInstagramAccounts(tenantId: string | undefined) {
   );
 }
 
-// ============ WhatsApp Hooks ============
-
-interface WhatsAppContactsResponse {
-  success: boolean;
-  contacts: any[];
-}
-
-export function useWhatsAppContacts(tenantId: string | undefined) {
-  return useSWRFetch<WhatsAppContactsResponse>(
-    tenantId ? `/api/whatsapp/contacts?tenantId=${tenantId}` : null
-  );
-}
-
-interface WhatsAppConversationsResponse {
-  success: boolean;
-  conversations: any[];
-}
-
-export function useWhatsAppConversations(tenantId: string | undefined) {
-  return useSWRFetch<WhatsAppConversationsResponse>(
-    tenantId ? `/api/whatsapp/inbox/conversations?tenantId=${tenantId}` : null,
-    { dedupingInterval: 30000 } // 30 sec for real-time messages
-  );
-}
-
 // ============ Sidebar Hook ============
 
 interface SidebarResponse {

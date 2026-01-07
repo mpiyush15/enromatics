@@ -1,72 +1,85 @@
+/**
+ * BFF Route: WhatsApp Messages
+ * Proxies to: POST /api/messages/send, GET /api/messages
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes - messages change frequently
+const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
+const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
-const cache = new Map<string, { data: any; timestamp: number }>();
-
-function getCacheKey(request: NextRequest): string {
-  const page = request.nextUrl.searchParams.get('page') || '1';
-  const limit = request.nextUrl.searchParams.get('limit') || '20';
-  const status = request.nextUrl.searchParams.get('status') || 'all';
-  const campaign = request.nextUrl.searchParams.get('campaign') || 'all';
-  return `whatsapp-messages-${page}-${limit}-${status}-${campaign}`;
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const cacheKey = getCacheKey(request);
-    const now = Date.now();
-
-    // Check cache (3 min TTL)
-    const cachedEntry = cache.get(cacheKey);
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      return NextResponse.json(cachedEntry.data, {
-        headers: { 'X-Cache': 'HIT' },
-      });
-    }
-
-    // Get cookies from request
-    const cookies = request.headers.get('cookie') || '';
-    const searchParams = request.nextUrl.searchParams;
-
-    // Build query string
-    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
-
-    // Fetch from backend
-    const backendResponse = await fetch(
-      `${BACKEND_URL}/api/whatsapp/messages${queryString}`,
+    const response = await fetch(
+      `${WHATSAPP_PLATFORM_URL}/api/messages`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': cookies,
+          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
         },
-        credentials: 'include',
       }
     );
 
-    const data = await backendResponse.json();
-
-    // Cache the response
-    if (backendResponse.ok) {
-      cache.set(cacheKey, { data, timestamp: now });
-
-      // Cache cleanup - remove oldest if exceeds 50 entries
-      if (cache.size > 50) {
-        const firstKey = cache.keys().next().value as string;
-        if (firstKey) cache.delete(firstKey);
-      }
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, message: `Platform error: ${response.statusText}` },
+        { status: response.status }
+      );
     }
 
-    return NextResponse.json(data, {
-      headers: { 'X-Cache': 'MISS' },
-      status: backendResponse.status,
-    });
-  } catch (error: any) {
-    console.error('Messages error:', error);
+    const data = await response.json();
+    const headers = new Headers();
+    headers.set('Cache-Control', 'public, max-age=180'); // 3 min
+
+    return NextResponse.json({ messages: data }, { headers });
+  } catch (error) {
+    console.error('❌ Messages GET error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch messages' },
+      { success: false, message: error instanceof Error ? error.message : 'Failed to fetch messages' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { to, message } = body;
+
+    if (!to || !message) {
+      return NextResponse.json(
+        { success: false, message: 'Missing required fields: to, message' },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${WHATSAPP_PLATFORM_URL}/api/messages/send`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
+        },
+        body: JSON.stringify({ to, message }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return NextResponse.json(
+        { success: false, message: errorData.message || `Platform error: ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error('❌ Messages POST error:', error);
+    return NextResponse.json(
+      { success: false, message: error instanceof Error ? error.message : 'Failed to send message' },
       { status: 500 }
     );
   }

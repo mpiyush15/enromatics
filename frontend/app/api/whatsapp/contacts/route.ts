@@ -1,96 +1,42 @@
+/**
+ * BFF Route: WhatsApp Contacts
+ * Proxies to: GET /api/contacts
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { redisCache, CACHE_TTL } from '@/lib/redis';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
+const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
-function getCacheKey(request: NextRequest): string {
-  const searchParams = request.nextUrl.searchParams;
-  return `whatsapp:contacts:${JSON.stringify(Object.fromEntries(searchParams))}`;
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const cacheKey = getCacheKey(request);
-
-    // Check Redis cache (5 min TTL)
-    const cached = await redisCache.get<any>(cacheKey);
-    if (cached) {
-      return NextResponse.json(cached, {
-        headers: { 
-          'X-Cache': 'HIT',
-          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
-        },
-      });
-    }
-
-    // Get cookies from request
-    const cookies = request.headers.get('cookie') || '';
-
-    // Fetch from backend
-    const backendResponse = await fetch(`${BACKEND_URL}/api/whatsapp/contacts`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookies,
-      },
-      credentials: 'include',
-    });
-
-    const data = await backendResponse.json();
-
-    // Cache the response
-    if (backendResponse.ok) {
-      await redisCache.set(cacheKey, data, CACHE_TTL.MEDIUM);
-    }
-
-    return NextResponse.json(data, {
-      headers: { 
-        'X-Cache': 'MISS',
-        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
-      },
-      status: backendResponse.status,
-    });
-  } catch (error: any) {
-    console.error('Contacts error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch contacts' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const cookies = request.headers.get('cookie') || '';
-
-    // POST requests bypass cache
-    const backendResponse = await fetch(
-      `${BACKEND_URL}/api/whatsapp/contacts`,
+    const response = await fetch(
+      `${WHATSAPP_PLATFORM_URL}/api/contacts`,
       {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': cookies,
+          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
         },
-        body: JSON.stringify(body),
-        credentials: 'include',
       }
     );
 
-    const data = await backendResponse.json();
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, message: `Platform error: ${response.statusText}` },
+        { status: response.status }
+      );
+    }
 
-    // Invalidate contacts caches on create
-    await redisCache.delPattern('whatsapp:contacts:*');
+    const data = await response.json();
+    const headers = new Headers();
+    headers.set('Cache-Control', 'public, max-age=300'); // 5 min
 
-    return NextResponse.json(data, {
-      status: backendResponse.status,
-      headers: { 'X-Cache': 'BYPASS' },
-    });
-  } catch (error: any) {
-    console.error('Create contact error:', error);
+    return NextResponse.json({ contacts: data }, { headers });
+  } catch (error) {
+    console.error('❌ Contacts error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create contact' },
+      { success: false, message: error instanceof Error ? error.message : 'Failed to fetch contacts' },
       { status: 500 }
     );
   }

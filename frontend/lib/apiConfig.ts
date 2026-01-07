@@ -36,13 +36,14 @@ export const API_ENDPOINTS = {
     ATTENDANCE: '/api/student-auth/attendance',
     PAYMENTS: '/api/student-auth/payments',
   },
-  // WhatsApp
+  // WhatsApp (External Platform Integration)
   WHATSAPP: {
-    CONFIG: '/api/whatsapp/config',
-    CONTACTS: '/api/whatsapp/contacts',
+    CONVERSATIONS: '/api/whatsapp/conversations',
     MESSAGES: '/api/whatsapp/messages',
-    SEND: '/api/whatsapp/send',
+    CHATBOTS: '/api/whatsapp/chatbots',
+    CONTACTS: '/api/whatsapp/contacts',
     STATS: '/api/whatsapp/stats',
+    CONFIG: '/api/whatsapp/config',
   },
   // Tenants
   TENANTS: '/api/tenants',

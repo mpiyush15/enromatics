@@ -91,10 +91,18 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   // Helper: build href with tenant context
   const buildHrefLocal = (href: string) => {
-    if (href.includes("/client/")) return href;
+    if (!href) return "#";
     
-    // ✅ EXCEPTION: WhatsApp routes are NOT tenant-specific (shared across all tenants)
-    if (href.includes("/whatsapp/")) return href;
+    // If href contains [tenantId] placeholder, ALWAYS replace it FIRST
+    if (href.includes("[tenantId]")) {
+      if (!user?.tenantId) {
+        console.warn(`⚠️ buildHrefLocal: No tenantId available for href: ${href}`);
+        return "#";
+      }
+      return href.replace("[tenantId]", user.tenantId);
+    }
+    
+    if (href.includes("/client/")) return href;
     
     if (
       user?.tenantId &&
@@ -161,10 +169,20 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   console.log("🔍 Sidebar render - User:", user?.email, "Role:", user?.role, "TenantID:", user?.tenantId, "Loading:", loading);
 
   function buildHref(href: string) {
-    if (href.includes("/client/")) return href;
+    if (!href) return "#";
     
-    // ✅ EXCEPTION: WhatsApp routes are NOT tenant-specific (shared across all tenants)
-    if (href.includes("/whatsapp/")) return href;
+    // If href contains [tenantId] placeholder, ALWAYS replace it FIRST
+    if (href.includes("[tenantId]")) {
+      if (!user?.tenantId) {
+        console.warn(`⚠️ buildHref: No tenantId available for href: ${href}`);
+        return "#";
+      }
+      const built = href.replace("[tenantId]", user.tenantId);
+      console.log(`🔧 buildHref: "${href}" → "${built}"`);
+      return built;
+    }
+    
+    if (href.includes("/client/")) return href;
     
     if (
       user?.tenantId &&

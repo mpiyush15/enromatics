@@ -355,11 +355,6 @@ export const CACHE_KEYS = {
   EXPENSES_LIST: (tenantId: string, query: string) => `expenses:list:${tenantId}:${query}`,
   RECEIPTS_LIST: (tenantId: string, query: string) => `receipts:list:${tenantId}:${query}`,
   
-  // WhatsApp
-  WHATSAPP_STATS: (tenantId: string) => `whatsapp:stats:${tenantId}`,
-  WHATSAPP_CONTACTS: (tenantId: string, query: string) => `whatsapp:contacts:${tenantId}:${query}`,
-  WHATSAPP_TEMPLATES: (tenantId: string) => `whatsapp:templates:${tenantId}`,
-  
   // Social Media
   SOCIAL_INSIGHTS: (tenantId: string) => `social:insights:${tenantId}`,
   
