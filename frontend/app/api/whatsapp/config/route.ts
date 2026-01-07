@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { tenantId, businessAccountId, phoneNumberId, phoneNumber } = body;
+    const { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey } = body;
 
     // Validate required fields
     if (!tenantId || !businessAccountId || !phoneNumberId || !phoneNumber) {
@@ -65,74 +65,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate platform credentials exist
-    if (!WHATSAPP_PLATFORM_URL || !WHATSAPP_PLATFORM_API_KEY) {
-      return NextResponse.json(
-        { success: false, message: 'Platform credentials not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Test connection to platform with tenant's account
-    try {
-      const testResponse = await fetch(
-        `${WHATSAPP_PLATFORM_URL}/api/messages?businessAccountId=${businessAccountId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
-          },
-        }
-      );
-
-      const isConnected = testResponse.ok || testResponse.status === 401; // Accept 401 as tenant exists
-
-      // Call backend to save config
-      const saveResponse = await fetch(
-        `${BACKEND_URL}/api/whatsapp/config`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            tenantId,
-            businessAccountId,
-            phoneNumberId,
-            phoneNumber,
-            isConnected,
-            connectionStatus: isConnected ? 'connected' : 'error',
-            errorMessage: isConnected ? null : 'Unable to connect to platform',
-          }),
-        }
-      );
-
-      if (saveResponse.ok) {
-        const data = await saveResponse.json();
-        return NextResponse.json({
-          success: true,
-          message: 'Configuration saved and verified',
-          config: data.config || {
-            tenantId,
-            businessAccountId,
-            phoneNumberId,
-            phoneNumber,
-            isConnected,
-            connectionStatus: isConnected ? 'connected' : 'error',
-          }
-        });
-      } else {
-        return NextResponse.json(
-          { success: false, message: 'Failed to save configuration' },
-          { status: saveResponse.status }
-        );
+    // Call backend to save config and verify API key if provided
+    const saveResponse = await fetch(
+      `${BACKEND_URL}/api/whatsapp/config`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId,
+          businessAccountId,
+          phoneNumberId,
+          phoneNumber,
+          apiKey: apiKey || null,
+        }),
       }
-    } catch (error) {
-      console.error('❌ Platform connection error:', error);
+    );
+
+    if (saveResponse.ok) {
+      const data = await saveResponse.json();
+      return NextResponse.json({
+        success: true,
+        message: data.message || 'Configuration saved',
+        config: data.config,
+        connectionStatus: data.connectionStatus,
+      });
+    } else {
+      const errorData = await saveResponse.json();
       return NextResponse.json(
-        { success: false, message: 'Unable to reach WhatsApp platform' },
-        { status: 503 }
+        { success: false, message: errorData.message || errorData.error || 'Failed to save configuration' },
+        { status: saveResponse.status }
       );
     }
   } catch (error) {
