@@ -1,14 +1,14 @@
 /**
  * BFF Route: WhatsApp Conversations (Live Chat)
  * Proxies calls to external WhatsApp Platform
- * Uses tenant's businessAccountId
+ * Gets tenant config from backend
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
 
 const WHATSAPP_PLATFORM_URL = (process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
 const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5050';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,11 +22,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get tenant config from MongoDB
-    await connectDB();
-    const db = (global as any).mongodb?.db();
-    const collection = db?.collection('whatsapp_tenant_configs');
-    const config = await collection?.findOne({ tenantId });
+    // Get tenant config from backend
+    const configResponse = await fetch(
+      `${BACKEND_URL}/api/whatsapp/config?tenantId=${tenantId}`
+    );
+
+    if (!configResponse.ok) {
+      return NextResponse.json(
+        { success: false, message: 'WhatsApp account not configured for this tenant' },
+        { status: 404 }
+      );
+    }
+
+    const configData = await configResponse.json();
+    const config = configData.config;
 
     if (!config || !config.businessAccountId) {
       return NextResponse.json(

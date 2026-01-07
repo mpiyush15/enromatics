@@ -2,15 +2,15 @@
  * BFF Route: WhatsApp Config/Settings
  * Handles tenant WhatsApp account configuration
  * Reads platform URL + API key from backend env
- * Stores tenant-specific account details in MongoDB
+ * Stores tenant-specific account details in MongoDB (via backend)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
 
 // Platform credentials (from backend env via BFF)
 const WHATSAPP_PLATFORM_URL = (process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
 const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5050';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,37 +24,25 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Connect to MongoDB
-    await connectDB();
+    // Get tenant config from backend
+    const response = await fetch(
+      `${BACKEND_URL}/api/whatsapp/config?tenantId=${tenantId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // Get tenant config from database
-    const db = (global as any).mongodb?.db();
-    const collection = db?.collection('whatsapp_tenant_configs');
-    
-    const config = await collection?.findOne({ tenantId });
-
-    if (!config) {
-      return NextResponse.json({
-        success: true,
-        config: null,
-        message: 'No configuration found for this tenant'
-      });
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch config from backend' },
+        { status: response.status }
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      config: {
-        _id: config._id,
-        tenantId: config.tenantId,
-        businessAccountId: config.businessAccountId,
-        phoneNumberId: config.phoneNumberId,
-        phoneNumber: config.phoneNumber,
-        isConnected: config.isConnected || false,
-        connectedAt: config.connectedAt,
-        connectionStatus: config.connectionStatus || 'disconnected',
-        errorMessage: config.errorMessage
-      }
-    });
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error('❌ Config GET error:', error);
     return NextResponse.json(
@@ -87,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     // Test connection to platform with tenant's account
     try {
-      const response = await fetch(
+      const testResponse = await fetch(
         `${WHATSAPP_PLATFORM_URL}/api/messages?businessAccountId=${businessAccountId}`,
         {
           method: 'GET',
@@ -98,85 +86,50 @@ export async function POST(req: NextRequest) {
         }
       );
 
-      // Connect to MongoDB
-      await connectDB();
-      const db = (global as any).mongodb?.db();
-      const collection = db?.collection('whatsapp_tenant_configs');
+      const isConnected = testResponse.ok || testResponse.status === 401; // Accept 401 as tenant exists
 
-      const isConnected = response.ok || response.status === 401; // Accept 401 as tenant exists
-      const timestamp = new Date();
-
-      // Upsert tenant config
-      const result = await collection?.updateOne(
-        { tenantId },
+      // Call backend to save config
+      const saveResponse = await fetch(
+        `${BACKEND_URL}/api/whatsapp/config`,
         {
-          $set: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             tenantId,
             businessAccountId,
             phoneNumberId,
             phoneNumber,
             isConnected,
-            connectedAt: isConnected ? timestamp : null,
             connectionStatus: isConnected ? 'connected' : 'error',
             errorMessage: isConnected ? null : 'Unable to connect to platform',
-            updatedAt: timestamp,
-          },
-          $setOnInsert: {
-            createdAt: timestamp,
-          }
-        },
-        { upsert: true }
+          }),
+        }
       );
 
-      if (isConnected) {
+      if (saveResponse.ok) {
+        const data = await saveResponse.json();
         return NextResponse.json({
           success: true,
           message: 'Configuration saved and verified',
-          config: {
+          config: data.config || {
             tenantId,
             businessAccountId,
             phoneNumberId,
             phoneNumber,
-            isConnected: true,
-            connectionStatus: 'connected',
-            connectedAt: timestamp
+            isConnected,
+            connectionStatus: isConnected ? 'connected' : 'error',
           }
         });
       } else {
-        return NextResponse.json({
-          success: false,
-          message: `Failed to connect: ${response.statusText}`,
-          errorCode: response.status
-        }, { status: 401 });
+        return NextResponse.json(
+          { success: false, message: 'Failed to save configuration' },
+          { status: saveResponse.status }
+        );
       }
     } catch (error) {
       console.error('❌ Platform connection error:', error);
-      
-      // Still save config even if connection fails (user can test later)
-      await connectDB();
-      const db = (global as any).mongodb?.db();
-      const collection = db?.collection('whatsapp_tenant_configs');
-      
-      await collection?.updateOne(
-        { tenantId },
-        {
-          $set: {
-            tenantId,
-            businessAccountId,
-            phoneNumberId,
-            phoneNumber,
-            isConnected: false,
-            connectionStatus: 'error',
-            errorMessage: 'Unable to reach platform',
-            updatedAt: new Date(),
-          },
-          $setOnInsert: {
-            createdAt: new Date(),
-          }
-        },
-        { upsert: true }
-      );
-
       return NextResponse.json(
         { success: false, message: 'Unable to reach WhatsApp platform' },
         { status: 503 }
