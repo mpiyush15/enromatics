@@ -44,6 +44,7 @@ import supercrmRoutes from './routes/supercrmRoutes.js';
 import websiteAnalyticsRoutes from './routes/websiteAnalyticsRoutes.js';
 import phase1AnalyticsRoutes from './routes/phase1AnalyticsRoutes.js';
 import phase2AnalyticsRoutes from './routes/phase2AnalyticsRoutes.js';
+import whatsappRoutes from './routes/whatsappRoutes.js';
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
@@ -157,6 +158,7 @@ app.use('/api/supercrm', supercrmRoutes);
 app.use('/api/website-analytics', websiteAnalyticsRoutes);
 app.use('/api/analytics/phase1', phase1AnalyticsRoutes);
 app.use('/api/analytics/phase2', phase2AnalyticsRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);

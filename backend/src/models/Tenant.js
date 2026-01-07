@@ -122,6 +122,14 @@ const tenantSchema = new mongoose.Schema(
       default: true, // Default to true for existing tenants
     },
 
+    // WhatsApp Platform Configuration (for WhatsApp integration)
+    whatsappConfig: {
+      businessAccountId: { type: String, default: null },
+      phoneNumberId: { type: String, default: null },
+      phoneNumber: { type: String, default: null },
+      updatedAt: { type: Date, default: null },
+    },
+
     // Analytics and usage tracking (for future scaling)
     usage: {
       studentsCount: { type: Number, default: 0 },
