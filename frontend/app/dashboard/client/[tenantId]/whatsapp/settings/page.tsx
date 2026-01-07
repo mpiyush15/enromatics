@@ -298,22 +298,37 @@ export default function SettingsPage() {
               </div>
 
               {/* Platform API Key - Optional for advanced users */}
-              <div className="opacity-50 pointer-events-none">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <div className="flex items-center gap-2">
                     <Key className="h-4 w-4" />
-                    Custom API Key (Not needed - using Meta credentials)
+                    WhatsApp Platform API Key
                   </div>
                 </label>
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={formData.apiKey}
-                  disabled
-                  placeholder="Leave empty - uses Meta WhatsApp credentials"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm bg-gray-100"
-                />
+                <div className="relative">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={formData.apiKey}
+                    onChange={(e) =>
+                      setFormData({ ...formData, apiKey: e.target.value })
+                    }
+                    placeholder="Enter your WhatsApp Platform API key (optional)"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Not required. Enromatics uses Meta WhatsApp Cloud API directly.
+                  Optional. For verifying with WhatsApp Platform. Leave empty to use Meta WhatsApp Cloud API.
                 </p>
               </div>
 

@@ -97,6 +97,8 @@ router.get('/config', async (req, res) => {
  * POST /api/whatsapp/config
  * Save or update tenant's WhatsApp configuration
  * Body: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
+ * 
+ * If apiKey is provided, verifies connection to WhatsApp Platform
  */
 router.post('/config', async (req, res) => {
   try {
@@ -106,6 +108,35 @@ router.post('/config', async (req, res) => {
       return res.status(400).json({ 
         error: 'Missing required fields: tenantId, businessAccountId, phoneNumberId, phoneNumber' 
       });
+    }
+
+    // If API key is provided, verify the connection before saving
+    let connectionStatus = 'disconnected';
+    let errorMessage = null;
+
+    if (apiKey && apiKey.trim()) {
+      try {
+        console.log('🔍 Verifying WhatsApp Platform connection with provided API key...');
+        
+        // Try to fetch stats with the provided API key to verify it works
+        const stats = await whatsappClient.getStats(apiKey);
+        
+        if (stats && stats.success) {
+          connectionStatus = 'connected';
+          console.log('✅ WhatsApp Platform connection verified successfully');
+        } else {
+          connectionStatus = 'error';
+          errorMessage = 'Failed to verify connection: ' + (stats?.error || 'Unknown error');
+          console.warn('⚠️ Connection verification failed:', errorMessage);
+        }
+      } catch (verifyError) {
+        connectionStatus = 'error';
+        errorMessage = 'Invalid API key or connection failed: ' + verifyError.message;
+        console.error('❌ API key verification failed:', verifyError.message);
+        
+        // Don't stop - allow saving even if verification fails (user can retry)
+        // This allows for network issues to be retried later
+      }
     }
 
     // Save to MongoDB
@@ -118,6 +149,9 @@ router.post('/config', async (req, res) => {
           phoneNumber,
           apiKey: apiKey || null,
           isConfigured: true,
+          connectionStatus,
+          errorMessage,
+          connectedAt: connectionStatus === 'connected' ? new Date() : null,
           updatedAt: new Date()
         }
       },
@@ -130,8 +164,11 @@ router.post('/config', async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'WhatsApp configuration saved successfully',
-      config: tenant.whatsappConfig
+      message: connectionStatus === 'connected' 
+        ? 'WhatsApp configuration saved and verified!' 
+        : 'Configuration saved. API key verification pending or failed.',
+      config: tenant.whatsappConfig,
+      connectionStatus
     });
   } catch (error) {
     console.error('Error saving WhatsApp config:', error);
