@@ -203,8 +203,39 @@ router.get('/messages', async (req, res) => {
 });
 
 /**
+ * POST /api/whatsapp/messages
+ * Send a message from tenant account (NEW - matches frontend)
+ * Body: { accountId (tenantId), type, phoneNumberId, recipientPhone, message }
+ */
+router.post('/messages', async (req, res) => {
+  try {
+    const { accountId, type, phoneNumberId, recipientPhone, message } = req.body;
+
+    if (!accountId || !recipientPhone || !message) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: accountId (tenantId), recipientPhone, message' 
+      });
+    }
+
+    // Get tenant or global config
+    const config = await getWhatsAppConfig(accountId);
+
+    // Send message via platform using tenant API key
+    const result = await whatsappClient.sendMessage(recipientPhone, message, null, null, config.apiKey);
+
+    return res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /api/whatsapp/messages/send
- * Send a message from tenant account
+ * Send a message from tenant account (LEGACY - kept for backwards compatibility)
  * Body: { tenantId, to, message }
  */
 router.post('/messages/send', async (req, res) => {
@@ -221,7 +252,7 @@ router.post('/messages/send', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
 
     // Send message via platform using tenant API key
-    const result = await whatsappClient.sendTextMessage(to, message, 'manual', config.apiKey);
+    const result = await whatsappClient.sendMessage(to, message, null, null, config.apiKey);
 
     return res.json(result);
   } catch (error) {
