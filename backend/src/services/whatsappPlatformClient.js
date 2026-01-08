@@ -466,6 +466,127 @@ class WhatsAppPlatformClient {
   async getHealth() {
     return this.request('GET', '/health', null, {});
   }
+
+  // ============ CONTACTS MANAGEMENT ============
+
+  /**
+   * Fetch all contacts
+   * @param {number} limit - Results limit (default: 100)
+   * @param {number} offset - Pagination offset (default: 0)
+   * @param {string} search - Search by name, phone, email
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async getContacts(limit = 100, offset = 0, search = null, tenantApiKey = null) {
+    const params = { limit, offset };
+    if (search) params.search = search;
+    return this.request('GET', '/contacts', null, params, tenantApiKey);
+  }
+
+  /**
+   * Get single contact by ID
+   * @param {string} contactId - Contact ID
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async getContact(contactId, tenantApiKey = null) {
+    return this.request('GET', `/contacts/${contactId}`, null, null, tenantApiKey);
+  }
+
+  /**
+   * Create new contact
+   * @param {object} contactData - Contact data (name, phone, email, tags)
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async createContact(contactData, tenantApiKey = null) {
+    return this.request('POST', '/contacts', contactData, null, tenantApiKey);
+  }
+
+  /**
+   * Update contact
+   * @param {string} contactId - Contact ID
+   * @param {object} contactData - Updated contact data
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async updateContact(contactId, contactData, tenantApiKey = null) {
+    return this.request('PUT', `/contacts/${contactId}`, contactData, null, tenantApiKey);
+  }
+
+  /**
+   * Delete contact
+   * @param {string} contactId - Contact ID
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async deleteContact(contactId, tenantApiKey = null) {
+    return this.request('DELETE', `/contacts/${contactId}`, null, null, tenantApiKey);
+  }
+
+  // ============ CONVERSATIONS/CHATS ============
+
+  /**
+   * Fetch all conversations
+   * @param {number} limit - Results limit (default: 50)
+   * @param {number} offset - Pagination offset (default: 0)
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async getAllConversations(limit = 50, offset = 0, tenantApiKey = null) {
+    const params = { limit, offset };
+    return this.request('GET', '/conversations', null, params, tenantApiKey);
+  }
+
+  /**
+   * Get messages for a conversation
+   * @param {string} conversationId - Conversation ID
+   * @param {number} limit - Results limit (default: 50)
+   * @param {number} offset - Pagination offset (default: 0)
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async getConversationMessages(conversationId, limit = 50, offset = 0, tenantApiKey = null) {
+    const params = { limit, offset };
+    return this.request('GET', `/conversations/${conversationId}/messages`, null, params, tenantApiKey);
+  }
+
+  /**
+   * Reply to a conversation
+   * @param {string} conversationId - Conversation ID
+   * @param {string} message - Reply message text
+   * @param {string} mediaUrl - Optional media URL
+   * @param {string} mediaType - Optional media type (image, video, document)
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async replyToConversation(conversationId, message, mediaUrl = null, mediaType = null, tenantApiKey = null) {
+    const data = { message };
+    if (mediaUrl) data.mediaUrl = mediaUrl;
+    if (mediaType) data.mediaType = mediaType;
+    return this.request('POST', `/conversations/${conversationId}/reply`, data, null, tenantApiKey);
+  }
+
+  // ============ DIRECT MESSAGING ============
+
+  /**
+   * Send message to a contact by phone number
+   * @param {string} recipientPhone - Recipient phone number
+   * @param {string} message - Message text
+   * @param {string} mediaUrl - Optional media URL
+   * @param {string} mediaType - Optional media type
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async sendMessage(recipientPhone, message, mediaUrl = null, mediaType = null, tenantApiKey = null) {
+    const data = { 
+      recipientPhone,
+      message 
+    };
+    if (mediaUrl) data.mediaUrl = mediaUrl;
+    if (mediaType) data.mediaType = mediaType;
+    return this.request('POST', '/send-message', data, null, tenantApiKey);
+  }
+
+  /**
+   * Send broadcast to multiple contacts
+   * @param {object} broadcastData - Broadcast data (message, contactIds or tags)
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   */
+  async sendBroadcastV2(broadcastData, tenantApiKey = null) {
+    return this.request('POST', '/broadcast', broadcastData, null, tenantApiKey);
+  }
 }
 
 export default new WhatsAppPlatformClient();

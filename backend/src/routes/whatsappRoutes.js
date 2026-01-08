@@ -416,4 +416,296 @@ router.get('/health', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/whatsapp/conversations
+ * Fetch all conversations for a tenant
+ * Query params: tenantId, limit (optional), offset (optional)
+ */
+router.get('/conversations', async (req, res) => {
+  try {
+    const { tenantId, limit = 50, offset = 0 } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const conversations = await whatsappClient.getAllConversations(
+      parseInt(limit),
+      parseInt(offset),
+      config.apiKey
+    );
+
+    return res.json(conversations);
+  } catch (error) {
+    console.error('Error fetching conversations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/conversation/:conversationId/messages
+ * Fetch messages for a specific conversation
+ * Query params: tenantId, limit (optional), offset (optional)
+ * Path params: conversationId
+ */
+router.get('/conversation/:conversationId/messages', async (req, res) => {
+  try {
+    const { tenantId, limit = 50, offset = 0 } = req.query;
+    const { conversationId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const messages = await whatsappClient.getConversationMessages(
+      conversationId,
+      parseInt(limit),
+      parseInt(offset),
+      config.apiKey
+    );
+
+    return res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/whatsapp/conversation/:conversationId/reply
+ * Send reply to a conversation
+ * Body: { message, mediaUrl (optional), mediaType (optional) }
+ * Query params: tenantId
+ */
+router.post('/conversation/:conversationId/reply', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { conversationId } = req.params;
+    const { message, mediaUrl, mediaType } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const result = await whatsappClient.replyToConversation(
+      conversationId,
+      message,
+      mediaUrl,
+      mediaType,
+      config.apiKey
+    );
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error replying to conversation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/contacts
+ * Fetch all contacts for a tenant
+ * Query params: tenantId, limit (optional), offset (optional), search (optional)
+ */
+router.get('/contacts', async (req, res) => {
+  try {
+    const { tenantId, limit = 100, offset = 0, search } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const contacts = await whatsappClient.getContacts(
+      parseInt(limit),
+      parseInt(offset),
+      search,
+      config.apiKey
+    );
+
+    return res.json(contacts);
+  } catch (error) {
+    console.error('Error fetching contacts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/contacts/:contactId
+ * Fetch single contact by ID
+ * Query params: tenantId
+ */
+router.get('/contacts/:contactId', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { contactId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const contact = await whatsappClient.getContact(contactId, config.apiKey);
+
+    return res.json(contact);
+  } catch (error) {
+    console.error('Error fetching contact:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/whatsapp/contacts
+ * Create new contact
+ * Body: { name, phone, email (optional), tags (optional) }
+ * Query params: tenantId
+ */
+router.post('/contacts', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const contactData = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    if (!contactData.name || !contactData.phone) {
+      return res.status(400).json({ error: 'name and phone are required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const contact = await whatsappClient.createContact(contactData, config.apiKey);
+
+    return res.json(contact);
+  } catch (error) {
+    console.error('Error creating contact:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/whatsapp/contacts/:contactId
+ * Update contact
+ * Body: { name (optional), email (optional), tags (optional) }
+ * Query params: tenantId
+ */
+router.put('/contacts/:contactId', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { contactId } = req.params;
+    const contactData = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const contact = await whatsappClient.updateContact(contactId, contactData, config.apiKey);
+
+    return res.json(contact);
+  } catch (error) {
+    console.error('Error updating contact:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/whatsapp/contacts/:contactId
+ * Delete contact
+ * Query params: tenantId
+ */
+router.delete('/contacts/:contactId', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { contactId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const result = await whatsappClient.deleteContact(contactId, config.apiKey);
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/whatsapp/send-message
+ * Send direct message to a contact by phone
+ * Body: { recipientPhone, message, mediaUrl (optional), mediaType (optional) }
+ * Query params: tenantId
+ */
+router.post('/send-message', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const { recipientPhone, message, mediaUrl, mediaType } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    if (!recipientPhone || !message) {
+      return res.status(400).json({ error: 'recipientPhone and message are required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const result = await whatsappClient.sendMessage(
+      recipientPhone,
+      message,
+      mediaUrl,
+      mediaType,
+      config.apiKey
+    );
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/whatsapp/broadcast
+ * Send broadcast message to multiple contacts
+ * Body: { message, contactIds (array) or tags (array) }
+ * Query params: tenantId
+ */
+router.post('/broadcast', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+    const broadcastData = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    if (!broadcastData.message) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    if (!broadcastData.contactIds && !broadcastData.tags) {
+      return res.status(400).json({ error: 'contactIds or tags is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const result = await whatsappClient.sendBroadcastV2(broadcastData, config.apiKey);
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error sending broadcast:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
