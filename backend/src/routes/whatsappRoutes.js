@@ -559,6 +559,8 @@ router.post('/conversation/:conversationId/reply', async (req, res) => {
  * GET /api/whatsapp/contacts
  * Fetch all contacts for a tenant
  * Query params: tenantId, limit (optional), offset (optional), search (optional)
+ * 
+ * Transforms Platform API response to frontend format
  */
 router.get('/contacts', async (req, res) => {
   try {
@@ -569,14 +571,43 @@ router.get('/contacts', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const contacts = await whatsappClient.getContacts(
+    const response = await whatsappClient.getContacts(
       parseInt(limit),
       parseInt(offset),
       search,
       config.apiKey
     );
 
-    return res.json(contacts);
+    // Transform Platform response to frontend format
+    const contacts = (response.data?.contacts || []).map(contact => ({
+      _id: contact._id,                                // MongoDB ID
+      contactId: contact._id,                          // Alias for _id
+      name: contact.name,                              // Contact name
+      phone: contact.phone,                            // Phone with + prefix
+      whatsappNumber: contact.whatsappNumber,          // WhatsApp number without +
+      email: contact.email,                            // Email address
+      type: contact.type,                              // Customer/agent/etc
+      tags: contact.tags || [],                        // Tags array
+      isOptedIn: contact.isOptedIn,                    // Opt-in status
+      messageCount: contact.messageCount || 0,         // Total messages
+      conversationCount: contact.messageCount || 0,    // Alias for frontend
+      lastMessageAt: contact.lastMessageAt,           // Last message time
+      createdAt: contact.createdAt,                    // When contact was created
+      updatedAt: contact.updatedAt,                    // Last update
+      metadata: contact.metadata || {},                // Extra metadata
+      notes: null                                      // Not provided by Platform
+    }));
+
+    return res.json({
+      success: true,
+      contacts,
+      pagination: response.data?.pagination || {
+        total: contacts.length,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: false
+      }
+    });
   } catch (error) {
     console.error('Error fetching contacts:', error);
     res.status(500).json({ error: error.message });
