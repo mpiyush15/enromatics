@@ -117,13 +117,13 @@ export default function InboxPage() {
   }
 
   // Fetch messages for selected conversation
-  const fetchMessages = async (conversationMongoId: string, silent = false) => {
+  const fetchMessages = async (conversationPlatformId: string, silent = false) => {
     try {
       if (!silent) setIsLoadingMessages(true)
-      console.log(`📬 Fetching messages for conversation: ${conversationMongoId}`)
+      console.log(`📬 Fetching messages for conversation: ${conversationPlatformId}`)
       
       const response = await fetch(
-        `/api/whatsapp/messages?conversationId=${conversationMongoId}&tenantId=${tenantId}&limit=50&offset=0`,
+        `/api/whatsapp/messages?conversationId=${conversationPlatformId}&tenantId=${tenantId}&limit=50&offset=0`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -141,9 +141,14 @@ export default function InboxPage() {
         setMessages(messagesList)
         setError("")
       } else {
-        const errorData = await response.json()
-        console.error("Failed to fetch messages:", response.status, errorData)
-        if (!silent) setError(`Failed to load messages: ${errorData.error || response.statusText}`)
+        try {
+          const errorData = await response.json()
+          console.error("Failed to fetch messages:", response.status, errorData)
+          if (!silent) setError(`Failed to load messages: ${errorData.error || response.statusText}`)
+        } catch (parseError) {
+          console.error("Failed to fetch messages (response parse error):", response.status, response.statusText)
+          if (!silent) setError(`Failed to load messages: ${response.statusText}`)
+        }
       }
     } catch (error) {
       console.error("Error fetching messages:", error)
@@ -161,7 +166,7 @@ export default function InboxPage() {
       setIsSendingMessage(true)
       setError("")
 
-      console.log(`📤 Sending message to conversation: ${selectedConversation._id || selectedConversation.id}`)
+      console.log(`📤 Sending message to conversation: ${selectedConversation.conversationId}`)
 
       const response = await fetch(`/api/whatsapp/send-message`, {
         method: "POST",
@@ -171,7 +176,7 @@ export default function InboxPage() {
         },
         body: JSON.stringify({
           tenantId,
-          conversationId: selectedConversation._id || selectedConversation.id,
+          conversationId: selectedConversation.conversationId,
           messageText: messageText.trim(),
         }),
       })
@@ -184,7 +189,7 @@ export default function InboxPage() {
         setTimeout(() => setSuccessMessage(""), 3000)
         // Refresh messages after short delay to allow server to process
         setTimeout(() => {
-          fetchMessages(selectedConversation._id || selectedConversation.id, true)
+          fetchMessages(selectedConversation.conversationId, true)
         }, 500)
       } else {
         const error = await response.json()
@@ -204,25 +209,34 @@ export default function InboxPage() {
     fetchConversations()
   }, [tenantId])
 
-  // Auto-refresh conversations and messages
+  // Auto-refresh conversations (smart polling with reduced frequency)
   useEffect(() => {
     if (!pollingActive) return
 
-    const interval = setInterval(async () => {
+    // Poll conversations every 5 seconds to sync new messages/updates
+    const conversationInterval = setInterval(async () => {
       await fetchConversations(true)
-      if (selectedConversation) {
-        await fetchMessages(selectedConversation._id || selectedConversation.id, true)
-      }
-    }, 2000) // Poll every 2 seconds
+    }, 5000) // Poll conversations every 5 seconds (reduced from 2 seconds)
 
-    pollingIntervalRef.current = interval
-    return () => clearInterval(interval)
+    // Only poll messages every 10 seconds if a conversation is selected (reduced frequency)
+    let messageInterval: NodeJS.Timeout | null = null
+    if (selectedConversation) {
+      messageInterval = setInterval(async () => {
+        await fetchMessages(selectedConversation.conversationId, true)
+      }, 10000) // Poll messages every 10 seconds (not every 2 seconds)
+    }
+
+    pollingIntervalRef.current = conversationInterval
+    return () => {
+      clearInterval(conversationInterval)
+      if (messageInterval) clearInterval(messageInterval)
+    }
   }, [pollingActive, selectedConversation, tenantId])
 
   // Handle conversation selection
   const handleSelectConversation = async (conv: Conversation) => {
     setSelectedConversation(conv)
-    await fetchMessages(conv._id || conv.id)
+    await fetchMessages(conv.conversationId)
   }
 
   // Filter conversations

@@ -548,12 +548,15 @@ router.get('/health', async (req, res) => {
  * GET /api/whatsapp/conversation/:conversationId/messages
  * Fetch messages for a specific conversation
  * Query params: tenantId, limit (optional), offset (optional)
- * Path params: conversationId (can be MongoDB _id or conversationId string)
+ * Path params: conversationId (should be the platform conversationId, not MongoDB _id)
+ * 
+ * Note: Use the human-readable conversationId (e.g., "pixels_internal_889344924259692_918087131777")
+ * not the MongoDB _id
  */
 router.get('/conversation/:conversationId/messages', async (req, res) => {
   try {
     const { tenantId, limit = 50, offset = 0 } = req.query;
-    let { conversationId } = req.params;
+    const { conversationId } = req.params;
 
     if (!tenantId) {
       return res.status(400).json({ error: 'tenantId is required' });
@@ -561,20 +564,52 @@ router.get('/conversation/:conversationId/messages', async (req, res) => {
 
     const config = await getWhatsAppConfig(tenantId);
     
-    // Try to fetch messages - the conversationId parameter should be the MongoDB _id
-    // If it's not a valid MongoDB ObjectId, it will be treated as conversationId
-    // and the WhatsApp Platform will reject it
-    const messages = await whatsappClient.getConversationMessages(
+    // Fetch messages from platform using the platform's conversationId
+    const response = await whatsappClient.getConversationMessages(
       conversationId,
       parseInt(limit),
       parseInt(offset),
       config.apiKey
     );
 
-    return res.json(messages);
+    // Transform Platform response to consistent frontend format
+    const messages = (response.data?.messages || response.messages || []).map(msg => ({
+      _id: msg._id || msg.messageId,           // MongoDB ID for frontend
+      messageId: msg.messageId,                // Platform message ID
+      waMessageId: msg.waMessageId,            // WhatsApp message ID
+      conversationId: msg.conversationId,      // Parent conversation ID
+      senderPhone: msg.senderPhone,            // Who sent the message
+      recipientPhone: msg.recipientPhone,      // Who received it
+      messageType: msg.messageType,            // text, image, document, etc
+      content: msg.content,                    // Message content (structure varies by type)
+      status: msg.status,                      // sent, delivered, read, failed, pending
+      direction: msg.direction,                // inbound or outbound
+      timestamp: msg.timestamp,                // When message was sent
+      createdAt: msg.createdAt,                // When created in system
+      deliveredAt: msg.deliveredAt,            // When delivered
+      readAt: msg.readAt                       // When read
+    }));
+
+    // Return formatted response
+    return res.json({
+      success: true,
+      data: {
+        messages: messages,
+        pagination: response.data?.pagination || {
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          total: messages.length,
+          hasMore: false
+        }
+      }
+    });
   } catch (error) {
     console.error('Error fetching messages:', error);
-    res.status(500).json({ error: error.message });
+    const errorMessage = error?.message || error?.response?.data?.message || String(error) || 'Unknown error';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: error?.response?.data || error?.code || 'No additional details'
+    });
   }
 });
 
