@@ -342,40 +342,60 @@ router.get('/conversations', async (req, res) => {
       config.apiKey
     );
 
+    // Log raw Platform response first
+    console.log('📥 Raw Platform response (first conv):', JSON.stringify(response.data?.conversations?.[0], null, 2).substring(0, 500));
+
     // Transform Platform response to frontend format
-    const conversations = (response.data?.conversations || []).map(conv => ({
-      _id: conv._id,                                  // MongoDB ID (internal only)
-      id: conv.conversationId,                        // Business conversation ID (use this for APIs)
-      conversationId: conv.conversationId,             // Platform conversation ID
-      phone: conv.userPhone,                          // Customer phone
-      phoneNumberId: conv.phoneNumberId,              // Phone number ID
-      userPhone: conv.userPhone,                      // Customer phone (alias)
-      name: conv.userProfileName || conv.userName,    // Display name (prefer profile name)
-      userName: conv.userName,                        // User name (alias)
-      userProfileName: conv.userProfileName,          // User profile name (alias)
-      lastMessage: conv.lastMessagePreview,           // Last message text
-      lastMessagePreview: conv.lastMessagePreview,    // Last message preview (alias)
-      lastMessageTime: conv.lastMessageAt,            // Last message timestamp
-      lastMessageAt: conv.lastMessageAt,              // Last message time (alias)
-      lastMessageType: conv.lastMessageType,          // Message type (text/image/etc)
-      unreadCount: conv.unreadCount || 0,             // Unread count
-      status: conv.status,                            // Conversation status (open/closed)
-      priority: conv.priority,                        // Priority (normal/high/low)
-      createdAt: conv.createdAt,                      // When conversation started
-      updatedAt: conv.updatedAt,                      // Last updated
-      lastReadAt: conv.lastReadAt,                    // When last read
-      assignedAgentId: conv.assignedAgentId,          // Assigned agent (if any)
-      tags: conv.tags || []                           // Conversation tags
-    }));
+    const conversations = (response.data?.conversations || []).map(conv => {
+      // Debug: check what fields are available
+      const mappedConv = {
+        _id: conv._id,                                  // MongoDB ID (internal only)
+        id: conv.conversationId || conv.id,             // Business conversation ID (use conversationId first, fallback to id)
+        conversationId: conv.conversationId || conv.id, // Platform conversation ID
+        phone: conv.userPhone || conv.phone,            // Customer phone
+        phoneNumberId: conv.phoneNumberId,              // Phone number ID
+        userPhone: conv.userPhone || conv.phone,        // Customer phone (alias)
+        name: conv.userProfileName || conv.userName || conv.name,    // Display name (prefer profile name)
+        userName: conv.userName,                        // User name (alias)
+        userProfileName: conv.userProfileName,          // User profile name (alias)
+        lastMessage: conv.lastMessagePreview,           // Last message text
+        lastMessagePreview: conv.lastMessagePreview,    // Last message preview (alias)
+        lastMessageTime: conv.lastMessageAt,            // Last message timestamp
+        lastMessageAt: conv.lastMessageAt,              // Last message time (alias)
+        lastMessageType: conv.lastMessageType,          // Message type (text/image/etc)
+        unreadCount: conv.unreadCount || 0,             // Unread count
+        status: conv.status,                            // Conversation status (open/closed)
+        priority: conv.priority,                        // Priority (normal/high/low)
+        createdAt: conv.createdAt,                      // When conversation started
+        updatedAt: conv.updatedAt,                      // Last updated
+        lastReadAt: conv.lastReadAt,                    // When last read
+        assignedAgentId: conv.assignedAgentId,          // Assigned agent (if any)
+        tags: conv.tags || []                           // Conversation tags
+      };
+      
+      if (mappedConv.id === conv._id) {
+        console.warn('⚠️ WARNING: Conversation ID is still MongoDB _id! conversationId field missing or undefined');
+        console.warn('  conv._id:', conv._id);
+        console.warn('  conv.conversationId:', conv.conversationId);
+        console.warn('  Available fields:', Object.keys(conv).filter(k => k.includes('id') || k.includes('conversation')));
+      }
+      
+      return mappedConv;
+    });
+
+    // Log the mapped conversations to debug ID issue
+    console.log('✅ Mapped conversations for frontend:', conversations.slice(0, 1).map(c => ({ _id: c._id, id: c.id, conversationId: c.conversationId })));
 
     return res.json({
       success: true,
-      conversations,
-      pagination: response.data?.pagination || {
-        total: conversations.length,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        hasMore: false
+      data: {
+        conversations,
+        pagination: response.data?.pagination || {
+          total: conversations.length,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          hasMore: false
+        }
       }
     });
   } catch (error) {
@@ -594,6 +614,16 @@ router.get('/conversation/:conversationId/messages', async (req, res) => {
 
     if (!tenantId) {
       return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    console.log('📨 Fetching messages for conversation:', conversationId);
+    console.log('   tenantId:', tenantId);
+    
+    // Check if conversationId looks like MongoDB _id vs platform conversationId
+    if (conversationId.length === 24 && /^[0-9a-f]{24}$/.test(conversationId)) {
+      console.warn('⚠️ WARNING: conversationId looks like MongoDB _id!');
+      console.warn('   Expected format: pixels_internal_889344924259692_918087131777');
+      console.warn('   Got format: ' + conversationId);
     }
 
     const config = await getWhatsAppConfig(tenantId);

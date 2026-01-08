@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        conversations: data.conversations || [],
-        pagination: data.pagination || { total: 0, limit: parseInt(limit), offset: parseInt(offset), hasMore: false }
+        conversations: data.data?.conversations || [],
+        pagination: data.data?.pagination || { total: 0, limit: parseInt(limit), offset: parseInt(offset), hasMore: false }
       }
     });
   } catch (error) {
