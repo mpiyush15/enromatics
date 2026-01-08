@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to backend which will send via WhatsApp Platform
-    const backendUrl = getApiUrl(`/api/whatsapp/conversation/${conversationId}/reply`);
+    const backendUrl = getApiUrl(`/api/whatsapp/conversation/${conversationId}/reply?tenantId=${tenantId}`);
     const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message: messageText,
-        tenantId,
       }),
     });
 
