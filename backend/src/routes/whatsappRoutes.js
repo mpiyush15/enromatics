@@ -59,7 +59,8 @@ router.get('/config', async (req, res) => {
         phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID, // Using phone number ID as fallback
         apiKey: process.env.WHATSAPP_PLATFORM_API_KEY,
         isGlobal: true,
-        source: 'environment'
+        source: 'environment',
+        connectionStatus: 'connected' // Add connection status
       };
       
       if (!globalConfig.businessAccountId || !globalConfig.phoneNumberId) {
@@ -86,7 +87,13 @@ router.get('/config', async (req, res) => {
       });
     }
 
-    return res.json(tenant.whatsappConfig);
+    // Return config with connectionStatus set to 'connected' since it exists
+    const configWithStatus = {
+      ...tenant.whatsappConfig.toObject ? tenant.whatsappConfig.toObject() : tenant.whatsappConfig,
+      connectionStatus: 'connected'
+    };
+    
+    return res.json(configWithStatus);
   } catch (error) {
     console.error('Error fetching WhatsApp config:', error);
     res.status(500).json({ error: error.message });
@@ -265,6 +272,8 @@ router.post('/messages/send', async (req, res) => {
  * GET /api/whatsapp/conversations
  * Fetch conversations for a tenant
  * Query params: tenantId (required), limit (optional), offset (optional)
+ * 
+ * Transforms Platform API response to frontend format
  */
 router.get('/conversations', async (req, res) => {
   try {
@@ -277,14 +286,43 @@ router.get('/conversations', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform using tenant API key with correct method
-    const conversations = await whatsappClient.getAllConversations(
+    // Fetch conversations from platform using tenant API key
+    const response = await whatsappClient.getAllConversations(
       parseInt(limit),
       parseInt(offset),
       config.apiKey
     );
 
-    return res.json(conversations);
+    // Transform Platform response to frontend format
+    const conversations = (response.data?.conversations || []).map(conv => ({
+      id: conv._id,                                    // MongoDB ID
+      conversationId: conv.conversationId,             // Platform conversation ID
+      phone: conv.userPhone,                          // Customer phone
+      phoneNumberId: conv.phoneNumberId,              // Phone number ID
+      name: conv.userProfileName || conv.userName,    // Display name (prefer profile name)
+      lastMessage: conv.lastMessagePreview,           // Last message text
+      lastMessageTime: conv.lastMessageAt,            // Last message timestamp
+      lastMessageType: conv.lastMessageType,          // Message type (text/image/etc)
+      unreadCount: conv.unreadCount || 0,             // Unread count
+      status: conv.status,                            // Conversation status (open/closed)
+      priority: conv.priority,                        // Priority (normal/high/low)
+      createdAt: conv.createdAt,                      // When conversation started
+      updatedAt: conv.updatedAt,                      // Last updated
+      lastReadAt: conv.lastReadAt,                    // When last read
+      assignedAgentId: conv.assignedAgentId,          // Assigned agent (if any)
+      tags: conv.tags || []                           // Conversation tags
+    }));
+
+    return res.json({
+      success: true,
+      conversations,
+      pagination: response.data?.pagination || {
+        total: conversations.length,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: false
+      }
+    });
   } catch (error) {
     console.error('Error fetching conversations:', error);
     res.status(500).json({ error: error.message });

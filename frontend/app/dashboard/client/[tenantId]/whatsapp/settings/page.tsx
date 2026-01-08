@@ -215,6 +215,45 @@ export default function SettingsPage() {
     }
   }
 
+  const handleDisconnect = async () => {
+    if (!window.confirm("Are you sure you want to disconnect WhatsApp? You won't be able to send or receive messages.")) {
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      setErrorMessage("")
+      const response = await fetch(`/api/whatsapp/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          disconnect: true,
+        }),
+      })
+
+      if (response.ok) {
+        setConfig(null)
+        setFormData({
+          businessAccountId: "",
+          phoneNumberId: "",
+          phoneNumber: "",
+          apiKey: "",
+        })
+        setSuccessMessage("WhatsApp account disconnected successfully")
+        await fetchConfig()
+      } else {
+        const error = await response.json()
+        setErrorMessage(error.message || "Failed to disconnect")
+      }
+    } catch (error) {
+      console.error("Error disconnecting:", error)
+      setErrorMessage("Failed to disconnect WhatsApp account")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="h-full bg-gray-50 flex items-center justify-center">
@@ -252,43 +291,61 @@ export default function SettingsPage() {
                 : "bg-yellow-50 border-yellow-200"
             }`}
           >
-            <div className="flex items-start gap-4">
-              {isConnected ? (
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="flex items-start gap-4 justify-between">
+              <div className="flex items-start gap-4 flex-1">
+                {isConnected ? (
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-6 w-6 text-green-600 mt-1" />
+                  </div>
+                ) : (
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-6 w-6 text-yellow-600 mt-1" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className={`text-lg font-semibold ${isConnected ? 'text-green-900' : 'text-yellow-900'}`}>
+                    {isConnected ? "✅ Connected" : "⚠️ Not Connected"}
+                  </h3>
+                  {isConnected && config?.phoneNumber && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        <span className="font-mono">{config.phoneNumber}</span>
+                      </p>
+                      {config?.businessAccountId && (
+                        <p className="text-sm text-green-700 font-medium">
+                          💼 Account ID: <span className="font-mono text-xs">{config.businessAccountId}</span>
+                        </p>
+                      )}
+                      {config?.connectedAt && (
+                        <p className="text-xs text-green-600">
+                          Connected since {new Date(config.connectedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {!isConnected && (
+                    <p className="text-sm mt-2 text-yellow-700">
+                      Please configure your WhatsApp platform credentials to get started
+                    </p>
+                  )}
+                  {config?.errorMessage && (
+                    <p className="text-sm mt-2 text-red-700">
+                      Error: {config.errorMessage}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-6 w-6 text-yellow-600" />
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className={`text-lg font-semibold ${isConnected ? 'text-green-900' : 'text-yellow-900'}`}>
-                  {isConnected ? "✅ Connected" : "⚠️ Not Connected"}
-                </h3>
-                {isConnected && config?.phoneNumber && (
-                  <p className="text-sm mt-2 text-green-700 font-medium">
-                    📱 Phone: <span className="font-mono">{config.phoneNumber}</span>
-                  </p>
-                )}
-                {isConnected && config?.businessAccountId && (
-                  <p className="text-sm mt-1 text-green-700 font-medium">
-                    💼 Account ID: <span className="font-mono text-xs">{config.businessAccountId}</span>
-                  </p>
-                )}
-                <p className={`text-sm mt-1 ${isConnected ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {isConnected
-                    ? `Connected since ${new Date(
-                        config?.connectedAt || ""
-                      ).toLocaleDateString()}`
-                    : "Please configure your WhatsApp platform credentials to get started"}
-                </p>
-                {config?.errorMessage && (
-                  <p className="text-sm mt-2 text-red-700">
-                    Error: {config.errorMessage}
-                  </p>
-                )}
               </div>
+              {isConnected && (
+                <Button
+                  onClick={handleDisconnect}
+                  disabled={isSaving}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50 flex-shrink-0"
+                >
+                  {isSaving ? "Disconnecting..." : "Disconnect"}
+                </Button>
+              )}
             </div>
           </div>
 

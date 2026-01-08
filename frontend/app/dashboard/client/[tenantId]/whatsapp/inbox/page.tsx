@@ -74,14 +74,15 @@ export default function InboxPage() {
       const response = await fetch(`/api/whatsapp/conversations?tenantId=${tenantId}`)
       if (response.ok) {
         const data = await response.json()
+        // Backend now returns transformed data with correct field names
         const transformed = (data.conversations || []).map((conv: any) => ({
-          id: conv.conversationId || conv._id,
-          phone: conv.userPhone,
-          phoneNumberId: conv.phoneNumberId,
-          name: conv.userName,
-          lastMessage: conv.lastMessagePreview,
-          lastMessageTime: conv.lastMessageAt,
-          unreadCount: conv.unreadCount,
+          id: conv.id,                      // MongoDB ID from backend
+          phone: conv.phone,                 // Already mapped as 'phone'
+          phoneNumberId: conv.phoneNumberId, // Already mapped
+          name: conv.name,                   // Already mapped as 'name'
+          lastMessage: conv.lastMessage,     // Already mapped as 'lastMessage'
+          lastMessageTime: conv.lastMessageTime, // Already mapped as 'lastMessageTime'
+          unreadCount: conv.unreadCount || 0,    // With fallback
         }))
         setConversations(transformed)
       }

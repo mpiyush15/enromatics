@@ -412,6 +412,12 @@ export const trackInteraction = async (req, res) => {
       return res.status(400).json({ success: false, message: "sessionId and page required" });
     }
 
+    // Skip PageView tracking for WhatsApp inbox (test)
+    if (page.includes('/whatsapp/inbox')) {
+      console.log(`⏭️ Skipping PageView for WhatsApp inbox: ${page}`);
+      return res.status(200).json({ success: true, skipped: true, reason: 'WhatsApp inbox tracking disabled for testing' });
+    }
+
     // CRITICAL FIX: Try to find pageview, create if missing (handles schema validation failures)
     let pageView = await PageView.findOne({
       sessionId,
