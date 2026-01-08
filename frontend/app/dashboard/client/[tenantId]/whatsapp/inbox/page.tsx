@@ -413,31 +413,9 @@ export default function InboxPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-gray-50">
+        <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
           {selectedConversation ? (
             <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 px-5 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Phone className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h2 className="font-semibold text-gray-900 text-sm">
-                        {selectedConversation.userName || selectedConversation.userProfileName || selectedConversation.userPhone || 'Unknown'}
-                      </h2>
-                      <p className="text-xs text-gray-600">
-                        {selectedConversation.userPhone || 'No phone'}
-                      </p>
-                    </div>
-                  </div>
-                  <button className="p-2 rounded-lg hover:bg-gray-100 transition">
-                    <MoreVertical className="h-5 w-5 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-
               {/* Messages Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {isLoadingMessages ? (
