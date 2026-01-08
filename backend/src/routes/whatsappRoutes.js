@@ -233,11 +233,11 @@ router.post('/messages/send', async (req, res) => {
 /**
  * GET /api/whatsapp/conversations
  * Fetch conversations for a tenant
- * Query params: tenantId (required)
+ * Query params: tenantId (required), limit (optional), offset (optional)
  */
 router.get('/conversations', async (req, res) => {
   try {
-    const { tenantId } = req.query;
+    const { tenantId, limit = 50, offset = 0 } = req.query;
 
     if (!tenantId) {
       return res.status(400).json({ error: 'tenantId is required' });
@@ -246,8 +246,12 @@ router.get('/conversations', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform using tenant API key
-    const conversations = await whatsappClient.getConversations(50, 0, config.apiKey);
+    // Fetch conversations from platform using tenant API key with correct method
+    const conversations = await whatsappClient.getAllConversations(
+      parseInt(limit),
+      parseInt(offset),
+      config.apiKey
+    );
 
     return res.json(conversations);
   } catch (error) {
@@ -413,33 +417,6 @@ router.get('/health', async (req, res) => {
       status: 'unhealthy',
       error: error.message 
     });
-  }
-});
-
-/**
- * GET /api/whatsapp/conversations
- * Fetch all conversations for a tenant
- * Query params: tenantId, limit (optional), offset (optional)
- */
-router.get('/conversations', async (req, res) => {
-  try {
-    const { tenantId, limit = 50, offset = 0 } = req.query;
-
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
-    }
-
-    const config = await getWhatsAppConfig(tenantId);
-    const conversations = await whatsappClient.getAllConversations(
-      parseInt(limit),
-      parseInt(offset),
-      config.apiKey
-    );
-
-    return res.json(conversations);
-  } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ error: error.message });
   }
 });
 
