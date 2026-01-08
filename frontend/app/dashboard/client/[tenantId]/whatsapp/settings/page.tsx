@@ -11,9 +11,21 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Users,
+  Phone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useParams } from "next/navigation"
+
+interface Contact {
+  _id: string
+  name: string
+  phone: string
+  whatsappNumber: string
+  messageCount: number
+  isOptedIn: boolean
+  createdAt: string
+}
 
 interface WhatsAppConfig {
   _id: string
@@ -33,7 +45,9 @@ export default function SettingsPage() {
   const tenantId = params.tenantId as string
 
   const [config, setConfig] = useState<WhatsAppConfig | null>(null)
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
@@ -45,6 +59,22 @@ export default function SettingsPage() {
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+
+  // Fetch contacts list
+  const fetchContacts = async () => {
+    try {
+      setIsLoadingContacts(true)
+      const response = await fetch(`/api/whatsapp/contacts?tenantId=${tenantId}&limit=100`)
+      if (response.ok) {
+        const data = await response.json()
+        setContacts(data.data || [])
+      }
+    } catch (error) {
+      console.error("Error fetching contacts:", error)
+    } finally {
+      setIsLoadingContacts(false)
+    }
+  }
 
   // Fetch config
   const fetchConfig = async () => {
@@ -61,6 +91,8 @@ export default function SettingsPage() {
             phoneNumber: data.config.phoneNumber || "",
             apiKey: data.config.apiKey || "",
           })
+          // Fetch contacts after loading config
+          await fetchContacts()
         }
       }
     } catch (error) {
@@ -216,11 +248,21 @@ export default function SettingsPage() {
               )}
               <div className="flex-1">
                 <h3 className={`text-lg font-semibold ${isConnected ? 'text-green-900' : 'text-yellow-900'}`}>
-                  {isConnected ? "Connected" : "Not Connected"}
+                  {isConnected ? "✅ Connected" : "⚠️ Not Connected"}
                 </h3>
+                {isConnected && config?.phoneNumber && (
+                  <p className="text-sm mt-2 text-green-700 font-medium">
+                    📱 Phone: <span className="font-mono">{config.phoneNumber}</span>
+                  </p>
+                )}
+                {isConnected && config?.businessAccountId && (
+                  <p className="text-sm mt-1 text-green-700 font-medium">
+                    💼 Account ID: <span className="font-mono text-xs">{config.businessAccountId}</span>
+                  </p>
+                )}
                 <p className={`text-sm mt-1 ${isConnected ? 'text-green-700' : 'text-yellow-700'}`}>
                   {isConnected
-                    ? `Connected to WhatsApp platform since ${new Date(
+                    ? `Connected since ${new Date(
                         config?.connectedAt || ""
                       ).toLocaleDateString()}`
                     : "Please configure your WhatsApp platform credentials to get started"}
@@ -423,6 +465,59 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Saved Contacts List */}
+          {isConnected && (
+            <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Users className="h-5 w-5 text-gray-700" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Saved Contacts ({contacts.length})
+                </h2>
+              </div>
+
+              {isLoadingContacts ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading contacts...</p>
+                </div>
+              ) : contacts.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <Phone className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500">No contacts saved yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {contacts.map((contact) => (
+                    <div
+                      key={contact._id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{contact.name}</p>
+                        <p className="text-sm text-gray-600 font-mono">{contact.whatsappNumber}</p>
+                        {contact.messageCount > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            💬 {contact.messageCount} messages
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {contact.isOptedIn ? (
+                          <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Opted In
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                            Opted Out
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

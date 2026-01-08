@@ -39,6 +39,7 @@ class WhatsAppPlatformClient {
         headers: {
           'Content-Type': 'application/json',
         },
+        timeout: 15000, // 15 second timeout
       };
 
       // Use tenant-specific API key if provided, otherwise fall back to default
