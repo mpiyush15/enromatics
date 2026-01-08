@@ -341,26 +341,26 @@ export default function InboxPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden bg-white">
         {/* Conversations List */}
-        <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
+        <div className="w-72 border-r border-gray-200 bg-white flex flex-col">
           {/* Search */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-3 border-b border-gray-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name or number..."
+                placeholder="Search conversations"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-9 pr-4 py-2 bg-gray-100 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
           </div>
 
-          {/* Conversations */}
+          {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
-            {isLoadingConversations && filteredConversations.length === 0 ? (
+            {isLoadingConversations ? (
               <div className="flex items-center justify-center h-full">
                 <Loader className="h-6 w-6 text-gray-400 animate-spin" />
               </div>
@@ -376,35 +376,33 @@ export default function InboxPage() {
                 <button
                   key={conv.id || conv._id}
                   onClick={() => handleSelectConversation(conv)}
-                  className={`w-full px-4 py-3 border-b border-gray-100 text-left transition ${
+                  className={`w-full px-4 py-3 border-b border-gray-100 text-left transition hover:bg-gray-50 ${
                     selectedConversation?.id === conv.id || selectedConversation?._id === conv._id
-                      ? "bg-green-50 border-l-4 border-l-green-600"
-                      : "hover:bg-gray-50"
+                      ? "bg-gray-50 border-l-4 border-l-green-600"
+                      : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 truncate">
+                        <h3 className="font-medium text-gray-900 text-sm truncate">
                           {conv.name || conv.userName || conv.userProfileName || conv.phone || conv.userPhone || 'Unknown'}
                         </h3>
                         {conv.unreadCount > 0 && (
-                          <span className="inline-block w-5 h-5 bg-green-600 text-white text-xs rounded-full flex items-center justify-center">
+                          <span className="inline-flex w-5 h-5 bg-green-500 text-white text-xs rounded-full items-center justify-center flex-shrink-0">
                             {conv.unreadCount}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 truncate">
-                        {conv.phone || conv.userPhone || 'Unknown'}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1 truncate">
+                      <p className="text-xs text-gray-600 mt-0.5 truncate">
                         {conv.lastMessagePreview || '[No messages]'}
                       </p>
                     </div>
-                    <div className="ml-2 text-xs text-gray-500 flex-shrink-0">
+                    <div className="text-xs text-gray-500 flex-shrink-0">
                       {new Date(conv.lastMessageAt).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
+                        hour: "numeric",
                         minute: "2-digit",
+                        hour12: true,
                       })}
                     </div>
                   </div>
@@ -419,11 +417,11 @@ export default function InboxPage() {
           {selectedConversation ? (
             <>
               {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+              <div className="bg-white border-b border-gray-200 px-5 py-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <Phone className="h-4 w-4 text-green-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Phone className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <h2 className="font-semibold text-gray-900 text-sm">
@@ -434,14 +432,14 @@ export default function InboxPage() {
                       </p>
                     </div>
                   </div>
-                  <button className="p-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">
-                    <MoreVertical className="h-4 w-4" />
+                  <button className="p-2 rounded-lg hover:bg-gray-100 transition">
+                    <MoreVertical className="h-5 w-5 text-gray-600" />
                   </button>
                 </div>
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
                 {isLoadingMessages ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader className="h-6 w-6 text-gray-400 animate-spin" />
@@ -460,27 +458,25 @@ export default function InboxPage() {
                       className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-xs px-3 py-1.5 rounded-lg text-sm ${
+                        className={`max-w-md px-3 py-2 rounded-lg text-sm ${
                           msg.direction === "outbound"
                             ? "bg-green-600 text-white rounded-br-none"
-                            : "bg-gray-200 text-gray-900 rounded-bl-none"
+                            : "bg-gray-300 text-gray-900 rounded-bl-none"
                         }`}
                       >
                         <p className="break-words">
                           {msg.content?.text ||
-                            `[${(msg.messageType || 'unknown').toUpperCase()}] ${msg.content?.caption || msg.content?.url || ''}`}
+                            `[${(msg.messageType || 'unknown').toUpperCase()}]`}
                         </p>
-                        <div className="flex items-center justify-between gap-1.5 mt-0.5">
-                          <p className={`text-xs ${msg.direction === "outbound" ? "text-green-100" : "text-gray-600"}`}>
+                        <div className="flex items-center justify-end gap-2 mt-1">
+                          <span className={`text-xs opacity-70`}>
                             {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString("en-US", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
-                          </p>
+                          </span>
                           {msg.direction === "outbound" && (
-                            <span className={`text-xs font-bold ${
-                              msg.status === "read" ? "text-blue-300" : "text-green-100"
-                            }`}>
+                            <span className={`text-xs`}>
                               {msg.status === "read" && "✓✓"}
                               {msg.status === "delivered" && "✓✓"}
                               {msg.status === "sent" && "✓"}
@@ -492,7 +488,7 @@ export default function InboxPage() {
                       </div>
                     </div>
                   ))
-                )}
+                )}}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -516,10 +512,9 @@ export default function InboxPage() {
                   <button
                     onClick={handleSendMessage}
                     disabled={!messageText.trim() || isSendingMessage}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <Send className="h-4 w-4" />
-                    {isSendingMessage ? "Sending..." : "Send"}
                   </button>
                 </div>
               </div>
