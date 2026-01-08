@@ -98,7 +98,8 @@ export const sidebarLinks = [
         children: [
           { label: "📧 Inbox", href: "/dashboard/client/[tenantId]/whatsapp/inbox", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
           { label: "🤖 Chatbot", href: "/dashboard/client/[tenantId]/whatsapp/chatbot", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
-          { label: "📢 Broadcasts", href: "/dashboard/client/[tenantId]/whatsapp/broadcasts", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "📢 Broadcasts", href: "/dashboard/client/[tenantId]/whatsapp/broadcast", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
+          { label: "📋 Templates", href: "/dashboard/client/[tenantId]/whatsapp/templates", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "👥 Contacts", href: "/dashboard/client/[tenantId]/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
           { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/whatsapp/analytics", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
           { label: "⚙️ Settings", href: "/dashboard/client/[tenantId]/whatsapp/settings", roles: ["SuperAdmin", "tenantAdmin"] },

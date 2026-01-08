@@ -13,6 +13,8 @@ import {
   Eye,
   MoreVertical,
   Search,
+  TrendingUp,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useParams } from "next/navigation"
@@ -282,6 +284,14 @@ export default function ChatbotPage() {
                             <MessageCircle className="h-4 w-4" />
                             <span>
                               {chatbot.conversationsCount} conversations
+                            </span>
+                          </div>
+                        )}
+                        {chatbot.successRate !== undefined && (
+                          <div className="flex items-center gap-1.5">
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                            <span className="font-medium text-green-600">
+                              {chatbot.successRate}% success
                             </span>
                           </div>
                         )}

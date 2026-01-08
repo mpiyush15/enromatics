@@ -269,6 +269,55 @@ router.post('/messages/send', async (req, res) => {
 });
 
 /**
+ * GET /api/whatsapp/messages/stats
+ * Get message statistics (sent, delivered, read, failed counts)
+ * Query params: tenantId (required), conversationId (optional), days (optional)
+ */
+router.get('/messages/stats', async (req, res) => {
+  try {
+    const { tenantId, conversationId, days = 30 } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    // Get date range
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - parseInt(days));
+
+    // Get config for API key
+    const config = await getWhatsAppConfig(tenantId);
+
+    // Fetch stats from platform using tenant API key
+    const stats = await whatsappClient.getMessageStats(
+      config.apiKey,
+      conversationId,
+      dateFrom.toISOString()
+    );
+
+    return res.json({
+      stats: {
+        totalMessages: stats.total || 0,
+        sentCount: stats.sent || 0,
+        deliveredCount: stats.delivered || 0,
+        readCount: stats.read || 0,
+        failedCount: stats.failed || 0,
+        inboundCount: stats.inbound || 0,
+        outboundCount: stats.outbound || 0,
+      },
+      dateRange: {
+        from: dateFrom,
+        to: new Date(),
+        days: parseInt(days),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching message stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/whatsapp/conversations
  * Fetch conversations for a tenant
  * Query params: tenantId (required), limit (optional), offset (optional)

@@ -92,30 +92,46 @@ export const sidebarLinks = [
     roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
     children: [
       {
-        label: "🤖 Automation",
-        href: "/dashboard/whatsapp/automation",
-        roles: ["tenantAdmin", "SuperAdmin"], // Automation for admins
+        label: "📧 Inbox",
+        href: "/dashboard/client/[tenantId]/whatsapp/inbox",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/inbox",
+        roles: ["tenantAdmin", "SuperAdmin"],
       },
       {
-        label: "📥 Inbox",
-        href: "/dashboard/whatsapp/inbox",
-        roles: ["tenantAdmin", "SuperAdmin"], // Inbox restricted to admins only
+        label: "🤖 Chatbot",
+        href: "/dashboard/client/[tenantId]/whatsapp/chatbot",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/chatbot",
+        roles: ["tenantAdmin", "SuperAdmin"],
       },
       {
-        label: "📢 Campaigns",
-        href: "/dashboard/whatsapp/campaigns",
+        label: "📢 Broadcasts",
+        href: "/dashboard/client/[tenantId]/whatsapp/broadcast",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/broadcast",
+        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
+      },
+      {
+        label: "📋 Templates",
+        href: "/dashboard/client/[tenantId]/whatsapp/templates",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/templates",
+        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
       },
       {
         label: "👥 Contacts",
-        href: "/dashboard/whatsapp/contacts",
+        href: "/dashboard/client/[tenantId]/whatsapp/contacts",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/contacts",
+        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
       },
       {
-        label: "📊 Reports",
-        href: "/dashboard/whatsapp/reports",
+        label: "📈 Analytics",
+        href: "/dashboard/client/[tenantId]/whatsapp/analytics",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/analytics",
+        roles: ["tenantAdmin", "SuperAdmin"],
       },
       {
         label: "⚙️ Settings",
-        href: "/dashboard/whatsapp/settings",
+        href: "/dashboard/client/[tenantId]/whatsapp/settings",
+        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/settings",
+        roles: ["tenantAdmin", "SuperAdmin"],
       },
     ],
   },

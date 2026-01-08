@@ -17,9 +17,13 @@ import {
   Image as ImageIcon,
   FileText,
   Play,
+  Loader,
+  Volume2,
+  Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useParams } from "next/navigation"
+import Image from "next/image"
 
 interface Contact {
   id: string
@@ -30,6 +34,7 @@ interface Contact {
   lastMessageTime?: string
   unreadCount?: number
   profilePic?: string
+  isOnline?: boolean
 }
 
 interface Message {
@@ -45,6 +50,10 @@ interface Message {
   sentAt?: string
   deliveredAt?: string
   readAt?: string
+  mediaUrl?: string
+  mediaType?: string
+  fileName?: string
+  fileSize?: number
 }
 
 export default function InboxPage() {
@@ -59,7 +68,9 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [typingUser, setTypingUser] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [onlineContactIds, setOnlineContactIds] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -265,12 +276,145 @@ export default function InboxPage() {
     })
   }
 
+  // Format date for display in date separator
+  const formatDateSeparator = (isoString: string): string => {
+    const date = new Date(isoString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today"
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday"
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+      })
+    }
+  }
+
+  // Check if should show date separator between messages
+  const shouldShowDateSeparator = (currentMsg: Message, prevMsg: Message | null): boolean => {
+    if (!prevMsg) return true
+    const currentDate = new Date(currentMsg.createdAt).toDateString()
+    const prevDate = new Date(prevMsg.createdAt).toDateString()
+    return currentDate !== prevDate
+  }
+
+  // Check if contact is online (last message < 5 minutes ago)
+  const isContactOnline = (contact: Contact): boolean => {
+    if (!contact.lastMessageTime) return false
+    const lastMessageTime = new Date(contact.lastMessageTime).getTime()
+    const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000
+    return lastMessageTime > fiveMinutesAgo
+  }
+
+  // Get media preview icon/emoji for conversation list
+  const getMediaPreviewIcon = (lastMessage: string | undefined): string => {
+    if (!lastMessage) return ""
+    if (lastMessage.includes("🖼️") || lastMessage.includes("[Image]")) return "🖼️"
+    if (lastMessage.includes("🎥") || lastMessage.includes("[Video]")) return "🎥"
+    if (lastMessage.includes("📄") || lastMessage.includes("[Document]")) return "📄"
+    if (lastMessage.includes("🎵") || lastMessage.includes("[Audio]")) return "🎵"
+    return ""
+  }
+
   const getStatusIcon = (message: Message) => {
     if (message.direction === "inbound") return null
-    if (message.status === "read") return <CheckCheck className="h-4 w-4 text-blue-600" />
-    if (message.status === "delivered") return <CheckCheck className="h-4 w-4 text-gray-600" />
-    if (message.status === "sent") return <Check className="h-4 w-4 text-gray-600" />
-    return <Clock className="h-4 w-4 text-gray-400" />
+    
+    switch (message.status) {
+      case "read":
+        return <CheckCheck className="h-4 w-4 text-[#53bdeb]" />
+      case "delivered":
+        return <CheckCheck className="h-4 w-4 text-[#667781]" />
+      case "sent":
+        return <Check className="h-4 w-4 text-[#667781]" />
+      case "failed":
+        return <AlertCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-[#667781]" />
+    }
+  }
+
+  // Render media message content
+  const renderMessageContent = (message: Message) => {
+    const { messageType, content, mediaUrl, mediaType, fileName } = message
+
+    switch (messageType.toLowerCase()) {
+      case "image":
+      case "media":
+        if (mediaUrl || content?.url) {
+          return (
+            <div className="relative group">
+              <img
+                src={mediaUrl || content.url}
+                alt="Message image"
+                className="max-w-xs rounded-lg max-h-72"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition rounded-lg flex items-center justify-center">
+                <Download className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition" />
+              </div>
+            </div>
+          )
+        }
+        break
+
+      case "video":
+        if (mediaUrl || content?.url) {
+          return (
+            <div className="relative max-w-xs rounded-lg overflow-hidden bg-black">
+              <video
+                src={mediaUrl || content.url}
+                controls
+                className="max-h-72 w-full"
+              />
+            </div>
+          )
+        }
+        break
+
+      case "document":
+      case "file":
+        return (
+          <div className="flex items-center gap-2 bg-opacity-10 bg-gray-200 p-3 rounded-lg max-w-xs">
+            <FileText className="h-6 w-6 text-[#667781] flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{fileName || "Document"}</p>
+              {content?.size && (
+                <p className="text-xs text-gray-500">
+                  {(content.size / 1024).toFixed(1)} KB
+                </p>
+              )}
+            </div>
+          </div>
+        )
+
+      case "audio":
+        if (mediaUrl || content?.url) {
+          return (
+            <div className="flex items-center gap-2 max-w-xs">
+              <button className="p-2 bg-green-600 rounded-full hover:bg-green-700">
+                <Play className="h-4 w-4 text-white fill-white" />
+              </button>
+              <audio
+                controls
+                className="flex-1"
+                src={mediaUrl || content.url}
+              />
+            </div>
+          )
+        }
+        break
+
+      case "text":
+      default:
+        return <p className="text-sm break-words">{content?.text || ""}</p>
+    }
+
+    return <p className="text-sm break-words">{content?.text || ""}</p>
   }
 
   return (
@@ -300,45 +444,58 @@ export default function InboxPage() {
               <p className="text-sm mt-1">Start by sending a message</p>
             </div>
           ) : (
-            filteredConversations.map((contact) => (
-              <button
-                key={contact.id}
-                onClick={() => setSelectedContact(contact)}
-                className={`w-full p-3 flex items-center gap-3 hover:bg-[#f5f6f6] transition border-b border-gray-100 ${
-                  selectedContact?.id === contact.id ? "bg-[#f0f2f5]" : "bg-white"
-                }`}
-              >
-                <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-green-700 font-medium">
-                    {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-[#111b21] truncate text-[17px]">
-                      {contact.name || contact.phone}
-                    </p>
-                    {contact.lastMessageTime && (
-                      <span className="text-xs text-[#667781] ml-2 flex-shrink-0">
-                        {formatTime(contact.lastMessageTime)}
+            filteredConversations.map((contact) => {
+              const online = isContactOnline(contact)
+              const mediaIcon = getMediaPreviewIcon(contact.lastMessage)
+              return (
+                <button
+                  key={contact.id}
+                  onClick={() => setSelectedContact(contact)}
+                  className={`w-full p-3 flex items-center gap-3 hover:bg-[#f5f6f6] transition border-b border-gray-100 ${
+                    selectedContact?.id === contact.id ? "bg-[#f0f2f5]" : "bg-white"
+                  }`}
+                >
+                  {/* Avatar with online indicator */}
+                  <div className="relative flex-shrink-0">
+                    <div className="h-12 w-12 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center">
+                      <span className="text-green-700 font-medium text-sm">
+                        {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
                       </span>
+                    </div>
+                    {/* Online indicator dot */}
+                    {online && (
+                      <div className="absolute bottom-0 right-0 h-3 w-3 bg-[#25d366] border-2 border-white rounded-full"></div>
                     )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-[#667781] truncate max-w-[200px]">
-                      {contact.lastMessage || "No messages yet"}
-                    </p>
-                    {(contact.unreadCount ?? 0) > 0 && (
-                      <div className="h-5 min-w-[20px] bg-[#25d366] rounded-full flex items-center justify-center px-1.5 ml-2">
-                        <span className="text-xs font-semibold text-white">
-                          {(contact.unreadCount ?? 0) > 99 ? "99+" : contact.unreadCount}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-[#111b21] truncate text-[17px]">
+                        {contact.name || contact.phone}
+                      </p>
+                      {contact.lastMessageTime && (
+                        <span className="text-xs text-[#667781] ml-2 flex-shrink-0">
+                          {formatTime(contact.lastMessageTime)}
                         </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-[#667781] truncate max-w-[200px]">
+                        {mediaIcon && <span className="mr-1">{mediaIcon}</span>}
+                        {contact.lastMessage || "No messages yet"}
+                      </p>
+                      {(contact.unreadCount ?? 0) > 0 && (
+                        <div className="h-5 min-w-[20px] bg-[#25d366] rounded-full flex items-center justify-center px-1.5 ml-2">
+                          <span className="text-xs font-semibold text-white">
+                            {(contact.unreadCount ?? 0) > 99 ? "99+" : contact.unreadCount}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))
+                </button>
+              )
+            })
           )}
         </div>
       </div>
@@ -350,18 +507,44 @@ export default function InboxPage() {
             {/* Chat Header */}
             <div className="bg-[#f0f2f5] border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-700 font-medium text-sm">
-                    {selectedContact.name?.[0]?.toUpperCase() || selectedContact.phone[0]}
-                  </span>
+                {/* Avatar */}
+                <div className="relative">
+                  <div className="h-10 w-10 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center">
+                    <span className="text-green-700 font-medium text-sm">
+                      {selectedContact.name?.[0]?.toUpperCase() || selectedContact.phone[0]}
+                    </span>
+                  </div>
+                  {/* Online indicator */}
+                  {isContactOnline(selectedContact) && (
+                    <div className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-[#25d366] border-2 border-white rounded-full"></div>
+                  )}
                 </div>
+
                 <div>
                   <p className="font-medium text-gray-900">
                     {selectedContact.name || selectedContact.phone}
                   </p>
-                  <p className="text-xs text-gray-600">Active now</p>
+                  <p className="text-xs text-gray-600">
+                    {isTyping ? (
+                      <span className="flex items-center gap-1">
+                        <span>typing</span>
+                        <span className="flex gap-0.5">
+                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce"></span>
+                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></span>
+                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></span>
+                        </span>
+                      </span>
+                    ) : isContactOnline(selectedContact) ? (
+                      <span className="text-[#25d366] font-medium">Active now</span>
+                    ) : (
+                      <span>
+                        Last seen {selectedContact.lastMessageTime ? formatTime(selectedContact.lastMessageTime) : "never"}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
                   <Phone className="h-5 w-5 text-gray-600" />
@@ -376,40 +559,79 @@ export default function InboxPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
               {isLoading && messages.length === 0 && (
                 <div className="flex justify-center items-center h-full">
-                  <div className="animate-spin">
-                    <MessageSquare className="h-8 w-8 text-gray-400" />
+                  <div className="text-center">
+                    <Loader className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">Loading messages...</p>
                   </div>
                 </div>
               )}
-              {messages.map((message) => (
-                <div
-                  key={message._id}
-                  className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${
-                      message.direction === "outbound"
-                        ? "bg-[#dcf8c6] text-[#111b21]"
-                        : "bg-white text-[#111b21] border border-gray-200"
-                    }`}
-                  >
-                    <p className="text-sm">{message.content?.text || ""}</p>
-                    <div
-                      className={`flex items-center justify-end gap-1 mt-1 text-xs ${
-                        message.direction === "outbound"
-                          ? "text-[#667781]"
-                          : "text-[#667781]"
-                      }`}
-                    >
-                      <span>{formatTime(message.createdAt)}</span>
-                      {message.direction === "outbound" && getStatusIcon(message)}
-                    </div>
+
+              {messages.length === 0 && !isLoading && (
+                <div className="flex justify-center items-center h-full">
+                  <div className="text-center">
+                    <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No messages yet</p>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {messages.map((message, index) => {
+                const prevMessage = index > 0 ? messages[index - 1] : null
+                const showDateSeparator = shouldShowDateSeparator(message, prevMessage)
+
+                return (
+                  <div key={message._id}>
+                    {/* Date Separator */}
+                    {showDateSeparator && (
+                      <div className="flex items-center gap-3 my-4">
+                        <div className="flex-1 border-t border-gray-200"></div>
+                        <span className="text-xs text-[#667781] px-3 py-1 bg-gray-50 rounded-full">
+                          {formatDateSeparator(message.createdAt)}
+                        </span>
+                        <div className="flex-1 border-t border-gray-200"></div>
+                      </div>
+                    )}
+
+                    {/* Message */}
+                    <div
+                      className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-md px-4 py-2.5 rounded-lg break-words ${
+                          message.direction === "outbound"
+                            ? "bg-[#dcf8c6] text-[#111b21]"
+                            : "bg-white text-[#111b21] border border-[#e5e5ea]"
+                        }`}
+                      >
+                        {/* Message Content */}
+                        <div className="text-sm">
+                          {renderMessageContent(message)}
+                        </div>
+
+                        {/* Message Footer with Time and Status */}
+                        <div
+                          className={`flex items-center justify-end gap-1.5 mt-1 text-xs ${
+                            message.direction === "outbound"
+                              ? "text-[#667781]"
+                              : "text-[#667781]"
+                          }`}
+                        >
+                          <span>{formatTime(message.createdAt)}</span>
+                          {message.direction === "outbound" && (
+                            <div className="flex items-center">
+                              {getStatusIcon(message)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
               <div ref={messagesEndRef} />
             </div>
 

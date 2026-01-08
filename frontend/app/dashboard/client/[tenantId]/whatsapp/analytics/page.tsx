@@ -9,6 +9,9 @@ import {
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  Check,
+  CheckCheck,
+  AlertCircle,
 } from "lucide-react"
 import { useParams } from "next/navigation"
 
@@ -22,11 +25,18 @@ interface Stats {
   activeConversations: number
   deliveryRate: number
   readRate: number
+  sentCount?: number
+  deliveredCount?: number
+  readCount?: number
+  failedCount?: number
   dailyStats: Array<{
     date: string
     sent: number
     received: number
     conversations: number
+    delivered?: number
+    read?: number
+    failed?: number
   }>
 }
 
@@ -269,6 +279,69 @@ export default function AnalyticsPage() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Message Status Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-600 text-sm font-medium">Sent</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Check className="h-4 w-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.sentCount || 0}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {stats.totalMessages > 0 
+                ? Math.round(((stats.sentCount || 0) / stats.totalMessages) * 100)
+                : 0}% of total
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-600 text-sm font-medium">Delivered</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <CheckCheck className="h-4 w-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.deliveredCount || 0}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {stats.totalMessages > 0
+                ? Math.round(((stats.deliveredCount || 0) / stats.totalMessages) * 100)
+                : 0}% of total
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-600 text-sm font-medium">Read</p>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCheck className="h-4 w-4 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.readCount || 0}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {stats.totalMessages > 0
+                ? Math.round(((stats.readCount || 0) / stats.totalMessages) * 100)
+                : 0}% of total
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-gray-600 text-sm font-medium">Failed</p>
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.failedCount || 0}</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {stats.totalMessages > 0
+                ? Math.round(((stats.failedCount || 0) / stats.totalMessages) * 100)
+                : 0}% of total
+            </p>
           </div>
         </div>
 
