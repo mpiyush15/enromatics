@@ -282,9 +282,9 @@ export default function InboxPage() {
   const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MessageCircle className="h-6 w-6 text-green-600" />
@@ -325,23 +325,23 @@ export default function InboxPage() {
         </div>
       </div>
 
-      {/* Error/Success Messages */}
-      {error && (
-        <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-2 text-red-700">
-          <AlertCircle className="h-5 w-5" />
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-2 text-green-700">
-          <CheckCircle className="h-5 w-5" />
-          {successMessage}
-        </div>
-      )}
-
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden bg-white">
+        {/* Error/Success Messages - Overlay */}
+        {error && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 px-6 py-3 flex items-center gap-2 text-red-700 rounded-lg shadow-lg z-50">
+            <AlertCircle className="h-5 w-5" />
+            {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-50 border border-green-200 px-6 py-3 flex items-center gap-2 text-green-700 rounded-lg shadow-lg z-50">
+            <CheckCircle className="h-5 w-5" />
+            {successMessage}
+          </div>
+        )}
+
         {/* Conversations List */}
         <div className="w-72 border-r border-gray-200 bg-white flex flex-col">
           {/* Search */}
