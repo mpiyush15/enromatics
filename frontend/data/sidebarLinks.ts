@@ -97,6 +97,11 @@ export const sidebarLinks = [
         roles: ["tenantAdmin", "SuperAdmin"],
       },
       {
+        label: "📋 Templates",
+        href: "/dashboard/client/[tenantId]/whatsapp/templates",
+        roles: ["tenantAdmin", "SuperAdmin"],
+      },
+      {
         label: "⚙️ Settings",
         href: "/dashboard/client/[tenantId]/whatsapp/settings",
         roles: ["tenantAdmin", "SuperAdmin"],

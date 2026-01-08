@@ -568,6 +568,124 @@ router.get('/account-info', async (req, res) => {
 });
 
 /**
+ * GET /api/whatsapp/templates
+ * Fetch WhatsApp templates from Meta Business API via Platform
+ * Query params: tenantId (required), status (optional - approved/pending/rejected)
+ */
+router.get('/templates', async (req, res) => {
+  try {
+    const { tenantId, status = 'approved' } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenantId parameter' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    
+    console.log(`📋 Fetching templates for tenant: ${tenantId}, status: ${status}`);
+
+    // Call WhatsApp Platform templates endpoint
+    const response = await fetch(
+      `https://whatsapp-platform-production-e48b.up.railway.app/api/integrations/templates?status=${status}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Platform API error: ${response.status}`, errorData);
+      return res.status(response.status).json({ 
+        error: `Failed to fetch templates from platform: ${response.statusText}`,
+        details: errorData 
+      });
+    }
+
+    const data = await response.json();
+    console.log(`✅ Templates fetched:`, data.templates?.length || 0);
+
+    // Return formatted response
+    res.status(200).json({
+      success: true,
+      data: {
+        templates: data.templates || [],
+        stats: data.stats || {}
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch templates',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/templates/sync
+ * Sync templates from Meta to Platform
+ * Body: { tenantId }
+ */
+router.post('/templates/sync', async (req, res) => {
+  try {
+    const { tenantId } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenantId' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    
+    console.log(`🔄 Syncing templates for tenant: ${tenantId}`);
+
+    // For now, just fetch templates as "sync" 
+    // (Platform will handle actual Meta sync internally)
+    const response = await fetch(
+      'https://whatsapp-platform-production-e48b.up.railway.app/api/integrations/templates?status=approved',
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Platform API error: ${response.status}`, errorData);
+      return res.status(response.status).json({ 
+        error: `Failed to sync templates from platform: ${response.statusText}`,
+        details: errorData 
+      });
+    }
+
+    const data = await response.json();
+    const count = data.templates?.length || 0;
+    console.log(`✅ Templates synced:`, count);
+
+    // Return formatted response
+    res.status(200).json({
+      success: true,
+      data: {
+        count: count,
+        synced: data.templates || []
+      }
+    });
+  } catch (error) {
+    console.error('Error syncing templates:', error);
+    res.status(500).json({ 
+      error: 'Failed to sync templates',
+      details: error.message 
+    });
+  }
+});
+
+/**
  * GET /api/whatsapp/health
  * Check WhatsApp Platform health status
  * Query params: tenantId (required)
