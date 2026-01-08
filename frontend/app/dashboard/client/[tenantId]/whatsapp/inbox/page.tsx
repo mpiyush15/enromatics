@@ -71,11 +71,7 @@ export default function InboxPage() {
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {
-      const response = await fetch(`/api/whatsapp/conversations?accountId=${tenantId}`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
-        },
-      })
+      const response = await fetch(`/api/whatsapp/conversations?tenantId=${tenantId}`)
       if (response.ok) {
         const data = await response.json()
         const transformed = (data.conversations || []).map((conv: any) => ({
@@ -102,12 +98,7 @@ export default function InboxPage() {
     try {
       setIsLoading(true)
       const response = await fetch(
-        `/api/whatsapp/conversations/${encodeURIComponent(contactId)}/messages`,
-        {
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
-          },
-        }
+        `/api/whatsapp/conversation/${encodeURIComponent(contactId)}?tenantId=${tenantId}`
       )
       if (response.ok) {
         const data = await response.json()
@@ -120,7 +111,7 @@ export default function InboxPage() {
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [])
+  }, [tenantId])
 
   useEffect(() => {
     fetchConversations()

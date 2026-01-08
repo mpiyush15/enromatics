@@ -51,11 +51,7 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/whatsapp/contacts?accountId=${tenantId}`, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
-        },
-      })
+      const response = await fetch(`/api/whatsapp/contacts?tenantId=${tenantId}`)
       if (response.ok) {
         const data = await response.json()
         setContacts(data.contacts || [])

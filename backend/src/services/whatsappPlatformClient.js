@@ -414,6 +414,58 @@ class WhatsAppPlatformClient {
   async testConnection(accountId) {
     return this.request('GET', '/health', null, { accountId });
   }
+
+  // ============ CONVERSATION DETAILS ============
+
+  /**
+   * Get single conversation details
+   * @param {string} conversationId - Conversation ID
+   */
+  async getConversationDetail(conversationId) {
+    return this.request('GET', `/conversations/${conversationId}`);
+  }
+
+  /**
+   * Mark conversation as read
+   * @param {string} conversationId - Conversation ID
+   */
+  async markAsRead(conversationId) {
+    return this.request('PATCH', `/conversations/${conversationId}/read`);
+  }
+
+  // ============ BROADCAST MESSAGING ============
+
+  /**
+   * Send broadcast message to multiple contacts
+   * @param {array} contactIds - Array of contact IDs
+   * @param {string} message - Message text
+   * @param {string} templateName - Optional template name
+   */
+  async sendBroadcast(contactIds, message, templateName = null) {
+    const data = {
+      contactIds,
+      message,
+      templateName
+    };
+    return this.request('POST', '/broadcast', data);
+  }
+
+  // ============ ACCOUNT/SETUP ============
+
+  /**
+   * Get account configuration and phone numbers
+   * @param {string} accountId - Account ID
+   */
+  async getAccountInfo(accountId) {
+    return this.request('GET', '/account/config', null, { accountId });
+  }
+
+  /**
+   * Get health status of platform
+   */
+  async getHealth() {
+    return this.request('GET', '/health', null, {});
+  }
 }
 
 export default new WhatsAppPlatformClient();

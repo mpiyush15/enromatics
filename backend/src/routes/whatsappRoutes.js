@@ -119,15 +119,16 @@ router.post('/config', async (req, res) => {
       try {
         console.log('🔍 Verifying WhatsApp Platform connection with provided API key...');
         
-        // Try to fetch stats with the provided API key to verify it works
-        const stats = await whatsappClient.getStats(apiKey);
+        // Try to fetch conversations with the provided API key to verify it works
+        // Using conversations endpoint which is more reliable than stats
+        const conversations = await whatsappClient.getConversations(1, 0, apiKey);
         
-        if (stats && stats.success) {
+        if (conversations && (conversations.success !== false)) {
           connectionStatus = 'connected';
           console.log('✅ WhatsApp Platform connection verified successfully');
         } else {
           connectionStatus = 'error';
-          errorMessage = 'Failed to verify connection: ' + (stats?.error || 'Unknown error');
+          errorMessage = 'Failed to verify connection: ' + (conversations?.error || 'Unknown error');
           console.warn('⚠️ Connection verification failed:', errorMessage);
         }
       } catch (verifyError) {
@@ -304,6 +305,114 @@ router.get('/stats', async (req, res) => {
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/conversation/:conversationId
+ * Get single conversation details
+ * Params: conversationId (required)
+ * Query params: tenantId (required)
+ */
+router.get('/conversation/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const conversation = await whatsappClient.getConversationDetail(conversationId);
+
+    return res.json(conversation);
+  } catch (error) {
+    console.error('Error fetching conversation details:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/whatsapp/broadcast
+ * Send broadcast message to multiple contacts
+ * Body: { tenantId, contactIds[], message, templateName? }
+ */
+router.post('/broadcast', async (req, res) => {
+  try {
+    const { tenantId, contactIds, message, templateName } = req.body;
+
+    if (!tenantId || !contactIds || !message) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: tenantId, contactIds, message' 
+      });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const result = await whatsappClient.sendBroadcast(contactIds, message, templateName, config.apiKey);
+
+    return res.json({
+      success: true,
+      message: 'Broadcast sent successfully',
+      result
+    });
+  } catch (error) {
+    console.error('Error sending broadcast:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/account-info
+ * Get account configuration and info
+ * Query params: tenantId (required)
+ */
+router.get('/account-info', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const accountInfo = await whatsappClient.getAccountInfo(config.businessAccountId);
+
+    return res.json(accountInfo);
+  } catch (error) {
+    console.error('Error fetching account info:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/whatsapp/health
+ * Check WhatsApp Platform health status
+ * Query params: tenantId (required)
+ */
+router.get('/health', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    const health = await whatsappClient.getHealth();
+
+    return res.json({
+      success: true,
+      status: 'healthy',
+      platform: health
+    });
+  } catch (error) {
+    console.error('Error checking health:', error);
+    res.status(503).json({ 
+      success: false,
+      status: 'unhealthy',
+      error: error.message 
+    });
   }
 });
 
