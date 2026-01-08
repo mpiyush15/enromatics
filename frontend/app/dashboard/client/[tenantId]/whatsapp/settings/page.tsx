@@ -100,7 +100,17 @@ export default function SettingsPage() {
       })
 
       if (response.ok) {
-        setSuccessMessage("Configuration saved successfully")
+        const data = await response.json()
+        
+        // Show connection status in success message
+        if (data.connectionStatus === 'connected') {
+          setSuccessMessage("✅ Configuration saved and verified! WhatsApp account is connected.")
+        } else if (data.connectionStatus === 'error') {
+          setErrorMessage("⚠️ Configuration saved but verification failed: " + (data.config?.errorMessage || "Unknown error"))
+        } else {
+          setSuccessMessage("Configuration saved successfully")
+        }
+        
         await fetchConfig()
       } else {
         const error = await response.json()
