@@ -130,6 +130,9 @@ const tenantSchema = new mongoose.Schema(
       apiKey: { type: String, default: null },
       accessToken: { type: String, default: null },
       isConfigured: { type: Boolean, default: false },
+      connectionStatus: { type: String, enum: ['connected', 'disconnected', 'error'], default: 'disconnected' },
+      connectedAt: { type: Date, default: null },
+      errorMessage: { type: String, default: null },
       updatedAt: { type: Date, default: null },
     },
 
