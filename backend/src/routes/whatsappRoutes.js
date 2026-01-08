@@ -344,13 +344,19 @@ router.get('/conversations', async (req, res) => {
 
     // Transform Platform response to frontend format
     const conversations = (response.data?.conversations || []).map(conv => ({
-      id: conv._id,                                    // MongoDB ID
+      _id: conv._id,                                  // MongoDB ID (required for fetching messages)
+      id: conv._id,                                    // MongoDB ID (alias for compatibility)
       conversationId: conv.conversationId,             // Platform conversation ID
       phone: conv.userPhone,                          // Customer phone
       phoneNumberId: conv.phoneNumberId,              // Phone number ID
+      userPhone: conv.userPhone,                      // Customer phone (alias)
       name: conv.userProfileName || conv.userName,    // Display name (prefer profile name)
+      userName: conv.userName,                        // User name (alias)
+      userProfileName: conv.userProfileName,          // User profile name (alias)
       lastMessage: conv.lastMessagePreview,           // Last message text
+      lastMessagePreview: conv.lastMessagePreview,    // Last message preview (alias)
       lastMessageTime: conv.lastMessageAt,            // Last message timestamp
+      lastMessageAt: conv.lastMessageAt,              // Last message time (alias)
       lastMessageType: conv.lastMessageType,          // Message type (text/image/etc)
       unreadCount: conv.unreadCount || 0,             // Unread count
       status: conv.status,                            // Conversation status (open/closed)
@@ -542,18 +548,22 @@ router.get('/health', async (req, res) => {
  * GET /api/whatsapp/conversation/:conversationId/messages
  * Fetch messages for a specific conversation
  * Query params: tenantId, limit (optional), offset (optional)
- * Path params: conversationId
+ * Path params: conversationId (can be MongoDB _id or conversationId string)
  */
 router.get('/conversation/:conversationId/messages', async (req, res) => {
   try {
     const { tenantId, limit = 50, offset = 0 } = req.query;
-    const { conversationId } = req.params;
+    let { conversationId } = req.params;
 
     if (!tenantId) {
       return res.status(400).json({ error: 'tenantId is required' });
     }
 
     const config = await getWhatsAppConfig(tenantId);
+    
+    // Try to fetch messages - the conversationId parameter should be the MongoDB _id
+    // If it's not a valid MongoDB ObjectId, it will be treated as conversationId
+    // and the WhatsApp Platform will reject it
     const messages = await whatsappClient.getConversationMessages(
       conversationId,
       parseInt(limit),

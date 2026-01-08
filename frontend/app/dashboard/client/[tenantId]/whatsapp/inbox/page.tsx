@@ -117,13 +117,13 @@ export default function InboxPage() {
   }
 
   // Fetch messages for selected conversation
-  const fetchMessages = async (conversationId: string, silent = false) => {
+  const fetchMessages = async (conversationMongoId: string, silent = false) => {
     try {
       if (!silent) setIsLoadingMessages(true)
-      console.log(`📬 Fetching messages for conversation: ${conversationId}`)
+      console.log(`📬 Fetching messages for conversation: ${conversationMongoId}`)
       
       const response = await fetch(
-        `/api/whatsapp/messages?conversationId=${conversationId}&tenantId=${tenantId}&limit=50&offset=0`,
+        `/api/whatsapp/messages?conversationId=${conversationMongoId}&tenantId=${tenantId}&limit=50&offset=0`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
@@ -161,7 +161,7 @@ export default function InboxPage() {
       setIsSendingMessage(true)
       setError("")
 
-      console.log(`📤 Sending message to conversation: ${selectedConversation.conversationId}`)
+      console.log(`📤 Sending message to conversation: ${selectedConversation._id || selectedConversation.id}`)
 
       const response = await fetch(`/api/whatsapp/send-message`, {
         method: "POST",
@@ -171,7 +171,7 @@ export default function InboxPage() {
         },
         body: JSON.stringify({
           tenantId,
-          conversationId: selectedConversation.conversationId,
+          conversationId: selectedConversation._id || selectedConversation.id,
           messageText: messageText.trim(),
         }),
       })
@@ -184,7 +184,7 @@ export default function InboxPage() {
         setTimeout(() => setSuccessMessage(""), 3000)
         // Refresh messages after short delay to allow server to process
         setTimeout(() => {
-          fetchMessages(selectedConversation.conversationId, true)
+          fetchMessages(selectedConversation._id || selectedConversation.id, true)
         }, 500)
       } else {
         const error = await response.json()
@@ -211,7 +211,7 @@ export default function InboxPage() {
     const interval = setInterval(async () => {
       await fetchConversations(true)
       if (selectedConversation) {
-        await fetchMessages(selectedConversation.conversationId, true)
+        await fetchMessages(selectedConversation._id || selectedConversation.id, true)
       }
     }, 2000) // Poll every 2 seconds
 
@@ -222,13 +222,13 @@ export default function InboxPage() {
   // Handle conversation selection
   const handleSelectConversation = async (conv: Conversation) => {
     setSelectedConversation(conv)
-    await fetchMessages(conv.conversationId)
+    await fetchMessages(conv._id || conv.id)
   }
 
   // Filter conversations
   const filteredConversations = conversations.filter((conv) =>
-    (conv.userName || conv.userProfileName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (conv.userPhone || '').includes(searchQuery)
+    (conv.name || conv.userName || conv.userProfileName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (conv.phone || conv.userPhone || '').includes(searchQuery)
   )
 
   // Get total unread count
@@ -327,10 +327,10 @@ export default function InboxPage() {
             ) : (
               filteredConversations.map((conv) => (
                 <button
-                  key={conv._id}
+                  key={conv.id || conv._id}
                   onClick={() => handleSelectConversation(conv)}
                   className={`w-full px-4 py-3 border-b border-gray-100 text-left transition ${
-                    selectedConversation?._id === conv._id
+                    selectedConversation?.id === conv.id || selectedConversation?._id === conv._id
                       ? "bg-green-50 border-l-4 border-l-green-600"
                       : "hover:bg-gray-50"
                   }`}
@@ -339,7 +339,7 @@ export default function InboxPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-gray-900 truncate">
-                          {conv.userName || conv.userProfileName || conv.userPhone || 'Unknown'}
+                          {conv.name || conv.userName || conv.userProfileName || conv.phone || conv.userPhone || 'Unknown'}
                         </h3>
                         {conv.unreadCount > 0 && (
                           <span className="inline-block w-5 h-5 bg-green-600 text-white text-xs rounded-full flex items-center justify-center">
@@ -348,7 +348,7 @@ export default function InboxPage() {
                         )}
                       </div>
                       <p className="text-xs text-gray-500 mt-1 truncate">
-                        {conv.userPhone || 'No phone'}
+                        {conv.phone || conv.userPhone || 'Unknown'}
                       </p>
                       <p className="text-sm text-gray-600 mt-1 truncate">
                         {conv.lastMessagePreview || '[No messages]'}
