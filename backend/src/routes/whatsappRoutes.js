@@ -462,6 +462,40 @@ router.get('/conversation/:conversationId', async (req, res) => {
 });
 
 /**
+ * PATCH /api/whatsapp/conversation/:conversationId/read
+ * Mark a conversation as read
+ * Params: conversationId (required)
+ * Query params: tenantId (required)
+ */
+router.patch('/conversation/:conversationId/read', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const config = await getWhatsAppConfig(tenantId);
+    
+    // Mark conversation as read on WhatsApp Platform
+    const result = await whatsappClient.markConversationAsRead(conversationId, config.apiKey);
+
+    return res.json({
+      success: true,
+      message: 'Conversation marked as read',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error marking conversation as read:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.response?.data || null 
+    });
+  }
+});
+
+/**
  * POST /api/whatsapp/broadcast
  * Send broadcast message to multiple contacts
  * Body: { tenantId, contactIds[], message, templateName? }

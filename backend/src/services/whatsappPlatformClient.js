@@ -115,9 +115,11 @@ class WhatsAppPlatformClient {
 
   /**
    * Mark conversation as read
+   * @param {string} conversationId - Conversation ID
+   * @param {string} tenantApiKey - Optional tenant-specific API key
    */
-  async markConversationAsRead(conversationId) {
-    return this.request('PATCH', `/conversations/${conversationId}/read`);
+  async markConversationAsRead(conversationId, tenantApiKey = null) {
+    return this.request('PATCH', `/conversations/${conversationId}/read`, null, null, tenantApiKey);
   }
 
   /**

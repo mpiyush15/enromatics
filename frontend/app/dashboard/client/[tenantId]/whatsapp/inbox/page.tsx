@@ -237,6 +237,39 @@ export default function InboxPage() {
   const handleSelectConversation = async (conv: Conversation) => {
     setSelectedConversation(conv)
     await fetchMessages(conv.conversationId)
+    
+    // Mark conversation as read
+    await markConversationAsRead(conv.conversationId)
+  }
+
+  // Mark conversation as read
+  const markConversationAsRead = async (conversationId: string) => {
+    try {
+      const response = await fetch(
+        `/api/whatsapp/conversation/${conversationId}/read?tenantId=${tenantId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+        }
+      )
+
+      if (response.ok) {
+        // Update the conversation's unread count in state
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.conversationId === conversationId
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          )
+        )
+        console.log('✅ Conversation marked as read')
+      }
+    } catch (error) {
+      console.error('Error marking conversation as read:', error)
+    }
   }
 
   // Filter conversations
@@ -437,25 +470,25 @@ export default function InboxPage() {
                           {msg.content?.text ||
                             `[${(msg.messageType || 'unknown').toUpperCase()}] ${msg.content?.caption || msg.content?.url || ''}`}
                         </p>
-                        <p className={`text-xs mt-1 ${msg.direction === "outbound" ? "text-green-100" : "text-gray-600"}`}>
-                          {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        {msg.direction === "outbound" && (
-                          <div className="flex items-center gap-1 mt-1">
-                            {msg.status === "delivered" && (
-                              <CheckCircle className="h-3 w-3" />
-                            )}
-                            {msg.status === "read" && (
-                              <CheckCircle className="h-3 w-3 text-blue-300" />
-                            )}
-                            {msg.status === "pending" && (
-                              <Clock className="h-3 w-3" />
-                            )}
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <p className={`text-xs ${msg.direction === "outbound" ? "text-green-100" : "text-gray-600"}`}>
+                            {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          {msg.direction === "outbound" && (
+                            <span className={`text-xs font-bold ${
+                              msg.status === "read" ? "text-blue-300" : "text-green-100"
+                            }`}>
+                              {msg.status === "read" && "✓✓"}
+                              {msg.status === "delivered" && "✓✓"}
+                              {msg.status === "sent" && "✓"}
+                              {msg.status === "pending" && "⏱"}
+                              {msg.status === "failed" && "✗"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))
