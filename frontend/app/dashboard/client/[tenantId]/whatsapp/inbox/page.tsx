@@ -488,7 +488,7 @@ export default function InboxPage() {
                       </div>
                     </div>
                   ))
-                )}}
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
