@@ -439,7 +439,7 @@ export default function InboxPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {isLoadingMessages ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader className="h-6 w-6 text-gray-400 animate-spin" />
