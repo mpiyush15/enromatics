@@ -1,56 +1,45 @@
-/**
- * BFF Route: WhatsApp Contacts
- * Proxies to backend WhatsApp API which transforms Platform data
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
-
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/whatsapp/contacts
+ * Fetch WhatsApp contacts for a tenant
+ */
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
     const limit = searchParams.get('limit') || '100';
-    const offset = searchParams.get('offset') || '0';
-    const search = searchParams.get('search') || '';
 
     if (!tenantId) {
       return NextResponse.json(
-        { success: false, message: 'tenantId is required' },
+        { error: 'tenantId is required' },
         { status: 400 }
       );
     }
 
-    // Call backend directly - it handles everything including transformation
-    const response = await fetch(
-      `${BACKEND_URL}/api/whatsapp/contacts?tenantId=${tenantId}&limit=${limit}&offset=${offset}${search ? `&search=${search}` : ''}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    const data = await response.json();
+    const backendUrl = getApiUrl('/api/whatsapp/contacts');
+    const response = await fetch(`${backendUrl}?tenantId=${tenantId}&limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: request.headers.get('Authorization') || '',
+      },
+    });
 
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      return NextResponse.json(
+        { error: 'Failed to fetch contacts from backend' },
+        { status: response.status }
+      );
     }
 
-    // Cache for 5 minutes for GET requests
-    const headers = new Headers();
-    headers.set('Cache-Control', 'public, max-age=300');
-
-    return NextResponse.json(data, { headers });
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('❌ WhatsApp contacts error:', error);
+    console.error('Error fetching WhatsApp contacts:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to fetch contacts',
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

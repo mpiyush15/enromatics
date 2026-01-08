@@ -89,48 +89,16 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
+    roles: ["tenantAdmin", "SuperAdmin"],
     children: [
       {
         label: "📧 Inbox",
         href: "/dashboard/client/[tenantId]/whatsapp/inbox",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/inbox",
-        roles: ["tenantAdmin", "SuperAdmin"],
-      },
-      {
-        label: "🤖 Chatbot",
-        href: "/dashboard/client/[tenantId]/whatsapp/chatbot",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/chatbot",
-        roles: ["tenantAdmin", "SuperAdmin"],
-      },
-      {
-        label: "📢 Broadcasts",
-        href: "/dashboard/client/[tenantId]/whatsapp/broadcast",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/broadcast",
-        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
-      },
-      {
-        label: "📋 Templates",
-        href: "/dashboard/client/[tenantId]/whatsapp/templates",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/templates",
-        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
-      },
-      {
-        label: "👥 Contacts",
-        href: "/dashboard/client/[tenantId]/whatsapp/contacts",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/contacts",
-        roles: ["subscriber", "admin", "tenantAdmin", "SuperAdmin"],
-      },
-      {
-        label: "📈 Analytics",
-        href: "/dashboard/client/[tenantId]/whatsapp/analytics",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/analytics",
         roles: ["tenantAdmin", "SuperAdmin"],
       },
       {
         label: "⚙️ Settings",
         href: "/dashboard/client/[tenantId]/whatsapp/settings",
-        superAdminHref: "/dashboard/client/[tenantId]/whatsapp/settings",
         roles: ["tenantAdmin", "SuperAdmin"],
       },
     ],

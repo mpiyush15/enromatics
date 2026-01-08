@@ -85,75 +85,22 @@ export const sidebarLinks = [
     ]
   },
 
-  // === PRIORITY 7: Communication (WhatsApp + Social Media) ===
+  // === PRIORITY 7: Communication (WhatsApp) ===
   {
-    label: "💬 Communication",
+    label: "💬 WhatsApp",
     href: "#",
-    roles: ["employee", "adsManager", "Admin", "SuperAdmin", "tenantAdmin", "manager", "marketing"],
+    roles: ["SuperAdmin", "tenantAdmin"],
+    tenantSpecific: true,
     children: [
       {
-        label: "💬 WhatsApp",
-        href: "#",
-        roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"],
-        children: [
-          { label: "📧 Inbox", href: "/dashboard/client/[tenantId]/whatsapp/inbox", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
-          { label: "🤖 Chatbot", href: "/dashboard/client/[tenantId]/whatsapp/chatbot", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
-          { label: "📢 Broadcasts", href: "/dashboard/client/[tenantId]/whatsapp/broadcast", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
-          { label: "📋 Templates", href: "/dashboard/client/[tenantId]/whatsapp/templates", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
-          { label: "👥 Contacts", href: "/dashboard/client/[tenantId]/whatsapp/contacts", roles: ["SuperAdmin", "tenantAdmin", "manager", "marketing"] },
-          { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/whatsapp/analytics", roles: ["SuperAdmin", "tenantAdmin", "manager"] },
-          { label: "⚙️ Settings", href: "/dashboard/client/[tenantId]/whatsapp/settings", roles: ["SuperAdmin", "tenantAdmin"] },
-        ],
+        label: "📧 Inbox",
+        href: "/dashboard/client/[tenantId]/whatsapp/inbox",
+        roles: ["SuperAdmin", "tenantAdmin"],
       },
       {
-        label: "📱 Social Media",
-        href: "#",
-        // 🔒 HIDDEN FROM TENANTS - Still in development. Only SuperAdmin can access.
-        roles: ["employee", "adsManager", "Admin", "SuperAdmin"],
-        children: [
-          { 
-            label: "🏠 Dashboard", 
-            href: "/dashboard/social", 
-            superAdminHref: "/dashboard/social",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "📊 Campaigns", 
-            href: "/dashboard/client/[tenantId]/social/campaigns", 
-            superAdminHref: "/dashboard/social/campaigns",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "📊 Analytics", 
-            href: "/dashboard/client/[tenantId]/social/analytics", 
-            superAdminHref: "/dashboard/social/analytics",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "🎯 Create Ads", 
-            href: "/dashboard/client/[tenantId]/social/create-ads", 
-            superAdminHref: "/dashboard/social/create-ads",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "📅 Content Planner", 
-            href: "/dashboard/client/[tenantId]/social/content-planner", 
-            superAdminHref: "/dashboard/social/content-planner",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "🏢 Business Assets", 
-            href: "/dashboard/client/[tenantId]/social/business-assets", 
-            superAdminHref: "/dashboard/social/business-assets",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-          { 
-            label: "⚙️ Settings", 
-            href: "/dashboard/client/[tenantId]/social/settings", 
-            superAdminHref: "/dashboard/social/settings",
-            roles: ["employee", "adsManager", "Admin", "SuperAdmin"] 
-          },
-        ],
+        label: "⚙️ Settings",
+        href: "/dashboard/client/[tenantId]/whatsapp/settings",
+        roles: ["SuperAdmin", "tenantAdmin"],
       },
     ],
   },

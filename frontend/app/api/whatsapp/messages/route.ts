@@ -1,143 +1,61 @@
-/**
- * BFF Route: WhatsApp Messages
- * Proxies to: POST /api/messages/send, GET /api/messages
- * Gets tenant config from backend, uses to call platform
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { getApiUrl } from '@/lib/apiConfig';
 
-const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
-const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
-
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/whatsapp/messages
+ * Fetch messages for a specific conversation
+ * Forwards to backend which proxies to WhatsApp Platform API
+ */
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
+    const conversationId = searchParams.get('conversationId');
     const tenantId = searchParams.get('tenantId');
+    const limit = searchParams.get('limit') || '50';
+    const offset = searchParams.get('offset') || '0';
 
-    if (!tenantId) {
+    if (!conversationId || !tenantId) {
       return NextResponse.json(
-        { success: false, message: 'tenantId is required' },
+        { error: 'conversationId and tenantId are required' },
         { status: 400 }
       );
     }
 
-    // Get tenant config from backend
-    const configResponse = await fetch(
-      `${BACKEND_URL}/api/whatsapp/config?tenantId=${tenantId}`
-    );
-
-    if (!configResponse.ok) {
-      return NextResponse.json(
-        { success: false, message: 'WhatsApp account not configured for this tenant' },
-        { status: 404 }
-      );
-    }
-
-    const configData = await configResponse.json();
-    const config = configData.config;
-
-    if (!config || !config.businessAccountId) {
-      return NextResponse.json(
-        { success: false, message: 'WhatsApp account not configured for this tenant' },
-        { status: 404 }
-      );
-    }
-
-    // Call platform with tenant's businessAccountId
+    // Forward to backend which will fetch from WhatsApp Platform
+    const backendUrl = getApiUrl(`/api/whatsapp/conversation/${conversationId}/messages`);
     const response = await fetch(
-      `${WHATSAPP_PLATFORM_URL}/api/messages?businessAccountId=${config.businessAccountId}`,
+      `${backendUrl}?tenantId=${tenantId}&limit=${limit}&offset=${offset}`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
+          Authorization: request.headers.get('Authorization') || '',
         },
       }
     );
 
     if (!response.ok) {
+      console.error('Failed to fetch messages:', response.status);
       return NextResponse.json(
-        { success: false, message: `Platform error: ${response.statusText}` },
+        { error: 'Failed to fetch messages from server', details: await response.text() },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    const headers = new Headers();
-    headers.set('Cache-Control', 'public, max-age=180'); // 3 min
-
-    return NextResponse.json({ messages: data }, { headers });
-  } catch (error) {
-    console.error('❌ Messages GET error:', error);
-    return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : 'Failed to fetch messages' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { tenantId, to, message } = body;
-
-    if (!tenantId || !to || !message) {
-      return NextResponse.json(
-        { success: false, message: 'Missing required fields: tenantId, to, message' },
-        { status: 400 }
-      );
-    }
-
-    // Get tenant config from backend
-    const configResponse = await fetch(
-      `${BACKEND_URL}/api/whatsapp/config?tenantId=${tenantId}`
-    );
-
-    if (!configResponse.ok) {
-      return NextResponse.json(
-        { success: false, message: 'WhatsApp account not configured for this tenant' },
-        { status: 404 }
-      );
-    }
-
-    const configData = await configResponse.json();
-    const config = configData.config;
-
-    if (!config || !config.businessAccountId) {
-      return NextResponse.json(
-        { success: false, message: 'WhatsApp account not configured for this tenant' },
-        { status: 404 }
-      );
-    }
-
-    // Send message from tenant's account
-    const response = await fetch(
-      `${WHATSAPP_PLATFORM_URL}/api/messages/send?businessAccountId=${config.businessAccountId}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${WHATSAPP_PLATFORM_API_KEY}`,
-        },
-        body: JSON.stringify({ to, message }),
+    
+    // Return messages in the format expected by frontend
+    return NextResponse.json({
+      success: true,
+      data: {
+        messages: data.data?.messages || data.messages || [],
+        pagination: data.pagination || { total: 0, limit: parseInt(limit), offset: parseInt(offset), hasMore: false }
       }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return NextResponse.json(
-        { success: false, message: errorData.message || `Platform error: ${response.statusText}` },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json({ success: true, data });
+    });
   } catch (error) {
-    console.error('❌ Messages POST error:', error);
+    console.error('Error fetching WhatsApp messages:', error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : 'Failed to send message' },
+      { error: 'Internal server error', details: String(error) },
       { status: 500 }
     );
   }

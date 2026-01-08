@@ -1,719 +1,491 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
-  MessageSquare,
-  Search,
   Send,
+  MessageCircle,
   Phone,
-  Video,
-  MoreVertical,
-  Paperclip,
-  Smile,
-  Check,
-  CheckCheck,
-  Clock,
-  AlertCircle,
-  Image as ImageIcon,
-  FileText,
-  Play,
+  Settings,
+  Search,
   Loader,
-  Volume2,
-  Download,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  MoreVertical,
+  RefreshCw,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { useParams } from "next/navigation"
-import Image from "next/image"
-
-interface Contact {
-  id: string
-  phone: string
-  phoneNumberId: string
-  name?: string
-  lastMessage?: string
-  lastMessageTime?: string
-  unreadCount?: number
-  profilePic?: string
-  isOnline?: boolean
-}
 
 interface Message {
   _id: string
-  waMessageId?: string
-  recipientPhone?: string
-  senderPhone?: string
-  messageType: string
-  content: any
-  status: string
+  messageId: string
+  senderPhone: string
+  recipientPhone: string
+  messageType: "text" | "image" | "document" | "audio" | "video" | "template"
+  content: {
+    text?: string
+    url?: string
+    mediaType?: string
+    caption?: string
+    templateName?: string
+  }
+  status: "sent" | "delivered" | "read" | "failed" | "pending"
   direction: "inbound" | "outbound"
+  timestamp: string
   createdAt: string
-  sentAt?: string
-  deliveredAt?: string
-  readAt?: string
-  mediaUrl?: string
-  mediaType?: string
-  fileName?: string
-  fileSize?: number
+}
+
+interface Conversation {
+  _id: string
+  conversationId: string
+  phoneNumberId: string
+  userPhone: string
+  userName: string
+  lastMessagePreview: string
+  lastMessageAt: string
+  lastMessageType: string
+  unreadCount: number
+  status: "open" | "closed"
+  priority: "normal" | "high" | "low"
+  userProfileName: string
+  lastReadAt: string
 }
 
 export default function InboxPage() {
   const params = useParams()
   const tenantId = params.tenantId as string
 
-  const [conversations, setConversations] = useState<Contact[]>([])
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  // State Management
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState("")
+  const [messageText, setMessageText] = useState("")
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSending, setIsSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [typingUser, setTypingUser] = useState<string | null>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [onlineContactIds, setOnlineContactIds] = useState<Set<string>>(new Set())
+  const [pollingActive, setPollingActive] = useState(true)
+  const [error, setError] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const selectedContactIdRef = useRef<string | null>(null)
-  const isFetchingRef = useRef(false)
-  const shouldScrollRef = useRef(false)
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Scroll to bottom when messages update
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   // Fetch conversations
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = async (silent = false) => {
     try {
-      const response = await fetch(`/api/whatsapp/conversations?tenantId=${tenantId}`)
+      if (!silent) setIsLoadingConversations(true)
+      console.log(`📱 Fetching conversations for tenant: ${tenantId}`)
+      
+      const response = await fetch(
+        `/api/whatsapp/conversations?tenantId=${tenantId}&limit=50&offset=0`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+        }
+      )
+
       if (response.ok) {
         const data = await response.json()
-        // Backend now returns transformed data with correct field names
-        const transformed = (data.conversations || []).map((conv: any) => ({
-          id: conv.id,                      // MongoDB ID from backend
-          phone: conv.phone,                 // Already mapped as 'phone'
-          phoneNumberId: conv.phoneNumberId, // Already mapped
-          name: conv.name,                   // Already mapped as 'name'
-          lastMessage: conv.lastMessage,     // Already mapped as 'lastMessage'
-          lastMessageTime: conv.lastMessageTime, // Already mapped as 'lastMessageTime'
-          unreadCount: conv.unreadCount || 0,    // With fallback
-        }))
-        setConversations(transformed)
+        console.log('📥 Conversations response:', data)
+        
+        // Handle both response formats
+        const convList = data.data?.conversations || data.conversations || []
+        console.log(`✅ Loaded ${convList.length} conversations`)
+        setConversations(convList)
+        setError("")
+      } else {
+        const errorData = await response.json()
+        console.error("Failed to fetch conversations:", response.status, errorData)
+        if (!silent) setError(`Failed to load conversations: ${errorData.error || response.statusText}`)
       }
     } catch (error) {
       console.error("Error fetching conversations:", error)
+      if (!silent) setError(`Error loading conversations: ${String(error)}`)
+    } finally {
+      if (!silent) setIsLoadingConversations(false)
     }
-  }, [tenantId])
+  }
 
-  // Fetch messages for selected contact
-  const fetchMessages = useCallback(async (contactId: string) => {
-    if (isFetchingRef.current) return
-    isFetchingRef.current = true
-
+  // Fetch messages for selected conversation
+  const fetchMessages = async (conversationId: string, silent = false) => {
     try {
-      setIsLoading(true)
+      if (!silent) setIsLoadingMessages(true)
+      console.log(`📬 Fetching messages for conversation: ${conversationId}`)
+      
       const response = await fetch(
-        `/api/whatsapp/conversation/${encodeURIComponent(contactId)}?tenantId=${tenantId}`
+        `/api/whatsapp/messages?conversationId=${conversationId}&tenantId=${tenantId}&limit=50&offset=0`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+          },
+        }
       )
+
       if (response.ok) {
         const data = await response.json()
-        setMessages(data.messages || [])
-        shouldScrollRef.current = true
+        console.log('📥 Messages response:', data)
+        
+        // Handle both response formats
+        const messagesList = data.data?.messages || data.messages || []
+        console.log(`✅ Loaded ${messagesList.length} messages`)
+        setMessages(messagesList)
+        setError("")
+      } else {
+        const errorData = await response.json()
+        console.error("Failed to fetch messages:", response.status, errorData)
+        if (!silent) setError(`Failed to load messages: ${errorData.error || response.statusText}`)
       }
     } catch (error) {
       console.error("Error fetching messages:", error)
+      if (!silent) setError(`Error loading messages: ${String(error)}`)
     } finally {
-      setIsLoading(false)
-      isFetchingRef.current = false
+      if (!silent) setIsLoadingMessages(false)
     }
-  }, [tenantId])
+  }
 
-  useEffect(() => {
-    fetchConversations()
-    const interval = setInterval(fetchConversations, 5000)
-    return () => clearInterval(interval)
-  }, [fetchConversations])
-
-  useEffect(() => {
-    if (selectedContact) {
-      selectedContactIdRef.current = selectedContact.id
-      fetchMessages(selectedContact.id)
-    } else {
-      selectedContactIdRef.current = null
-    }
-  }, [selectedContact?.id, fetchMessages])
-
-  // Poll for new messages
-  useEffect(() => {
-    if (!selectedContact) return
-
-    const pollInterval = setInterval(async () => {
-      const currentId = selectedContactIdRef.current
-      if (!currentId) return
-
-      try {
-        const response = await fetch(
-          `/api/whatsapp/conversations/${encodeURIComponent(currentId)}/messages`,
-          {
-            headers: {
-              "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
-            },
-          }
-        )
-        if (response.ok) {
-          const data = await response.json()
-          const newMessages = data.messages || []
-
-          setMessages((prev) => {
-            const existingIds = new Set(prev.map((m) => m._id))
-            const incomingIds = new Set(newMessages.map((m: any) => m._id))
-
-            const onlyNew = newMessages.filter(
-              (m: any) => !existingIds.has(m._id)
-            )
-
-            if (onlyNew.length > 0) {
-              shouldScrollRef.current = true
-              return [...prev, ...onlyNew]
-            }
-            return prev
-          })
-        }
-      } catch (error) {
-        console.error("Error polling messages:", error)
-      }
-    }, 3000)
-
-    return () => clearInterval(pollInterval)
-  }, [selectedContact])
-
-  // Auto scroll to bottom
-  useEffect(() => {
-    if (shouldScrollRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-      shouldScrollRef.current = false
-    }
-  }, [messages])
-
-  const filteredConversations = conversations.filter(
-    (contact) =>
-      contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.includes(searchQuery)
-  )
-
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !selectedContact) return
+  // Send message
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedConversation) return
 
     try {
-      setIsSending(true)
-      const response = await fetch(`/api/whatsapp/messages`, {
+      setIsSendingMessage(true)
+      setError("")
+
+      console.log(`📤 Sending message to conversation: ${selectedConversation.conversationId}`)
+
+      const response = await fetch(`/api/whatsapp/send-message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('whatsapp_api_key') || ''}`,
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({
-          accountId: tenantId,
-          type: "text",
-          phoneNumberId: selectedContact.phoneNumberId,
-          recipientPhone: selectedContact.phone,
-          message: newMessage.trim(),
+          tenantId,
+          conversationId: selectedConversation.conversationId,
+          messageText: messageText.trim(),
         }),
       })
 
       if (response.ok) {
-        const data = await response.json()
-
-        const currentTime = new Date().toISOString()
-        const newMsg: Message = {
-          _id: data.data?.messageId || Date.now().toString(),
-          messageType: "text",
-          content: { text: newMessage.trim() },
-          direction: "outbound",
-          status: "sent",
-          createdAt: currentTime,
-        }
-
-        setMessages((prev) => [...prev, newMsg])
-        setNewMessage("")
-        shouldScrollRef.current = true
-
-        setConversations((prev) => {
-          const updated = prev.map((conv) =>
-            conv.id === selectedContact.id
-              ? {
-                  ...conv,
-                  lastMessage: newMessage.trim().substring(0, 50),
-                  lastMessageTime: new Date().toISOString(),
-                }
-              : conv
-          )
-          return updated.sort((a, b) => {
-            if (a.id === selectedContact.id) return -1
-            if (b.id === selectedContact.id) return 1
-            return (
-              new Date(b.lastMessageTime || 0).getTime() -
-              new Date(a.lastMessageTime || 0).getTime()
-            )
-          })
-        })
+        const result = await response.json()
+        console.log('✅ Message sent:', result)
+        setMessageText("")
+        setSuccessMessage("Message sent!")
+        setTimeout(() => setSuccessMessage(""), 3000)
+        // Refresh messages after short delay to allow server to process
+        setTimeout(() => {
+          fetchMessages(selectedConversation.conversationId, true)
+        }, 500)
       } else {
         const error = await response.json()
-        console.error("❌ Send failed:", error)
-        alert("Failed to send message")
+        console.error("Failed to send message:", error)
+        setError(error.error || "Failed to send message")
       }
     } catch (error) {
       console.error("Error sending message:", error)
-      alert("Failed to send message")
+      setError(`Error sending message: ${String(error)}`)
     } finally {
-      setIsSending(false)
-    }
-  }, [newMessage, selectedContact, tenantId])
-
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString)
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    })
-  }
-
-  // Format date for display in date separator
-  const formatDateSeparator = (isoString: string): string => {
-    const date = new Date(isoString)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    if (date.toDateString() === today.toDateString()) {
-      return "Today"
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday"
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
-      })
+      setIsSendingMessage(false)
     }
   }
 
-  // Check if should show date separator between messages
-  const shouldShowDateSeparator = (currentMsg: Message, prevMsg: Message | null): boolean => {
-    if (!prevMsg) return true
-    const currentDate = new Date(currentMsg.createdAt).toDateString()
-    const prevDate = new Date(prevMsg.createdAt).toDateString()
-    return currentDate !== prevDate
+  // Initial load
+  useEffect(() => {
+    fetchConversations()
+  }, [tenantId])
+
+  // Auto-refresh conversations and messages
+  useEffect(() => {
+    if (!pollingActive) return
+
+    const interval = setInterval(async () => {
+      await fetchConversations(true)
+      if (selectedConversation) {
+        await fetchMessages(selectedConversation.conversationId, true)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    pollingIntervalRef.current = interval
+    return () => clearInterval(interval)
+  }, [pollingActive, selectedConversation, tenantId])
+
+  // Handle conversation selection
+  const handleSelectConversation = async (conv: Conversation) => {
+    setSelectedConversation(conv)
+    await fetchMessages(conv.conversationId)
   }
 
-  // Check if contact is online (last message < 5 minutes ago)
-  const isContactOnline = (contact: Contact): boolean => {
-    if (!contact.lastMessageTime) return false
-    const lastMessageTime = new Date(contact.lastMessageTime).getTime()
-    const fiveMinutesAgo = new Date().getTime() - 5 * 60 * 1000
-    return lastMessageTime > fiveMinutesAgo
-  }
+  // Filter conversations
+  const filteredConversations = conversations.filter((conv) =>
+    (conv.userName || conv.userProfileName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (conv.userPhone || '').includes(searchQuery)
+  )
 
-  // Get media preview icon/emoji for conversation list
-  const getMediaPreviewIcon = (lastMessage: string | undefined): string => {
-    if (!lastMessage) return ""
-    if (lastMessage.includes("🖼️") || lastMessage.includes("[Image]")) return "🖼️"
-    if (lastMessage.includes("🎥") || lastMessage.includes("[Video]")) return "🎥"
-    if (lastMessage.includes("📄") || lastMessage.includes("[Document]")) return "📄"
-    if (lastMessage.includes("🎵") || lastMessage.includes("[Audio]")) return "🎵"
-    return ""
-  }
-
-  const getStatusIcon = (message: Message) => {
-    if (message.direction === "inbound") return null
-    
-    switch (message.status) {
-      case "read":
-        return <CheckCheck className="h-4 w-4 text-[#53bdeb]" />
-      case "delivered":
-        return <CheckCheck className="h-4 w-4 text-[#667781]" />
-      case "sent":
-        return <Check className="h-4 w-4 text-[#667781]" />
-      case "failed":
-        return <AlertCircle className="h-4 w-4 text-red-500" />
-      default:
-        return <Clock className="h-4 w-4 text-[#667781]" />
-    }
-  }
-
-  // Render media message content
-  const renderMessageContent = (message: Message) => {
-    const { messageType, content, mediaUrl, mediaType, fileName } = message
-
-    switch (messageType.toLowerCase()) {
-      case "image":
-      case "media":
-        if (mediaUrl || content?.url) {
-          return (
-            <div className="relative group">
-              <img
-                src={mediaUrl || content.url}
-                alt="Message image"
-                className="max-w-xs rounded-lg max-h-72"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition rounded-lg flex items-center justify-center">
-                <Download className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition" />
-              </div>
-            </div>
-          )
-        }
-        break
-
-      case "video":
-        if (mediaUrl || content?.url) {
-          return (
-            <div className="relative max-w-xs rounded-lg overflow-hidden bg-black">
-              <video
-                src={mediaUrl || content.url}
-                controls
-                className="max-h-72 w-full"
-              />
-            </div>
-          )
-        }
-        break
-
-      case "document":
-      case "file":
-        return (
-          <div className="flex items-center gap-2 bg-opacity-10 bg-gray-200 p-3 rounded-lg max-w-xs">
-            <FileText className="h-6 w-6 text-[#667781] flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{fileName || "Document"}</p>
-              {content?.size && (
-                <p className="text-xs text-gray-500">
-                  {(content.size / 1024).toFixed(1)} KB
-                </p>
-              )}
-            </div>
-          </div>
-        )
-
-      case "audio":
-        if (mediaUrl || content?.url) {
-          return (
-            <div className="flex items-center gap-2 max-w-xs">
-              <button className="p-2 bg-green-600 rounded-full hover:bg-green-700">
-                <Play className="h-4 w-4 text-white fill-white" />
-              </button>
-              <audio
-                controls
-                className="flex-1"
-                src={mediaUrl || content.url}
-              />
-            </div>
-          )
-        }
-        break
-
-      case "text":
-      default:
-        return <p className="text-sm break-words">{content?.text || ""}</p>
-    }
-
-    return <p className="text-sm break-words">{content?.text || ""}</p>
-  }
+  // Get total unread count
+  const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)
 
   return (
-    <div className="h-full flex bg-white">
-      {/* Conversations List */}
-      <div className="w-[400px] bg-white border-r border-gray-200 flex flex-col">
-        {/* Search */}
-        <div className="p-3 bg-white border-b border-gray-200">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search conversations"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#f0f2f5] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm text-gray-900"
-            />
-          </div>
-        </div>
-
-        {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>No conversations yet</p>
-              <p className="text-sm mt-1">Start by sending a message</p>
+    <div className="h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="h-6 w-6 text-green-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">WhatsApp Inbox</h1>
+              <p className="text-sm text-gray-600">
+                {totalUnread > 0 ? (
+                  <>
+                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    {totalUnread} unread message{totalUnread !== 1 ? "s" : ""}
+                  </>
+                ) : (
+                  "All caught up!"
+                )}
+              </p>
             </div>
-          ) : (
-            filteredConversations.map((contact) => {
-              const online = isContactOnline(contact)
-              const mediaIcon = getMediaPreviewIcon(contact.lastMessage)
-              return (
-                <button
-                  key={contact.id}
-                  onClick={() => setSelectedContact(contact)}
-                  className={`w-full p-3 flex items-center gap-3 hover:bg-[#f5f6f6] transition border-b border-gray-100 ${
-                    selectedContact?.id === contact.id ? "bg-[#f0f2f5]" : "bg-white"
-                  }`}
-                >
-                  {/* Avatar with online indicator */}
-                  <div className="relative flex-shrink-0">
-                    <div className="h-12 w-12 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center">
-                      <span className="text-green-700 font-medium text-sm">
-                        {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
-                      </span>
-                    </div>
-                    {/* Online indicator dot */}
-                    {online && (
-                      <div className="absolute bottom-0 right-0 h-3 w-3 bg-[#25d366] border-2 border-white rounded-full"></div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-[#111b21] truncate text-[17px]">
-                        {contact.name || contact.phone}
-                      </p>
-                      {contact.lastMessageTime && (
-                        <span className="text-xs text-[#667781] ml-2 flex-shrink-0">
-                          {formatTime(contact.lastMessageTime)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-[#667781] truncate max-w-[200px]">
-                        {mediaIcon && <span className="mr-1">{mediaIcon}</span>}
-                        {contact.lastMessage || "No messages yet"}
-                      </p>
-                      {(contact.unreadCount ?? 0) > 0 && (
-                        <div className="h-5 min-w-[20px] bg-[#25d366] rounded-full flex items-center justify-center px-1.5 ml-2">
-                          <span className="text-xs font-semibold text-white">
-                            {(contact.unreadCount ?? 0) > 99 ? "99+" : contact.unreadCount}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              )
-            })
-          )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setPollingActive(!pollingActive)
+              }}
+              className={`p-2 rounded-lg transition ${
+                pollingActive
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <RefreshCw className={`h-5 w-5 ${pollingActive ? "animate-spin" : ""}`} />
+            </button>
+            <button
+              onClick={() => fetchConversations()}
+              className="p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedContact ? (
-          <>
-            {/* Chat Header */}
-            <div className="bg-[#f0f2f5] border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="relative">
-                  <div className="h-10 w-10 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center">
-                    <span className="text-green-700 font-medium text-sm">
-                      {selectedContact.name?.[0]?.toUpperCase() || selectedContact.phone[0]}
-                    </span>
-                  </div>
-                  {/* Online indicator */}
-                  {isContactOnline(selectedContact) && (
-                    <div className="absolute bottom-0 right-0 h-2.5 w-2.5 bg-[#25d366] border-2 border-white rounded-full"></div>
-                  )}
-                </div>
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-2 text-red-700">
+          <AlertCircle className="h-5 w-5" />
+          {error}
+        </div>
+      )}
 
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {selectedContact.name || selectedContact.phone}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {isTyping ? (
-                      <span className="flex items-center gap-1">
-                        <span>typing</span>
-                        <span className="flex gap-0.5">
-                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce"></span>
-                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></span>
-                          <span className="h-1 w-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></span>
-                        </span>
-                      </span>
-                    ) : isContactOnline(selectedContact) ? (
-                      <span className="text-[#25d366] font-medium">Active now</span>
-                    ) : (
-                      <span>
-                        Last seen {selectedContact.lastMessageTime ? formatTime(selectedContact.lastMessageTime) : "never"}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
+      {successMessage && (
+        <div className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-2 text-green-700">
+          <CheckCircle className="h-5 w-5" />
+          {successMessage}
+        </div>
+      )}
 
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
-                  <Phone className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
-                  <Video className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
-                  <MoreVertical className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
-              {isLoading && messages.length === 0 && (
-                <div className="flex justify-center items-center h-full">
-                  <div className="text-center">
-                    <Loader className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Loading messages...</p>
-                  </div>
-                </div>
-              )}
-
-              {messages.length === 0 && !isLoading && (
-                <div className="flex justify-center items-center h-full">
-                  <div className="text-center">
-                    <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No messages yet</p>
-                  </div>
-                </div>
-              )}
-
-              {messages.map((message, index) => {
-                const prevMessage = index > 0 ? messages[index - 1] : null
-                const showDateSeparator = shouldShowDateSeparator(message, prevMessage)
-
-                return (
-                  <div key={message._id}>
-                    {/* Date Separator */}
-                    {showDateSeparator && (
-                      <div className="flex items-center gap-3 my-4">
-                        <div className="flex-1 border-t border-gray-200"></div>
-                        <span className="text-xs text-[#667781] px-3 py-1 bg-gray-50 rounded-full">
-                          {formatDateSeparator(message.createdAt)}
-                        </span>
-                        <div className="flex-1 border-t border-gray-200"></div>
-                      </div>
-                    )}
-
-                    {/* Message */}
-                    <div
-                      className={`flex ${message.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-md px-4 py-2.5 rounded-lg break-words ${
-                          message.direction === "outbound"
-                            ? "bg-[#dcf8c6] text-[#111b21]"
-                            : "bg-white text-[#111b21] border border-[#e5e5ea]"
-                        }`}
-                      >
-                        {/* Message Content */}
-                        <div className="text-sm">
-                          {renderMessageContent(message)}
-                        </div>
-
-                        {/* Message Footer with Time and Status */}
-                        <div
-                          className={`flex items-center justify-end gap-1.5 mt-1 text-xs ${
-                            message.direction === "outbound"
-                              ? "text-[#667781]"
-                              : "text-[#667781]"
-                          }`}
-                        >
-                          <span>{formatTime(message.createdAt)}</span>
-                          {message.direction === "outbound" && (
-                            <div className="flex items-center">
-                              {getStatusIcon(message)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="bg-[#f0f2f5] border-t border-gray-200 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0">
-                  <Smile className="h-6 w-6 text-[#54656f]" />
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*,.pdf,.doc,.docx"
-                  className="hidden"
-                />
-
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0"
-                >
-                  <Paperclip className="h-6 w-6 text-[#54656f]" />
-                </button>
-
-                <textarea
-                  ref={textareaRef}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage()
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
-                  rows={1}
-                />
-
-                <button
-                  onClick={handleSendMessage}
-                  disabled={isSending || !newMessage.trim()}
-                  className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0 disabled:opacity-50"
-                >
-                  <Send className="h-6 w-6 text-green-600" />
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-white">
-            <div className="text-center">
-              <div className="mb-4">
-                <svg
-                  className="mx-auto"
-                  width="60"
-                  height="60"
-                  viewBox="0 0 60 60"
-                  fill="none"
-                >
-                  <circle cx="30" cy="30" r="30" fill="#f5f5f5" />
-                  <path
-                    d="M30 15c-8.28 0-15 6.72-15 15s6.72 15 15 15 15-6.72 15-15-6.72-15-15-15z"
-                    fill="#ddd"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-[32px] font-light text-[#41525d] mb-5">
-                WhatsApp Business
-              </h3>
-              <p className="text-[14px] text-[#667781] leading-relaxed max-w-md mx-auto">
-                Send and receive messages from your customers. Select a chat from the left to start messaging.
-              </p>
-              <div className="mt-8 pt-8 border-t border-[#00000014]">
-                <p className="text-[14px] text-[#667781] flex items-center justify-center gap-1">
-                  <span className="inline-block w-3 h-3">🔒</span>
-                  End-to-end encrypted
-                </p>
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Conversations List */}
+        <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
+          {/* Search */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
             </div>
           </div>
-        )}
+
+          {/* Conversations */}
+          <div className="flex-1 overflow-y-auto">
+            {isLoadingConversations && filteredConversations.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader className="h-6 w-6 text-gray-400 animate-spin" />
+              </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <p>No conversations</p>
+                </div>
+              </div>
+            ) : (
+              filteredConversations.map((conv) => (
+                <button
+                  key={conv._id}
+                  onClick={() => handleSelectConversation(conv)}
+                  className={`w-full px-4 py-3 border-b border-gray-100 text-left transition ${
+                    selectedConversation?._id === conv._id
+                      ? "bg-green-50 border-l-4 border-l-green-600"
+                      : "hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {conv.userName || conv.userProfileName || conv.userPhone || 'Unknown'}
+                        </h3>
+                        {conv.unreadCount > 0 && (
+                          <span className="inline-block w-5 h-5 bg-green-600 text-white text-xs rounded-full flex items-center justify-center">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 truncate">
+                        {conv.userPhone || 'No phone'}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1 truncate">
+                        {conv.lastMessagePreview || '[No messages]'}
+                      </p>
+                    </div>
+                    <div className="ml-2 text-xs text-gray-500 flex-shrink-0">
+                      {new Date(conv.lastMessageAt).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-gray-50">
+          {selectedConversation ? (
+            <>
+              {/* Chat Header */}
+              <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-gray-900">
+                        {selectedConversation.userName || selectedConversation.userProfileName || selectedConversation.userPhone || 'Unknown'}
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        {selectedConversation.userPhone || 'No phone'}
+                      </p>
+                    </div>
+                  </div>
+                  <button className="p-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {isLoadingMessages ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader className="h-6 w-6 text-gray-400 animate-spin" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <MessageCircle className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                      <p>No messages yet</p>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div
+                      key={msg._id}
+                      className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-xs px-4 py-2 rounded-lg ${
+                          msg.direction === "outbound"
+                            ? "bg-green-600 text-white rounded-br-none"
+                            : "bg-gray-200 text-gray-900 rounded-bl-none"
+                        }`}
+                      >
+                        <p className="break-words">
+                          {msg.content?.text ||
+                            `[${(msg.messageType || 'unknown').toUpperCase()}] ${msg.content?.caption || msg.content?.url || ''}`}
+                        </p>
+                        <p className={`text-xs mt-1 ${msg.direction === "outbound" ? "text-green-100" : "text-gray-600"}`}>
+                          {new Date(msg.timestamp || msg.createdAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        {msg.direction === "outbound" && (
+                          <div className="flex items-center gap-1 mt-1">
+                            {msg.status === "delivered" && (
+                              <CheckCircle className="h-3 w-3" />
+                            )}
+                            {msg.status === "read" && (
+                              <CheckCircle className="h-3 w-3 text-blue-300" />
+                            )}
+                            {msg.status === "pending" && (
+                              <Clock className="h-3 w-3" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input */}
+              <div className="bg-white border-t border-gray-200 px-6 py-4">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMessage()
+                      }
+                    }}
+                    disabled={isSendingMessage}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!messageText.trim() || isSendingMessage}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    {isSendingMessage ? "Sending..." : "Send"}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg">Select a conversation to start chatting</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

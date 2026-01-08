@@ -1,113 +1,104 @@
-/**
- * BFF Route: WhatsApp Config/Settings
- * Handles tenant WhatsApp account configuration
- * Reads platform URL + API key from backend env
- * Stores tenant-specific account details in MongoDB (via backend)
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { getApiUrl } from '@/lib/apiConfig';
 
-// Platform credentials (from env vars)
-const WHATSAPP_PLATFORM_URL = (process.env.NEXT_PUBLIC_WHATSAPP_PLATFORM_URL || 'http://localhost:5050').replace(/\/$/, '');
-const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
-
-export async function GET(req: NextRequest) {
+/**
+ * GET /api/whatsapp/config
+ * Fetch WhatsApp configuration for a tenant
+ */
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
 
     if (!tenantId) {
       return NextResponse.json(
-        { success: false, message: 'tenantId is required' },
+        { error: 'tenantId is required' },
         { status: 400 }
       );
     }
 
-    // Get tenant config from backend
-    const response = await fetch(
-      `${BACKEND_URL}/api/whatsapp/config?tenantId=${tenantId}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const backendUrl = getApiUrl('/api/whatsapp/config');
+    const response = await fetch(`${backendUrl}?tenantId=${tenantId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: request.headers.get('Authorization') || '',
+      },
+    });
 
     if (!response.ok) {
+      console.error('Backend error:', response.status);
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch config from backend' },
+        { error: 'Failed to fetch config from backend', config: null },
         { status: response.status }
       );
     }
 
     const data = await response.json();
     
-    // Wrap response to ensure consistent structure
+    // Backend returns the config directly, wrap it in the format settings page expects
     return NextResponse.json({
       success: true,
-      config: data,
-      connectionStatus: data.connectionStatus || 'disconnected'
+      config: data
     });
   } catch (error) {
-    console.error('❌ Config GET error:', error);
+    console.error('Error fetching WhatsApp config:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch config' },
+      { error: 'Internal server error', config: null },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * POST /api/whatsapp/config
+ * Save or update WhatsApp configuration
+ */
+export async function POST(request: NextRequest) {
   try {
-    const body = await req.json();
-    const { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey } = body;
+    const body = await request.json();
+    const { tenantId, ...configData } = body;
 
-    // Validate required fields
-    if (!tenantId || !businessAccountId || !phoneNumberId || !phoneNumber) {
+    if (!tenantId) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields: tenantId, businessAccountId, phoneNumberId, phoneNumber' },
+        { error: 'tenantId is required' },
         { status: 400 }
       );
     }
 
-    // Call backend to save config and verify API key if provided
-    const saveResponse = await fetch(
-      `${BACKEND_URL}/api/whatsapp/config`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tenantId,
-          businessAccountId,
-          phoneNumberId,
-          phoneNumber,
-          apiKey: apiKey || null,
-        }),
-      }
-    );
+    const backendUrl = getApiUrl('/api/whatsapp/config');
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({
+        tenantId,
+        ...configData,
+      }),
+    });
 
-    if (saveResponse.ok) {
-      const data = await saveResponse.json();
-      return NextResponse.json({
-        success: true,
-        message: data.message || 'Configuration saved',
-        config: data.config,
-        connectionStatus: data.connectionStatus,
-      });
-    } else {
-      const errorData = await saveResponse.json();
+    if (!response.ok) {
+      const error = await response.json();
       return NextResponse.json(
-        { success: false, message: errorData.message || errorData.error || 'Failed to save configuration' },
-        { status: saveResponse.status }
+        { error: error.error || 'Failed to save config', message: error.message },
+        { status: response.status }
       );
     }
+
+    const data = await response.json();
+    
+    // Wrap response in the format settings page expects
+    return NextResponse.json({
+      success: true,
+      config: data,
+      connectionStatus: data.connectionStatus
+    });
   } catch (error) {
-    console.error('❌ Config POST error:', error);
+    console.error('Error saving WhatsApp config:', error);
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : 'Failed to save config' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
