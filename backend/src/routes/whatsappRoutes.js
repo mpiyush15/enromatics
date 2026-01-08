@@ -645,7 +645,11 @@ router.post('/conversation/:conversationId/reply', async (req, res) => {
     return res.json(result);
   } catch (error) {
     console.error('Error replying to conversation:', error);
-    res.status(500).json({ error: error.message });
+    const errorMessage = error?.message || error?.response?.data?.message || String(error) || 'Unknown error';
+    res.status(500).json({ 
+      error: errorMessage,
+      details: error?.response?.data || error?.code || 'No additional details'
+    });
   }
 });
 
