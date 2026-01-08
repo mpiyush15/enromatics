@@ -344,8 +344,8 @@ router.get('/conversations', async (req, res) => {
 
     // Transform Platform response to frontend format
     const conversations = (response.data?.conversations || []).map(conv => ({
-      _id: conv._id,                                  // MongoDB ID (required for fetching messages)
-      id: conv._id,                                    // MongoDB ID (alias for compatibility)
+      _id: conv._id,                                  // MongoDB ID (internal only)
+      id: conv.conversationId,                        // Business conversation ID (use this for APIs)
       conversationId: conv.conversationId,             // Platform conversation ID
       phone: conv.userPhone,                          // Customer phone
       phoneNumberId: conv.phoneNumberId,              // Phone number ID
