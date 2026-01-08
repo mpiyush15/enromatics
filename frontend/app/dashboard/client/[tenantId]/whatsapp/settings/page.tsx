@@ -64,13 +64,22 @@ export default function SettingsPage() {
   const fetchContacts = async () => {
     try {
       setIsLoadingContacts(true)
+      console.log(`👥 Fetching contacts for tenant: ${tenantId}`)
       const response = await fetch(`/api/whatsapp/contacts?tenantId=${tenantId}&limit=100`)
+      console.log(`Contacts response status: ${response.status}`)
       if (response.ok) {
         const data = await response.json()
-        setContacts(data.data || [])
+        console.log('📥 Contacts data received:', data)
+        // Handle both response formats
+        const contactsList = data.data?.contacts || data.contacts || []
+        console.log(`✅ Found ${contactsList.length} contacts`)
+        setContacts(contactsList)
+      } else {
+        console.warn('⚠️ Failed to fetch contacts:', response.status)
       }
     } catch (error) {
-      console.error("Error fetching contacts:", error)
+      console.error("❌ Error fetching contacts:", error)
+      setContacts([])
     } finally {
       setIsLoadingContacts(false)
     }
@@ -80,11 +89,15 @@ export default function SettingsPage() {
   const fetchConfig = async () => {
     try {
       setIsLoading(true)
+      console.log(`📱 Fetching WhatsApp config for tenant: ${tenantId}`)
       const response = await fetch(`/api/whatsapp/config?tenantId=${tenantId}`)
+      console.log(`Response status: ${response.status}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('📥 Config data received:', data)
         setConfig(data.config || null)
         if (data.config) {
+          console.log('✅ Config found, updating form')
           setFormData({
             businessAccountId: data.config.businessAccountId || "",
             phoneNumberId: data.config.phoneNumberId || "",
@@ -92,11 +105,14 @@ export default function SettingsPage() {
             apiKey: data.config.apiKey || "",
           })
           // Fetch contacts after loading config
+          console.log('📞 Fetching contacts...')
           await fetchContacts()
         }
+      } else {
+        console.warn('⚠️ Failed to fetch config:', response.status)
       }
     } catch (error) {
-      console.error("Error fetching config:", error)
+      console.error("❌ Error fetching config:", error)
     } finally {
       setIsLoading(false)
     }

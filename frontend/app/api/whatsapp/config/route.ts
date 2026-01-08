@@ -42,7 +42,13 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Wrap response to ensure consistent structure
+    return NextResponse.json({
+      success: true,
+      config: data,
+      connectionStatus: data.connectionStatus || 'disconnected'
+    });
   } catch (error) {
     console.error('❌ Config GET error:', error);
     return NextResponse.json(
