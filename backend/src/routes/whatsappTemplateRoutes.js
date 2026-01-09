@@ -2,6 +2,7 @@ import express from 'express';
 import WhatsAppTemplate from '../models/WhatsAppTemplate.js';
 import Tenant from '../models/Tenant.js';
 import axios from 'axios';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -183,8 +184,9 @@ router.delete('/templates/:templateId', async (req, res) => {
 /**
  * POST /api/whatsapp/templates/sync
  * Sync templates from WhatsApp Platform
+ * Protected: Requires valid user authentication
  */
-router.post('/templates/sync', async (req, res) => {
+router.post('/templates/sync', protect, async (req, res) => {
   try {
     const { tenantId } = req.body;
 

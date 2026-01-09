@@ -20,18 +20,32 @@ export async function POST(request: NextRequest) {
     console.log(`🔄 Syncing templates from WhatsApp Platform for tenant: ${tenantId}`);
 
     const backendUrl = getApiUrl('/api/whatsapp/templates/sync');
+    const authHeader = request.headers.get('Authorization');
+    const cookieHeader = request.headers.get('cookie');
+    
+    const headers: any = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Pass auth and cookies from request
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+
     const response = await fetch(backendUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: request.headers.get('Authorization') || '',
-      },
+      headers,
       body: JSON.stringify({ tenantId }),
+      credentials: 'include',
     });
 
     const data = await response.json();
 
     if (!response.ok) {
+      console.error(`❌ Backend returned ${response.status}:`, data);
       return NextResponse.json(data, { status: response.status });
     }
 
