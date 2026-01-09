@@ -269,16 +269,19 @@ export default function WhatsAppTemplatesPage() {
                   {filteredTemplates.map((template) => (
                     <tr 
                       key={template._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setShowPreview(true);
-                      }}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <button
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setShowPreview(true);
+                          }}
+                          className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer"
+                        >
                           {template.name}
-                        </span>
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`font-medium ${categoryColors[template.category]}`}>
