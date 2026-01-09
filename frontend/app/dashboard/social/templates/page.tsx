@@ -271,7 +271,6 @@ export default function WhatsAppTemplatesPage() {
                       key={template._id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => {
