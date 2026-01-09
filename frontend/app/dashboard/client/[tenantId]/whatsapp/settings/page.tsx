@@ -223,13 +223,9 @@ export default function SettingsPage() {
     try {
       setIsSaving(true)
       setErrorMessage("")
-      const response = await fetch(`/api/whatsapp/config`, {
-        method: "POST",
+      const response = await fetch(`/api/whatsapp/config?tenantId=${tenantId}`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId,
-          disconnect: true,
-        }),
       })
 
       if (response.ok) {
