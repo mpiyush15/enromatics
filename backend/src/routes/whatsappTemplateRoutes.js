@@ -255,32 +255,34 @@ router.post('/templates/sync', protect, async (req, res) => {
       }
 
       console.log(`📞 Fetching templates from WhatsApp Platform`);
-      console.log(`🔗 URL: ${platformUrl}/api/templates`);
+      console.log(`🔗 URL: ${platformUrl}/api/integrations/templates`);
       console.log(`📱 Phone Number ID: ${phoneNumberId}`);
       
       const response = await axios.get(
-        `${platformUrl}/api/templates`,
+        `${platformUrl}/api/integrations/templates`,
         {
           headers: {
-            'x-api-key': platformApiKey,
+            'Authorization': `Bearer ${platformApiKey}`,
+            'X-Tenant-Id': tenantId,
             'Content-Type': 'application/json',
           },
         }
       );
 
-      const platformTemplates = response.data.templates || response.data.data || [];
+      const platformTemplates = response.data?.data?.templates || response.data?.templates || response.data?.data || [];
       console.log(`✅ Fetched ${platformTemplates.length} templates from platform`);
 
       let syncedCount = 0;
 
       // Process and save each template
       for (const platformTemplate of platformTemplates) {
-        const templateBody = platformTemplate.body || platformTemplate.message || '';
+        const templateBody = platformTemplate.content || platformTemplate.body || platformTemplate.message || '';
         const templateName = platformTemplate.name || platformTemplate.templateName || '';
-        const templateId = platformTemplate.id || platformTemplate.templateId || '';
-        const status = platformTemplate.status || 'APPROVED';
+        const templateId = platformTemplate._id || platformTemplate.id || platformTemplate.templateId || '';
+        const status = (platformTemplate.status || 'APPROVED').toLowerCase();
         const language = platformTemplate.language || 'en_US';
         const category = platformTemplate.category || 'MARKETING';
+        const usageCount = platformTemplate.usageCount || 0;
 
         // Extract variables from template body
         const variableRegex = /\{\{(\w+)\}\}/g;
