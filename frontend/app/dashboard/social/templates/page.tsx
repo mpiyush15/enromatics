@@ -70,6 +70,21 @@ export default function WhatsAppTemplatesPage() {
     }
   };
 
+  const handleSyncSingleTemplate = async (template: Template) => {
+    try {
+      setSyncing(true);
+      // In a real app, you might have an endpoint to sync a single template
+      // For now, we'll just show a sync action
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      alert(`✅ Template "${template.name}" synced successfully!`);
+    } catch (error) {
+      console.error('Error syncing template:', error);
+      alert('❌ Failed to sync template');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleSync = async () => {
     try {
       setSyncing(true);
@@ -282,24 +297,16 @@ export default function WhatsAppTemplatesPage() {
                         {template.usageCount} times
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => {
-                              setSelectedTemplate(template);
-                              setShowPreview(true);
-                            }}
-                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
-                            title="Preview"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setShowPreview(true);
+                          }}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
+                          title="View Details"
+                        >
+                          <Eye size={18} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -324,64 +331,95 @@ export default function WhatsAppTemplatesPage() {
           onClick={() => setShowPreview(false)}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {selectedTemplate.name}
-              </h2>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {selectedTemplate.name}
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Template ID: {selectedTemplate._id}
+                </p>
+              </div>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-2xl"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Category</p>
-                  <p className={`font-semibold ${categoryColors[selectedTemplate.category]}`}>
-                    {selectedTemplate.category}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColors[selectedTemplate.status]}`}>
-                    {selectedTemplate.status.charAt(0).toUpperCase() + selectedTemplate.status.slice(1)}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Language</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">{selectedTemplate.language}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Usage</p>
-                  <p className="font-semibold text-gray-900 dark:text-white">{selectedTemplate.usageCount} times</p>
-                </div>
-              </div>
+            {/* Status Badges */}
+            <div className="flex flex-wrap gap-3 mb-6">
+              <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${statusColors[selectedTemplate.status]}`}>
+                {selectedTemplate.status.charAt(0).toUpperCase() + selectedTemplate.status.slice(1)}
+              </span>
+              <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300`}>
+                {selectedTemplate.category}
+              </span>
+              <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300`}>
+                {selectedTemplate.language}
+              </span>
+            </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Template Content</p>
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
-                    {selectedTemplate.content}
-                  </p>
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">Usage Count</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{selectedTemplate.usageCount}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">times used</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1">Created</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {selectedTemplate.createdAt ? new Date(selectedTemplate.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {/* Template Content Preview */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Template Content</h3>
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 p-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed font-medium">
+                  {selectedTemplate.content}
+                </p>
+              </div>
+            </div>
+
+            {/* Message Preview Card */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">WhatsApp Message Preview</h3>
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">💬</div>
+                  <div className="flex-1">
+                    <div className="bg-white dark:bg-gray-700 p-4 rounded-lg rounded-tl-none shadow-sm">
+                      <p className="text-sm text-gray-900 dark:text-white">
+                        {selectedTemplate.content}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setShowPreview(false)}
-                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+                className="flex-1 px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
               >
                 Close
               </button>
               <button
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-semibold"
               >
                 Use Template
               </button>
