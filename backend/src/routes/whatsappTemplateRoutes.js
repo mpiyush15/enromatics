@@ -215,60 +215,107 @@ router.post('/templates/sync', async (req, res) => {
 
     // Fetch templates from WhatsApp Platform API
     const businessAccountId = tenant.whatsappConfig.businessAccountId;
-    const accessToken = tenant.whatsappConfig.accessToken;
+    // Use global access token from environment (shared credential for Meta Graph API)
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
-    if (!businessAccountId || !accessToken) {
+    if (!businessAccountId) {
       return res.status(400).json({
-        error: 'Missing WhatsApp credentials',
-        message: 'Business Account ID or Access Token is missing',
+        error: 'Missing Business Account ID',
+        message: 'Business Account ID is missing. Please connect your WhatsApp Business Account in Settings first.',
+      });
+    }
+
+    if (!accessToken) {
+      return res.status(500).json({
+        error: 'Server Configuration Error',
+        message: 'WhatsApp Access Token is not configured on the server. Contact your administrator.',
       });
     }
 
     try {
-      // Call Meta Graph API to fetch templates
+      // Call WhatsApp Platform to fetch templates for this phone number
+      const platformUrl = process.env.WHATSAPP_PLATFORM_URL;
+      const platformApiKey = process.env.WHATSAPP_PLATFORM_API_KEY;
+
+      if (!platformUrl || !platformApiKey) {
+        return res.status(500).json({
+          error: 'Platform Configuration Error',
+          message: 'WhatsApp Platform is not configured on the server.',
+        });
+      }
+
+      const phoneNumberId = tenant.whatsappConfig.phoneNumberId;
+      if (!phoneNumberId) {
+        return res.status(400).json({
+          error: 'Missing Phone Number ID',
+          message: 'Phone Number ID is missing. Please configure WhatsApp settings first.',
+        });
+      }
+
+      console.log(`📞 Fetching templates from WhatsApp Platform`);
+      console.log(`🔗 URL: ${platformUrl}/api/templates`);
+      console.log(`📱 Phone Number ID: ${phoneNumberId}`);
+      
       const response = await axios.get(
-        `https://graph.instagram.com/v21.0/${businessAccountId}/message_templates`,
+        `${platformUrl}/api/templates`,
         {
-          params: {
-            access_token: accessToken,
-            fields: 'id,name,status,category,language,components',
+          headers: {
+            'x-api-key': platformApiKey,
+            'Content-Type': 'application/json',
           },
         }
       );
 
-      const metaTemplates = response.data.data || [];
+      const platformTemplates = response.data.templates || response.data.data || [];
+      console.log(`✅ Fetched ${platformTemplates.length} templates from platform`);
+
       let syncedCount = 0;
 
       // Process and save each template
-      for (const metaTemplate of metaTemplates) {
-        const templateBody = metaTemplate.components
-          ?.find((c) => c.type === 'BODY')
-          ?.text || '';
+      for (const platformTemplate of platformTemplates) {
+        const templateBody = platformTemplate.body || platformTemplate.message || '';
+        const templateName = platformTemplate.name || platformTemplate.templateName || '';
+        const templateId = platformTemplate.id || platformTemplate.templateId || '';
+        const status = platformTemplate.status || 'APPROVED';
+        const language = platformTemplate.language || 'en_US';
+        const category = platformTemplate.category || 'MARKETING';
+
+        // Extract variables from template body
+        const variableRegex = /\{\{(\w+)\}\}/g;
+        const variables = [];
+        let match;
+        while ((match = variableRegex.exec(templateBody)) !== null) {
+          if (!variables.includes(match[1])) {
+            variables.push(match[1]);
+          }
+        }
 
         const existingTemplate = await WhatsAppTemplate.findOne({
           tenantId,
-          templateId: metaTemplate.id,
+          templateId: templateId,
         });
 
         if (existingTemplate) {
           // Update existing template
-          existingTemplate.templateName = metaTemplate.name;
+          existingTemplate.templateName = templateName;
           existingTemplate.templateBody = templateBody;
-          existingTemplate.status = metaTemplate.status?.toLowerCase() || 'pending';
-          existingTemplate.category = metaTemplate.category || 'MARKETING';
-          existingTemplate.language = metaTemplate.language || 'en';
+          existingTemplate.status = status.toLowerCase();
+          existingTemplate.category = category;
+          existingTemplate.language = language;
+          existingTemplate.variables = variables;
           existingTemplate.isLocalOnly = false;
           await existingTemplate.save();
         } else {
           // Create new template
           const newTemplate = new WhatsAppTemplate({
             tenantId,
-            templateId: metaTemplate.id,
-            templateName: metaTemplate.name,
-            templateBody,
-            status: metaTemplate.status?.toLowerCase() || 'pending',
-            category: metaTemplate.category || 'MARKETING',
-            language: metaTemplate.language || 'en',
+            templateId: templateId,
+            templateName: templateName,
+            templateBody: templateBody,
+            status: status.toLowerCase(),
+            category: category,
+            language: language,
+            variables: variables,
             isLocalOnly: false,
           });
           await newTemplate.save();
@@ -285,14 +332,14 @@ router.post('/templates/sync', async (req, res) => {
         syncedCount,
       });
     } catch (apiError) {
-      console.error(`❌ Error calling WhatsApp API:`, apiError.message);
+      console.error(`❌ Error calling WhatsApp Platform API:`, apiError.message);
       return res.status(400).json({
         error: 'Failed to fetch templates from WhatsApp Platform',
         message: apiError.message,
       });
     }
   } catch (error) {
-    console.error(`❌ Error syncing templates for ${req.body.tenantId}:`, error.message);
+    console.error(`❌ Error syncing templates for ${req.query.tenantId}:`, error.message);
     res.status(500).json({
       error: 'Failed to sync templates',
       message: error.message,
