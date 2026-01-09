@@ -85,22 +85,22 @@ export const sidebarLinks = [
     ]
   },
 
-  // === PRIORITY 7: Communication (WhatsApp) ===
+  // === PRIORITY 7: Communication (WhatsApp - Tenant Admins Only) ===
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["SuperAdmin", "tenantAdmin"],
+    roles: ["tenantAdmin"],
     tenantSpecific: true,
     children: [
       {
         label: "📧 Inbox",
         href: "/dashboard/client/[tenantId]/whatsapp/inbox",
-        roles: ["SuperAdmin", "tenantAdmin"],
+        roles: ["tenantAdmin"],
       },
       {
         label: "⚙️ Settings",
         href: "/dashboard/client/[tenantId]/whatsapp/settings",
-        roles: ["SuperAdmin", "tenantAdmin"],
+        roles: ["tenantAdmin"],
       },
     ],
   },

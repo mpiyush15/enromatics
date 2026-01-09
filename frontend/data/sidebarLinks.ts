@@ -89,17 +89,17 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["tenantAdmin", "SuperAdmin"],
+    roles: ["tenantAdmin"],
     children: [
       {
         label: "📧 Inbox",
         href: "/dashboard/client/[tenantId]/whatsapp/inbox",
-        roles: ["tenantAdmin", "SuperAdmin"],
+        roles: ["tenantAdmin"],
       },
       {
         label: "⚙️ Settings",
         href: "/dashboard/client/[tenantId]/whatsapp/settings",
-        roles: ["tenantAdmin", "SuperAdmin"],
+        roles: ["tenantAdmin"],
       },
     ],
   },
