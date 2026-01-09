@@ -1,33 +1,50 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
+const mongodb_uri = 'mongodb+srv://pixelsagency:Pm02072023@pixelsagency.664wxw1.mongodb.net/enromatics';
 
-mongoose.connect(process.env.MONGODB_URI).then(async () => {
-  const db = mongoose.connection.db;
-  const tenants = await db.collection('tenants').find({}).limit(10).toArray();
-  
-  console.log('\n📱 WhatsApp Configurations:\n');
-  let found = false;
-  
-  tenants.forEach(tenant => {
-    if (tenant.whatsappConfig) {
-      found = true;
-      console.log(`✅ Tenant: ${tenant.tenantId}`);
-      console.log(`   Business Account ID: ${tenant.whatsappConfig.businessAccountId}`);
-      console.log(`   Phone Number ID: ${tenant.whatsappConfig.phoneNumberId}`);
-      console.log(`   Phone Number: ${tenant.whatsappConfig.phoneNumber}`);
-      console.log(`   Connection Status: ${tenant.whatsappConfig.connectionStatus || 'N/A'}`);
-      console.log(`   Connected At: ${tenant.whatsappConfig.connectedAt || 'N/A'}`);
-      console.log(`   Configured: ${tenant.whatsappConfig.isConfigured}`);
+(async () => {
+  try {
+    await mongoose.connect(mongodb_uri);
+    const db = mongoose.connection.db;
+    
+    console.log('✅ FINAL STATUS - WhatsApp Connections\n');
+    console.log('═'.repeat(80));
+    
+    const tenants = await db.collection('tenants').find({}).project({
+      tenantId: 1,
+      instituteName: 1,
+      'whatsappConfig.isConfigured': 1,
+      'whatsappConfig.connectionStatus': 1,
+      'whatsappConfig.phoneNumber': 1
+    }).toArray();
+    
+    const withWhatsApp = tenants.filter(t => t.whatsappConfig && t.whatsappConfig.isConfigured);
+    const withoutWhatsApp = tenants.filter(t => !t.whatsappConfig || !t.whatsappConfig.isConfigured);
+    
+    console.log(`✅ Tenants WITH WhatsApp Connected: ${withWhatsApp.length}`);
+    console.log('─'.repeat(80));
+    withWhatsApp.forEach((t, i) => {
+      console.log(`${i + 1}. ${t.instituteName || 'Unknown'}`);
+      console.log(`   tenantId: ${t.tenantId}`);
+      console.log(`   Status: 🟢 ${t.whatsappConfig.connectionStatus}`);
+      console.log(`   Phone: ${t.whatsappConfig.phoneNumber}`);
       console.log('');
+    });
+    
+    console.log(`\n🔴 Tenants WITHOUT WhatsApp: ${withoutWhatsApp.length}`);
+    console.log('─'.repeat(80));
+    withoutWhatsApp.slice(0, 5).forEach((t, i) => {
+      console.log(`${i + 1}. ${t.instituteName || 'Unknown'} (${t.tenantId})`);
+    });
+    if (withoutWhatsApp.length > 5) {
+      console.log(`... and ${withoutWhatsApp.length - 5} more`);
     }
-  });
-  
-  if (!found) {
-    console.log('❌ No WhatsApp configurations found');
+    
+    console.log('\n═'.repeat(80));
+    console.log('✅ Only REAL WhatsApp accounts are now connected!');
+    
+    await mongoose.connection.close();
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    process.exit(1);
   }
-  
-  process.exit(0);
-}).catch(err => {
-  console.error('Error:', err.message);
-  process.exit(1);
-});
+})();

@@ -110,12 +110,14 @@ router.get('/config', async (req, res) => {
  * 🔒 Save or update a tenant's WhatsApp configuration
  * BODY: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
  * SECURITY: Only tenant's own config can be saved
+ * CRITICAL: One WhatsApp account can only be connected to ONE tenant
  * 
  * Flow:
  * 1. Validate tenantId exists
- * 2. Verify API key by connecting to WhatsApp Platform
- * 3. Save config to database (upsert)
- * 4. Return success only if connection verified
+ * 2. CHECK: Is this WhatsApp account already connected to another tenant?
+ * 3. Verify API key by connecting to WhatsApp Platform
+ * 4. Save config to database (upsert)
+ * 5. Return success only if connection verified
  */
 router.post('/config', async (req, res) => {
   try {
@@ -147,6 +149,24 @@ router.post('/config', async (req, res) => {
       return res.status(404).json({
         error: 'Tenant not found',
         message: `Cannot configure WhatsApp for unknown tenant "${tenantId}"`
+      });
+    }
+
+    // 🔒 CRITICAL: Check if this WhatsApp account is already connected to ANOTHER tenant
+    console.log(`🔍 Checking if WhatsApp account (${businessAccountId}) is already in use...`);
+    
+    const existingTenant = await Tenant.findOne({
+      tenantId: { $ne: tenantId }, // ← Find ANY OTHER tenant
+      'whatsappConfig.businessAccountId': businessAccountId,
+      'whatsappConfig.isConfigured': true
+    });
+
+    if (existingTenant) {
+      console.error(`🚨 TENANT ISOLATION VIOLATION: WhatsApp account ${businessAccountId} already connected to ${existingTenant.tenantId}`);
+      return res.status(409).json({
+        error: 'WhatsApp account already in use',
+        message: `This WhatsApp Business Account (${businessAccountId}) is already connected to another tenant: "${existingTenant.instituteName || existingTenant.tenantId}". Each WhatsApp account can only be connected to ONE tenant.`,
+        conflictingTenant: existingTenant.tenantId
       });
     }
 
@@ -213,6 +233,66 @@ router.post('/config', async (req, res) => {
     console.error(`❌ Error saving WhatsApp config for ${req.body.tenantId}:`, error.message);
     res.status(500).json({ 
       error: 'Failed to save WhatsApp configuration',
+      message: error.message 
+    });
+  }
+});
+
+/**
+ * DELETE /api/whatsapp/config
+ * 🔒 Disconnect WhatsApp for a tenant
+ * REQUIRED: tenantId query param
+ * SECURITY: Permanently removes tenant's WhatsApp configuration
+ * 
+ * This will:
+ * 1. Remove all WhatsApp settings from the tenant
+ * 2. Stop syncing conversations/messages
+ * 3. Require reconfiguration to re-enable
+ */
+router.delete('/config', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+
+    // 🔴 MANDATORY: tenantId is required
+    if (!tenantId) {
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'You must specify which tenant to disconnect'
+      });
+    }
+
+    console.log(`🔌 Disconnecting WhatsApp for tenantId: ${tenantId}`);
+
+    // ✅ Get tenant (validate exists before deleting config)
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({
+        error: 'Tenant not found',
+        message: `Tenant "${tenantId}" does not exist`
+      });
+    }
+
+    // ✅ CRITICAL: Remove entire whatsappConfig from tenant
+    const result = await Tenant.findOneAndUpdate(
+      { tenantId },
+      {
+        $unset: { whatsappConfig: 1 } // ← Removes the entire field
+      },
+      { new: true }
+    );
+
+    console.log(`✅ WhatsApp disconnected for tenant: ${tenantId}`);
+
+    return res.json({
+      success: true,
+      message: `✅ WhatsApp has been disconnected for tenant: ${tenantId}`,
+      tenantId,
+      whatsappConfig: null // ← Now empty
+    });
+  } catch (error) {
+    console.error(`❌ Error disconnecting WhatsApp for ${req.query.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to disconnect WhatsApp',
       message: error.message 
     });
   }
