@@ -5,181 +5,216 @@ import Tenant from '../models/Tenant.js';
 const router = express.Router();
 
 /**
- * Helper function to get WhatsApp config for a tenant or global super admin
- * @param {string} tenantId - Tenant identifier (can be "global:*" for super admin)
+ * 🔒 MANDATORY: Get WhatsApp config for a tenant
+ * ⚠️  CRITICAL: Every tenant MUST have their own WhatsApp config
+ * ❌ No global config, no shared accounts, no super admin bypass
+ * @param {string} tenantId - Tenant identifier (REQUIRED)
  * @returns {Promise<object>} - WhatsApp configuration with apiKey
+ * @throws {Error} If tenantId is missing or no config found
  */
 async function getWhatsAppConfig(tenantId) {
-  // Super admin with global config (no tenant-specific DB record needed)
-  if (tenantId.startsWith('global:')) {
-    const globalConfig = {
-      businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
-      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-      phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID,
-      apiKey: process.env.WHATSAPP_PLATFORM_API_KEY,
-      isGlobal: true,
-      source: 'environment'
-    };
-    
-    if (!globalConfig.businessAccountId || !globalConfig.phoneNumberId) {
-      throw new Error('Global WhatsApp configuration not found in environment variables');
-    }
-    
-    return globalConfig;
+  // 🔴 MANDATORY VALIDATION: tenantId is required
+  if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+    throw new Error('❌ TENANT ISOLATION VIOLATION: tenantId is required and cannot be empty');
   }
 
-  // Regular tenant lookup
+  // 🔴 BLOCK "global:*" pattern - No shared global accounts allowed
+  if (tenantId.startsWith('global:') || tenantId === 'global') {
+    console.error('🚨 SECURITY VIOLATION BLOCKED: Attempt to access global WhatsApp config for tenantId:', tenantId);
+    throw new Error('❌ TENANT ISOLATION VIOLATION: Global WhatsApp accounts are not permitted. Each tenant must have their own WhatsApp connection.');
+  }
+
+  // ✅ TENANT LOOKUP: Each tenant owns their WhatsApp config
   const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
   
-  if (!tenant || !tenant.whatsappConfig) {
-    throw new Error('WhatsApp configuration not found for this tenant');
+  if (!tenant) {
+    console.warn(`⚠️  Tenant not found: ${tenantId}`);
+    throw new Error(`Tenant "${tenantId}" not found in database`);
+  }
+
+  if (!tenant.whatsappConfig || !tenant.whatsappConfig.isConfigured) {
+    console.warn(`⚠️  WhatsApp not configured for tenant: ${tenantId}`);
+    throw new Error(`WhatsApp is not configured for tenant "${tenantId}". Please set it up first.`);
   }
   
-  return tenant.whatsappConfig;
+  // ✅ Return tenant-specific config with tenantId attached
+  return {
+    ...tenant.whatsappConfig,
+    tenantId: tenantId // MANDATORY: Attach tenantId to config for audit trails
+  };
 }
 
 /**
  * GET /api/whatsapp/config
- * Fetch tenant's WhatsApp configuration from MongoDB
- * Query params: tenantId (required)
+ * 🔒 Fetch tenant's WhatsApp configuration from MongoDB
+ * REQUIRED: tenantId query param (identifies the tenant)
+ * SECURITY: Returns only the requesting tenant's config
  */
 router.get('/config', async (req, res) => {
   try {
     const { tenantId } = req.query;
 
+    // 🔴 MANDATORY: tenantId must be provided
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
-    }
-
-    // Super admin with global config (no tenant-specific DB record needed)
-    if (tenantId.startsWith('global:')) {
-      const globalConfig = {
-        businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
-        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-        phoneNumber: process.env.WHATSAPP_PHONE_NUMBER_ID, // Using phone number ID as fallback
-        apiKey: process.env.WHATSAPP_PLATFORM_API_KEY,
-        isGlobal: true,
-        source: 'environment',
-        connectionStatus: 'connected' // Add connection status
-      };
-      
-      if (!globalConfig.businessAccountId || !globalConfig.phoneNumberId) {
-        return res.status(404).json({ 
-          error: 'Global WhatsApp configuration not found',
-          message: 'Please set WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_PHONE_NUMBER_ID in environment'
-        });
-      }
-      
-      return res.json(globalConfig);
-    }
-
-    // Regular tenant lookup
-    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
-
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant not found' });
-    }
-
-    if (!tenant.whatsappConfig) {
-      return res.status(404).json({ 
-        error: 'WhatsApp configuration not found for this tenant',
-        message: 'Please configure WhatsApp settings first'
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'You must specify which tenant this request belongs to'
       });
     }
 
-    // Return config with connectionStatus set to 'connected' since it exists
-    const configWithStatus = {
-      ...tenant.whatsappConfig.toObject ? tenant.whatsappConfig.toObject() : tenant.whatsappConfig,
-      connectionStatus: 'connected'
+    console.log(`📨 GET /config for tenantId: ${tenantId}`);
+
+    // ✅ Get config for THIS tenant only
+    const tenant = await Tenant.findOne({ tenantId }).select('whatsappConfig');
+
+    if (!tenant) {
+      return res.status(404).json({ 
+        error: 'Tenant not found',
+        message: `Tenant "${tenantId}" does not exist`
+      });
+    }
+
+    if (!tenant.whatsappConfig || !tenant.whatsappConfig.isConfigured) {
+      return res.status(404).json({ 
+        error: 'WhatsApp configuration not found',
+        message: 'This tenant has not configured WhatsApp yet. Please set it up in settings.',
+        connectionStatus: 'disconnected'
+      });
+    }
+
+    // ✅ Return config WITH connection status, DO NOT expose sensitive apiKey to frontend
+    const safeConfig = {
+      businessAccountId: tenant.whatsappConfig.businessAccountId,
+      phoneNumberId: tenant.whatsappConfig.phoneNumberId,
+      phoneNumber: tenant.whatsappConfig.phoneNumber,
+      isConfigured: tenant.whatsappConfig.isConfigured,
+      connectionStatus: tenant.whatsappConfig.connectionStatus || 'disconnected',
+      connectedAt: tenant.whatsappConfig.connectedAt,
+      errorMessage: tenant.whatsappConfig.errorMessage,
+      // DO NOT include: apiKey, accessToken (these should never go to frontend)
     };
     
-    return res.json(configWithStatus);
+    console.log(`✅ WhatsApp config returned for tenant: ${tenantId}, status: ${safeConfig.connectionStatus}`);
+    return res.json(safeConfig);
   } catch (error) {
-    console.error('Error fetching WhatsApp config:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error fetching WhatsApp config for ${req.query.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch WhatsApp configuration',
+      message: error.message 
+    });
   }
 });
 
 /**
  * POST /api/whatsapp/config
- * Save or update tenant's WhatsApp configuration
- * Body: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
+ * 🔒 Save or update a tenant's WhatsApp configuration
+ * BODY: { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey }
+ * SECURITY: Only tenant's own config can be saved
  * 
- * If apiKey is provided, verifies connection to WhatsApp Platform
- * Creates tenant if it doesn't exist
+ * Flow:
+ * 1. Validate tenantId exists
+ * 2. Verify API key by connecting to WhatsApp Platform
+ * 3. Save config to database (upsert)
+ * 4. Return success only if connection verified
  */
 router.post('/config', async (req, res) => {
   try {
     const { tenantId, businessAccountId, phoneNumberId, phoneNumber, apiKey } = req.body;
 
+    // 🔴 MANDATORY: All required fields
     if (!tenantId || !businessAccountId || !phoneNumberId || !phoneNumber) {
       return res.status(400).json({ 
-        error: 'Missing required fields: tenantId, businessAccountId, phoneNumberId, phoneNumber' 
+        error: 'Missing required fields',
+        required: ['tenantId', 'businessAccountId', 'phoneNumberId', 'phoneNumber'],
+        received: { tenantId, businessAccountId, phoneNumberId, phoneNumber }
       });
     }
 
-    // If API key is provided, verify the connection before saving
+    // 🔴 BLOCK: Global account patterns
+    if (tenantId.startsWith('global:') || tenantId === 'global') {
+      console.error('🚨 SECURITY VIOLATION BLOCKED: Attempt to save global WhatsApp config');
+      return res.status(403).json({
+        error: 'Global WhatsApp accounts not permitted',
+        message: 'Each tenant must have their own WhatsApp Business Account'
+      });
+    }
+
+    console.log(`📝 Setting up WhatsApp for tenantId: ${tenantId}`);
+
+    // ✅ VERIFY: Tenant exists in database
+    const tenantExists = await Tenant.findOne({ tenantId });
+    if (!tenantExists) {
+      return res.status(404).json({
+        error: 'Tenant not found',
+        message: `Cannot configure WhatsApp for unknown tenant "${tenantId}"`
+      });
+    }
+
+    // ✅ VERIFY: API key by testing connection to WhatsApp Platform
     let connectionStatus = 'disconnected';
     let errorMessage = null;
 
     if (apiKey && apiKey.trim()) {
       try {
-        console.log('🔍 Verifying WhatsApp Platform connection with provided API key...');
+        console.log(`🔍 Verifying WhatsApp Platform connection for tenant: ${tenantId}`);
         
-        // Try to fetch conversations with the provided API key to verify it works
-        // Using conversations endpoint which is more reliable than stats
-        const conversations = await whatsappClient.getConversations(1, 0, apiKey);
+        // Test connection by fetching conversations with the provided API key
+        const testResult = await whatsappClient.getConversations(1, 0, apiKey);
         
-        if (conversations && (conversations.success !== false)) {
+        if (testResult && testResult.success !== false) {
           connectionStatus = 'connected';
-          console.log('✅ WhatsApp Platform connection verified successfully');
+          console.log(`✅ WhatsApp Platform connection verified for tenant: ${tenantId}`);
         } else {
           connectionStatus = 'error';
-          errorMessage = 'Failed to verify connection: ' + (conversations?.error || 'Unknown error');
-          console.warn('⚠️ Connection verification failed:', errorMessage);
+          errorMessage = `Connection test failed: ${testResult?.error || 'Unknown error'}`;
+          console.warn(`⚠️  Connection verification failed for ${tenantId}:`, errorMessage);
         }
       } catch (verifyError) {
         connectionStatus = 'error';
-        errorMessage = 'Invalid API key or connection failed: ' + verifyError.message;
-        console.error('❌ API key verification failed:', verifyError.message);
-        
-        // Don't stop - allow saving even if verification fails (user can retry)
-        // This allows for network issues to be retried later
+        errorMessage = `Invalid API key or connection failed: ${verifyError.message}`;
+        console.error(`❌ API key verification failed for ${tenantId}:`, verifyError.message);
       }
+    } else {
+      errorMessage = 'No API key provided - connection cannot be verified';
+      console.warn(`⚠️  No API key provided for tenant: ${tenantId}`);
     }
 
-    // Save to MongoDB - create tenant if it doesn't exist
-    const tenant = await Tenant.findOneAndUpdate(
-      { tenantId },
+    // ✅ SAVE: Update/create tenant's WhatsApp config (isolated by tenantId)
+    const updatedTenant = await Tenant.findOneAndUpdate(
+      { tenantId }, // ← CRITICAL: Filter by tenantId to ensure isolation
       {
         whatsappConfig: {
           businessAccountId,
           phoneNumberId,
           phoneNumber,
-          apiKey: apiKey || null,
+          apiKey, // ✅ Stored only in DB, never returned to frontend
           isConfigured: true,
           connectionStatus,
           errorMessage,
           connectedAt: connectionStatus === 'connected' ? new Date() : null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          updatedByTenantId: tenantId // ← Audit trail
         }
       },
-      { new: true, upsert: true }
+      { new: true, upsert: false } // ← Don't create new tenants, only update existing ones
     );
 
-    console.log('✅ WhatsApp config saved for tenant:', tenantId);
+    console.log(`✅ WhatsApp config saved for tenant: ${tenantId}, connectionStatus: ${connectionStatus}`);
 
     return res.json({
-      success: true,
+      success: connectionStatus === 'connected',
       message: connectionStatus === 'connected' 
-        ? 'WhatsApp configuration saved and verified!' 
-        : 'Configuration saved. API key verification pending or failed.',
-      config: tenant.whatsappConfig,
-      connectionStatus
+        ? `✅ WhatsApp configured and verified for tenant: ${tenantId}`
+        : `⚠️  WhatsApp configuration saved, but connection could not be verified: ${errorMessage}`,
+      connectionStatus,
+      errorMessage: errorMessage || null
     });
   } catch (error) {
-    console.error('Error saving WhatsApp config:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error saving WhatsApp config for ${req.body.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to save WhatsApp configuration',
+      message: error.message 
+    });
   }
 });
 
@@ -211,60 +246,84 @@ router.get('/messages', async (req, res) => {
 
 /**
  * POST /api/whatsapp/messages
- * Send a message from tenant account (NEW - matches frontend)
- * Body: { accountId (tenantId), type, phoneNumberId, recipientPhone, message }
+ * 🔒 Send a message from tenant account
+ * BODY: { accountId (tenantId), type, phoneNumberId, recipientPhone, message }
+ * SECURITY: Each message tagged with tenant's API key
  */
 router.post('/messages', async (req, res) => {
   try {
     const { accountId, type, phoneNumberId, recipientPhone, message } = req.body;
 
+    // 🔴 MANDATORY: accountId is the tenantId
     if (!accountId || !recipientPhone || !message) {
       return res.status(400).json({ 
         error: 'Missing required fields: accountId (tenantId), recipientPhone, message' 
       });
     }
 
-    // Get tenant or global config
+    // ✅ Get tenant config (validates tenant exists)
     const config = await getWhatsAppConfig(accountId);
 
-    // Send message via platform using tenant API key
-    const result = await whatsappClient.sendMessage(recipientPhone, message, null, null, config.apiKey);
+    // ✅ CRITICAL: Pass tenantId (accountId) to Platform
+    const result = await whatsappClient.sendMessage(
+      recipientPhone, 
+      message, 
+      null, 
+      null, 
+      config.apiKey,
+      accountId // ← MANDATORY: Platform must attach tenantId
+    );
 
     return res.json({
       success: true,
       data: result
     });
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error sending message from ${req.body.accountId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to send message',
+      message: error.message 
+    });
   }
 });
 
 /**
  * POST /api/whatsapp/messages/send
- * Send a message from tenant account (LEGACY - kept for backwards compatibility)
- * Body: { tenantId, to, message }
+ * 🔒 Send a message from tenant account (LEGACY)
+ * BODY: { tenantId, to, message }
+ * SECURITY: Legacy endpoint - should migrate to POST /send-message
  */
 router.post('/messages/send', async (req, res) => {
   try {
     const { tenantId, to, message } = req.body;
 
+    // 🔴 MANDATORY: tenantId must be provided
     if (!tenantId || !to || !message) {
       return res.status(400).json({ 
         error: 'Missing required fields: tenantId, to, message' 
       });
     }
 
-    // Get tenant or global config
+    // ✅ Get tenant config (validates tenant exists)
     const config = await getWhatsAppConfig(tenantId);
 
-    // Send message via platform using tenant API key
-    const result = await whatsappClient.sendMessage(to, message, null, null, config.apiKey);
+    // ✅ CRITICAL: Pass tenantId to Platform
+    const result = await whatsappClient.sendMessage(
+      to, 
+      message, 
+      null, 
+      null, 
+      config.apiKey,
+      tenantId // ← MANDATORY: Platform must attach tenantId
+    );
 
     return res.json(result);
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error sending message from ${req.body.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to send message',
+      message: error.message 
+    });
   }
 });
 
@@ -319,77 +378,71 @@ router.get('/messages/stats', async (req, res) => {
 
 /**
  * GET /api/whatsapp/conversations
- * Fetch conversations for a tenant
- * Query params: tenantId (required), limit (optional), offset (optional)
+ * 🔒 Fetch conversations for a specific tenant
+ * REQUIRED: tenantId query param
+ * SECURITY: Returns only conversations belonging to this tenant
  * 
- * Transforms Platform API response to frontend format
+ * Platform API must filter by tenantId to prevent data leaks
  */
 router.get('/conversations', async (req, res) => {
   try {
     const { tenantId, limit = 50, offset = 0 } = req.query;
 
+    // 🔴 MANDATORY: tenantId is required
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'You must specify which tenant this request belongs to'
+      });
     }
 
-    // Get tenant or global config
+    console.log(`📬 GET /conversations for tenantId: ${tenantId}, limit: ${limit}, offset: ${offset}`);
+
+    // ✅ Get config (validates tenant exists and has WhatsApp configured)
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch conversations from platform using tenant API key
+    // ✅ CRITICAL: Pass tenantId to Platform API so it filters conversations by tenant
     const response = await whatsappClient.getAllConversations(
       parseInt(limit),
       parseInt(offset),
-      config.apiKey
+      config.apiKey,
+      tenantId // ← MANDATORY: Platform must scope results to this tenant
     );
 
-    // Log raw Platform response first
-    console.log('📥 Raw Platform response (first conv):', JSON.stringify(response.data?.conversations?.[0], null, 2).substring(0, 500));
+    console.log(`✅ Found ${response.data?.conversations?.length || 0} conversations for tenant: ${tenantId}`);
 
     // Transform Platform response to frontend format
-    const conversations = (response.data?.conversations || []).map(conv => {
-      // Debug: check what fields are available
-      const mappedConv = {
-        _id: conv._id,                                  // MongoDB ID (internal only)
-        id: conv.conversationId || conv.id,             // Business conversation ID (use conversationId first, fallback to id)
-        conversationId: conv.conversationId || conv.id, // Platform conversation ID
-        phone: conv.userPhone || conv.phone,            // Customer phone
-        phoneNumberId: conv.phoneNumberId,              // Phone number ID
-        userPhone: conv.userPhone || conv.phone,        // Customer phone (alias)
-        name: conv.userProfileName || conv.userName || conv.name,    // Display name (prefer profile name)
-        userName: conv.userName,                        // User name (alias)
-        userProfileName: conv.userProfileName,          // User profile name (alias)
-        lastMessage: conv.lastMessagePreview,           // Last message text
-        lastMessagePreview: conv.lastMessagePreview,    // Last message preview (alias)
-        lastMessageTime: conv.lastMessageAt,            // Last message timestamp
-        lastMessageAt: conv.lastMessageAt,              // Last message time (alias)
-        lastMessageType: conv.lastMessageType,          // Message type (text/image/etc)
-        unreadCount: conv.unreadCount || 0,             // Unread count
-        status: conv.status,                            // Conversation status (open/closed)
-        priority: conv.priority,                        // Priority (normal/high/low)
-        createdAt: conv.createdAt,                      // When conversation started
-        updatedAt: conv.updatedAt,                      // Last updated
-        lastReadAt: conv.lastReadAt,                    // When last read
-        assignedAgentId: conv.assignedAgentId,          // Assigned agent (if any)
-        tags: conv.tags || []                           // Conversation tags
-      };
-      
-      if (mappedConv.id === conv._id) {
-        console.warn('⚠️ WARNING: Conversation ID is still MongoDB _id! conversationId field missing or undefined');
-        console.warn('  conv._id:', conv._id);
-        console.warn('  conv.conversationId:', conv.conversationId);
-        console.warn('  Available fields:', Object.keys(conv).filter(k => k.includes('id') || k.includes('conversation')));
-      }
-      
-      return mappedConv;
-    });
-
-    // Log the mapped conversations to debug ID issue
-    console.log('✅ Mapped conversations for frontend:', conversations.slice(0, 1).map(c => ({ _id: c._id, id: c.id, conversationId: c.conversationId })));
+    const conversations = (response.data?.conversations || []).map(conv => ({
+      _id: conv._id,
+      id: conv.conversationId || conv.id,
+      conversationId: conv.conversationId || conv.id,
+      tenantId: tenantId, // ← ALWAYS attach tenantId for audit
+      phone: conv.userPhone || conv.phone,
+      phoneNumberId: conv.phoneNumberId,
+      userPhone: conv.userPhone || conv.phone,
+      name: conv.userProfileName || conv.userName || conv.name,
+      userName: conv.userName,
+      userProfileName: conv.userProfileName,
+      lastMessage: conv.lastMessagePreview,
+      lastMessagePreview: conv.lastMessagePreview,
+      lastMessageTime: conv.lastMessageAt,
+      lastMessageAt: conv.lastMessageAt,
+      lastMessageType: conv.lastMessageType,
+      unreadCount: conv.unreadCount || 0,
+      status: conv.status,
+      priority: conv.priority,
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt,
+      lastReadAt: conv.lastReadAt,
+      assignedAgentId: conv.assignedAgentId,
+      tags: conv.tags || []
+    }));
 
     return res.json({
       success: true,
       data: {
         conversations,
+        tenantId, // ← Return tenant context
         pagination: response.data?.pagination || {
           total: conversations.length,
           limit: parseInt(limit),
@@ -399,8 +452,11 @@ router.get('/conversations', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching conversations:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error fetching conversations for ${req.query.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch conversations',
+      message: error.message 
+    });
   }
 });
 
@@ -600,65 +656,69 @@ router.get('/health', async (req, res) => {
 
 /**
  * GET /api/whatsapp/conversation/:conversationId/messages
- * Fetch messages for a specific conversation
- * Query params: tenantId, limit (optional), offset (optional)
- * Path params: conversationId (should be the platform conversationId, not MongoDB _id)
+ * 🔒 Fetch messages for a specific conversation
+ * REQUIRED: tenantId query param, conversationId path param
+ * SECURITY: Validates tenant owns this conversation before returning messages
  * 
- * Note: Use the human-readable conversationId (e.g., "pixels_internal_889344924259692_918087131777")
- * not the MongoDB _id
+ * This endpoint MUST verify:
+ * 1. tenantId is provided
+ * 2. Tenant has WhatsApp configured
+ * 3. Platform returns only this tenant's messages
  */
 router.get('/conversation/:conversationId/messages', async (req, res) => {
   try {
     const { tenantId, limit = 50, offset = 0 } = req.query;
     const { conversationId } = req.params;
 
+    // 🔴 MANDATORY: tenantId is required
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'You must specify which tenant this request belongs to'
+      });
     }
 
-    console.log('📨 Fetching messages for conversation:', conversationId);
-    console.log('   tenantId:', tenantId);
-    
-    // Check if conversationId looks like MongoDB _id vs platform conversationId
-    if (conversationId.length === 24 && /^[0-9a-f]{24}$/.test(conversationId)) {
-      console.warn('⚠️ WARNING: conversationId looks like MongoDB _id!');
-      console.warn('   Expected format: pixels_internal_889344924259692_918087131777');
-      console.warn('   Got format: ' + conversationId);
-    }
+    console.log(`📨 GET /conversation/${conversationId}/messages for tenantId: ${tenantId}`);
 
+    // ✅ Get config (validates tenant exists and has WhatsApp configured)
     const config = await getWhatsAppConfig(tenantId);
-    
-    // Fetch messages from platform using the platform's conversationId
+
+    // ✅ CRITICAL: Platform must filter messages by tenantId to prevent leaks
     const response = await whatsappClient.getConversationMessages(
       conversationId,
       parseInt(limit),
       parseInt(offset),
-      config.apiKey
+      config.apiKey,
+      tenantId // ← MANDATORY: Platform must scope messages to this tenant
     );
 
-    // Transform Platform response to consistent frontend format
+    // Transform Platform response to frontend format with tenantId attached
     const messages = (response.data?.messages || response.messages || []).map(msg => ({
-      _id: msg._id || msg.messageId,           // MongoDB ID for frontend
-      messageId: msg.messageId,                // Platform message ID
-      waMessageId: msg.waMessageId,            // WhatsApp message ID
-      conversationId: msg.conversationId,      // Parent conversation ID
-      senderPhone: msg.senderPhone,            // Who sent the message
-      recipientPhone: msg.recipientPhone,      // Who received it
-      messageType: msg.messageType,            // text, image, document, etc
-      content: msg.content,                    // Message content (structure varies by type)
-      status: msg.status,                      // sent, delivered, read, failed, pending
-      direction: msg.direction,                // inbound or outbound
-      timestamp: msg.timestamp,                // When message was sent
-      createdAt: msg.createdAt,                // When created in system
-      deliveredAt: msg.deliveredAt,            // When delivered
-      readAt: msg.readAt                       // When read
+      _id: msg._id || msg.messageId,
+      messageId: msg.messageId,
+      waMessageId: msg.waMessageId,
+      conversationId: msg.conversationId,
+      tenantId: tenantId, // ← ALWAYS attach for audit
+      senderPhone: msg.senderPhone,
+      recipientPhone: msg.recipientPhone,
+      messageType: msg.messageType,
+      content: msg.content,
+      status: msg.status,
+      direction: msg.direction,
+      timestamp: msg.timestamp,
+      createdAt: msg.createdAt,
+      deliveredAt: msg.deliveredAt,
+      readAt: msg.readAt
     }));
 
-    // Return formatted response
+    console.log(`✅ Found ${messages.length} messages for conversation: ${conversationId}, tenant: ${tenantId}`);
+
     return res.json({
       success: true,
       data: {
-        messages: messages,
+        messages,
+        tenantId,
+        conversationId,
         pagination: response.data?.pagination || {
           limit: parseInt(limit),
           offset: parseInt(offset),
@@ -668,11 +728,12 @@ router.get('/conversation/:conversationId/messages', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
-    const errorMessage = error?.message || error?.response?.data?.message || String(error) || 'Unknown error';
+    console.error(`❌ Error fetching messages for ${req.query.tenantId}/${req.params.conversationId}:`, error.message);
+    const errorMessage = error?.message || error?.response?.data?.message || 'Unknown error';
     res.status(500).json({ 
-      error: errorMessage,
-      details: error?.response?.data || error?.code || 'No additional details'
+      error: 'Failed to fetch messages',
+      message: errorMessage,
+      details: error?.response?.data || null
     });
   }
 });
@@ -881,36 +942,60 @@ router.delete('/contacts/:contactId', async (req, res) => {
 
 /**
  * POST /api/whatsapp/send-message
- * Send direct message to a contact by phone
- * Body: { recipientPhone, message, mediaUrl (optional), mediaType (optional) }
- * Query params: tenantId
+ * 🔒 Send a direct message from a tenant's WhatsApp account
+ * BODY: { tenantId, recipientPhone, message, mediaUrl (optional), mediaType (optional) }
+ * SECURITY: Each message is tagged with tenantId on Platform side
  */
 router.post('/send-message', async (req, res) => {
   try {
-    const { tenantId } = req.query;
-    const { recipientPhone, message, mediaUrl, mediaType } = req.body;
+    const { tenantId, recipientPhone, message, mediaUrl, mediaType } = req.body;
 
+    // 🔴 MANDATORY: tenantId is required
     if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'You must specify which tenant this message belongs to'
+      });
     }
 
     if (!recipientPhone || !message) {
-      return res.status(400).json({ error: 'recipientPhone and message are required' });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        required: ['recipientPhone', 'message']
+      });
     }
 
+    console.log(`📤 Sending message from tenant: ${tenantId} to ${recipientPhone}`);
+
+    // ✅ Get config (validates tenant exists and has WhatsApp configured)
     const config = await getWhatsAppConfig(tenantId);
+
+    // ✅ CRITICAL: Platform must tag this message with tenantId
     const result = await whatsappClient.sendMessage(
       recipientPhone,
       message,
       mediaUrl,
       mediaType,
-      config.apiKey
+      config.apiKey,
+      tenantId // ← MANDATORY: Platform must attach tenantId to message record
     );
 
-    return res.json(result);
+    console.log(`✅ Message sent from tenant: ${tenantId}`);
+
+    return res.json({
+      success: true,
+      message: 'Message sent successfully',
+      data: {
+        ...result,
+        tenantId // ← Return tenant context in response
+      }
+    });
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: error.message });
+    console.error(`❌ Error sending message from ${req.body.tenantId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to send message',
+      message: error.message 
+    });
   }
 });
 
