@@ -299,16 +299,24 @@ export default function WhatsAppTemplatesPage() {
                         {template.usageCount} times
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            setSelectedTemplate(template);
-                            setShowPreview(true);
-                          }}
-                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
-                          title="View Details"
-                        >
-                          <Eye size={18} />
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedTemplate(template);
+                              setShowPreview(true);
+                            }}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
+                            title="Preview"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
