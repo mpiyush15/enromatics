@@ -103,3 +103,64 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/whatsapp/config
+ * 🔒 Disconnect WhatsApp for a tenant
+ * Query param: tenantId (required)
+ * 
+ * Permanently removes tenant's WhatsApp configuration
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tenantId = searchParams.get('tenantId');
+
+    // 🔴 MANDATORY: tenantId is required
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'tenantId is required', message: 'You must specify which tenant to disconnect' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`🔌 Frontend: Disconnecting WhatsApp for tenant: ${tenantId}`);
+
+    const backendUrl = getApiUrl('/api/whatsapp/config');
+    const response = await fetch(`${backendUrl}?tenantId=${tenantId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: request.headers.get('Authorization') || '',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return NextResponse.json(
+        { 
+          error: error.error || 'Failed to disconnect WhatsApp',
+          message: error.message 
+        },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    
+    console.log(`✅ Frontend: WhatsApp disconnected for tenant: ${tenantId}`);
+
+    return NextResponse.json({
+      success: true,
+      message: `✅ WhatsApp disconnected for tenant: ${tenantId}`,
+      tenantId,
+      whatsappConfig: null
+    });
+  } catch (error) {
+    console.error(`❌ Error disconnecting WhatsApp:`, error);
+    return NextResponse.json(
+      { error: 'Internal server error', message: (error as Error).message },
+      { status: 500 }
+    );
+  }
+}
