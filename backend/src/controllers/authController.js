@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import Tenant from "../models/Tenant.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 import { sendCredentialsEmail } from "../services/emailService.js";
 import { notifyNewSignup } from "../services/superadminNotificationService.js";
@@ -243,27 +245,66 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password, purpose } = req.body;
 
-    console.log('🔐 Login attempt for:', email, 'Purpose:', purpose || 'default');
+    console.log('\n' + '='.repeat(80));
+    console.log('🔐 LOGIN ATTEMPT');
+    console.log('='.repeat(80));
+    console.log('📧 Email:', email);
+    console.log('🔑 Password received:');
+    console.log('   - Type:', typeof password);
+    console.log('   - Length:', password ? password.length : 'NULL/UNDEFINED');
+    console.log('   - Value:', JSON.stringify(password));
+    console.log('   - First 20 chars:', password ? password.substring(0, 20) : 'NONE');
+    console.log('🎯 Purpose:', purpose || 'default');
     
     // Extract tenant subdomain from request (set by frontend middleware via BFF)
     const tenantSubdomain = req.headers['x-tenant-subdomain'];
-    console.log('🌐 Tenant subdomain:', tenantSubdomain || 'NONE (main domain)');
+    console.log('🌐 Subdomain header:', tenantSubdomain || 'NONE (main domain)');
+    
+    console.log('\n📊 Database check:');
+    console.log('   - Connected:', !!mongoose.connection);
+    console.log('   - Database name:', mongoose.connection.name);
     
     const user = await User.findOne({ email });
+    
+    console.log('\n👤 User lookup:');
+    console.log('   - User found:', !!user);
+    
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log('   ❌ User NOT found in database');
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log('✓ User found, role:', user.role, 'tenantId:', user.tenantId, 'checking password...');
+    console.log('   - Name:', user.name);
+    console.log('   - Email:', user.email);
+    console.log('   - Role:', user.role);
+    console.log('   - Password field:', user.password ? 'EXISTS' : 'MISSING');
+    
+    console.log('\n🔐 PASSWORD DEBUG:');
+    console.log('LOGIN DEBUG');
+    console.log('Email:', email);
+    console.log('User found:', !!user);
+    console.log('Stored password:', user?.password);
+    console.log(
+      'Password match:',
+      user ? await bcrypt.compare(password, user.password) : 'no user'
+    );
+    
+    console.log('\n🔐 Password verification:');
+    console.log('   - Stored hash (first 30):', user.password ? user.password.substring(0, 30) + '...' : 'NO HASH');
+    console.log('   - Calling matchPassword()...');
+    
     const isMatch = await user.matchPassword(password);
-    console.log('🔑 Password match result:', isMatch);
+    console.log('   - Result:', isMatch ? '✅ PASSWORD MATCHES' : '❌ PASSWORD DOES NOT MATCH');
     
     if (!isMatch) {
-      console.log('❌ Invalid password for user:', email);
+      console.log('❌ LOGIN FAILED: Invalid password');
+      console.log('='.repeat(80));
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    console.log('✅ Password verified successfully');
+    console.log('='.repeat(80) + '\n');
+    
     // ✅ TENANT-BASED ACCESS CONTROL
     const userRole = user.role?.toLowerCase();
     
@@ -329,7 +370,19 @@ export const loginUser = async (req, res) => {
     // ✅ Update user's active session (invalidates previous sessions)
     user.activeSessionId = sessionId;
     user.lastLoginAt = new Date();
-    await user.save();
+    
+    // Save with timeout to prevent hanging
+    try {
+      await Promise.race([
+        user.save(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("User save timeout")), 5000)
+        )
+      ]);
+    } catch (saveErr) {
+      console.error('⚠️  User save failed, continuing anyway:', saveErr.message);
+      // Don't block login if save fails
+    }
 
     // ✅ Include sessionId in JWT token
     const token = jwt.sign(

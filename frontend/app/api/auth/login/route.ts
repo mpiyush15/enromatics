@@ -20,6 +20,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, subdomain, purpose } = body;
 
+    console.log('🔓 [BFF LOGIN] Request received');
+    console.log('  - Email:', email);
+    console.log('  - Password length:', password?.length);
+    console.log('  - Subdomain:', subdomain || 'NONE (main domain)');
+    console.log('  - Purpose:', purpose || 'default');
+
     if (!email || !password) {
       return NextResponse.json(
         { message: 'Email and password are required' },
@@ -29,6 +35,8 @@ export async function POST(request: NextRequest) {
 
     // Check if EXPRESS_BACKEND_URL is configured
     const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL;
+    console.log('  - EXPRESS_BACKEND_URL:', expressUrl);
+    
     if (!expressUrl) {
       console.error('❌ EXPRESS_BACKEND_URL not configured in environment');
       return NextResponse.json(
@@ -106,14 +114,15 @@ export async function POST(request: NextRequest) {
       }
 
       if (!expressResponse.ok) {
-        console.error('❌ Express returned error:', expressResponse.status, data);
+        console.error('❌ [BFF] Express returned error:', expressResponse.status);
+        console.error('   - Data:', data);
         return NextResponse.json(
           { success: false, message: data.message || 'Login failed' },
           { status: expressResponse.status }
         );
       }
 
-      console.log('✅ Express login successful');
+      console.log('✅ [BFF] Express login successful');
 
       // ✅ CRITICAL: Set cookie on Vercel domain using Next.js cookies() API
       // This ensures the cookie is stored for subsequent requests to the BFF

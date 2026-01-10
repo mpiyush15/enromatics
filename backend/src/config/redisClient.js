@@ -16,12 +16,13 @@ try {
     url: process.env.REDIS_URL || "redis://localhost:6379",
     socket: {
       reconnectStrategy: (retries) => {
-        if (retries > 10) {
+        if (retries > 3) {
           console.warn("⚠️  Redis: Max reconnection attempts reached");
           return new Error("Max reconnection attempts reached");
         }
-        return Math.min(retries * 100, 3000);
+        return Math.min(retries * 100, 1000);
       },
+      connectTimeout: 3000, // 3 second timeout for initial connection
     },
   });
 
@@ -43,10 +44,15 @@ try {
     isConnected = false;
   });
 
-  // Connect to Redis
-  redisClient.connect().catch((err) => {
+  // Connect to Redis with timeout
+  Promise.race([
+    redisClient.connect(),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Redis connection timeout")), 3000)
+    )
+  ]).catch((err) => {
     isConnected = false;
-    // Silent failure - MongoDB fallback will be used
+    console.warn("⚠️  Redis connection failed, using MongoDB fallback");
   });
 } catch (err) {
   // Silent initialization failure - MongoDB fallback

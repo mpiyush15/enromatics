@@ -55,6 +55,9 @@ export default function InstituteOverviewPage() {
   const [revenueView, setRevenueView] = useState<'quarterly' | 'annual'>('quarterly');
   const [revenueLoading, setRevenueLoading] = useState(false);
 
+  // Check if trial is expired
+  const isTrialExpired = user?.plan === 'trial' && user?.subscription?.endDate ? new Date(user.subscription.endDate) < new Date() : false;
+
   useEffect(() => {
     fetchDashboardData();
   }, [user, tenantId]);
@@ -193,24 +196,42 @@ export default function InstituteOverviewPage() {
 
       {/* Trial Notification Banner */}
       {user?.plan === 'trial' && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-lg shadow-md">
+        <div className={`${
+          isTrialExpired 
+            ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400' 
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400'
+        } p-4 rounded-lg shadow-md`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">⏳</span>
+              <span className="text-2xl">{isTrialExpired ? '⏰' : '⏳'}</span>
               <div>
-                <h3 className="text-sm font-bold text-yellow-900 dark:text-yellow-200">
-                  Free Trial Active
+                <h3 className={`text-sm font-bold ${
+                  isTrialExpired 
+                    ? 'text-red-900 dark:text-red-200' 
+                    : 'text-yellow-900 dark:text-yellow-200'
+                }`}>
+                  {isTrialExpired ? 'Trial Period Expired' : 'Free Trial Active'}
                 </h3>
-                <p className="text-xs text-yellow-800 dark:text-yellow-300 mt-1">
-                  Your free trial is active. Upgrade your plan to unlock all features.
+                <p className={`text-xs ${
+                  isTrialExpired 
+                    ? 'text-red-800 dark:text-red-300' 
+                    : 'text-yellow-800 dark:text-yellow-300'
+                } mt-1`}>
+                  {isTrialExpired 
+                    ? 'Your trial has expired. Please upgrade your plan to continue using all features.'
+                    : 'Your free trial is active. Upgrade your plan to unlock all features.'}
                 </p>
               </div>
             </div>
             <button
               onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
-              className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold rounded-lg transition-colors whitespace-nowrap ml-4"
+              className={`px-4 py-2 ${
+                isTrialExpired
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900'
+              } font-semibold rounded-lg transition-colors whitespace-nowrap ml-4`}
             >
-              Upgrade Now
+              {isTrialExpired ? '🚀 Upgrade Now' : 'Upgrade Now'}
             </button>
           </div>
         </div>
