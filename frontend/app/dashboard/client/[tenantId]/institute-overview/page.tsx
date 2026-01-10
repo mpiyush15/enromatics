@@ -57,6 +57,20 @@ export default function InstituteOverviewPage() {
 
   // Check if trial is expired
   const isTrialExpired = user?.plan === 'trial' && user?.subscription?.endDate ? new Date(user.subscription.endDate) < new Date() : false;
+  
+  // Calculate days remaining for trial
+  const getDaysRemaining = () => {
+    if (!user?.subscription?.endDate) return 0;
+    const endDate = new Date(user.subscription.endDate);
+    const today = new Date();
+    const diffTime = endDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const daysRemaining = getDaysRemaining();
+  const startDate = user?.subscription?.startDate ? new Date(user.subscription.startDate).toLocaleDateString() : 'N/A';
+  const endDate = user?.subscription?.endDate ? new Date(user.subscription.endDate).toLocaleDateString() : 'N/A';
 
   useEffect(() => {
     fetchDashboardData();
@@ -194,33 +208,49 @@ export default function InstituteOverviewPage() {
         </div>
       </div>
 
-      {/* Trial Notification Banner */}
+      {/* Trial Notification Banner - Dynamic with Days Remaining */}
       {user?.plan === 'trial' && (
         <div className={`${
           isTrialExpired 
             ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400' 
-            : 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400'
+            : 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400'
         } p-4 rounded-lg shadow-md`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{isTrialExpired ? '⏰' : '⏳'}</span>
-              <div>
-                <h3 className={`text-sm font-bold ${
-                  isTrialExpired 
-                    ? 'text-red-900 dark:text-red-200' 
-                    : 'text-yellow-900 dark:text-yellow-200'
-                }`}>
-                  {isTrialExpired ? 'Trial Period Expired' : 'Free Trial Active'}
-                </h3>
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-2xl">{isTrialExpired ? '⏰' : '✨'}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className={`text-sm font-bold ${
+                    isTrialExpired 
+                      ? 'text-red-900 dark:text-red-200' 
+                      : 'text-blue-900 dark:text-blue-200'
+                  }`}>
+                    {user.plan?.charAt(0).toUpperCase() + user.plan?.slice(1)} Plan
+                  </h3>
+                  {!isTrialExpired && daysRemaining > 0 && (
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      daysRemaining <= 3 
+                        ? 'bg-orange-200 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200' 
+                        : 'bg-green-200 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                    }`}>
+                      {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} left
+                    </span>
+                  )}
+                </div>
                 <p className={`text-xs ${
                   isTrialExpired 
                     ? 'text-red-800 dark:text-red-300' 
-                    : 'text-yellow-800 dark:text-yellow-300'
-                } mt-1`}>
+                    : 'text-blue-800 dark:text-blue-300'
+                }`}>
                   {isTrialExpired 
-                    ? 'Your trial has expired. Please upgrade your plan to continue using all features.'
-                    : 'Your free trial is active. Upgrade your plan to unlock all features.'}
+                    ? '❌ Subscription expired' 
+                    : `📅 Started: ${startDate} • Expires: ${endDate}`}
                 </p>
+                {isTrialExpired && (
+                  <p className="text-xs text-red-800 dark:text-red-300 mt-1">
+                    Your trial has expired. Upgrade your plan to continue using all features.
+                  </p>
+                )}
               </div>
             </div>
             <button
@@ -228,10 +258,10 @@ export default function InstituteOverviewPage() {
               className={`px-4 py-2 ${
                 isTrialExpired
                   ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
               } font-semibold rounded-lg transition-colors whitespace-nowrap ml-4`}
             >
-              {isTrialExpired ? '🚀 Upgrade Now' : 'Upgrade Now'}
+              {isTrialExpired ? '🚀 Upgrade Now' : '💳 Get Paid Plan'}
             </button>
           </div>
         </div>
