@@ -574,7 +574,11 @@ function LoginUrlCard({ tenant, onUpdate }: { tenant: Tenant; onUpdate: (t: Tena
   };
 
   const loginUrl = tenant.subdomain 
-    ? `https://${tenant.subdomain}.enromatics.com/tenant/login`
+    ? `https://${tenant.subdomain}.enromatics.com/login`
+    : null;
+
+  const instituteUrl = tenant.subdomain
+    ? `https://${tenant.subdomain}.enromatics.com`
     : null;
 
   const copyUrl = () => {
@@ -601,10 +605,40 @@ function LoginUrlCard({ tenant, onUpdate }: { tenant: Tenant; onUpdate: (t: Tena
               {tenant.subdomain}
             </p>
           </div>
+
+          <div>
+            <label className="font-medium text-gray-600 dark:text-gray-400 text-sm">
+              🌐 Institute Portal URL
+            </label>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                value={instituteUrl || ""}
+                readOnly
+                className="flex-1 font-mono text-sm bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded-lg"
+              />
+              <button
+                onClick={() => {
+                  if (instituteUrl) {
+                    navigator.clipboard.writeText(instituteUrl);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  copied 
+                    ? "bg-green-500 text-white" 
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+                }`}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
           
           <div>
             <label className="font-medium text-gray-600 dark:text-gray-400 text-sm">
-              Login URL
+              🔐 Login URL
             </label>
             <div className="flex items-center gap-2 mt-1">
               <input
@@ -684,9 +718,11 @@ function LoginUrlCard({ tenant, onUpdate }: { tenant: Tenant; onUpdate: (t: Tena
           
           {subdomain && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Preview: <span className="font-mono text-purple-600 dark:text-purple-400">
-                https://{subdomain}.enromatics.com/tenant/login
-              </span>
+              Preview: 
+              <br />
+              • Institute: <span className="font-mono text-purple-600 dark:text-purple-400">https://{subdomain}.enromatics.com</span>
+              <br />
+              • Login: <span className="font-mono text-purple-600 dark:text-purple-400">https://{subdomain}.enromatics.com/login</span>
             </p>
           )}
         </div>
