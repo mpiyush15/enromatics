@@ -4,7 +4,8 @@ import Tenant from '../models/Tenant.js';
 import { sendEmail } from '../services/emailService.js';
 import { generateSubscriptionExpiryEmail } from '../services/subscriptionNotificationService.js';
 import { PLANS } from '../config/plans.js';
-import { protect, restrictTo } from '../middleware/auth.js';
+import { protect } from '../middleware/authMiddleware.js';
+import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const router = express.Router();
  * GET /api/subscription-notifications/expiring-soon
  * Get all subscriptions expiring within specified days (Superadmin only)
  */
-router.get('/expiring-soon', protect, restrictTo('superadmin'), async (req, res) => {
+router.get('/expiring-soon', protect, authorizeRoles('superadmin'), async (req, res) => {
   try {
     const { daysUntilExpiry = 30, type = 'all' } = req.query;
     const daysNum = parseInt(daysUntilExpiry);
@@ -85,7 +86,7 @@ router.get('/expiring-soon', protect, restrictTo('superadmin'), async (req, res)
  * POST /api/subscription-notifications/send-expiry-notification
  * Send expiry notification email to a specific tenant (Superadmin only)
  */
-router.post('/send-expiry-notification', protect, restrictTo('superadmin'), async (req, res) => {
+router.post('/send-expiry-notification', protect, authorizeRoles('superadmin'), async (req, res) => {
   try {
     const { tenantId, customMessage } = req.body;
 
