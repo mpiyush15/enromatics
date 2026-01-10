@@ -15,6 +15,10 @@ interface TopbarProps {
 export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
   const [dateTime, setDateTime] = useState("");
   const pathname = usePathname();
+  const params = useParams();
+  
+  // Get tenantId from params if in client dashboard route
+  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
 
   useEffect(() => {
     const updateTime = () => {
