@@ -347,7 +347,7 @@ export default function SubscriptionPage() {
               </div>
               {billingCycle === 'annual' && (
                 <div className="text-sm text-green-600 font-semibold mb-4">
-                  Save $174/year (50% OFF!)
+                  50% OFF with annual billing
                 </div>
               )}
               <ul className="space-y-2 text-left">
@@ -376,7 +376,7 @@ export default function SubscriptionPage() {
               </div>
               {billingCycle === 'annual' && (
                 <div className="text-sm text-green-600 font-semibold mb-4">
-                  Save $294/year (50% OFF!)
+                  50% OFF with annual billing
                 </div>
               )}
               <ul className="space-y-2 text-left">

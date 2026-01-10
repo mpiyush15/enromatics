@@ -452,7 +452,21 @@ export default function MySubscriptionPage() {
 
       {/* Upgrade Plans Section */}
       {upgradePlans.length > 0 && (
-        <div id="upgrade-section" className="space-y-4 scroll-mt-6">
+        <div id="upgrade-section" className="space-y-6 scroll-mt-6">
+          {/* Annual Discount Banner */}
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl border-2 border-green-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">🎉 Save 50% with Annual Billing</h2>
+                <p className="text-green-100">Switch to annual billing and get half off your subscription</p>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-bold">50% OFF</div>
+                <div className="text-sm text-green-100">Annual Plan</div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -464,12 +478,12 @@ export default function MySubscriptionPage() {
               </p>
             </div>
             {/* Billing Cycle Toggle */}
-            <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/30 p-2 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setBillingCycle("monthly")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                   billingCycle === "monthly"
-                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    ? "bg-blue-600 text-white shadow-sm"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
@@ -477,14 +491,14 @@ export default function MySubscriptionPage() {
               </button>
               <button
                 onClick={() => setBillingCycle("yearly")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                   billingCycle === "yearly"
-                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    ? "bg-green-600 text-white shadow-sm"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
-                Yearly
-                <Badge className="ml-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold animate-pulse">💰 Save 30%</Badge>
+                Annual
+                <span className="text-xs bg-red-500 px-2 py-1 rounded-full">50% SAVE</span>
               </button>
             </div>
           </div>
