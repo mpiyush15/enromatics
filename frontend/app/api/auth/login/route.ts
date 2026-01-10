@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           name: data.user?.name,
           role: data.user?.role,
           tenantId: data.user?.tenantId,
-          plan: data.user?.plan, // ✅ Include plan for trial notification checks
+          plan: data.user?.plan || 'trial', // ✅ Default to 'trial' if missing (for existing users)
           tenant: data.user?.tenant, // Include tenant info
         },
         message: data.message || 'Login successful',

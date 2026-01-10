@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         name: data.user?.name || data.name,
         role: data.user?.role || data.role,
         tenantId: data.user?.tenantId || data.tenantId,
-        plan: data.user?.plan || data.plan, // ✅ Include plan for trial notification checks
+        plan: data.user?.plan || data.plan || 'trial', // ✅ Default to 'trial' if missing (for existing users)
         profilePicture: data.user?.profilePicture || data.profilePicture,
         tenant: data.user?.tenant || data.tenant, // Include tenant info
       },

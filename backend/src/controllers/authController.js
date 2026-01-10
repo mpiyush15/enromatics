@@ -322,9 +322,6 @@ export const loginUser = async (req, res) => {
     }
 
     console.log('✅ Login successful for:', email);
-    
-    const tenant = await Tenant.findOne({ tenantId: user.tenantId });
-    const plan = tenant ? tenant.plan : "free";
 
     // ✅ Generate unique session ID for concurrent login prevention
     const sessionId = crypto.randomBytes(32).toString('hex');
@@ -358,8 +355,8 @@ export const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        plan: user.plan, // ✅ Include plan from user object (set during signup)
       },
-      plan,
     });
   } catch (err) {
     console.error('❌ Login error:', err);

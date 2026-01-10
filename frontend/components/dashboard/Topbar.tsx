@@ -24,11 +24,9 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
     ? (params?.tenantId as string) 
     : user?.tenantId;
   
-  // Show notification for trial users (check both plan and subscription.status) or if tenantId is present
-  const isTrialUser = user?.plan === 'trial' || user?.subscription?.status === 'trial';
-  const shouldShowNotification = !isAdmin && (isTrialUser || tenantId);
-  
-  console.log('📊 Topbar Debug:', { isAdmin, isTrialUser, tenantId, shouldShowNotification, userPlan: user?.plan, subscriptionStatus: user?.subscription?.status });
+  // Show notification only for trial users
+  const isTrialUser = user?.plan === 'trial';
+  const shouldShowNotification = !isAdmin && isTrialUser;
 
   useEffect(() => {
     const updateTime = () => {
@@ -78,7 +76,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
         {shouldShowNotification && (
           <SubscriptionNotification 
             tenantId={tenantId} 
-            accountType={isTrialUser ? 'trial' : undefined}
+            accountType={isTrialOrFreeUser ? (user?.plan === 'free' ? 'free' : 'trial') : undefined}
           />
         )}
         
