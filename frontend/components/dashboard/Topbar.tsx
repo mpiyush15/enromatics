@@ -4,29 +4,17 @@ import { useEffect, useState } from "react";
 import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
 import NotificationCenter from "./NotificationCenter";
-import SubscriptionNotification from "./SubscriptionNotification";
 import { useParams, usePathname } from "next/navigation";
 
 interface TopbarProps {
   userName: string;
   onToggleSidebar: () => void;
   isAdmin?: boolean;
-  user?: { plan?: string; subscription?: { status?: string }; tenantId?: string };
 }
 
-export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: TopbarProps) {
+export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
   const [dateTime, setDateTime] = useState("");
   const pathname = usePathname();
-  const params = useParams();
-  
-  // Get tenantId from URL or from user object
-  const tenantId = pathname?.includes('/client/') 
-    ? (params?.tenantId as string) 
-    : user?.tenantId;
-  
-  // Show notification only for trial users
-  const isTrialUser = user?.plan === 'trial';
-  const shouldShowNotification = !isAdmin && isTrialUser;
 
   useEffect(() => {
     const updateTime = () => {
@@ -72,14 +60,6 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
 
       {/* Right Section */}
       <div className="flex items-center gap-3 sm:gap-4">
-        {/* Subscription Trial Notification */}
-        {shouldShowNotification && (
-          <SubscriptionNotification 
-            tenantId={tenantId} 
-            accountType="trial"
-          />
-        )}
-        
         {/* Time Display */}
         <p className="hidden lg:inline text-xs text-gray-500 dark:text-gray-400 font-medium px-3 py-2 bg-white dark:bg-gray-800 rounded-lg">
           {dateTime}

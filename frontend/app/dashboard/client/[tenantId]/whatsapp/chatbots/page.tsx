@@ -15,6 +15,8 @@ import {
   Edit2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import useAuth from "@/hooks/useAuth"
+import UpgradeRequired from "@/components/UpgradeRequired"
 
 interface Keyword {
   _id: string
@@ -53,7 +55,21 @@ interface Template {
 
 export default function ChatbotsPage() {
   const params = useParams()
+  const { user } = useAuth()
   const tenantId = params.tenantId as string
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Create and manage AI-powered chatbots for automated customer support"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
   const [selectedChatbot, setSelectedChatbot] = useState<Chatbot | null>(null)

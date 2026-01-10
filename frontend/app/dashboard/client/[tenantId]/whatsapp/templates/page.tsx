@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import {
   Trash2,
   Plus,
@@ -11,6 +11,8 @@ import {
   FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import useAuth from "@/hooks/useAuth"
+import UpgradeRequired from "@/components/UpgradeRequired"
 
 interface Template {
   _id: string
@@ -27,7 +29,22 @@ interface Template {
 
 export default function TemplatesPage() {
   const params = useParams()
+  const router = useRouter()
+  const { user } = useAuth()
   const tenantId = params.tenantId as string
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Automated messages, templates, and two-way conversations with parents"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   const [templates, setTemplates] = useState<Template[]>([])
   const [isLoading, setIsLoading] = useState(true)

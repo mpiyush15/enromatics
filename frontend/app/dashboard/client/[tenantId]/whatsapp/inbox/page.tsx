@@ -15,6 +15,8 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { useParams } from "next/navigation"
+import useAuth from "@/hooks/useAuth"
+import UpgradeRequired from "@/components/UpgradeRequired"
 
 interface Message {
   _id: string
@@ -53,7 +55,21 @@ interface Conversation {
 
 export default function InboxPage() {
   const params = useParams()
+  const { user } = useAuth()
   const tenantId = params.tenantId as string
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Two-way conversations with parents and students in one unified inbox"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   // State Management
   const [conversations, setConversations] = useState<Conversation[]>([])
