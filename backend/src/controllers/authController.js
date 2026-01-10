@@ -3,6 +3,7 @@ import Tenant from "../models/Tenant.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
+import { sendCredentialsEmail } from "../services/emailService.js";
 
 const generateToken = (id, email, role, tenantId) =>
   jwt.sign({ id, email, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -100,12 +101,25 @@ export const registerUser = async (req, res) => {
     console.log('📝 [SIGNUP] subscriptionTier:', subscriptionTier, 'status:', subscriptionStatus);
 
     console.log('📝 [SIGNUP] Creating tenant...');
+    
+    // Auto-generate subdomain for tenant
+    const baseName = instituteName || userName || email.split('@')[0];
+    const cleanSubdomain = baseName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric
+      .substring(0, 20); // Limit to 20 chars
+    const suffix = Math.random().toString(36).substr(2, 5); // 5 char random suffix
+    const generatedSubdomain = cleanSubdomain + suffix;
+    
+    console.log('📝 [SIGNUP] Generated subdomain:', generatedSubdomain);
+    
     const tenant = await Tenant.create({
       tenantId: newTenantId,
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
       plan: subscriptionTier, // 'basic', 'pro', 'enterprise', or 'free'
+      subdomain: generatedSubdomain, // ✅ AUTO-GENERATED SUBDOMAIN
       subscription: { 
         status: subscriptionStatus, // 'trial', 'active', or 'inactive'
         startDate: new Date(),
@@ -118,7 +132,7 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false, // Store WhatsApp consent
     });
 
-    console.log('✅ [SIGNUP] Tenant created:', tenant._id);
+    console.log('✅ [SIGNUP] Tenant created:', tenant._id, 'with subdomain:', generatedSubdomain);
 
     console.log('📝 [SIGNUP] Creating user...');
     const user = await User.create({
@@ -135,7 +149,29 @@ export const registerUser = async (req, res) => {
     // Generate token for immediate auth (especially important for trial signup)
     console.log('📝 [SIGNUP] Generating token...');
     const token = generateToken(user._id, user.email, user.role, newTenantId);
-    console.log('✅ [SIGNUP] Token generated, sending response...');
+    console.log('✅ [SIGNUP] Token generated');
+
+    // Build institute URL with auto-generated subdomain
+    const instituteUrl = `https://${generatedSubdomain}.enromatics.com`;
+    const loginUrl = `${instituteUrl}/login`;
+
+    console.log('📧 [SIGNUP] Sending credentials email...');
+    // Send credentials email to tenant (non-blocking)
+    sendCredentialsEmail({
+      to: email,
+      name: userName,
+      instituteName: instituteName || userName,
+      email: email,
+      password: password, // User created their own password
+      instituteUrl: instituteUrl,
+      loginUrl: loginUrl,
+      tenantId: newTenantId,
+      userId: user._id
+    }).catch(err => {
+      console.error('❌ [SIGNUP] Failed to send credentials email:', err.message);
+    });
+
+    console.log('✅ [SIGNUP] Sending response...');
 
     res.status(201).json({
       message: "User registered successfully ✅",
@@ -146,6 +182,15 @@ export const registerUser = async (req, res) => {
         role: user.role,
         tenantId: user.tenantId,
         createdAt: user.createdAt,
+      },
+      tenant: {
+        tenantId: tenant.tenantId,
+        name: tenant.name,
+        instituteName: tenant.instituteName,
+        email: tenant.email,
+        subdomain: generatedSubdomain,
+        instituteUrl: instituteUrl,
+        loginUrl: loginUrl,
       },
       trial: isTrial ? {
         planId: subscriptionTier,

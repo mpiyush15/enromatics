@@ -95,9 +95,19 @@ export const initiateSubscriptionPayment = async (req, res) => {
 
     if (!tenant) {
       // Create new tenant record - this is a new signup
+      
+      // ✅ Auto-generate user-friendly subdomain (same as free trial does)
+      const baseName = instituteName || name || email.split('@')[0];
+      const cleanSubdomain = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric
+        .substring(0, 20); // Limit to 20 chars
+      const suffix = Math.random().toString(36).substr(2, 5); // 5 char random suffix
+      const generatedSubdomain = cleanSubdomain + suffix;
+      
       tenant = await Tenant.create({
         tenantId: finalTenantId,
-        subdomain: finalTenantId, // Set subdomain same as tenantId for URL access
+        subdomain: generatedSubdomain, // ✅ Use auto-generated user-friendly subdomain
         name: name || instituteName || email.split('@')[0],
         instituteName: instituteName || null,
         email: email,
@@ -116,7 +126,7 @@ export const initiateSubscriptionPayment = async (req, res) => {
           pendingPlan: planId // Store the plan they're trying to upgrade to
         }
       });
-      console.log('Created new tenant:', tenant.tenantId, 'Subdomain:', tenant.subdomain, 'Pending plan:', planId);
+      console.log('Created new tenant:', tenant.tenantId, 'Subdomain:', generatedSubdomain, 'Pending plan:', planId);
     } else {
       // Existing tenant - DON'T change plan yet, just mark as pending upgrade
       // Store the pending plan in subscription metadata
@@ -618,13 +628,19 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           console.log('Webhook: Created new user account:', user.email);
           
           // Send credentials email
+          // ✅ Build institute URL from subdomain
+          const baseDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'enromatics.com';
+          const instituteUrl = `https://${tenant.subdomain}.${baseDomain}`;
+          const loginUrl = `${instituteUrl}/login`;
+          
           await sendCredentialsEmail({
             to: tenant.email,
             name: tenant.name,
             instituteName: tenant.instituteName || tenant.name,
             email: tenant.email,
             password: generatedPassword,
-            loginUrl: `${process.env.FRONTEND_URL}/login`,
+            instituteUrl: instituteUrl, // ✅ Include institute URL in green box
+            loginUrl: loginUrl,
             tenantId: tenant.tenantId,
             userId: user._id
           });

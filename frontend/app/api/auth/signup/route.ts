@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.EXPRESS_BACKEND_URL || "https://endearing-blessing-production-c61f.up.railway.app";
 
@@ -68,6 +69,19 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Signup successful for:', email);
+
+    // Set JWT cookie for future requests (like login route does)
+    if (data.token) {
+      console.log('🍪 Setting JWT cookie on signup (httpOnly, secure, sameSite=none)');
+      const cookieStore = await cookies();
+      cookieStore.set('jwt', data.token, {
+        httpOnly: true,
+        secure: true, // Always secure on production
+        sameSite: 'none', // Allow cross-domain
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: '/',
+      });
+    }
 
     // Return success response with token
     return NextResponse.json({
