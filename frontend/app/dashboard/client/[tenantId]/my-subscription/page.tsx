@@ -174,6 +174,9 @@ export default function MySubscriptionPage() {
     
     setUpgradingPlan(planId);
     try {
+      // Normalize "yearly" to "annual" for backend compatibility
+      const normalizedCycle = billingCycle === "yearly" ? "annual" : billingCycle;
+      
       const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
         method: "POST",
         headers: { 
@@ -181,7 +184,7 @@ export default function MySubscriptionPage() {
           "Authorization": `Bearer ${token}`,
         },
         credentials: "include",
-        body: JSON.stringify({ planId, billingCycle }),
+        body: JSON.stringify({ planId, billingCycle: normalizedCycle }),
       });
 
       const data = await response.json();
