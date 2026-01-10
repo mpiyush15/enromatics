@@ -9,7 +9,7 @@ import { protect, restrictTo } from '../middleware/auth.js';
 const router = express.Router();
 
 /**
- * GET /api/subscriptions/expiring-soon
+ * GET /api/subscription-notifications/expiring-soon
  * Get all subscriptions expiring within specified days (Superadmin only)
  */
 router.get('/expiring-soon', protect, restrictTo('superadmin'), async (req, res) => {
@@ -82,7 +82,7 @@ router.get('/expiring-soon', protect, restrictTo('superadmin'), async (req, res)
 });
 
 /**
- * POST /api/subscriptions/send-expiry-notification
+ * POST /api/subscription-notifications/send-expiry-notification
  * Send expiry notification email to a specific tenant (Superadmin only)
  */
 router.post('/send-expiry-notification', protect, restrictTo('superadmin'), async (req, res) => {
@@ -192,7 +192,7 @@ router.post('/send-expiry-notification', protect, restrictTo('superadmin'), asyn
 });
 
 /**
- * GET /api/subscriptions/status/:tenantId
+ * GET /api/subscription-notifications/status/:tenantId
  * Get subscription status for a specific tenant (for topbar notifications)
  */
 router.get('/status/:tenantId', protect, async (req, res) => {

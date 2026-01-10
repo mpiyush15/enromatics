@@ -164,7 +164,7 @@ app.use('/api/analytics/phase2', phase2AnalyticsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappTemplateRoutes);
 app.use('/api/whatsapp', whatsappChatbotRoutes);
-app.use('/api/subscriptions', subscriptionNotificationRoutes);
+app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);

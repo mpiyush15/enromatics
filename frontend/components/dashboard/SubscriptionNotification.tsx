@@ -20,7 +20,7 @@ export default function SubscriptionNotification({ tenantId }: SubscriptionNotif
     const fetchSubscriptionStatus = async () => {
       try {
         const [data, err] = await safeApiCall(() =>
-          api.get(`/api/subscriptions/status/${tenantId}`)
+          api.get(`/api/subscription-notifications/status/${tenantId}`)
         );
 
         if (!err && data?.data) {
