@@ -384,7 +384,16 @@ export const createNewTenant = async (req, res) => {
     // Generate unique tenantId
     const tenantId = crypto.randomBytes(4).toString("hex");
 
-    // Create new tenant
+    // Auto-generate clean subdomain for the tenant
+    const baseName = instituteName || name || email.split('@')[0];
+    const cleanSubdomain = baseName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') // Remove all non-alphanumeric
+      .substring(0, 20); // Limit to 20 chars for prefix
+    const suffix = Math.random().toString(36).substr(2, 5); // 5 char random suffix
+    const generatedSubdomain = cleanSubdomain + suffix;
+
+    // Create new tenant with auto-generated subdomain
     const newTenant = new Tenant({
       tenantId,
       name,
@@ -392,6 +401,7 @@ export const createNewTenant = async (req, res) => {
       instituteName: instituteName || null,
       plan: "free", // Default to free plan for demos
       active: true,
+      subdomain: generatedSubdomain, // ✅ Auto-generated subdomain
       contact: {
         phone: phone || null,
         country: country || "India",
@@ -405,6 +415,8 @@ export const createNewTenant = async (req, res) => {
     });
 
     await newTenant.save();
+
+    console.log(`✅ Tenant created with auto-generated subdomain: ${generatedSubdomain}`);
 
     // Send welcome email to tenant
     sendTenantRegistrationEmail({
@@ -431,6 +443,8 @@ export const createNewTenant = async (req, res) => {
         email: newTenant.email,
         instituteName: newTenant.instituteName,
         plan: newTenant.plan,
+        subdomain: newTenant.subdomain,
+        instituteUrl: `https://${newTenant.subdomain}.pixelsagency.in`,
         contact: newTenant.contact,
         createdAt: newTenant.createdAt,
       },
@@ -514,6 +528,7 @@ export const sendTenantCredentials = async (req, res) => {
     // Use subdomain field if set, otherwise fallback to tenantId
     const subdomainForUrl = tenant.subdomain || tenant.tenantId;
     const loginUrl = `https://${subdomainForUrl}.${baseDomain}/login`;
+    const instituteUrl = `https://${subdomainForUrl}.${baseDomain}`;
 
     // Send credentials email
     await sendCredentialsEmail({
@@ -523,6 +538,7 @@ export const sendTenantCredentials = async (req, res) => {
       email: tenant.email,
       password: generatedPassword,
       loginUrl: loginUrl,
+      instituteUrl: instituteUrl,
       tenantId: tenant.tenantId,
       userId: user._id
     });
@@ -579,33 +595,56 @@ export const cancelSubscription = async (req, res) => {
 
 /* ================================================================
    🔹 11. Update Tenant Subdomain (SuperAdmin only)
+   Supports both manual assignment and auto-generation
 ================================================================ */
 export const updateTenantSubdomain = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const { subdomain } = req.body;
+    const { subdomain, autoGenerate = false } = req.body;
 
     if (!tenantId) {
       return res.status(400).json({ message: "Tenant ID is required" });
     }
 
-    if (!subdomain || !subdomain.trim()) {
-      return res.status(400).json({ message: "Subdomain is required" });
+    // Find tenant
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
     }
 
-    // Validate subdomain format (lowercase alphanumeric only)
-    const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (cleanSubdomain.length < 3) {
-      return res.status(400).json({ message: "Subdomain must be at least 3 characters" });
-    }
+    let finalSubdomain;
 
-    if (cleanSubdomain.length > 30) {
-      return res.status(400).json({ message: "Subdomain must be 30 characters or less" });
+    if (autoGenerate) {
+      // Auto-generate new subdomain
+      const baseName = tenant.instituteName || tenant.name || tenant.email.split('@')[0];
+      const cleanSubdomain = baseName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 20);
+      const suffix = Math.random().toString(36).substr(2, 5);
+      finalSubdomain = cleanSubdomain + suffix;
+      console.log(`✅ Auto-generated subdomain for ${tenantId}: ${finalSubdomain}`);
+    } else {
+      // Manual assignment
+      if (!subdomain || !subdomain.trim()) {
+        return res.status(400).json({ message: "Subdomain is required or set autoGenerate to true" });
+      }
+
+      // Validate subdomain format (lowercase alphanumeric only)
+      finalSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      
+      if (finalSubdomain.length < 3) {
+        return res.status(400).json({ message: "Subdomain must be at least 3 characters" });
+      }
+
+      if (finalSubdomain.length > 30) {
+        return res.status(400).json({ message: "Subdomain must be 30 characters or less" });
+      }
     }
 
     // Check if subdomain is already taken by another tenant
     const existingTenant = await Tenant.findOne({ 
-      subdomain: cleanSubdomain, 
+      subdomain: finalSubdomain, 
       tenantId: { $ne: tenantId } 
     });
 
@@ -614,23 +653,22 @@ export const updateTenantSubdomain = async (req, res) => {
     }
 
     // Update tenant with new subdomain
-    const tenant = await Tenant.findOneAndUpdate(
-      { tenantId },
-      { subdomain: cleanSubdomain },
-      { new: true }
-    );
+    tenant.subdomain = finalSubdomain;
+    await tenant.save();
 
-    if (!tenant) {
-      return res.status(404).json({ message: "Tenant not found" });
-    }
+    const baseDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'pixelsagency.in';
+    const instituteUrl = `https://${finalSubdomain}.${baseDomain}`;
+    const loginUrl = `https://${finalSubdomain}.${baseDomain}/login`;
 
-    console.log(`Subdomain updated for tenant ${tenantId}: ${cleanSubdomain}`);
+    console.log(`✅ Subdomain updated for tenant ${tenantId}: ${finalSubdomain}`);
 
     res.status(200).json({
       success: true,
-      message: "Subdomain updated successfully",
-      subdomain: cleanSubdomain,
-      loginUrl: `https://${cleanSubdomain}.enromatics.com/tenant/login`
+      message: autoGenerate ? "Subdomain auto-generated successfully" : "Subdomain updated successfully",
+      subdomain: finalSubdomain,
+      instituteUrl: instituteUrl,
+      loginUrl: loginUrl,
+      baseDomain: baseDomain
     });
   } catch (err) {
     console.error("Update Subdomain Error:", err);

@@ -594,6 +594,7 @@ export const sendCredentialsEmail = async ({
     email,
     password,
     loginUrl,
+    instituteUrl = null,
     tenantId, 
     userId = null 
 }) => {
@@ -635,6 +636,14 @@ export const sendCredentialsEmail = async ({
                             <code style="font-size: 20px; letter-spacing: 2px; color: #dc2626; font-weight: bold;">${password}</code>
                         </div>
                     </div>
+
+                    ${instituteUrl ? `
+                    <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <h3 style="margin-top: 0; color: #10b981;">🌐 Your Institute Portal URL:</h3>
+                        <p style="margin: 5px 0; font-size: 14px;">Access your exclusive institute dashboard here:</p>
+                        <a href="${instituteUrl}" style="font-size: 16px; color: #10b981; font-weight: bold; word-break: break-all;">${instituteUrl}</a>
+                    </div>
+                    ` : ''}
 
                     <div class="warning">
                         ⚠️ <strong>Important:</strong> For security reasons, you will be required to change your password on your first login. Please choose a strong, unique password.
