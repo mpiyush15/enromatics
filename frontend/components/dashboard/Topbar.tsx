@@ -76,7 +76,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
         {shouldShowNotification && (
           <SubscriptionNotification 
             tenantId={tenantId} 
-            accountType={isTrialOrFreeUser ? (user?.plan === 'free' ? 'free' : 'trial') : undefined}
+            accountType="trial"
           />
         )}
         
