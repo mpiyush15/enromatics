@@ -58,19 +58,6 @@ export default function InboxPage() {
   const { user } = useAuth()
   const tenantId = params.tenantId as string
 
-  // Check if user has access to WhatsApp module (Pro or Enterprise only)
-  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
-  
-  if (isTrialOrBasic) {
-    return (
-      <UpgradeRequired 
-        featureName="WhatsApp Business Automation (WABA)"
-        description="Two-way conversations with parents and students in one unified inbox"
-        requiredPlan="Pro or Enterprise (Annual)"
-      />
-    )
-  }
-
   // State Management
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
@@ -296,6 +283,19 @@ export default function InboxPage() {
 
   // Get total unread count
   const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0)
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Two-way conversations with parents and students in one unified inbox"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">

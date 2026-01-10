@@ -33,6 +33,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
   const [requestingApp, setRequestingApp] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     if (user?.tenantId) {
@@ -154,6 +155,45 @@ export default function SubscriptionPage() {
       <div>
         <h1 className="text-3xl font-bold">Subscription Management</h1>
         <p className="text-gray-600 mt-2">Manage your plan and access premium features</p>
+      </div>
+
+      {/* Annual Discount Banner */}
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl border-2 border-green-400">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">🎉 Save 50% with Annual Billing</h2>
+            <p className="text-green-100">Switch to annual billing and get half off your subscription</p>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-bold">50% OFF</div>
+            <div className="text-sm text-green-100">Annual Plan</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Billing Cycle Toggle */}
+      <div className="flex justify-center items-center gap-4 bg-gray-100 rounded-xl p-4 w-fit mx-auto">
+        <button
+          onClick={() => setBillingCycle('monthly')}
+          className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+            billingCycle === 'monthly'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setBillingCycle('annual')}
+          className={`px-6 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+            billingCycle === 'annual'
+              ? 'bg-green-600 text-white shadow-md'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Annual
+          <span className="text-xs bg-red-500 px-2 py-1 rounded-full">50% SAVE</span>
+        </button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -299,7 +339,17 @@ export default function SubscriptionPage() {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="text-center p-6 border rounded-lg">
               <h3 className="text-xl font-bold mb-2">Basic Plan</h3>
-              <div className="text-3xl font-bold text-gray-600 mb-4">$29/month</div>
+              <div className="text-3xl font-bold text-gray-600 mb-1">
+                ${billingCycle === 'monthly' ? '29' : '174'}
+                <span className="text-sm text-gray-500">/
+                  {billingCycle === 'monthly' ? 'month' : 'year'}
+                </span>
+              </div>
+              {billingCycle === 'annual' && (
+                <div className="text-sm text-green-600 font-semibold mb-4">
+                  Save $174/year (50% OFF!)
+                </div>
+              )}
               <ul className="space-y-2 text-left">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-500" />
@@ -318,7 +368,17 @@ export default function SubscriptionPage() {
             
             <div className="text-center p-6 border-2 border-blue-500 rounded-lg bg-blue-50">
               <h3 className="text-xl font-bold mb-2">Premium Plan</h3>
-              <div className="text-3xl font-bold text-blue-600 mb-4">$49/month</div>
+              <div className="text-3xl font-bold text-blue-600 mb-1">
+                ${billingCycle === 'monthly' ? '49' : '294'}
+                <span className="text-sm text-gray-500">/
+                  {billingCycle === 'monthly' ? 'month' : 'year'}
+                </span>
+              </div>
+              {billingCycle === 'annual' && (
+                <div className="text-sm text-green-600 font-semibold mb-4">
+                  Save $294/year (50% OFF!)
+                </div>
+              )}
               <ul className="space-y-2 text-left">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-500" />

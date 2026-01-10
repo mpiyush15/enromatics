@@ -58,19 +58,6 @@ export default function ChatbotsPage() {
   const { user } = useAuth()
   const tenantId = params.tenantId as string
 
-  // Check if user has access to WhatsApp module (Pro or Enterprise only)
-  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
-  
-  if (isTrialOrBasic) {
-    return (
-      <UpgradeRequired 
-        featureName="WhatsApp Business Automation (WABA)"
-        description="Create and manage AI-powered chatbots for automated customer support"
-        requiredPlan="Pro or Enterprise (Annual)"
-      />
-    )
-  }
-
   const [chatbots, setChatbots] = useState<Chatbot[]>([])
   const [selectedChatbot, setSelectedChatbot] = useState<Chatbot | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
@@ -299,6 +286,19 @@ export default function ChatbotsPage() {
       fetchTemplates(selectedChatbot._id)
     }
   }, [selectedChatbot])
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Create and manage AI-powered chatbots for automated customer support"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">

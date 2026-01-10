@@ -33,19 +33,6 @@ export default function TemplatesPage() {
   const { user } = useAuth()
   const tenantId = params.tenantId as string
 
-  // Check if user has access to WhatsApp module (Pro or Enterprise only)
-  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
-  
-  if (isTrialOrBasic) {
-    return (
-      <UpgradeRequired 
-        featureName="WhatsApp Business Automation (WABA)"
-        description="Automated messages, templates, and two-way conversations with parents"
-        requiredPlan="Pro or Enterprise (Annual)"
-      />
-    )
-  }
-
   const [templates, setTemplates] = useState<Template[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -190,6 +177,19 @@ export default function TemplatesPage() {
       fetchTemplates()
     }
   }, [tenantId])
+
+  // Check if user has access to WhatsApp module (Pro or Enterprise only)
+  const isTrialOrBasic = user?.plan === 'trial' || user?.plan === 'basic'
+  
+  if (isTrialOrBasic) {
+    return (
+      <UpgradeRequired 
+        featureName="WhatsApp Business Automation (WABA)"
+        description="Automated messages, templates, and two-way conversations with parents"
+        requiredPlan="Pro or Enterprise (Annual)"
+      />
+    )
+  }
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
