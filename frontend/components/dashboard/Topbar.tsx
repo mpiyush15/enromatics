@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
 import NotificationCenter from "./NotificationCenter";
+import SubscriptionNotification from "./SubscriptionNotification";
 import { useParams, usePathname } from "next/navigation";
 
 interface TopbarProps {

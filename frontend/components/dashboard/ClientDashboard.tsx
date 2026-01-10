@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams, usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import SubscriptionNotification from "./SubscriptionNotification";
 
 export default function ClientDashboard({
   children,
@@ -20,6 +22,11 @@ export default function ClientDashboard({
   user?: any;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const params = useParams();
+  
+  // Get tenantId for subscription notification
+  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -42,6 +49,10 @@ export default function ClientDashboard({
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           isAdmin={isAdmin}
         />
+        
+        {/* Subscription Expiry Notification - Only for tenant dashboards */}
+        {tenantId && !isAdmin && <SubscriptionNotification tenantId={tenantId} />}
+        
         {/* Scrollable content area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
           {children}
