@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 import { sendCredentialsEmail } from "../services/emailService.js";
+import { notifyNewSignup } from "../services/superadminNotificationService.js";
 
 const generateToken = (id, email, role, tenantId) =>
   jwt.sign({ id, email, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -73,6 +74,19 @@ export const registerUser = async (req, res) => {
         whatsappOptIn: whatsappOptIn || false,
         tenantId,
         role: role || "employee",
+      });
+
+      // Send superadmin notification about new staff member (non-blocking)
+      notifyNewSignup({
+        name: userName,
+        email: email,
+        phone: phone,
+        instituteName: tenant.instituteName || tenant.name,
+        plan: tenant.plan,
+        isTrial: false,
+        tenantId: tenantId
+      }).catch(err => {
+        console.error('❌ [SIGNUP] Failed to send superadmin notification for staff member:', err.message);
       });
 
       return res.status(201).json({
@@ -169,6 +183,19 @@ export const registerUser = async (req, res) => {
       userId: user._id
     }).catch(err => {
       console.error('❌ [SIGNUP] Failed to send credentials email:', err.message);
+    });
+
+    // Send superadmin notification about new signup (non-blocking)
+    notifyNewSignup({
+      name: userName,
+      email: email,
+      phone: phone,
+      instituteName: instituteName,
+      plan: subscriptionTier,
+      isTrial: isTrial,
+      tenantId: newTenantId
+    }).catch(err => {
+      console.error('❌ [SIGNUP] Failed to send superadmin notification:', err.message);
     });
 
     console.log('✅ [SIGNUP] Sending response...');

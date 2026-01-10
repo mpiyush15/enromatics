@@ -6,6 +6,7 @@ import { PLANS } from '../config/plans.js';
 import axios from 'axios';
 import Tenant from '../models/Tenant.js';
 import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
+import { notifyNewSubscription } from '../services/superadminNotificationService.js';
 import { generateInvoicePdf } from '../services/pdfService.js';
 import crypto from 'crypto';
 import { provisionTenant } from '../../lib/provisionTenant.js';
@@ -665,6 +666,21 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           },
           tenantId: tenant.tenantId,
           userId: user?._id
+        });
+
+        // Notify superadmin about new subscription (non-blocking)
+        notifyNewSubscription({
+          tenantId: tenant.tenantId,
+          tenantName: tenant.instituteName || tenant.name,
+          email: tenant.email,
+          planId: planId,
+          planName: plan.name || planId,
+          amount: orderAmount,
+          billingCycle: billingCycle,
+          startDate: startDate,
+          endDate: endDate
+        }).catch(err => {
+          console.error('❌ Failed to send superadmin subscription notification:', err.message);
         });
 
         // Notify portal ready (post-provisioning)

@@ -1,5 +1,6 @@
 import DemoRequest from "../models/DemoRequest.js";
 import { sendEmail } from "../services/emailService.js";
+import { notifyNewDemoRequest } from "../services/superadminNotificationService.js";
 
 /**
  * 🔹 1. Create Demo Request
@@ -101,29 +102,15 @@ export const createDemoRequest = async (req, res) => {
       type: 'demo-request'
     }).catch(err => console.error('❌ Failed to send demo confirmation email:', err.message));
 
-    // Notify super admin about new demo request (non-blocking)
-    if (process.env.SUPER_ADMIN_EMAIL) {
-      sendEmail({
-        to: process.env.SUPER_ADMIN_EMAIL,
-        subject: `🎯 New Demo Request: ${company}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px;">
-            <h2 style="color: #3b82f6;">New Demo Request Received</h2>
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Company:</strong> ${company}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Phone:</strong> ${phone}</p>
-              <p><strong>Requested Date & Time:</strong> ${new Date(demoDateTime).toLocaleString()}</p>
-              ${message ? `<p><strong>Message:</strong> ${message}</p>` : ''}
-              <p><strong>Status:</strong> <span style="background: #fbbf24; padding: 4px 8px; border-radius: 4px;">Pending</span></p>
-            </div>
-            <p><a href="${process.env.FRONTEND_URL}/dashboard/admin/demo-requests" style="background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View & Manage</a></p>
-          </div>
-        `,
-        type: 'admin-notification'
-      }).catch(err => console.error('❌ Failed to send admin notification email:', err.message));
-    }
+    // Notify super admin about new demo request using superadmin notification service (non-blocking)
+    notifyNewDemoRequest({
+      name: name,
+      email: email,
+      phone: phone,
+      company: company,
+      message: message || '',
+      demoDateTime: demoDateTime
+    }).catch(err => console.error('❌ Failed to send superadmin demo notification:', err.message));
 
     res.status(201).json({
       message: "Demo request created successfully",

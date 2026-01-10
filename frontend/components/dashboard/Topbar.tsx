@@ -11,7 +11,7 @@ interface TopbarProps {
   userName: string;
   onToggleSidebar: () => void;
   isAdmin?: boolean;
-  user?: { type?: string; tenantId?: string };
+  user?: { plan?: string; subscription?: { status?: string }; tenantId?: string };
 }
 
 export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: TopbarProps) {
@@ -24,8 +24,11 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
     ? (params?.tenantId as string) 
     : user?.tenantId;
   
-  // Show notification for trial users or if tenantId is present
-  const shouldShowNotification = !isAdmin && (user?.type === 'trial' || tenantId);
+  // Show notification for trial users (check both plan and subscription.status) or if tenantId is present
+  const isTrialUser = user?.plan === 'trial' || user?.subscription?.status === 'trial';
+  const shouldShowNotification = !isAdmin && (isTrialUser || tenantId);
+  
+  console.log('📊 Topbar Debug:', { isAdmin, isTrialUser, tenantId, shouldShowNotification, userPlan: user?.plan, subscriptionStatus: user?.subscription?.status });
 
   useEffect(() => {
     const updateTime = () => {
@@ -75,7 +78,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: Top
         {shouldShowNotification && (
           <SubscriptionNotification 
             tenantId={tenantId} 
-            accountType={user?.type}
+            accountType={isTrialUser ? 'trial' : undefined}
           />
         )}
         
