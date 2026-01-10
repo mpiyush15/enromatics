@@ -444,7 +444,7 @@ export const createNewTenant = async (req, res) => {
         instituteName: newTenant.instituteName,
         plan: newTenant.plan,
         subdomain: newTenant.subdomain,
-        instituteUrl: `https://${newTenant.subdomain}.pixelsagency.in`,
+        instituteUrl: `https://${newTenant.subdomain}.enromatics.com`,
         contact: newTenant.contact,
         createdAt: newTenant.createdAt,
       },
@@ -656,7 +656,7 @@ export const updateTenantSubdomain = async (req, res) => {
     tenant.subdomain = finalSubdomain;
     await tenant.save();
 
-    const baseDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'pixelsagency.in';
+    const baseDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'enromatics.com';
     const instituteUrl = `https://${finalSubdomain}.${baseDomain}`;
     const loginUrl = `https://${finalSubdomain}.${baseDomain}/login`;
 
