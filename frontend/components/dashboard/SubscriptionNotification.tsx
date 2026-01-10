@@ -26,11 +26,11 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
     if (accountType === 'trial' && !tenantId) {
       console.log('🆓 SubscriptionNotification: Trial account detected (no tenantId)');
       setNotification({
-        type: 'info',
+        type: 'warning',
         icon: '🆓',
-        title: 'Free Trial Account',
-        message: 'Upgrade to unlock more features and continue your service.',
-        level: 'low'
+        title: 'Free Trial',
+        message: 'Your free trial is active. Upgrade your plan to unlock all features.',
+        level: 'medium'
       });
       setLoading(false);
       return;
@@ -202,10 +202,10 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
         {/* Action Button */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
-            href={`/dashboard/client/${tenantId}/my-subscription`}
+            href={tenantId ? `/dashboard/client/${tenantId}/my-subscription` : '/dashboard/pricing'}
             className={`text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${buttonColor[notification.type]} transition-colors`}
           >
-            {notification.level === 'critical' ? 'Upgrade Now' : 'View Details'}
+            {notification.level === 'critical' ? 'Upgrade Now' : 'Upgrade'}
           </Link>
 
           {/* Dismiss Button */}
