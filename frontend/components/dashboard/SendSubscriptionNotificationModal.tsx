@@ -24,18 +24,21 @@ export default function SendSubscriptionNotificationModal({
   const [message, setMessage] = useState("");
 
   const handleSendNotification = async () => {
+    console.log('🔔 handleSendNotification called');
+    console.log('📤 Sending notification for tenantId:', tenantId);
     setLoading(true);
     setStatus("idle");
     setMessage("");
 
     try {
+      console.log('🌐 Making API call to /api/subscription-notifications/send-expiry-notification');
       const [data, err] = await safeApiCall(() =>
         api.post("/api/subscription-notifications/send-expiry-notification", {
           tenantId,
         })
       );
-
-      if (err) {
+      
+      console.log('📥 API Response - data:', data, 'error:', err);
         setStatus("error");
         setMessage(err.message || "Failed to send notification");
         setLoading(false);

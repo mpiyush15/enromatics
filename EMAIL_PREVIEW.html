@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Expiry Notification - Email Preview</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    .email-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #f9f9f9;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 600px;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .header p {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 30px 20px;
+      background: white;
+    }
+    .greeting {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: #f0f4ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .info-box strong {
+      color: #667eea;
+    }
+    .plan-details {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .plan-details h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    .plan-details ul {
+      margin: 0;
+      padding-left: 20px;
+      list-style: none;
+    }
+    .plan-details li {
+      padding: 6px 0;
+      color: #555;
+    }
+    .plan-details li:before {
+      content: "✓ ";
+      color: #667eea;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+    .upgrade-section {
+      margin: 30px 0;
+    }
+    .upgrade-section h3 {
+      margin: 0 0 20px 0;
+      color: #333;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .plan-card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .plan-card h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    .plan-card .price {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    .plan-card ul {
+      margin: 0;
+      padding-left: 15px;
+      font-size: 13px;
+      color: #555;
+    }
+    .plan-card li {
+      margin-bottom: 5px;
+    }
+    .cta-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 20px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .cta-section h3 {
+      margin: 0 0 15px 0;
+      font-size: 20px;
+    }
+    .cta-section p {
+      margin: 0 0 20px 0;
+    }
+    .dashboard-link {
+      display: inline-block;
+      background: white;
+      color: #667eea;
+      padding: 12px 30px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      margin: 10px 5px;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    .dashboard-link:hover {
+      background: #f0f0f0;
+    }
+    .dashboard-url {
+      display: block;
+      margin-top: 15px;
+      font-size: 13px;
+      word-break: break-all;
+      opacity: 0.9;
+      font-family: monospace;
+    }
+    .footer {
+      background: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+      border-top: 1px solid #ddd;
+    }
+    .footer p {
+      margin: 5px 0;
+    }
+    .preview-info {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-info">
+    📧 <strong>Email Preview:</strong> This is how the subscription expiry notification email will appear to your clients.
+  </div>
+
+  <div class="email-wrapper">
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>Your Free Trial expires in 7 days!</h1>
+        <p>Action required • Don't miss out on your service</p>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <div class="greeting">Hi ABC Institute,</div>
+        
+        <p>Your current subscription plan will <strong>expire on Monday, January 20, 2026</strong>.</p>
+        
+        <!-- Days Remaining Alert -->
+        <div class="info-box">
+          <strong>⏰ Time Remaining: 7 days</strong>
+          <br>Plan Type: <strong>Free Trial</strong>
+        </div>
+
+        <!-- Current Plan Details -->
+        <div class="plan-details">
+          <h3>📊 Your Current Plan</h3>
+          <p><strong>Starter Plan</strong></p>
+          <ul>
+            <li>Up to 100 Students</li>
+            <li>Basic Reports</li>
+            <li>Email Support</li>
+          </ul>
+        </div>
+
+        <!-- Upgrade Section -->
+        <div class="upgrade-section">
+          <h3>🚀 Upgrade Your Plan</h3>
+          <p>Get more features and unlock advanced capabilities:</p>
+          
+          <div class="plans-grid">
+            <div class="plan-card">
+              <h4>Professional</h4>
+              <div class="price">₹9,999/month</div>
+              <ul>
+                <li>Up to 500 Students</li>
+                <li>Advanced Reports</li>
+                <li>Priority Support</li>
+              </ul>
+            </div>
+            
+            <div class="plan-card">
+              <h4>Enterprise</h4>
+              <div class="price">₹29,999/month</div>
+              <ul>
+                <li>Unlimited Students</li>
+                <li>Custom Reports</li>
+                <li>Dedicated Support</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="cta-section">
+          <h3>Ready to Upgrade?</h3>
+          <p>Log in to your dashboard and navigate to "My Subscription" to upgrade your plan.</p>
+          <a href="#" class="dashboard-link" style="cursor: pointer;">Go to Dashboard</a>
+          <div class="dashboard-url">https://dashboard.pixelsdigital.tech/dashboard/client/67a8f5c9d1e2f3g4h5i6j7k8/my-subscription</div>
+        </div>
+
+        <!-- Support -->
+        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+          <strong>Need Help?</strong><br>
+          Have questions about upgrading? Reply to this email or contact us at <strong>support@pixelsdigital.tech</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p><strong>Pixels Dashboard</strong></p>
+        <p>© 2026 Pixels Digital. All rights reserved.</p>
+        <p style="color: #999;">This is an automated notification. Please do not reply with sensitive information.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 8px;">
+    <h2>📌 Key Features</h2>
+    <ul>
+      <li>✅ Professional HTML template with gradient header</li>
+      <li>✅ Current plan details with all features listed</li>
+      <li>✅ Available upgrade options in grid layout</li>
+      <li>✅ Dashboard subscription link (no direct upgrade link - they must login)</li>
+      <li>✅ Days remaining countdown</li>
+      <li>✅ Support contact information</li>
+      <li>✅ Mobile responsive design</li>
+      <li>✅ Dark mode support (in actual email client)</li>
+    </ul>
+  </div>
+
+  <div style="margin-top: 20px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+    <h2>📊 Subscription Path in Dashboard</h2>
+    <p><strong>Email Link:</strong></p>
+    <code style="background: #f5f5f5; padding: 10px; border-radius: 4px; display: block;">
+      https://dashboard.pixelsdigital.tech/dashboard/client/[tenantId]/my-subscription
+    </code>
+    <p><strong>Frontend Path:</strong></p>
+    <code style="background: #f5f5f5; padding: 10px; border-radius: 4px; display: block;">
+      frontend/app/dashboard/client/[tenantId]/my-subscription/page.tsx
+    </code>
+    <p>✨ Clients will login and see their subscription page where they can upgrade plans</p>
+  </div>
+
+  <div style="margin-top: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px;">
+    <h2>🔔 Topbar Notification</h2>
+    <p><strong>For Trial Accounts (Day 7):</strong></p>
+    <div style="background: white; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #667eea;">
+      <strong>⚠️ Trial Expiring in 7 days</strong><br>
+      Don't lose access. Upgrade your plan to continue.<br>
+      <button style="background: #667eea; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">View Plans</button>
+    </div>
+    <p><strong>For Paid Plans (30 days before renewal):</strong></p>
+    <div style="background: white; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2196F3;">
+      <strong>ℹ️ Subscription Renews in 28 days</strong><br>
+      Your subscription will renew soon.<br>
+      <button style="background: #2196F3; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;">Manage Plan</button>
+    </div>
+  </div>
+</body>
+</html>

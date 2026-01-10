@@ -9,6 +9,8 @@ import { authorizeRoles } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
+console.log('✅ subscriptionNotificationRoutes.js loaded - registering routes');
+
 /**
  * GET /api/subscription-notifications/expiring-soon
  * Get all subscriptions expiring within specified days (Superadmin only)
@@ -86,8 +88,11 @@ router.get('/expiring-soon', protect, authorizeRoles('superadmin'), async (req, 
  * POST /api/subscription-notifications/send-expiry-notification
  * Send expiry notification email to a specific tenant (Superadmin only)
  */
+console.log('🔴 Registering POST /send-expiry-notification route');
 router.post('/send-expiry-notification', protect, authorizeRoles('superadmin'), async (req, res) => {
+  console.log('📮 POST /send-expiry-notification called');
   try {
+    console.log('📋 Request body:', req.body);
     const { tenantId, customMessage } = req.body;
 
     if (!tenantId) {

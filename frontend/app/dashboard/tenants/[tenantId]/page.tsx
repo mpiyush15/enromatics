@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Power, Loader, Mail, KeyRound } from "lucide-react";
+import { useSendSubscriptionNotification } from "@/hooks/useSendSubscriptionNotification";
 
 // Plan name mapping
 const PLAN_NAMES: Record<string, string> = {
@@ -57,6 +58,8 @@ export default function TenantDetailPage() {
   const [error, setError] = useState("");
   const [suspending, setSuspending] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [notifying, setNotifying] = useState(false);
+  const { sendNotification } = useSendSubscriptionNotification();
 
   useEffect(() => {
     const fetchTenantDetail = async () => {
@@ -283,6 +286,27 @@ export default function TenantDetailPage() {
                   : tenant.active
                   ? "Suspend Account"
                   : "Activate Account"}
+              </button>
+
+              {/* Notify Button */}
+              <button
+                onClick={async () => {
+                  console.log('📮 Sending notification for tenant:', tenant.name, tenant.tenantId);
+                  setNotifying(true);
+                  const result = await sendNotification(tenant.tenantId);
+                  setNotifying(false);
+                  if (result.success) {
+                    alert(`✅ ${result.message}`);
+                  } else {
+                    alert(`❌ ${result.message}`);
+                  }
+                }}
+                disabled={notifying}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Send subscription expiry notification to this tenant"
+              >
+                <Mail size={18} />
+                {notifying ? "Sending..." : "Notify"}
               </button>
             </div>
           </div>

@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Power, Plus, X, Mail } from "lucide-react";
+import { Eye, Power, Plus, X } from "lucide-react";
 import useAuth from "@/hooks/useAuth";
-import SendSubscriptionNotificationModal from "@/components/dashboard/SendSubscriptionNotificationModal";
 
 type Tenant = {
   _id: string;
@@ -39,10 +38,6 @@ export default function AdminTenantsPage() {
   const [error, setError] = useState("");
   const [suspendingId, setSuspendingId] = useState<string | null>(null);
   const [suspending, setSuspending] = useState(false);
-  
-  // Subscription notification modal state
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   
   // Filter and sort states
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
@@ -439,16 +434,6 @@ export default function AdminTenantsPage() {
                           <Eye size={16} /> Manage
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedTenant(tenant);
-                            setShowNotificationModal(true);
-                          }}
-                          className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors gap-1"
-                          title="Send subscription expiry notification"
-                        >
-                          <Mail size={16} /> Notify
-                        </button>
-                        <button
                           onClick={() => toggleSuspend(tenant)}
                           disabled={suspending && suspendingId === tenant.tenantId}
                           className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium gap-1 transition-colors ${
@@ -613,23 +598,6 @@ export default function AdminTenantsPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Send Subscription Notification Modal */}
-      {showNotificationModal && selectedTenant && (
-        <SendSubscriptionNotificationModal
-          tenantId={selectedTenant.tenantId}
-          tenantName={selectedTenant.name}
-          tenantEmail={selectedTenant.email}
-          onClose={() => {
-            setShowNotificationModal(false);
-            setSelectedTenant(null);
-          }}
-          onSuccess={() => {
-            // Optional: Refresh tenants list or show success message
-            fetchTenants();
-          }}
-        />
       )}
     </div>
   );

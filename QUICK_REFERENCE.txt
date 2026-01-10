@@ -1,0 +1,155 @@
+═══════════════════════════════════════════════════════════════════════════════
+  🎯 SUBSCRIPTION EXPIRY NOTIFICATION - QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+📧 EMAIL PREVIEW
+────────────────────────────────────────────────────────────────────────────────
+Sent to: admin@abcinstitute.com
+Subject: "⏰ Your Free Trial Expires in 7 Days"
+
+Content includes:
+  • Gradient header with urgency
+  • Current plan: Starter Plan (₹0/month free trial)
+  • Features: Up to 100 Students, Basic Reports, Email Support
+  • Upgrade plans: Professional (₹9,999), Enterprise (₹29,999)
+  • Dashboard link: /dashboard/client/[tenantId]/my-subscription
+  • Days remaining: 7 days countdown
+  • Support: support@pixelsdigital.tech
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔔 TOPBAR NOTIFICATION (Shown in Dashboard)
+────────────────────────────────────────────────────────────────────────────────
+Location: Below Topbar, Above Main Content
+
+Trial Timeline:
+  ├─ Day 8-30:   ℹ️  "Trial Expiring in 8 days" [Blue] [Explore Plans]
+  ├─ Day 4-7:    ⚠️  "Trial Expiring in 5 days" [Yellow] [View Plans]
+  ├─ Day 1-3:    ⏰  "Trial Expiring in 2 days" [Red] [Upgrade Now]
+  └─ Day 0:      🚨  "Trial Expired" [Critical Red] [Upgrade Now]
+
+Paid Subscription Timeline:
+  ├─ Day 8-30:   ℹ️  "Subscription Renews in 12 days" [Blue] [Manage Plan]
+  ├─ Day 4-7:    ⚠️  "Subscription Renews in 5 days" [Yellow] [View Details]
+  ├─ Day 1-3:    ⏰  "Subscription Renews in 2 days" [Red] [Manage Subscription]
+  └─ Day 0:      🔴  "Subscription Expired" [Critical Red] [Renew Subscription]
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📁 FILES IMPLEMENTED
+────────────────────────────────────────────────────────────────────────────────
+BACKEND:
+  ✅ backend/src/services/subscriptionNotificationService.js (NEW)
+     └─ generateSubscriptionExpiryEmail()
+     └─ getTrialExpiryNotification()
+     └─ getSubscriptionRenewalNotification()
+
+  ✅ backend/src/routes/subscriptionNotificationRoutes.js (NEW)
+     └─ GET /api/subscriptions/expiring-soon
+     └─ POST /api/subscriptions/send-expiry-notification
+     └─ GET /api/subscriptions/status/:tenantId
+
+  ✅ backend/src/server.js (UPDATED)
+     └─ Added route registration
+
+FRONTEND:
+  ✅ frontend/components/dashboard/SubscriptionNotification.tsx (NEW)
+     └─ Topbar notification component
+     └─ Fetches subscription status
+     └─ Auto-refresh every 6 hours
+
+  ✅ frontend/components/dashboard/ClientDashboard.tsx (UPDATED)
+     └─ Renders SubscriptionNotification
+     └─ Only for tenant dashboards (not superadmin)
+
+  ✅ frontend/components/dashboard/Topbar.tsx (UPDATED)
+     └─ Import SubscriptionNotification
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔗 SUBSCRIPTION PAGE LINK
+────────────────────────────────────────────────────────────────────────────────
+Used in: Email + Topbar Buttons
+
+Format:
+  https://dashboard.pixelsdigital.tech/dashboard/client/[tenantId]/my-subscription
+
+Example:
+  https://dashboard.pixelsdigital.tech/dashboard/client/67a8f5c9d1e2f/my-subscription
+
+Frontend Path:
+  frontend/app/dashboard/client/[tenantId]/my-subscription/page.tsx
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🛣️ API ENDPOINTS
+────────────────────────────────────────────────────────────────────────────────
+
+1️⃣  GET /api/subscriptions/expiring-soon
+    Auth: Superadmin only
+    Query: ?daysUntilExpiry=30&type=all
+    Returns: List of expiring subscriptions
+
+2️⃣  POST /api/subscriptions/send-expiry-notification
+    Auth: Superadmin only
+    Body: { "tenantId": "...", "customMessage": "optional" }
+    Returns: Success confirmation
+
+3️⃣  GET /api/subscriptions/status/:tenantId
+    Auth: Tenant or Superadmin
+    Returns: Subscription status for topbar
+
+═══════════════════════════════════════════════════════════════════════════════
+
+�� HOW TO TEST
+────────────────────────────────────────────────────────────────────────────────
+
+1. Start Backend:
+   cd backend && npm run dev
+
+2. Start Frontend:
+   cd frontend && npm run dev
+
+3. Login as Superadmin:
+   - Go to admin dashboard
+   - Navigate to Tenants
+   - Find a tenant with expiring subscription
+   - Click "Send Expiry Notification"
+   - Confirm to send email
+
+4. Check Email:
+   - Email sent to: tenant's registered email
+   - Check spam folder if not in inbox
+   - Verify dashboard link works
+
+5. Login as Tenant:
+   - Go to tenant dashboard
+   - Should see notification in topbar
+   - Click button → redirects to /my-subscription
+   - Can upgrade plan from there
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔐 SECURITY
+────────────────────────────────────────────────────────────────────────────────
+✅ Superadmin-only for sending emails
+✅ Tenant-only for viewing own subscription
+✅ No hardcoded credentials
+✅ Proper error handling
+✅ Database tracking (notificationSent flag)
+✅ No direct upgrade links (must login first)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📊 KEY METRICS
+────────────────────────────────────────────────────────────────────────────────
+• Email sends: Instant when superadmin clicks
+• Topbar check: Auto-refresh every 6 hours
+• Trial shown from: Day 1
+• Paid renewal shown: 30 days before expiry
+• Critical alert: 3 days before expiry
+• No notification: 30+ days remaining
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✨ READY TO PUSH & DEPLOY! 🚀

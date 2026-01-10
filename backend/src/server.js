@@ -48,6 +48,8 @@ import whatsappRoutes from './routes/whatsappRoutes.js';
 import whatsappTemplateRoutes from './routes/whatsappTemplateRoutes.js';
 import whatsappChatbotRoutes from './routes/whatsappChatbotRoutes.js';
 import subscriptionNotificationRoutes from './routes/subscriptionNotificationRoutes.js';
+
+console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
 
@@ -165,6 +167,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappTemplateRoutes);
 app.use('/api/whatsapp', whatsappChatbotRoutes);
 app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
+console.log('🟢 Registered /api/subscription-notifications routes');
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);
