@@ -132,7 +132,7 @@ export const registerUser = async (req, res) => {
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
-      plan: subscriptionTier, // 'basic', 'pro', 'enterprise', or 'free'
+      plan: isTrial ? 'trial' : 'free', // ✅ Set plan to 'trial' for trial users, 'free' otherwise
       subdomain: generatedSubdomain, // ✅ AUTO-GENERATED SUBDOMAIN
       subscription: { 
         status: subscriptionStatus, // 'trial', 'active', or 'inactive'
@@ -157,6 +157,7 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false,
       tenantId: newTenantId,
       role: "tenantAdmin",
+      plan: isTrial ? 'trial' : 'free', // ✅ Set user plan to 'trial' or 'free' based on signup type
     });
     console.log('✅ [SIGNUP] User created:', user._id);
 
@@ -204,10 +205,12 @@ export const registerUser = async (req, res) => {
       message: "User registered successfully ✅",
       token, // Include token for trial signup flow
       user: {
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         tenantId: user.tenantId,
+        plan: user.plan, // ✅ Include plan so frontend can check for 'trial'
         createdAt: user.createdAt,
       },
       tenant: {
