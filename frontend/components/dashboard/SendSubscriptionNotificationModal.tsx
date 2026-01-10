@@ -39,6 +39,8 @@ export default function SendSubscriptionNotificationModal({
       );
       
       console.log('📥 API Response - data:', data, 'error:', err);
+      
+      if (err) {
         setStatus("error");
         setMessage(err.message || "Failed to send notification");
         setLoading(false);

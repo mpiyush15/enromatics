@@ -6,6 +6,9 @@ import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
 import { API_BASE_URL } from "@/lib/apiConfig";
 
+// Prevent static generation for student pages
+export const dynamic = 'force-dynamic';
+
 interface AttendanceRecord {
   _id: string;
   date: string;

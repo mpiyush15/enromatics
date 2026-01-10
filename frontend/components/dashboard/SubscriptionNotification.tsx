@@ -180,9 +180,12 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
     info: 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
   };
 
+  // Type guard for notification type
+  const notificationType = notification.type as 'error' | 'warning' | 'info';
+
   return (
     <div
-      className={`mx-4 mt-4 px-4 py-3 rounded-lg border ${bgColor[notification.type]} transition-all`}
+      className={`mx-4 mt-4 px-4 py-3 rounded-lg border ${bgColor[notificationType]} transition-all`}
       role="alert"
     >
       <div className="flex items-start gap-3">
@@ -191,10 +194,10 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
 
         {/* Content */}
         <div className="flex-1">
-          <h4 className={`font-semibold ${titleColor[notification.type]}`}>
+          <h4 className={`font-semibold ${titleColor[notificationType]}`}>
             {notification.title}
           </h4>
-          <p className={`text-sm mt-1 ${textColor[notification.type]}`}>
+          <p className={`text-sm mt-1 ${textColor[notificationType]}`}>
             {notification.message}
           </p>
         </div>
@@ -203,7 +206,7 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href={tenantId ? `/dashboard/client/${tenantId}/my-subscription` : '/dashboard/pricing'}
-            className={`text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${buttonColor[notification.type]} transition-colors`}
+            className={`text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${buttonColor[notificationType]} transition-colors`}
           >
             {notification.level === 'critical' ? 'Upgrade Now' : 'Upgrade'}
           </Link>
@@ -214,7 +217,7 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
             className={`p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors`}
             aria-label="Dismiss notification"
           >
-            <XCircle size={18} className={textColor[notification.type]} />
+            <XCircle size={18} className={textColor[notificationType]} />
           </button>
         </div>
       </div>

@@ -464,7 +464,7 @@ export default function MySubscriptionPage() {
               </p>
             </div>
             {/* Billing Cycle Toggle */}
-            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-800/30 p-2 rounded-lg border border-blue-200 dark:border-blue-700">
               <button
                 onClick={() => setBillingCycle("monthly")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
@@ -484,7 +484,7 @@ export default function MySubscriptionPage() {
                 }`}
               >
                 Yearly
-                <Badge className="ml-2 bg-green-500 text-white text-xs">Save 20%</Badge>
+                <Badge className="ml-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold animate-pulse">💰 Save 30%</Badge>
               </button>
             </div>
           </div>
