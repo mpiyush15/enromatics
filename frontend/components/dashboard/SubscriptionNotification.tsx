@@ -6,25 +6,55 @@ import { AlertCircle, Clock, Info, XCircle } from "lucide-react";
 import { api, safeApiCall } from "@/lib/apiClient";
 
 interface SubscriptionNotificationProps {
-  tenantId: string;
+  tenantId?: string;
+  accountType?: string;
 }
 
-export default function SubscriptionNotification({ tenantId }: SubscriptionNotificationProps) {
+export default function SubscriptionNotification({ tenantId, accountType }: SubscriptionNotificationProps) {
   const [notification, setNotification] = useState<any>(null);
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!tenantId || dismissed) return;
+    // Skip if dismissed or no way to fetch data
+    if (dismissed) {
+      console.log('🔕 SubscriptionNotification: Dismissed by user');
+      return;
+    }
+
+    // For trial accounts without tenantId, show default trial notice
+    if (accountType === 'trial' && !tenantId) {
+      console.log('🆓 SubscriptionNotification: Trial account detected (no tenantId)');
+      setNotification({
+        type: 'info',
+        icon: '🆓',
+        title: 'Free Trial Account',
+        message: 'Upgrade to unlock more features and continue your service.',
+        level: 'low'
+      });
+      setLoading(false);
+      return;
+    }
+
+    // If we have a tenantId, fetch subscription status
+    if (!tenantId) {
+      console.log('🔕 SubscriptionNotification: No tenantId provided');
+      setLoading(false);
+      return;
+    }
 
     const fetchSubscriptionStatus = async () => {
       try {
+        console.log('📡 SubscriptionNotification: Fetching status for tenantId:', tenantId);
         const [data, err] = await safeApiCall(() =>
           api.get(`/api/subscription-notifications/status/${tenantId}`)
         );
 
+        console.log('📊 API Response:', { data, err });
+
         if (!err && data?.data) {
           const sub = data.data;
+          console.log('✅ Subscription data received:', sub);
           
           if (sub.requiresNotification) {
             let notif = null;
@@ -102,11 +132,15 @@ export default function SubscriptionNotification({ tenantId }: SubscriptionNotif
             }
             
             setNotification(notif);
+          } else {
+            console.log('⚠️ No notification needed - requiresNotification:', sub.requiresNotification);
           }
+        } else {
+          console.log('⚠️ No subscription data returned or API error:', err);
         }
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching subscription status:", error);
+        console.error("❌ Error fetching subscription status:", error);
         setLoading(false);
       }
     };

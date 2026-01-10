@@ -204,9 +204,11 @@ router.post('/send-expiry-notification', protect, authorizeRoles('superadmin'), 
 router.get('/status/:tenantId', protect, async (req, res) => {
   try {
     const { tenantId } = req.params;
+    console.log('📡 GET /status called for tenantId:', tenantId);
 
     // Verify tenant access (user owns this tenant)
     if (req.user?.tenantId?.toString() !== tenantId && req.user?.role !== 'superadmin') {
+      console.log('❌ Access denied - user tenantId:', req.user?.tenantId, 'requested:', tenantId);
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -219,7 +221,10 @@ router.get('/status/:tenantId', protect, async (req, res) => {
       status: { $in: ['active', 'trial'] }
     }).sort({ expiryDate: -1 });
 
+    console.log('📋 Subscription found:', subscription ? 'YES' : 'NO');
+    
     if (!subscription) {
+      console.log('⚠️ No active subscription for tenantId:', tenantId);
       return res.json({
         success: true,
         data: null,
@@ -230,6 +235,8 @@ router.get('/status/:tenantId', protect, async (req, res) => {
     // Calculate days remaining
     const now = new Date();
     const daysRemaining = Math.ceil((new Date(subscription.expiryDate) - now) / (1000 * 60 * 60 * 24));
+
+    console.log(`✅ Subscription: type=${subscription.type}, daysRemaining=${daysRemaining}, expiryDate=${subscription.expiryDate}`);
 
     res.json({
       success: true,

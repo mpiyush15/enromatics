@@ -11,15 +11,21 @@ interface TopbarProps {
   userName: string;
   onToggleSidebar: () => void;
   isAdmin?: boolean;
+  user?: { type?: string; tenantId?: string };
 }
 
-export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarProps) {
+export default function Topbar({ userName, onToggleSidebar, isAdmin, user }: TopbarProps) {
   const [dateTime, setDateTime] = useState("");
   const pathname = usePathname();
   const params = useParams();
   
-  // Only get tenantId if we're in a dashboard route with [tenantId]
-  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
+  // Get tenantId from URL or from user object
+  const tenantId = pathname?.includes('/client/') 
+    ? (params?.tenantId as string) 
+    : user?.tenantId;
+  
+  // Show notification for trial users or if tenantId is present
+  const shouldShowNotification = !isAdmin && (user?.type === 'trial' || tenantId);
 
   useEffect(() => {
     const updateTime = () => {
@@ -65,6 +71,14 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
 
       {/* Right Section */}
       <div className="flex items-center gap-3 sm:gap-4">
+        {/* Subscription Trial Notification */}
+        {shouldShowNotification && (
+          <SubscriptionNotification 
+            tenantId={tenantId} 
+            accountType={user?.type}
+          />
+        )}
+        
         {/* Time Display */}
         <p className="hidden lg:inline text-xs text-gray-500 dark:text-gray-400 font-medium px-3 py-2 bg-white dark:bg-gray-800 rounded-lg">
           {dateTime}
