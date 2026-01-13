@@ -20,8 +20,23 @@ export const sidebarLinks = [
     roles: ["SuperAdmin","admin"],
   },
   {
-    href: "/dashboard/institute-overview",
+    href: "/dashboard/client/[tenantId]/overview-pro",
     label: "💳 Institute Overview",
+    roles: ["tenantAdmin"],
+  },
+  {
+    href: "/dashboard/client/[tenantId]/ui-test-lab",
+    label: "🎨 UI Test Lab",
+    roles: ["tenantAdmin"],
+  },
+  {
+    href: "/dashboard/client/[tenantId]/enroll-student",
+    label: "➕ Enroll Student",
+    roles: ["tenantAdmin"],
+  },
+  {
+    href: "/dashboard/client/[tenantId]/test-dashboard",
+    label: "🧪 Test Dashboard",
     roles: ["tenantAdmin"],
   },
   {

@@ -195,14 +195,14 @@ export default function InstituteOverviewPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-gray-50 dark:bg-gray-950 min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="px-8 py-4 space-y-8 bg-gray-50 dark:bg-gray-950 min-h-screen">
+      {/* HEADER */}
+      <div className="flex justify-between items-center pt-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            📊 Institute Overview
+            Institute Overview
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Welcome back! Here's what's happening today.
           </p>
         </div>
@@ -267,152 +267,223 @@ export default function InstituteOverviewPage() {
         </div>
       )}
 
-      {/* Quick Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* UNIFORM ACTION BUTTONS - All same height and spacing */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <button
           onClick={() => router.push(`/dashboard/client/${tenantId}/students/add`)}
-          className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all transform hover:scale-105"
+          className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md rounded-lg transition-all gap-3"
         >
-          <span className="text-2xl">➕</span>
-          <div className="text-left">
-            <div className="font-bold">Enroll Student</div>
-            <div className="text-xs opacity-90">Add new admission</div>
+          <span className="text-3xl">➕</span>
+          <div className="text-center">
+            <div className="font-semibold text-sm text-gray-900 dark:text-white">Enroll</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Student</div>
           </div>
         </button>
 
         <button
           onClick={() => router.push(`/dashboard/client/${tenantId}/accounts/transactions`)}
-          className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl shadow-lg transition-all transform hover:scale-105"
+          className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md rounded-lg transition-all gap-3"
         >
-          <span className="text-2xl">💰</span>
-          <div className="text-left">
-            <div className="font-bold">Collect Fees</div>
-            <div className="text-xs opacity-90">Payment entry</div>
+          <span className="text-3xl">💰</span>
+          <div className="text-center">
+            <div className="font-semibold text-sm text-gray-900 dark:text-white">Collect</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Fees</div>
           </div>
         </button>
 
         <button
           onClick={() => router.push(`/dashboard/client/${tenantId}/academics/batches`)}
-          className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all transform hover:scale-105"
+          className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md rounded-lg transition-all gap-3"
         >
-          <span className="text-2xl">📚</span>
-          <div className="text-left">
-            <div className="font-bold">Manage Batches</div>
-            <div className="text-xs opacity-90">Create & organize</div>
+          <span className="text-3xl">📚</span>
+          <div className="text-center">
+            <div className="font-semibold text-sm text-gray-900 dark:text-white">Manage</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Batches</div>
           </div>
         </button>
 
         <button
           onClick={() => router.push(`/dashboard/client/${tenantId}/students/attendance`)}
-          className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-lg transition-all transform hover:scale-105"
+          className="flex flex-col items-center justify-center p-5 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md rounded-lg transition-all gap-3"
         >
-          <span className="text-2xl">✅</span>
-          <div className="text-left">
-            <div className="font-bold">Daily Attendance</div>
-            <div className="text-xs opacity-90">Mark batch attendance</div>
+          <span className="text-3xl">✅</span>
+          <div className="text-center">
+            <div className="font-semibold text-sm text-gray-900 dark:text-white">Mark</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Attendance</div>
           </div>
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* UNIFORM KPI CARDS - All same height and spacing */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {/* Total Students */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Students</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {stats.totalStudents}
-              </h3>
-            </div>
-            <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-full">
-              <span className="text-3xl">👥</span>
-            </div>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Total Students</p>
+            <span className="text-2xl">👥</span>
           </div>
-        </div>
-
-        {/* Total Revenue */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Revenue</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                ₹{stats.totalRevenue.toLocaleString()}
-              </h3>
-            </div>
-            <div className="bg-green-100 dark:bg-green-900 p-4 rounded-full">
-              <span className="text-3xl">💰</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Total Tests */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Tests</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {stats.totalTests}
-              </h3>
-            </div>
-            <div className="bg-purple-100 dark:bg-purple-900 p-4 rounded-full">
-              <span className="text-3xl">📝</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Today's Attendance */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Today's Attendance</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {stats.todayAttendance}%
-              </h3>
-            </div>
-            <div className="bg-orange-100 dark:bg-orange-900 p-4 rounded-full">
-              <span className="text-3xl">✅</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Pending Fees */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-red-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Pending Fees</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                ₹{stats.pendingFees.toLocaleString()}
-              </h3>
-            </div>
-            <div className="bg-red-100 dark:bg-red-900 p-4 rounded-full">
-              <span className="text-3xl">⚠️</span>
-            </div>
-          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStudents}</p>
         </div>
 
         {/* Active Batches */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Active Batches</p>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {stats.activeBatches}
-              </h3>
-            </div>
-            <div className="bg-indigo-100 dark:bg-indigo-900 p-4 rounded-full">
-              <span className="text-3xl">📚</span>
-            </div>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Active Batches</p>
+            <span className="text-2xl">📚</span>
           </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeBatches}</p>
+        </div>
+
+        {/* Today's Attendance */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Attendance</p>
+            <span className="text-2xl">✅</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.todayAttendance}%</p>
+        </div>
+
+        {/* Pending Fees */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Pending Fees</p>
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{(stats.pendingFees / 1000).toFixed(0)}k</p>
+        </div>
+
+        {/* Total Revenue */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Total Revenue</p>
+            <span className="text-2xl">💵</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{(stats.totalRevenue / 1000).toFixed(0)}k</p>
+        </div>
+
+        {/* Total Tests */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">Total Tests</p>
+            <span className="text-2xl">📝</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTests}</p>
         </div>
       </div>
 
-      {/* Two Column Layout */}
+      {/* UNIFORM CARDS SECTION - Upcoming Tests & WhatsApp */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Upcoming Tests Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              📅 Upcoming Tests
+            </h2>
+            <button
+              onClick={() => router.push(`/dashboard/client/${tenantId}/academics/schedules`)}
+              className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
+            >
+              View All →
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Physics Midterm</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">JEE Mains - Batch A</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Jan 20, 2026 • 10:00 AM</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Chemistry Quiz</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">NEET Biology</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Jan 22, 2026 • 2:00 PM</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Mathematics Exam</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">CBSE Class 12</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Jan 25, 2026 • 9:00 AM</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push(`/dashboard/client/${tenantId}/academics/schedules`)}
+            className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition-colors text-sm"
+          >
+            Create New Test
+          </button>
+        </div>
+
+        {/* WhatsApp Broadcast Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              💬 WhatsApp Broadcast
+            </h2>
+            <button
+              onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/inbox`)}
+              className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
+            >
+              View All →
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-3">
+                <span className="text-lg flex-shrink-0">📨</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Fees Reminder</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Sent to 245 students</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Today at 9:30 AM</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-3">
+                <span className="text-lg flex-shrink-0">📨</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Class Schedule Update</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Sent to 180 students</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Yesterday at 5:00 PM</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-3">
+                <span className="text-lg flex-shrink-0">📨</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">Test Results Declared</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Sent to 256 students</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">2 days ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/inbox`)}
+            className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition-colors text-sm"
+          >
+            Send Broadcast
+          </button>
+        </div>
+      </div>
+
+      {/* Two Column Layout - CLEAN WHITE */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Graph */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               💰 Revenue Overview
             </h2>
             <div className="flex gap-2">
@@ -496,37 +567,37 @@ export default function InstituteOverviewPage() {
           </div>
           
           <div className="mt-4 grid grid-cols-2 gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-600 dark:text-gray-400">Total Revenue</p>
-              <p className="text-lg font-bold text-blue-600">₹{stats.totalRevenue.toLocaleString()}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">₹{stats.totalRevenue.toLocaleString()}</p>
             </div>
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-600 dark:text-gray-400">Pending Fees</p>
-              <p className="text-lg font-bold text-green-600">₹{stats.pendingFees.toLocaleString()}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">₹{stats.pendingFees.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
         {/* Attendance Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
             ✅ Today's Attendance
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Present Students</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {Math.round((stats.todayAttendance / 100) * stats.totalStudents)}
                 </p>
               </div>
               <div className="text-4xl">✅</div>
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Absent Students</p>
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {stats.totalStudents - Math.round((stats.todayAttendance / 100) * stats.totalStudents)}
                 </p>
               </div>
@@ -543,8 +614,8 @@ export default function InstituteOverviewPage() {
         </div>
       </div>
 
-      {/* Top Rankers Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
+      {/* Top Rankers Table - CLEAN WHITE */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             🏆 Top Rankers
