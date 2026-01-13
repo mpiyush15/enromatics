@@ -106,9 +106,11 @@ export const addStudent = async (req, res) => {
 export const getStudents = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
+    console.log("🔍 getStudents called - tenantId:", tenantId, "user:", req.user);
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
     const { page = 1, limit = 10, batchId, batch, course, rollNumber, feesStatus } = req.query;
+    console.log("📋 Query params:", { batchId, batch, course, rollNumber, feesStatus, page, limit });
     const pageNum = Number(page);
     const lim = Math.min(Number(limit), 100);
 
@@ -189,6 +191,7 @@ export const getStudents = async (req, res) => {
           gender: 1,
           course: 1,
           batch: 1,
+          batchName: "$batch", // Map batch to batchName for consistency
           batchId: 1,
           rollNumber: 1,
           address: 1,
