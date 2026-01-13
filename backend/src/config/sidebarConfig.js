@@ -11,8 +11,8 @@ export const sidebarLinks = [
 
   // === PRIORITY 2: Institute Overview (Tenant Admins) ===
   {
-    href: "/dashboard/institute-overview",
-    label: "📊 Institute Overview",
+    href: "/dashboard/client/[tenantId]/overview-pro",
+    label: "💳 Institute Overview",
     roles: ["tenantAdmin"],
     tenantSpecific: true,
   },

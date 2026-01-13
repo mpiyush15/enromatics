@@ -199,7 +199,14 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   function isActive(href?: string) {
     if (!href) return false;
-    return pathname === buildHref(href);
+    const builtHref = buildHref(href);
+    
+    // Debug: Log sidebar active check
+    if (href.includes("overview")) {
+      console.log(`🔗 isActive check - href: "${href}", builtHref: "${builtHref}", pathname: "${pathname}", match: ${pathname === builtHref}`);
+    }
+    
+    return pathname === builtHref;
   }
 
   function toggle(label: string) {
