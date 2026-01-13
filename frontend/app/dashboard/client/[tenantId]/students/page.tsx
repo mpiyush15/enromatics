@@ -28,6 +28,7 @@ export default function StudentsPage() {
   const [pages, setPages] = useState(1);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [limit, setLimit] = useState(10); // Per page limit
+  const [batches, setBatches] = useState<string[]>([]);
 
   /* ================= FILTER INPUTS ================= */
   const [batchFilter, setBatchFilter] = useState("");
@@ -74,6 +75,9 @@ export default function StudentsPage() {
   const [error, setError] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportAction, setExportAction] = useState<"print" | "excel" | null>(null);
+  const [exportBatch, setExportBatch] = useState("");
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -150,6 +154,12 @@ export default function StudentsPage() {
           setStudents(data.students || []);
           setPages(data.pages || 1);
           if (data.quota) setQuota(data.quota);
+          
+          // Extract unique batches from students
+          if (data.students) {
+            const uniqueBatches = [...new Set(data.students.map((s: StudentDTO) => s.batch).filter(Boolean))];
+            setBatches(uniqueBatches as string[]);
+          }
         } catch (err: any) {
           console.error(err);
           setError(err.message || "Something went wrong");
@@ -162,6 +172,32 @@ export default function StudentsPage() {
       router.replace(`/dashboard/client/${tenantId}/students`, { scroll: false });
     }
   }, [searchParams]);
+
+  /* ================= FETCH BATCHES ================= */
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        const res = await fetch(`/api/batches?tenantId=${tenantId}`, {
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (data.success && data.batches) {
+          const batchNames = data.batches.map((b: any) => b.name || b.batchName).filter(Boolean);
+          setBatches(batchNames);
+          console.log("✅ Batches fetched:", batchNames);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch batches:", err);
+        // Fallback: extract from current students
+        const uniqueBatches = [...new Set(students.map(s => s.batch).filter(Boolean))];
+        setBatches(uniqueBatches as string[]);
+      }
+    };
+
+    if (showExportModal && batches.length === 0) {
+      fetchBatches();
+    }
+  }, [showExportModal, batches.length, students, tenantId]);
 
   /* ================= CSV ================= */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,6 +269,157 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
     a.click();
   };
 
+  // Export students to Excel
+  const exportToExcel = () => {
+    setExportAction("excel");
+    setShowExportModal(true);
+  };
+
+  // Print students list
+  const printStudentsList = () => {
+    setExportAction("print");
+    setShowExportModal(true);
+  };
+
+  // Handle actual export/print after batch selection
+  const handleExportWithBatch = async () => {
+    let studentsToExport = students;
+    
+    if (exportBatch) {
+      // Fetch all students for the selected batch
+      try {
+        const params = new URLSearchParams();
+        params.set("batch", exportBatch);
+        params.set("limit", "10000"); // Get all students
+        
+        const res = await fetch(`/api/students?${params.toString()}`, {
+          credentials: "include",
+        });
+        
+        const data = await res.json();
+        if (data.success && data.students) {
+          studentsToExport = data.students;
+        }
+      } catch (err) {
+        console.error("Error fetching batch students:", err);
+        studentsToExport = students.filter(s => s.batch === exportBatch);
+      }
+    }
+
+    if (studentsToExport.length === 0) {
+      alert("No students found for selected batch");
+      return;
+    }
+
+    if (exportAction === "excel") {
+      performExcelExport(studentsToExport);
+    } else if (exportAction === "print") {
+      performPrint(studentsToExport);
+    }
+
+    setShowExportModal(false);
+    setExportBatch("");
+    setExportAction(null);
+  };
+
+  // Actual Excel export
+  const performExcelExport = (studentsToExport: StudentDTO[]) => {
+    const headers = ["Name", "Email", "Phone", "Gender", "Course", "Batch", "Roll Number", "Address", "Fees Status"];
+    const rows = studentsToExport.map(student => [
+      student.name || "",
+      student.email || "",
+      student.phone || "",
+      student.gender || "",
+      student.course || "",
+      student.batch || "",
+      student.rollNumber || "",
+      student.address || "",
+      student.feesStatus || "Pending"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Actual print
+  const performPrint = (studentsToExport: StudentDTO[]) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print");
+      return;
+    }
+
+    const html = `
+      <html>
+      <head>
+        <title>Students List</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { text-align: center; color: #333; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f9f9f9; }
+          .header { margin-bottom: 10px; color: #666; }
+          @media print {
+            body { margin: 0; padding: 10px; }
+            table { font-size: 12px; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>📚 Students List</h1>
+        <div class="header">
+          <p><strong>Total Students:</strong> ${studentsToExport.length}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Course</th>
+              <th>Batch</th>
+              <th>Roll Number</th>
+              <th>Fees Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentsToExport.map(student => `
+              <tr>
+                <td>${student.name || "-"}</td>
+                <td>${student.email || "-"}</td>
+                <td>${student.phone || "-"}</td>
+                <td>${student.course || "-"}</td>
+                <td>${student.batch || "-"}</td>
+                <td>${student.rollNumber || "-"}</td>
+                <td>${student.feesStatus || "Pending"}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   if (loading) return <StudentListSkeleton />;
 
   /* ================= UI (UNCHANGED) ================= */
@@ -245,6 +432,54 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
         suggestedTier="pro"
         onClose={() => setShowUpsellModal(false)}
       />
+
+      {/* Export/Print Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {exportAction === "excel" ? "📊 Export to Excel" : "🖨️ Print Students"}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Select a batch to {exportAction === "excel" ? "export" : "print"} (optional)
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                🎓 Batch (Leave empty for all)
+              </label>
+              <select
+                value={exportBatch}
+                onChange={(e) => setExportBatch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-sm"
+              >
+                <option value="">-- All Batches --</option>
+                {(batches.length > 0 ? batches : [...new Set(students.map(s => s.batch).filter(Boolean))]).map(batch => (
+                  <option key={batch} value={batch}>{batch}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportBatch("");
+                  setExportAction(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExportWithBatch}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
+              >
+                {exportAction === "excel" ? "Export" : "Print"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
@@ -262,14 +497,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
               )}
             </p>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105 flex items-center gap-2"
-            >
-              <span className="text-xl">📤</span>
-              Upload CSV
-            </button>
+          <div className="flex gap-2 flex-wrap items-center">
             <div className="relative group">
               <button 
                 onClick={() => {
@@ -280,18 +508,18 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                   router.push(`/dashboard/client/${tenantId}/students/add`);
                 }}
                 disabled={quota !== null && !quota.canAdd}
-                className={`px-6 py-3 rounded-xl font-semibold shadow-lg transition-all transform flex items-center gap-2 ${
+                className={`px-3 py-2 text-sm rounded-lg transition flex items-center gap-1.5 ${
                   quota && !quota.canAdd
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:scale-105'
+                    ? 'border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30'
                 }`}
               >
-                <span className="text-xl">➕</span>
+                <span className="text-base">➕</span>
                 Add Student
               </button>
               {/* Tooltip for disabled button */}
               {quota && !quota.canAdd && (
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
                   Student limit reached ({quota.current}/{quota.cap}).
                   <button
                     onClick={() => router.push(`/dashboard/client/${tenantId}/my-subscription`)}
@@ -303,6 +531,27 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                 </div>
               )}
             </div>
+            <button
+              onClick={printStudentsList}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-1.5"
+            >
+              <span className="text-base">🖨️</span>
+              Print
+            </button>
+            <button
+              onClick={exportToExcel}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-1.5"
+            >
+              <span className="text-base">📊</span>
+              Export Excel
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center gap-1.5"
+            >
+              <span className="text-base">📤</span>
+              Upload CSV
+            </button>
           </div>
         </div>
 
