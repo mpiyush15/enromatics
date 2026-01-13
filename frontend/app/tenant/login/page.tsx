@@ -35,16 +35,46 @@ export default function TenantLoginPage() {
   useEffect(() => {
     const fetchBranding = async () => {
       try {
-        // Check if we're on a tenant subdomain
-        const tenantContext = getCookieValue('tenant-context');
+        // Try to get subdomain from cookie first, then fallback to URL
+        let subdomain = getCookieValue('tenant-context');
         
-        console.log('🎨 Tenant context:', tenantContext);
+        // Fallback: Extract subdomain from hostname if cookie not available
+        if (!subdomain && typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
+          
+          if (hostname.includes('lvh.me')) {
+            const parts = hostname.split('.');
+            if (parts.length >= 3) {
+              const potentialSubdomain = parts[0];
+              if (!nonTenantSubdomains.includes(potentialSubdomain.toLowerCase())) {
+                subdomain = potentialSubdomain;
+              }
+            }
+          } else if (hostname.includes('enromatics.com')) {
+            const parts = hostname.split('.');
+            if (parts.length >= 3) {
+              const potentialSubdomain = parts[0];
+              if (!nonTenantSubdomains.includes(potentialSubdomain.toLowerCase())) {
+                subdomain = potentialSubdomain;
+              }
+            }
+          }
+        }
         
-        if (tenantContext) {
+        console.log('🎨 Tenant subdomain:', subdomain);
+        
+        if (subdomain) {
           setIsTenantSubdomain(true);
           
+          // Set tenant-context cookie if not already set
+          if (!getCookieValue('tenant-context')) {
+            document.cookie = `tenant-context=${subdomain}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+            console.log('🍪 Tenant context cookie set:', subdomain);
+          }
+          
           // Fetch branding from API
-          const response = await fetch(`/api/tenant/branding-by-subdomain?subdomain=${tenantContext}`);
+          const response = await fetch(`/api/tenant/branding-by-subdomain?subdomain=${subdomain}`);
           
           if (response.ok) {
             const data = await response.json();
@@ -58,6 +88,7 @@ export default function TenantLoginPage() {
           }
         } else {
           // If no tenant context, redirect to main login
+          console.log('⚠️ No tenant subdomain detected, redirecting to /login');
           router.push('/login');
         }
       } catch (error) {
