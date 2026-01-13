@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { Eye } from "lucide-react";
-import { StudentListModal } from "@/components/modals/StudentListModal";
+import StudentListModal from "@/components/modals/StudentListModal";
 
 interface Course {
   _id: string;
@@ -413,7 +413,7 @@ export default function CoursesAndBatchesPage() {
                   <button
                     onClick={() => setStudentListModal({
                       isOpen: true,
-                      courseId: course._id,
+                      courseId: course.name,  // Pass course NAME for regex match, not ID
                       courseName: course.name,
                     })}
                     className="p-2 text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
@@ -812,11 +812,10 @@ export default function CoursesAndBatchesPage() {
       <StudentListModal
         isOpen={studentListModal.isOpen}
         onClose={() => setStudentListModal({ isOpen: false })}
-        batchId={studentListModal.batchId}
+        batch={studentListModal.batchId}
         batchName={studentListModal.batchName}
-        courseId={studentListModal.courseId}
+        course={studentListModal.courseId}
         courseName={studentListModal.courseName}
-        tenantId={tenantId}
       />
     </div>
   );

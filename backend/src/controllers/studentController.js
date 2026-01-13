@@ -1,6 +1,7 @@
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
 import Batch from "../models/Batch.js";
+import BatchStudent from "../models/BatchStudent.js";
 import Tenant from "../models/Tenant.js";
 import * as planGuard from "../../lib/planGuard.js";
 
@@ -89,6 +90,16 @@ export const addStudent = async (req, res) => {
 
     if (batchId) {
       await Batch.findByIdAndUpdate(batchId, { $inc: { enrolledCount: 1 } });
+      
+      // 🔥 NEW: Create BatchStudent mapping
+      await BatchStudent.create({
+        tenantId,
+        studentId: student._id,
+        batchId,
+        status: "active",
+        joinedAt: new Date(),
+      });
+      console.log(`✅ Student ${student.name} added to batch via BatchStudent`);
     }
 
     res.status(201).json({
@@ -124,18 +135,27 @@ export const getStudents = async (req, res) => {
 
     // Exact batchId filter (if provided)
     if (batchId) {
-      match.batchId = new mongoose.Types.ObjectId(batchId);
+      try {
+        match.batchId = new mongoose.Types.ObjectId(batchId);
+        console.log("🔍 Filtering by batchId:", batchId);
+      } catch (err) {
+        console.warn("⚠️ Invalid batchId format:", batchId, err.message);
+        // If invalid, don't add to match - will return no results which is correct
+      }
     }
 
     // Flexible course search - case insensitive partial match
     if (course) {
       match.course = { $regex: course, $options: "i" };
+      console.log("🔍 Filtering by course:", course);
     }
 
     // Flexible roll number search - case insensitive partial match
     if (rollNumber) {
       match.rollNumber = { $regex: rollNumber, $options: "i" };
     }
+
+    console.log("📋 Final match filter:", JSON.stringify(match));
 
     /* ---------------- PIPELINE ---------------- */
     const pipeline = [{ $match: match }];
@@ -219,6 +239,7 @@ export const getStudents = async (req, res) => {
     const students = await Student.aggregate(pipeline);
 
     /* ---------------- QUOTA ---------------- */
+    console.log(`✅ Found ${students.length} students matching filter`);
     const totalStudents = await Student.countDocuments({ tenantId });
     const tenant = await Tenant.findOne({ tenantId }).select("plan").lean();
     const quotaCheck = planGuard.checkStudentCap({
@@ -240,8 +261,8 @@ export const getStudents = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Get students error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Get students error:", err.message, err.stack);
+    res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
