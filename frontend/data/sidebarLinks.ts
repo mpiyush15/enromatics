@@ -144,7 +144,15 @@ export const sidebarLinks = [
     roles: ["tenantAdmin", "teacher", "staff", "student"],
     children: [
       {
-        label: "📅 Test Schedules",
+        label: "� Lessons Planning",
+        href: "/dashboard/client/[tenantId]/academics/lessons-planning",
+      },
+      {
+        label: "📦 Batches",
+        href: "/dashboard/client/[tenantId]/academics/batches",
+      },
+      {
+        label: "�📅 Test Schedules",
         href: "/dashboard/academics/schedules",
       },
       {

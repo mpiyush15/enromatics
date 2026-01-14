@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Eye } from "lucide-react";
 import StudentListModal from "@/components/modals/StudentListModal";
@@ -44,6 +44,7 @@ const fetcher = async (url: string) => {
 
 export default function CoursesAndBatchesPage() {
   const params = useParams();
+  const router = useRouter();
   const tenantId = params?.tenantId as string;
   
   const [activeTab, setActiveTab] = useState<"courses" | "batches">("courses");
@@ -410,6 +411,13 @@ export default function CoursesAndBatchesPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push(`/dashboard/client/${tenantId}/academics/courses/${course._id}`)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+                    title="View Course & Lessons"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  </button>
                   <button
                     onClick={() => setStudentListModal({
                       isOpen: true,
