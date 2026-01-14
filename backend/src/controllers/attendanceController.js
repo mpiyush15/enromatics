@@ -437,3 +437,99 @@ export const uploadAttendanceCSV = async (req, res) => {
     });
   }
 };
+
+// Get attendance analytics for date range
+export const getAttendanceAnalytics = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
+
+    const { startDate, endDate, batch } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "startDate and endDate are required" });
+    }
+
+    // Parse dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include entire end date
+
+    // Build student filter
+    const studentMatch = { tenantId };
+    if (batch) studentMatch.batch = batch;
+
+    // Get students matching filters
+    const students = await Student.find(studentMatch).lean();
+    const studentIds = students.map(s => s._id);
+
+    // Get all attendance records for the date range
+    const attendanceRecords = await Attendance.find({
+      tenantId,
+      studentId: { $in: studentIds },
+      date: { $gte: start, $lte: end }
+    }).lean();
+
+    // Calculate daily trend
+    const dailyMap = {};
+    attendanceRecords.forEach(record => {
+      const dateStr = record.date.toISOString().split('T')[0];
+      if (!dailyMap[dateStr]) {
+        dailyMap[dateStr] = { present: 0, absent: 0, late: 0, excused: 0 };
+      }
+      dailyMap[dateStr][record.status]++;
+    });
+
+    const dailyTrend = Object.entries(dailyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, counts]) => ({ date, ...counts }));
+
+    // Calculate student statistics
+    const studentStats = students.map(student => {
+      const studentRecords = attendanceRecords.filter(r => r.studentId.toString() === student._id.toString());
+      const totalDays = new Set(studentRecords.map(r => r.date.toISOString().split('T')[0])).size;
+      
+      const presentDays = studentRecords.filter(r => r.status === "present").length;
+      const absentDays = studentRecords.filter(r => r.status === "absent").length;
+      const lateDays = studentRecords.filter(r => r.status === "late").length;
+      const excusedDays = studentRecords.filter(r => r.status === "excused").length;
+      
+      const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+      return {
+        _id: student._id,
+        name: student.name,
+        rollNumber: student.rollNumber,
+        batch: student.batch,
+        totalDays,
+        presentDays,
+        absentDays,
+        lateDays,
+        excusedDays,
+        percentage
+      };
+    });
+
+    // Calculate overall stats
+    const totalUniqueStudents = students.length;
+    const totalDaysCount = dailyTrend.length;
+    const stats = {
+      totalDays: totalDaysCount,
+      present: attendanceRecords.filter(r => r.status === "present").length,
+      absent: attendanceRecords.filter(r => r.status === "absent").length,
+      late: attendanceRecords.filter(r => r.status === "late").length,
+      excused: attendanceRecords.filter(r => r.status === "excused").length
+    };
+
+    res.status(200).json({
+      success: true,
+      stats,
+      studentStats: studentStats.sort((a, b) => a.percentage - b.percentage),
+      dailyTrend,
+      filters: { startDate, endDate, batch: batch || "All" }
+    });
+  } catch (err) {
+    console.error("Get attendance analytics error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};

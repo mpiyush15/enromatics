@@ -305,7 +305,16 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       </div>
 
       {/* Menu */}
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-hide" style={{ scrollBehavior: 'smooth' }}>
+        <style>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
         <ul className="space-y-1">
           {links.map((section, idx) => (
             <li key={section.label}>

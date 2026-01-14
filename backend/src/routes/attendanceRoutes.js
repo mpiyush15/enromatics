@@ -7,7 +7,8 @@ import {
   getAttendanceReport,
   updateAttendance,
   deleteAttendance,
-  uploadAttendanceCSV
+  uploadAttendanceCSV,
+  getAttendanceAnalytics
 } from "../controllers/attendanceController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -39,6 +40,9 @@ router.post("/upload-csv", upload.single('file'), uploadAttendanceCSV);
 
 // Get attendance by date with filters
 router.get("/date", getAttendanceByDate);
+
+// Get attendance analytics for date range
+router.get("/analytics", getAttendanceAnalytics);
 
 // Get attendance history for a specific student
 router.get("/student/:studentId", getStudentAttendance);

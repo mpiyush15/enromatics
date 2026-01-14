@@ -237,6 +237,98 @@ export default function TestAttendancePage() {
     }
   };
 
+  // Print attendance list to PDF
+  const printAttendanceList = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print");
+      return;
+    }
+
+    const html = `
+      <html>
+      <head>
+        <title>Attendance Report - ${test?.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { text-align: center; color: #333; }
+          h2 { color: #555; margin-top: 15px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f9f9f9; }
+          .header { margin-bottom: 15px; color: #666; }
+          .summary { margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 5px; }
+          @media print {
+            body { margin: 0; padding: 10px; }
+            table { font-size: 11px; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>📋 Attendance Report</h1>
+        <div class="header">
+          <p><strong>Test:</strong> ${test?.name} (${test?.subject})</p>
+          <p><strong>Date:</strong> ${new Date(selectedDate).toLocaleDateString()}</p>
+          <p><strong>Batch:</strong> ${test?.batch}</p>
+          <p><strong>Course:</strong> ${test?.course}</p>
+          <p><strong>Total Students:</strong> ${students.length}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <strong>Summary:</strong>
+          <p>Present: ${Array.from(attendance.values()).filter((r) => r.status === "present").length} | Absent: ${Array.from(attendance.values()).filter((r) => r.status === "absent").length} | Late: ${Array.from(attendance.values()).filter((r) => r.status === "late").length}</p>
+        </div>
+
+        <h2>Student Attendance</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Roll No</th>
+              <th>Student Name</th>
+              <th>Batch</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map(student => {
+              const record = attendance.get(student._id);
+              const status = record?.status || "absent";
+              const statusDisplay = status === "present" ? "✓ Present" : status === "absent" ? "✗ Absent" : "⏰ Late";
+              return `
+              <tr>
+                <td>${student.rollNumber}</td>
+                <td>${student.name}</td>
+                <td>${student.batch || "N/A"}</td>
+                <td>${statusDisplay}</td>
+                <td>${record?.remarks || "-"}</td>
+              </tr>
+            `;
+            }).join("")}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+          <p>Printed on ${new Date().toLocaleString()}</p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
@@ -564,6 +656,12 @@ export default function TestAttendancePage() {
               className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold transition-colors"
             >
               {selectAll ? "Deselect All" : "Select All"}
+            </button>
+            <button
+              onClick={printAttendanceList}
+              className="px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold transition-colors"
+            >
+              🖨️ Print Attendance
             </button>
             <button
               onClick={handleSubmit}

@@ -45,23 +45,56 @@ export default function AttendancePage() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null); // Filter by status
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [studentMonthAttendance, setStudentMonthAttendance] = useState<any>(null);
+  const [loadingStudentAttendance, setLoadingStudentAttendance] = useState(false);
+  const [selectedModalMonth, setSelectedModalMonth] = useState(new Date());
 
   // Fetch unique batches and courses for filters
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await fetch(`/api/students?limit=1000`, {
+        // First, try to fetch batches from /api/batches endpoint (like student list page)
+        const batchRes = await fetch(`/api/batches?tenantId=${tenantId}`, {
           credentials: "include",
         });
-        const data = await res.json();
-        if (data.success) {
-          const uniqueBatches = [...new Set(data.students.map((s: any) => s.batchName))].filter(Boolean);
-          const uniqueCourses = [...new Set(data.students.map((s: any) => s.course))].filter(Boolean);
-          setBatches(uniqueBatches as string[]);
+        const batchData = await batchRes.json();
+        
+        if (batchData.success && batchData.batches) {
+          const batchNames = batchData.batches.map((b: any) => b.name || b.batchName).filter(Boolean);
+          setBatches(batchNames);
+          console.log("✅ Batches fetched from /api/batches:", batchNames);
+        }
+        
+        // Fetch courses from students
+        const studentRes = await fetch(`/api/students?limit=1000`, {
+          credentials: "include",
+        });
+        const studentData = await studentRes.json();
+        if (studentData.success) {
+          const uniqueCourses = [...new Set(studentData.students.map((s: any) => s.course))].filter(Boolean);
           setCourses(uniqueCourses as string[]);
+          console.log("✅ Courses fetched:", uniqueCourses);
         }
       } catch (err) {
-        console.error("Failed to fetch filters:", err);
+        console.error("❌ Failed to fetch filters:", err);
+        // Fallback: extract batches from student list
+        try {
+          const res = await fetch(`/api/students?limit=1000`, {
+            credentials: "include",
+          });
+          const data = await res.json();
+          if (data.success) {
+            const uniqueBatches = [...new Set(data.students.map((s: any) => s.batchName || s.batch))].filter(Boolean);
+            const uniqueCourses = [...new Set(data.students.map((s: any) => s.course))].filter(Boolean);
+            setBatches(uniqueBatches as string[]);
+            setCourses(uniqueCourses as string[]);
+            console.log("⚠️ Using fallback batches from students:", uniqueBatches);
+          }
+        } catch (fallbackErr) {
+          console.error("❌ Fallback also failed:", fallbackErr);
+        }
       }
     };
     fetchFilters();
@@ -83,7 +116,28 @@ export default function AttendancePage() {
 
       if (!res.ok) throw new Error(data.message || "Failed to fetch attendance");
 
-      setStudents(data.students || []);
+      // Fetch all students to get batchName details
+      const studentRes = await fetch(`/api/students?limit=1000`, {
+        credentials: "include",
+      });
+      const studentData = await studentRes.json();
+      
+      // Create a map of student IDs to batch names
+      const studentBatchMap = new Map();
+      if (studentData.success) {
+        studentData.students.forEach((s: any) => {
+          studentBatchMap.set(s._id, s.batchName || s.batch);
+        });
+      }
+      
+      // Enrich attendance data with batchName
+      const enrichedStudents = (data.students || []).map((s: any) => ({
+        ...s,
+        batchName: studentBatchMap.get(s._id) || s.batchName || "No Batch"
+      }));
+      
+      console.log("✅ Enriched student with batchName:", enrichedStudents[0]);
+      setStudents(enrichedStudents);
       setSummary(data.summary || null);
     } catch (err: any) {
       console.error(err);
@@ -94,6 +148,41 @@ export default function AttendancePage() {
   };
 
   // Removed auto-fetch - user must click "Load Students" button
+
+  const fetchStudentMonthlyAttendance = async (studentId: string, monthDate?: Date) => {
+    try {
+      setLoadingStudentAttendance(true);
+      
+      const targetMonth = monthDate || selectedModalMonth;
+      // Get first and last day of month
+      const firstDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1);
+      const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+      
+      const startDate = firstDay.toISOString().split('T')[0];
+      const endDate = lastDay.toISOString().split('T')[0];
+      
+      const res = await fetch(`/api/attendance/student/${studentId}?startDate=${startDate}&endDate=${endDate}&limit=100`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setStudentMonthAttendance(data);
+        console.log("✅ Monthly attendance fetched:", data);
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch monthly attendance:", err);
+    } finally {
+      setLoadingStudentAttendance(false);
+    }
+  };
+
+  const openStudentModal = (student: Student) => {
+    setSelectedStudent(student);
+    setShowStudentModal(true);
+    setSelectedModalMonth(new Date()); // Reset to current month
+    fetchStudentMonthlyAttendance(student._id, new Date());
+  };
 
   const handleStatusChange = (studentId: string, newStatus: string) => {
     setStudents((prev) =>
@@ -234,9 +323,132 @@ export default function AttendancePage() {
     }
   };
 
+  // Print attendance list
+  const printAttendanceList = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print");
+      return;
+    }
+
+    const filteredStudents = students.filter(s => !statusFilter || s.attendance?.status === statusFilter);
+
+    const html = `
+      <html>
+      <head>
+        <title>Attendance Report - ${new Date(date).toLocaleDateString()}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { text-align: center; color: #333; }
+          h2 { color: #555; margin-top: 15px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f9f9f9; }
+          .header { margin-bottom: 15px; color: #666; }
+          .summary { margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
+          .summary-item { padding: 10px; background-color: white; border-radius: 5px; text-align: center; }
+          .summary-item strong { display: block; font-size: 18px; color: #333; }
+          .summary-item span { font-size: 11px; color: #666; }
+          @media print {
+            body { margin: 0; padding: 10px; }
+            table { font-size: 11px; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>📋 Daily Attendance Report</h1>
+        <div class="header">
+          <p><strong>Date:</strong> ${new Date(date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+          ${batch ? `<p><strong>Batch:</strong> ${batch}</p>` : ""}
+          ${course ? `<p><strong>Course:</strong> ${course}</p>` : ""}
+          <p><strong>Total Students:</strong> ${filteredStudents.length}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <strong>Attendance Summary</strong>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <strong>${summary?.total || 0}</strong>
+              <span>Total</span>
+            </div>
+            <div class="summary-item" style="background-color: #d4edda;">
+              <strong>${summary?.present || 0}</strong>
+              <span>Present</span>
+            </div>
+            <div class="summary-item" style="background-color: #f8d7da;">
+              <strong>${summary?.absent || 0}</strong>
+              <span>Absent</span>
+            </div>
+            <div class="summary-item" style="background-color: #fff3cd;">
+              <strong>${summary?.late || 0}</strong>
+              <span>Late</span>
+            </div>
+            <div class="summary-item" style="background-color: #e2e3e5;">
+              <strong>${summary?.excused || 0}</strong>
+              <span>Excused</span>
+            </div>
+            <div class="summary-item" style="background-color: #d1ecf1;">
+              <strong>${summary?.notMarked || 0}</strong>
+              <span>Not Marked</span>
+            </div>
+          </div>
+        </div>
+
+        <h2>Student Attendance Details</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Roll No</th>
+              <th>Student Name</th>
+              <th>Batch</th>
+              <th>Course</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredStudents.map(student => {
+              const status = student.attendance?.status || "not marked";
+              const statusDisplay = status === "present" ? "✓ Present" : status === "absent" ? "✗ Absent" : status === "late" ? "⏰ Late" : "📝 Excused";
+              return `
+              <tr>
+                <td>${student.rollNumber}</td>
+                <td>${student.name}</td>
+                <td>${student.batchName}</td>
+                <td>${student.course}</td>
+                <td>${statusDisplay}</td>
+                <td>${student.attendance?.remarks || "-"}</td>
+              </tr>
+            `;
+            }).join("")}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+          <p>Printed on ${new Date().toLocaleString()}</p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <div className="min-h-full bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -398,8 +610,7 @@ export default function AttendancePage() {
         )}
 
         {/* Filters Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Filters</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-2">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <DatePicker
@@ -456,86 +667,70 @@ export default function AttendancePage() {
 
         {/* Summary Stats - CLICKABLE TO FILTER */}
         {summary && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{summary.total}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Total Students</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{summary.total}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Total</div>
             </div>
             
             <button
               onClick={() => filterByStatus("present")}
-              className={`bg-white dark:bg-gray-800 rounded-lg border-2 p-6 shadow-sm text-left hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group ${
-                statusFilter === "present" 
-                  ? "border-green-500 dark:border-green-500 ring-2 ring-green-500" 
-                  : "border-green-200 dark:border-green-800"
-              }`}
+              className={`bg-green-50 dark:bg-green-900/30 rounded-lg p-3 shadow-sm text-left hover:shadow-md transition-all group`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">✓</span>
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{summary.present}</div>
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-xl">✓</span>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.present}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-green-700 dark:group-hover:text-green-400 font-medium">
-                Present {statusFilter === "present" ? "(Filtered)" : "(Click to filter)"}
+              <div className="text-xs text-green-700 dark:text-green-300 font-medium">
+                Present
               </div>
             </button>
             
             <button
               onClick={() => filterByStatus("absent")}
-              className={`bg-white dark:bg-gray-800 rounded-lg border-2 p-6 shadow-sm text-left hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group ${
-                statusFilter === "absent" 
-                  ? "border-red-500 dark:border-red-500 ring-2 ring-red-500" 
-                  : "border-red-200 dark:border-red-800"
-              }`}
+              className={`bg-red-50 dark:bg-red-900/30 rounded-lg p-3 shadow-sm text-left hover:shadow-md transition-all group`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">✗</span>
-                <div className="text-3xl font-bold text-red-600 dark:text-red-400">{summary.absent}</div>
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-xl">✗</span>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.absent}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-red-700 dark:group-hover:text-red-400 font-medium">
-                Absent {statusFilter === "absent" ? "(Filtered)" : "(Click to filter)"}
+              <div className="text-xs text-red-700 dark:text-red-300 font-medium">
+                Absent
               </div>
             </button>
             
             <button
               onClick={() => filterByStatus("late")}
-              className={`bg-white dark:bg-gray-800 rounded-lg border-2 p-6 shadow-sm text-left hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors group ${
-                statusFilter === "late" 
-                  ? "border-yellow-500 dark:border-yellow-500 ring-2 ring-yellow-500" 
-                  : "border-yellow-200 dark:border-yellow-800"
-              }`}
+              className={`bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 shadow-sm text-left hover:shadow-md transition-all group`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">⏰</span>
-                <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{summary.late}</div>
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-xl">⏰</span>
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{summary.late}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-yellow-700 dark:group-hover:text-yellow-400 font-medium">
-                Late {statusFilter === "late" ? "(Filtered)" : "(Click to filter)"}
+              <div className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
+                Late
               </div>
             </button>
             
             <button
               onClick={() => filterByStatus("excused")}
-              className={`bg-white dark:bg-gray-800 rounded-lg border-2 p-6 shadow-sm text-left hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group ${
-                statusFilter === "excused" 
-                  ? "border-purple-500 dark:border-purple-500 ring-2 ring-purple-500" 
-                  : "border-purple-200 dark:border-purple-800"
-              }`}
+              className={`bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 shadow-sm text-left hover:shadow-md transition-all group`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">📝</span>
-                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{summary.excused}</div>
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-xl">📝</span>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{summary.excused}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-purple-700 dark:group-hover:text-purple-400 font-medium">
-                Excused {statusFilter === "excused" ? "(Filtered)" : "(Click to filter)"}
+              <div className="text-xs text-purple-700 dark:text-purple-300 font-medium">
+                Excused
               </div>
             </button>
             
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">⏸</span>
-                <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">{summary.notMarked}</div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-xl">⏸</span>
+                <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{summary.notMarked}</div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">Not Marked</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">Not Marked</div>
             </div>
           </div>
         )}
@@ -543,7 +738,7 @@ export default function AttendancePage() {
         {/* Status Message */}
         {status && (
           <div
-            className={`p-4 rounded-xl shadow-md ${
+            className={`p-4 rounded-xl shadow-md mb-2 ${
               status.startsWith("✅")
                 ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-300 dark:border-green-700"
                 : status.startsWith("❌")
@@ -574,7 +769,7 @@ export default function AttendancePage() {
         ) : (
           <>
             {/* Filter info banner - Always reserve space */}
-            <div className="min-h-[60px]">
+            <div className="min-h-[40px]">
               {statusFilter && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -610,9 +805,6 @@ export default function AttendancePage() {
                         Batch
                       </th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Course
-                      </th>
-                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -634,27 +826,21 @@ export default function AttendancePage() {
                           </span>
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
+                          <div className="flex items-center cursor-pointer group" onClick={() => openStudentModal(student)}>
                             <div className="flex-shrink-0 h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                               {student.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
                                 {student.name}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {student.email}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap">
                           <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {student.batchName}
+                            {student.batchName || "No Batch"}
                           </span>
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap">
-                          <span className="text-sm text-gray-900 dark:text-white">{student.course}</span>
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap">
                           <select
@@ -693,7 +879,14 @@ export default function AttendancePage() {
             </div>
 
             {/* Save Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={printAttendanceList}
+                className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors flex items-center gap-2"
+              >
+                <span>🖨️</span>
+                Print Attendance
+              </button>
               <button
                 onClick={handleSave}
                 disabled={loading}
@@ -715,6 +908,270 @@ export default function AttendancePage() {
           </>
         )}
       </div>
+
+      {/* Student Modal - Monthly Attendance */}
+      {showStudentModal && selectedStudent && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white p-6 border-b border-blue-700 dark:border-blue-900 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-2xl font-bold">{selectedStudent.name}</h2>
+                <p className="text-blue-100 text-sm">Roll No: {selectedStudent.rollNumber} • Batch: {selectedStudent.batchName}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowStudentModal(false);
+                  setSelectedStudent(null);
+                  setStudentMonthAttendance(null);
+                }}
+                className="text-2xl hover:bg-white/20 rounded-full w-10 h-10 flex items-center justify-center transition flex-shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide" style={{ scrollBehavior: 'smooth' }}>
+              <style>{`
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: none;
+                }
+                .scrollbar-hide {
+                  -ms-overflow-style: none;
+                  scrollbar-width: none;
+                }
+              `}</style>
+              {/* Month Selector */}
+              {studentMonthAttendance && (
+                <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                  <button
+                    onClick={() => {
+                      const prevMonth = new Date(selectedModalMonth.getFullYear(), selectedModalMonth.getMonth() - 1, 1);
+                      setSelectedModalMonth(prevMonth);
+                      fetchStudentMonthlyAttendance(selectedStudent!._id, prevMonth);
+                    }}
+                    className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition font-medium"
+                  >
+                    ← Prev
+                  </button>
+                  
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={selectedModalMonth.getMonth()}
+                      onChange={(e) => {
+                        const newMonth = new Date(selectedModalMonth.getFullYear(), parseInt(e.target.value), 1);
+                        setSelectedModalMonth(newMonth);
+                        fetchStudentMonthlyAttendance(selectedStudent!._id, newMonth);
+                      }}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                    >
+                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
+                        <option key={i} value={i}>{m}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={selectedModalMonth.getFullYear()}
+                      onChange={(e) => {
+                        const newMonth = new Date(parseInt(e.target.value), selectedModalMonth.getMonth(), 1);
+                        setSelectedModalMonth(newMonth);
+                        fetchStudentMonthlyAttendance(selectedStudent!._id, newMonth);
+                      }}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                    >
+                      {[2024, 2025, 2026, 2027].map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const nextMonth = new Date(selectedModalMonth.getFullYear(), selectedModalMonth.getMonth() + 1, 1);
+                      setSelectedModalMonth(nextMonth);
+                      fetchStudentMonthlyAttendance(selectedStudent!._id, nextMonth);
+                    }}
+                    className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition font-medium"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+
+              {loadingStudentAttendance ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                </div>
+              ) : studentMonthAttendance ? (
+                <>
+                  {/* Attendance Summary Stats */}
+                  {studentMonthAttendance.summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold">Total Days</p>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{studentMonthAttendance.summary.total}</p>
+                      </div>
+                      <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                        <p className="text-xs text-green-600 dark:text-green-400 font-semibold">Present</p>
+                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">{studentMonthAttendance.summary.present}</p>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 border border-red-200 dark:border-red-700">
+                        <p className="text-xs text-red-600 dark:text-red-400 font-semibold">Absent</p>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">{studentMonthAttendance.summary.absent}</p>
+                      </div>
+                      <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold">Late</p>
+                        <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{studentMonthAttendance.summary.late}</p>
+                      </div>
+                      <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold">Percentage</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                          {studentMonthAttendance.summary.total > 0 
+                            ? Math.round((studentMonthAttendance.summary.present / studentMonthAttendance.summary.total) * 100) 
+                            : 0}%
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attendance Calendar */}
+                  {studentMonthAttendance.records && studentMonthAttendance.records.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        {selectedModalMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })} Attendance
+                      </h3>
+                      <div className="grid grid-cols-7 gap-2">
+                        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                          <div key={day} className="text-center text-xs font-semibold text-gray-600 dark:text-gray-400 py-2">
+                            {day}
+                          </div>
+                        ))}
+                        {(() => {
+                          const year = selectedModalMonth.getFullYear();
+                          const month = String(selectedModalMonth.getMonth() + 1).padStart(2, '0');
+                          const firstDay = new Date(year, selectedModalMonth.getMonth(), 1);
+                          const lastDay = new Date(year, selectedModalMonth.getMonth() + 1, 0);
+                          const daysInMonth = lastDay.getDate();
+                          const startingDayOfWeek = firstDay.getDay();
+                          const days: any[] = [];
+
+                          // Empty cells for days before month starts
+                          for (let i = 0; i < startingDayOfWeek; i++) {
+                            days.push(<div key={`empty-${i}`}></div>);
+                          }
+
+                          // Calendar days
+                          for (let day = 1; day <= daysInMonth; day++) {
+                            const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
+                            const record = studentMonthAttendance.records.find((r: any) => {
+                              // Handle different date formats (just in case)
+                              const recordDate = r.date?.split('T')[0] || r.date;
+                              return recordDate === dateStr;
+                            });
+                            
+                            const today = new Date().toISOString().split('T')[0];
+                            const isToday = dateStr === today;
+
+                            const statusStyles: any = {
+                              present: "bg-green-100 dark:bg-green-900/40 border-green-400 dark:border-green-600",
+                              absent: "bg-red-100 dark:bg-red-900/40 border-red-400 dark:border-red-600",
+                              late: "bg-yellow-100 dark:bg-yellow-900/40 border-yellow-400 dark:border-yellow-600",
+                              excused: "bg-purple-100 dark:bg-purple-900/40 border-purple-400 dark:border-purple-600"
+                            };
+
+                            const statusTextColors: any = {
+                              present: "text-green-700 dark:text-green-100",
+                              absent: "text-red-700 dark:text-red-100",
+                              late: "text-yellow-700 dark:text-yellow-100",
+                              excused: "text-purple-700 dark:text-purple-100"
+                            };
+
+                            const statusIcons: any = {
+                              present: "✓",
+                              absent: "✗",
+                              late: "⏰",
+                              excused: "📝"
+                            };
+
+                            days.push(
+                              <div
+                                key={day}
+                                className={`aspect-square p-2 border-2 rounded-lg flex flex-col items-center justify-center text-center transition-all ${
+                                  record 
+                                    ? statusStyles[record.status as keyof typeof statusStyles]
+                                    : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                } ${isToday ? "ring-2 ring-blue-500" : ""}`}
+                                title={record ? `${record.status}${record.remarks ? ` - ${record.remarks}` : ""}` : dateStr}
+                              >
+                                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{day}</div>
+                                {record && (
+                                  <div className={`text-lg ${statusTextColors[record.status as keyof typeof statusTextColors]}`}>
+                                    {statusIcons[record.status as keyof typeof statusIcons]}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return days;
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {studentMonthAttendance.records?.length === 0 && (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <p className="text-gray-600 dark:text-gray-400">No attendance records for this month</p>
+                    </div>
+                  )}
+
+                  {/* Legend */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">Legend:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg text-green-600">✓</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Present</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg text-red-600">✗</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Absent</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg text-yellow-600">⏰</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Late</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg text-purple-600">📝</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Excused</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-400">Unable to load attendance data</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 p-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowStudentModal(false);
+                  setSelectedStudent(null);
+                  setStudentMonthAttendance(null);
+                }}
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

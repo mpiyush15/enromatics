@@ -26,8 +26,9 @@ export const sidebarLinks = [
     children: [
       { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
       { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager", "accountant"] },
-      { label: "📅 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "manager"] },
-      { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
+      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "manager"] },
+      { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] },
+      { label: "�👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
   },
 

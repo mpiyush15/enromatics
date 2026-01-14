@@ -107,6 +107,123 @@ export default function StudentAttendancePage() {
     setCurrentYear(year);
   };
 
+  // Print attendance list
+  const printAttendanceList = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print");
+      return;
+    }
+
+    const html = `
+      <html>
+      <head>
+        <title>My Attendance Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { text-align: center; color: #333; }
+          h2 { color: #555; margin-top: 15px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f9f9f9; }
+          .header { margin-bottom: 15px; color: #666; }
+          .summary { margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
+          .summary-item { padding: 10px; background-color: white; border-radius: 5px; text-align: center; }
+          .summary-item strong { display: block; font-size: 24px; color: #333; }
+          .summary-item span { font-size: 12px; color: #666; }
+          @media print {
+            body { margin: 0; padding: 10px; }
+            table { font-size: 11px; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>📋 My Attendance Report</h1>
+        <div class="header">
+          <p><strong>Student Name:</strong> ${studentName}</p>
+          <p><strong>Month:</strong> ${new Date(currentYear, currentMonth - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <strong>Attendance Summary</strong>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <strong>${summary?.total || 0}</strong>
+              <span>Total Days</span>
+            </div>
+            <div class="summary-item" style="background-color: #d4edda;">
+              <strong>${summary?.present || 0}</strong>
+              <span>Present</span>
+            </div>
+            <div class="summary-item" style="background-color: #f8d7da;">
+              <strong>${summary?.absent || 0}</strong>
+              <span>Absent</span>
+            </div>
+            <div class="summary-item" style="background-color: #fff3cd;">
+              <strong>${summary?.late || 0}</strong>
+              <span>Late</span>
+            </div>
+            <div class="summary-item" style="background-color: #e2e3e5;">
+              <strong>${summary?.excused || 0}</strong>
+              <span>Excused</span>
+            </div>
+            <div class="summary-item" style="background-color: #cce5ff;">
+              <strong>${summary?.percentage || 0}%</strong>
+              <span>Attendance Rate</span>
+            </div>
+          </div>
+        </div>
+
+        <h2>Attendance Details</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Day</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(record => {
+              const date = new Date(record.date);
+              const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+              const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              const statusDisplay = record.status === "present" ? "✓ Present" : record.status === "absent" ? "✗ Absent" : record.status === "late" ? "⏰ Late" : "📝 Excused";
+              return `
+              <tr>
+                <td>${dateStr}</td>
+                <td>${dayName}</td>
+                <td>${statusDisplay}</td>
+                <td>${record.remarks || "-"}</td>
+              </tr>
+            `;
+            }).join("")}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 40px; text-align: center; color: #666; font-size: 12px;">
+          <p>Printed on ${new Date().toLocaleString()}</p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <ClientDashboard userName={studentName} sidebarLinks={studentLinks}>
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -156,9 +273,17 @@ export default function StudentAttendancePage() {
         {/* Performance Indicator */}
         {summary && !loading && (
           <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-              Attendance Performance
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                Attendance Performance
+              </h3>
+              <button
+                onClick={printAttendanceList}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-colors flex items-center gap-2"
+              >
+                🖨️ Print Attendance
+              </button>
+            </div>
             <div className="relative pt-1">
               <div className="flex mb-2 items-center justify-between">
                 <div>
