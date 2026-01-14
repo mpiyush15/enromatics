@@ -16,7 +16,7 @@ import { ChevronLeft, ChevronRight, Check, AlertCircle } from "lucide-react";
  * - Single column focus
  * - Proper error states
  */
-export default function EnrollStudentPage() {
+export default function EnrollStudentWizardPage() {
   const { user, loading } = useAuth();
   const params = useParams();
   const router = useRouter();
@@ -26,7 +26,8 @@ export default function EnrollStudentPage() {
   const totalSteps = 4;
 
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     dateOfBirth: "",
@@ -34,37 +35,20 @@ export default function EnrollStudentPage() {
     parentName: "",
     parentPhone: "",
     batch: "",
+    rollNumber: "",
   });
 
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [batches, setBatches] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
-    const fetchBatches = async () => {
-      try {
-        const res = await fetch(`/api/batches?tenantId=${tenantId}`, {
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (data.success && data.batches) {
-          const batchData = data.batches.map((b: any) => ({
-            id: b._id || b.id,
-            name: b.name || b.batchName,
-          }));
-          setBatches(batchData);
-          console.log("✅ Batches fetched:", batchData);
-        }
-      } catch (error) {
-        console.error("❌ Failed to fetch batches:", error);
-      }
-    };
-    if (tenantId) {
-      fetchBatches();
-    }
-  }, [tenantId]);
+  const batches = [
+    { id: "jee-a", name: "JEE Mains - Batch A" },
+    { id: "jee-b", name: "JEE Mains - Batch B" },
+    { id: "neet", name: "NEET Biology" },
+    { id: "cbse-12", name: "CBSE Class 12" },
+  ];
 
   const steps = [
     { id: 1, title: "Personal Information", icon: "👤" },
@@ -107,7 +91,8 @@ export default function EnrollStudentPage() {
 
     switch (step) {
       case 1: // Personal Information
-        if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
+        if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+        if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
         if (!formData.dateOfBirth) newErrors.dateOfBirth = "Date of birth is required";
         if (!formData.gender) newErrors.gender = "Gender is required";
         break;
@@ -131,6 +116,7 @@ export default function EnrollStudentPage() {
 
       case 4: // Academic Details
         if (!formData.batch) newErrors.batch = "Batch selection is required";
+        if (!formData.rollNumber.trim()) newErrors.rollNumber = "Roll number is required";
         break;
     }
 
@@ -170,7 +156,8 @@ export default function EnrollStudentPage() {
       setTimeout(() => {
         setSubmitted(false);
         setFormData({
-          fullName: "",
+          firstName: "",
+          lastName: "",
           email: "",
           phone: "",
           dateOfBirth: "",
@@ -178,6 +165,7 @@ export default function EnrollStudentPage() {
           parentName: "",
           parentPhone: "",
           batch: "",
+          rollNumber: "",
         });
         setCurrentStep(1);
         setCompletedSteps([]);
@@ -193,22 +181,43 @@ export default function EnrollStudentPage() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Full Name *
+                First Name *
               </label>
               <input
                 type="text"
-                name="fullName"
-                value={formData.fullName}
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleInputChange}
-                placeholder="e.g. Raj Kumar"
+                placeholder="e.g. Raj"
                 className={`w-full px-4 py-3 rounded-lg border-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all focus:outline-none ${
-                  errors.fullName
+                  errors.firstName
                     ? "border-red-500 dark:border-red-400 focus:border-red-600"
                     : "border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
                 }`}
               />
-              {errors.fullName && (
-                <p className="text-red-600 dark:text-red-400 text-xs mt-2">{errors.fullName}</p>
+              {errors.firstName && (
+                <p className="text-red-600 dark:text-red-400 text-xs mt-2">{errors.firstName}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="e.g. Kumar"
+                className={`w-full px-4 py-3 rounded-lg border-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all focus:outline-none ${
+                  errors.lastName
+                    ? "border-red-500 dark:border-red-400 focus:border-red-600"
+                    : "border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                }`}
+              />
+              {errors.lastName && (
+                <p className="text-red-600 dark:text-red-400 text-xs mt-2">{errors.lastName}</p>
               )}
             </div>
 
@@ -378,7 +387,27 @@ export default function EnrollStudentPage() {
                 <p className="text-red-600 dark:text-red-400 text-xs mt-2">{errors.batch}</p>
               )}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Roll number will be auto-generated upon enrollment</p>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Roll Number *
+              </label>
+              <input
+                type="text"
+                name="rollNumber"
+                value={formData.rollNumber}
+                onChange={handleInputChange}
+                placeholder="e.g. A001"
+                className={`w-full px-4 py-3 rounded-lg border-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all focus:outline-none ${
+                  errors.rollNumber
+                    ? "border-red-500 dark:border-red-400 focus:border-red-600"
+                    : "border-gray-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400"
+                }`}
+              />
+              {errors.rollNumber && (
+                <p className="text-red-600 dark:text-red-400 text-xs mt-2">{errors.rollNumber}</p>
+              )}
+            </div>
           </div>
         );
 
@@ -395,13 +424,13 @@ export default function EnrollStudentPage() {
           <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-green-900 dark:text-green-100">✓ Student Enrolled Successfully!</h3>
-            <p className="text-sm text-green-700 dark:text-green-300 mt-1">{formData.fullName} has been added</p>
+            <p className="text-sm text-green-700 dark:text-green-300 mt-1">{formData.firstName} {formData.lastName} has been added to {formData.batch}</p>
           </div>
         </div>
       )}
 
       {/* HEADER */}
-      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Enroll New Student</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Step {currentStep} of {totalSteps}</p>

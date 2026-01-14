@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import type { StudentFormData, StudentMutationResponse } from "@/types/student";
 
 interface Batch {
@@ -22,6 +23,11 @@ export default function AddStudentPage() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
+
   const [form, setForm] = useState({
     studentName: "",
     email: "",
@@ -44,6 +50,13 @@ export default function AddStudentPage() {
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const steps = [
+    { id: 1, title: "Personal Information", icon: "👤" },
+    { id: 2, title: "Guardian Details", icon: "👨‍👩‍👧" },
+    { id: 3, title: "Academic Information", icon: "📚" },
+    { id: 4, title: "Review & Submit", icon: "✅" },
+  ];
+
   useEffect(() => {
     fetchBatches();
     if (regId && fromScholarship) {
@@ -58,7 +71,6 @@ export default function AddStudentPage() {
       });
       const data = await res.json();
       if (data.success) {
-        // Filter only active batches
         const activeBatches = data.batches.filter((b: Batch) => b.status === "active");
         setBatches(activeBatches);
       }
@@ -74,15 +86,12 @@ export default function AddStudentPage() {
     
     try {
       setLoadingRegistration(true);
-      
-      // Get examId from URL parameters (if coming from scholarship registration)
       const examId = searchParams.get('examId');
       if (!examId) {
         setStatus("❌ Missing exam information");
         return;
       }
       
-      // Fetch all registrations for the exam and find the specific one
       const res = await fetch(`/api/scholarship-exams/${examId}/registrations`, {
         credentials: "include",
       });
@@ -92,7 +101,6 @@ export default function AddStudentPage() {
         const registration = data.registrations?.find((r: any) => r._id === regId);
         
         if (registration) {
-          // Pre-fill form with registration data
           setForm(prev => ({
             ...prev,
             studentName: registration.studentName || "",
@@ -126,10 +134,64 @@ export default function AddStudentPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    if (stepErrors[e.target.name]) {
+      setStepErrors(prev => ({ ...prev, [e.target.name]: "" }));
+    }
+  };
+
+  const validateStep = (step: number): boolean => {
+    const errors: Record<string, string> = {};
+
+    switch (step) {
+      case 1:
+        if (!form.studentName.trim()) errors.studentName = "Full name is required";
+        if (!form.email.trim()) errors.email = "Email is required";
+        if (form.email && !form.email.includes("@")) errors.email = "Valid email is required";
+        break;
+      case 2:
+        if (!form.fatherName.trim() && !form.motherName.trim()) {
+          errors.fatherName = "At least one parent name is required";
+        }
+        break;
+      case 3:
+        if (!form.course.trim()) errors.course = "Course is required";
+        if (!form.batchId) errors.batchId = "Batch selection is required";
+        break;
+      case 4:
+        if (!form.studentName || !form.email || !form.course || !form.batchId) {
+          errors.submit = "Please fill all required fields";
+        }
+        break;
+    }
+
+    setStepErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (!completedSteps.includes(currentStep)) {
+        setCompletedSteps([...completedSteps, currentStep]);
+      }
+      if (currentStep < totalSteps) {
+        setCurrentStep(currentStep + 1);
+      }
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateStep(currentStep)) {
+      return;
+    }
+
     setSubmitting(true);
     setStatus("Adding student...");
 
@@ -142,8 +204,8 @@ export default function AddStudentPage() {
         credentials: "include",
         body: JSON.stringify({
           ...form,
-          name: form.studentName, // Map studentName to name for backend
-          gender: form.gender.charAt(0).toUpperCase() + form.gender.slice(1), // Capitalize gender
+          name: form.studentName,
+          gender: form.gender.charAt(0).toUpperCase() + form.gender.slice(1),
           fees: form.fees ? parseFloat(form.fees) : 0,
         }),
       });
@@ -153,7 +215,6 @@ export default function AddStudentPage() {
 
       setStatus("✅ Student added successfully!");
       
-      // If password was auto-generated, show it
       if (data.newPassword) {
         setGeneratedPassword(data.newPassword);
       }
@@ -166,9 +227,314 @@ export default function AddStudentPage() {
     }
   };
 
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Full Name *
+              </label>
+              <input
+                name="studentName"
+                value={form.studentName}
+                onChange={handleChange}
+                placeholder="Enter student's full name"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
+                  stepErrors.studentName ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                }`}
+                required
+              />
+              {stepErrors.studentName && <p className="text-red-600 text-xs mt-1">{stepErrors.studentName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email Address *
+              </label>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="student@example.com"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
+                  stepErrors.email ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                }`}
+                required
+              />
+              {stepErrors.email && <p className="text-red-600 text-xs mt-1">{stepErrors.email}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Phone Number
+              </label>
+              <input
+                name="phone"
+                type="tel"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="+91 98765 43210"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Date of Birth
+              </label>
+              <input
+                name="dateOfBirth"
+                type="date"
+                value={form.dateOfBirth}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Gender
+              </label>
+              <select
+                name="gender"
+                value={form.gender}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Address
+              </label>
+              <textarea
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                placeholder="Enter complete address"
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Father's Name
+              </label>
+              <input
+                name="fatherName"
+                value={form.fatherName}
+                onChange={handleChange}
+                placeholder="Father's name"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
+                  stepErrors.fatherName ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                }`}
+              />
+              {stepErrors.fatherName && <p className="text-red-600 text-xs mt-1">{stepErrors.fatherName}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Mother's Name
+              </label>
+              <input
+                name="motherName"
+                value={form.motherName}
+                onChange={handleChange}
+                placeholder="Mother's name"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Parent Phone
+              </label>
+              <input
+                name="parentPhone"
+                type="tel"
+                value={form.parentPhone}
+                onChange={handleChange}
+                placeholder="+91 98765 43210"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Current Class
+              </label>
+              <input
+                name="currentClass"
+                value={form.currentClass}
+                onChange={handleChange}
+                placeholder="e.g., Class 10, Class 12"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                School Name
+              </label>
+              <input
+                name="school"
+                value={form.school}
+                onChange={handleChange}
+                placeholder="School/College name"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Previous Academic Marks
+              </label>
+              <input
+                name="previousMarks"
+                value={form.previousMarks}
+                onChange={handleChange}
+                placeholder="e.g., 95% in 10th grade"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Course / Program *
+              </label>
+              <input
+                name="course"
+                value={form.course}
+                onChange={handleChange}
+                placeholder="e.g., JEE Main, NEET, Class 12"
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
+                  stepErrors.course ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                }`}
+                required
+              />
+              {stepErrors.course && <p className="text-red-600 text-xs mt-1">{stepErrors.course}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Select Batch *
+              </label>
+              {loadingBatches ? (
+                <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-800 text-gray-500">
+                  Loading batches...
+                </div>
+              ) : (
+                <select
+                  name="batchId"
+                  value={form.batchId}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
+                    stepErrors.batchId ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+                  }`}
+                  required
+                >
+                  <option value="">-- Select Batch --</option>
+                  {batches.map((batch) => (
+                    <option key={batch._id} value={batch._id}>
+                      {batch.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {stepErrors.batchId && <p className="text-red-600 text-xs mt-1">{stepErrors.batchId}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Total Fees (₹)
+              </label>
+              <input
+                name="fees"
+                type="number"
+                value={form.fees}
+                onChange={handleChange}
+                placeholder="Enter total course fees"
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Student Password
+              </label>
+              <input
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Leave empty to auto-generate"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                If empty, a secure password will be generated automatically
+              </p>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-4">📋 Review Your Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Student Name</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{form.studentName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Email</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{form.email}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Course</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{form.course}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400">Batch</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {batches.find(b => b._id === form.batchId)?.name || "Not selected"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 mb-6">
           <div className="flex items-center gap-4 mb-2">
@@ -179,319 +545,105 @@ export default function AddStudentPage() {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 {fromScholarship ? "Scholarship Student Enrollment" : "Student Admission Form"}
               </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                {fromScholarship 
-                  ? "Convert scholarship exam registration to full student admission"
-                  : "Fill in the details to enroll a new student"
-                }
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Step {currentStep} of {totalSteps}
               </p>
-              {fromScholarship && loadingRegistration && (
-                <div className="mt-2 flex items-center gap-2 text-blue-600">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm">Loading registration data...</span>
-                </div>
-              )}
             </div>
+          </div>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 mb-6">
+          <div className="flex justify-between mb-4">
+            {steps.map((step) => (
+              <button
+                key={step.id}
+                onClick={() => {
+                  if (completedSteps.includes(step.id) || step.id <= currentStep) {
+                    setCurrentStep(step.id);
+                  }
+                }}
+                disabled={!completedSteps.includes(step.id) && step.id > currentStep}
+                className={`flex flex-col items-center transition-all ${
+                  completedSteps.includes(step.id) || step.id === currentStep
+                    ? "opacity-100"
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold mb-2 transition-all ${
+                    step.id === currentStep
+                      ? "bg-blue-600 text-white shadow-lg scale-110"
+                      : completedSteps.includes(step.id)
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  {completedSteps.includes(step.id) ? <Check size={20} /> : step.id}
+                </div>
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center whitespace-nowrap max-w-[80px]">
+                  {step.title}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            />
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
+          {/* Step Content */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <span className="text-2xl">👤</span>
-              Personal Information
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-4xl">{steps[currentStep - 1].icon}</span>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Full Name *
-                </label>
-                <input
-                  name="studentName"
-                  value={form.studentName}
-                  onChange={handleChange}
-                  placeholder="Enter student's full name"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="student@example.com"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  name="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Date of Birth
-                </label>
-                <input
-                  name="dateOfBirth"
-                  type="date"
-                  value={form.dateOfBirth}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Gender
-                </label>
-                <select
-                  name="gender"
-                  value={form.gender}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Address
-                </label>
-                <textarea
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  placeholder="Enter complete address"
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {steps[currentStep - 1].title}
+                </h2>
               </div>
             </div>
+
+            {renderStepContent()}
           </div>
 
-          {/* Guardian Information */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <span className="text-2xl">👨‍👩‍👧</span>
-              Guardian / Parent Information
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Father's Name
-                </label>
-                <input
-                  name="fatherName"
-                  value={form.fatherName}
-                  onChange={handleChange}
-                  placeholder="Father's name"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mother's Name
-                </label>
-                <input
-                  name="motherName"
-                  value={form.motherName}
-                  onChange={handleChange}
-                  placeholder="Mother's name"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Parent Phone
-                </label>
-                <input
-                  name="parentPhone"
-                  type="tel"
-                  value={form.parentPhone}
-                  onChange={handleChange}
-                  placeholder="+91 98765 43210"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Academic Information */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <span className="text-2xl">📚</span>
-              Academic Information
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Current Class
-                </label>
-                <input
-                  name="currentClass"
-                  value={form.currentClass}
-                  onChange={handleChange}
-                  placeholder="e.g., Class 10, Class 12"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  School Name
-                </label>
-                <input
-                  name="school"
-                  value={form.school}
-                  onChange={handleChange}
-                  placeholder="School/College name"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Previous Academic Marks
-                </label>
-                <input
-                  name="previousMarks"
-                  value={form.previousMarks}
-                  onChange={handleChange}
-                  placeholder="e.g., 95% in 10th grade"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Course / Program *
-                </label>
-                <input
-                  name="course"
-                  value={form.course}
-                  onChange={handleChange}
-                  placeholder="e.g., JEE Main, NEET, Class 12"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Batch *
-                </label>
-                {loadingBatches ? (
-                  <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-800 text-gray-500">
-                    Loading batches...
-                  </div>
-                ) : batches.length === 0 ? (
-                  <div className="w-full px-4 py-3 border border-red-300 dark:border-red-600 rounded-xl dark:bg-gray-800 text-red-600">
-                    No active batches available. Please create a batch first.
-                  </div>
-                ) : (
-                  <select
-                    name="batchId"
-                    value={form.batchId}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                    required
-                  >
-                    <option value="">-- Select Batch --</option>
-                    {batches.map((batch) => (
-                      <option key={batch._id} value={batch._id}>
-                        {batch.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Total Fees (₹)
-                </label>
-                <input
-                  name="fees"
-                  type="number"
-                  value={form.fees}
-                  onChange={handleChange}
-                  placeholder="Enter total course fees"
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Student Password
-                </label>
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Leave empty to auto-generate"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  If empty, a secure password will be generated automatically
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8">
+          {/* Navigation Buttons */}
+          <div className="flex gap-4 justify-between">
             <button
-              type="submit"
-              disabled={submitting || batches.length === 0}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 rounded-xl transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+              type="button"
+              onClick={handlePrev}
+              disabled={currentStep === 1}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {submitting ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Adding Student...
-                </>
-              ) : (
-                <>
-                  <span>🎓</span>
-                  Enroll Student
-                </>
-              )}
+              <ChevronLeft size={18} />
+              Previous
             </button>
+
+            {currentStep < totalSteps ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all"
+              >
+                Next
+                <ChevronRight size={18} />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {submitting ? "Enrolling..." : "Complete Enrollment"}
+                <Check size={18} />
+              </button>
+            )}
           </div>
 
           {/* Status Messages */}

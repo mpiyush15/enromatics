@@ -260,10 +260,10 @@ export default function OverviewProPage() {
           <p className="font-semibold text-gray-900 dark:text-white text-sm">Collect Fees</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Process payments & receipts</p>
         </button>
-        <button onClick={() => router.push(`/dashboard/client/${tenantId}/accounts/transactions`)} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all text-left cursor-pointer">
-          <div className="text-2xl mb-2">💳</div>
-          <p className="font-semibold text-gray-900 dark:text-white text-sm">Transactions</p>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">View all payment transactions</p>
+        <button onClick={() => router.push(`/dashboard/client/${tenantId}/students/add`)} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all text-left cursor-pointer">
+          <div className="text-2xl mb-2">🎓</div>
+          <p className="font-semibold text-gray-900 dark:text-white text-sm">Enroll Student</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Add new student to institute</p>
         </button>
         <button onClick={() => router.push(`/dashboard/client/${tenantId}/whatsapp/settings`)} className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all text-left cursor-pointer">
           <div className="text-2xl mb-2">💬</div>
