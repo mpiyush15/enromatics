@@ -147,6 +147,94 @@ export default function MySubscriptionPage() {
     }
   };
 
+  // Handle plan upgrade - direct to Cashfree payment modal
+  const handleUpgrade = async (planId: string) => {
+    if (!tenant?.email || !tenant?.name) {
+      toast.error("User information not available");
+      return;
+    }
+
+    setUpgradingPlan(planId);
+    try {
+      // Find the plan from available plans
+      const selectedPlan = availablePlans.find(p => p.id === planId);
+      if (!selectedPlan) {
+        toast.error("Plan not found");
+        return;
+      }
+
+      // Get price based on billing cycle
+      const amount = billingCycle === "yearly" 
+        ? (selectedPlan.annualPrice || selectedPlan.monthlyPrice || 0)
+        : (selectedPlan.monthlyPrice || 0);
+
+      if (amount === 0) {
+        toast.error("Free plans cannot be upgraded");
+        return;
+      }
+
+      console.log("💳 Initiating upgrade payment:", { planId, billingCycle, amount });
+
+      // Call Cashfree payment initiation endpoint directly
+      const response = await fetch("/api/payment/initiate-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          tenantId,
+          planId,
+          email: tenant.email,
+          phone: tenant.contact?.phone || "9999999999",
+          name: tenant.name,
+          instituteName: tenant.instituteName || tenant.name,
+          billingCycle: billingCycle === "yearly" ? "annual" : "monthly",
+          amount: Number(amount),
+        }),
+      });
+
+      const data = await response.json();
+      console.log("✅ Payment response:", data);
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Failed to initiate payment");
+      }
+
+      if (!data.paymentSessionId) {
+        throw new Error("No payment session created");
+      }
+
+      // Initialize Cashfree and open modal
+      const cashfree = await (window as any).Cashfree({
+        mode: "production",
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_modal",
+        onSuccess: (paymentData: any) => {
+          console.log("✅ Payment successful:", paymentData);
+          toast.success("Payment successful! Your plan is now upgraded.");
+          setTimeout(() => {
+            refreshSubscription();
+          }, 1000);
+        },
+        onFailure: (error: any) => {
+          console.log("❌ Payment failed:", error);
+          toast.error("Payment failed. Please try again.");
+        },
+        onClose: () => {
+          console.log("Modal closed - refreshing subscription status");
+          refreshSubscription();
+        },
+      });
+    } catch (error: any) {
+      console.error("❌ Upgrade error:", error);
+      toast.error(error.message || "Failed to upgrade plan");
+    } finally {
+      setUpgradingPlan(null);
+    }
+  };
+
   // Load Cashfree SDK
   useEffect(() => {
     const script = document.createElement("script");
@@ -159,79 +247,6 @@ export default function MySubscriptionPage() {
       }
     };
   }, []);
-
-  const handleUpgrade = async (planId: string) => {
-    console.log("handleUpgrade called with planId:", planId);
-    console.log("tenantId:", tenantId);
-    console.log("billingCycle:", billingCycle);
-    
-    // Get token from localStorage
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please login again to continue");
-      return;
-    }
-    
-    setUpgradingPlan(planId);
-    try {
-      // Normalize "yearly" to "annual" for backend compatibility
-      const normalizedCycle = billingCycle === "yearly" ? "annual" : billingCycle;
-      
-      const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ planId, billingCycle: normalizedCycle }),
-      });
-
-      const data = await response.json();
-      console.log("Upgrade response:", data);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to initiate upgrade");
-      }
-
-      if (data.isFree) {
-        toast.success("Plan upgraded successfully!");
-        refreshSubscription(); // Refresh via SWR
-        return;
-      }
-
-      // Open Cashfree checkout for paid plans in a modal/popup
-      console.log("Opening Cashfree checkout with sessionId:", data.paymentSessionId);
-      const cashfree = await (window as any).Cashfree({
-        mode: "production",
-      });
-
-      // Use modal so user stays on same page and returns to dashboard
-      await cashfree.checkout({
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_modal", // Opens as popup modal, stays on same page
-        onSuccess: (paymentData: any) => {
-          console.log("Payment successful:", paymentData);
-          toast.success("Payment successful! Updating subscription...");
-          refreshSubscription(); // Refresh via SWR to show updated plan
-        },
-        onFailure: (error: any) => {
-          console.log("Payment failed or cancelled:", error);
-          toast.error("Payment was cancelled or failed. Please try again.");
-        },
-        onClose: () => {
-          console.log("Payment modal closed");
-          // User closed the modal - refresh to check if payment was made
-          refreshSubscription();
-        },
-      });
-    } catch (error: any) {
-      console.error("Upgrade error:", error);
-      toast.error(error.message || "Failed to upgrade plan");
-    } finally {
-      setUpgradingPlan(null);
-    }
-  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
