@@ -175,27 +175,49 @@ export default function MySubscriptionPage() {
       toast.error("Plan ID not found. Please select a plan.");
       return;
     }
+
+    // Get user data from tenant
+    if (!tenant?.email || !tenant?.name) {
+      toast.error("User information not loaded. Please refresh and try again.");
+      return;
+    }
     
     setUpgradingPlan(planId);
     try {
       // Normalize "yearly" to "annual" for backend compatibility
       const normalizedCycle = billingCycle === "yearly" ? "annual" : billingCycle;
       
-      const response = await fetch(`/api/tenants/${tenantId}/upgrade`, {
+      // Reuse the existing checkout endpoint - it handles both new signups and upgrades
+      // Just pass tenantId so backend knows it's an upgrade, not a new signup
+      const response = await fetch("/api/subscription/checkout", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ planId, billingCycle: normalizedCycle }),
+        body: JSON.stringify({ 
+          planId, 
+          billingCycle: normalizedCycle,
+          tenantId, // Pass this so backend knows it's an upgrade
+          isNewTenant: false, // Mark as upgrade
+          email: tenant.email, // Add email from tenant data
+          name: tenant.name, // Add name from tenant data
+          instituteName: tenant.instituteName || tenant.name, // Add institute name
+          phone: tenant.contact?.phone || '9999999999', // Add phone from tenant data
+        }),
       });
 
       const data = await response.json();
       console.log("Upgrade response:", data);
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
       if (!response.ok) {
         throw new Error(data.error || data.message || "Failed to initiate upgrade");
       }
+
+      console.log("isFree:", data.isFree);
+      console.log("paymentSessionId:", data.paymentSessionId);
 
       if (data.isFree) {
         toast.success("Plan upgraded successfully!");
@@ -203,11 +225,19 @@ export default function MySubscriptionPage() {
         return;
       }
 
+      // Check if paymentSessionId exists
+      if (!data.paymentSessionId) {
+        console.error("No paymentSessionId in response:", data);
+        throw new Error("Payment session not created. Please try again.");
+      }
+
       // Open Cashfree checkout for paid plans in a modal/popup
       console.log("Opening Cashfree checkout with sessionId:", data.paymentSessionId);
       const cashfree = await (window as any).Cashfree({
         mode: "production",
       });
+
+      console.log("Cashfree initialized:", !!cashfree);
 
       // Use modal so user stays on same page and returns to dashboard
       await cashfree.checkout({
@@ -230,6 +260,8 @@ export default function MySubscriptionPage() {
       });
     } catch (error: any) {
       console.error("Upgrade error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
       toast.error(error.message || "Failed to upgrade plan");
     } finally {
       setUpgradingPlan(null);
