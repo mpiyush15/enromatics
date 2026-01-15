@@ -160,7 +160,8 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/academics/results",
       },
       {
-        label: "📊 Test Reports",
+
+        label: "�📊 Test Reports",
         href: "/dashboard/academics/reports",
       },
       {

@@ -89,6 +89,7 @@ export default function TestSchedulesPage() {
   const [marksSaving, setMarksSaving] = useState(false);
   const [marksSubmitted, setMarksSubmitted] = useState(false);
   const [submittedMarksData, setSubmittedMarksData] = useState<Record<string, number>>({});
+  const [absentStudents, setAbsentStudents] = useState<Set<string>>(new Set()); // Track absent students
 
   // Batches loading state
   const [loadingBatches, setLoadingBatches] = useState(false);
@@ -250,14 +251,31 @@ export default function TestSchedulesPage() {
       if (res.ok && data.attendance && Array.isArray(data.attendance)) {
         // Convert array to record format
         const attendanceRecord: Record<string, boolean> = {};
+        let hasValidSubmittedData = false;
+        
         data.attendance.forEach((record: any) => {
           const studentId = typeof record.studentId === 'object' ? record.studentId._id : record.studentId;
           attendanceRecord[studentId] = record.present;
+          // Only mark as submitted if record has markedBy (was officially submitted)
+          if (record.markedBy) {
+            hasValidSubmittedData = true;
+          }
         });
+        
         setAttendanceData(attendanceRecord);
-        setSubmittedAttendanceData(attendanceRecord);
-        setAttendanceSubmitted(true);
-        console.log("✅ Loaded saved attendance:", attendanceRecord);
+        
+        // Only set as submitted if there's actual marked data with markedBy field
+        if (hasValidSubmittedData) {
+          setSubmittedAttendanceData(attendanceRecord);
+          setAttendanceSubmitted(true);
+          console.log("✅ Loaded SUBMITTED attendance:", attendanceRecord);
+        } else {
+          // No markedBy = not officially submitted yet, allow editing
+          setAttendanceData({});
+          setSubmittedAttendanceData({});
+          setAttendanceSubmitted(false);
+          console.log("📝 No officially submitted attendance yet");
+        }
       } else {
         setAttendanceData({});
         setSubmittedAttendanceData({});
@@ -281,14 +299,31 @@ export default function TestSchedulesPage() {
       if (res.ok && data.marks && Array.isArray(data.marks)) {
         // Convert array to record format
         const marksRecord: Record<string, number> = {};
+        let hasValidSubmittedData = false;
+        
         data.marks.forEach((record: any) => {
           const studentId = typeof record.studentId === 'object' ? record.studentId._id : record.studentId;
           marksRecord[studentId] = record.marksObtained;
+          // Only mark as submitted if record has enteredBy (was officially submitted)
+          if (record.enteredBy) {
+            hasValidSubmittedData = true;
+          }
         });
+        
         setMarksData(marksRecord);
-        setSubmittedMarksData(marksRecord);
-        setMarksSubmitted(true);
-        console.log("✅ Loaded saved marks:", marksRecord);
+        
+        // Only set as submitted if there's actual marked data with enteredBy field
+        if (hasValidSubmittedData) {
+          setSubmittedMarksData(marksRecord);
+          setMarksSubmitted(true);
+          console.log("✅ Loaded SUBMITTED marks:", marksRecord);
+        } else {
+          // No enteredBy = not officially submitted yet, allow editing
+          setMarksData({});
+          setSubmittedMarksData({});
+          setMarksSubmitted(false);
+          console.log("📝 No officially submitted marks yet");
+        }
       } else {
         setMarksData({});
         setSubmittedMarksData({});
@@ -299,6 +334,38 @@ export default function TestSchedulesPage() {
       setMarksData({});
       setSubmittedMarksData({});
       setMarksSubmitted(false);
+    }
+  };
+
+  const fetchAttendanceForMarksTab = async (testId: string) => {
+    try {
+      const res = await fetch(`/api/academics/tests/${testId}/attendance`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.attendance && Array.isArray(data.attendance)) {
+        console.log("📋 Attendance records returned:", data.attendance.length);
+        
+        // Find all students marked as absent (present === false)
+        const absent = new Set<string>();
+        data.attendance.forEach((record: any) => {
+          const studentId = typeof record.studentId === 'object' ? record.studentId._id : record.studentId;
+          console.log(`  Student ${studentId}: present = ${record.present}`);
+          // If student is NOT present (false), mark as absent
+          if (record.present === false) {
+            absent.add(studentId);
+          }
+        });
+        setAbsentStudents(absent);
+        console.log("🔴 Absent students identified:", absent.size, "IDs:", Array.from(absent));
+      } else {
+        console.log("⚠️ No attendance data found");
+        setAbsentStudents(new Set());
+      }
+    } catch (error) {
+      console.log("⚠️ Could not fetch attendance for marks tab:", error);
+      setAbsentStudents(new Set());
     }
   };
 
@@ -1095,10 +1162,13 @@ export default function TestSchedulesPage() {
                     setAttendanceSaving(true);
                     try {
                       // Convert attendance data to array format
-                      const records = Object.entries(attendanceData).map(([studentId, present]) => ({
-                        studentId,
-                        present: Boolean(present)
+                      // IMPORTANT: Send ALL students from batch, both present and absent
+                      const records = batchStudents.map((student) => ({
+                        studentId: student._id,
+                        present: Boolean(attendanceData[student._id]) // true if checked, false if not
                       }));
+                      
+                      console.log("📤 Saving attendance for all students:", records.length);
                       
                       // Save to BFF (which forwards to backend)
                       const response = await fetch(`/api/academics/tests/${selectedTestForAttendance._id}/attendance`, {
@@ -1193,6 +1263,8 @@ export default function TestSchedulesPage() {
                         setSelectedTestForMarks(test);
                         fetchStudents(test.batch);
                         fetchSavedMarks(test._id);
+                        // Also fetch attendance to check for absent students
+                        fetchAttendanceForMarksTab(test._id);
                       }}
                       className="w-full text-left px-4 py-3 bg-white dark:bg-gray-700 rounded-lg hover:bg-purple-50 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition-colors"
                     >
@@ -1221,6 +1293,7 @@ export default function TestSchedulesPage() {
                       setMarksData({});
                       setMarksSubmitted(false);
                       setSubmittedMarksData({});
+                      setAbsentStudents(new Set()); // Clear absent students list
                     }}
                     className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
                   >
@@ -1275,15 +1348,21 @@ export default function TestSchedulesPage() {
                         const studentId = student._id;
                         const marks = marksData[studentId] || 0;
                         const isPassing = marks >= selectedTestForMarks.passingMarks;
+                        const isAbsent = absentStudents.has(studentId);
                         
                         return (
                           <div
                             key={studentId}
-                            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600"
+                            className={`flex items-center gap-3 p-3 rounded-lg border ${
+                              isAbsent 
+                                ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700" 
+                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                            }`}
                           >
                             <div className="flex-1">
                               <span className="font-medium text-gray-900 dark:text-white block">{student.name}</span>
                               {student.rollNo && <span className="text-xs text-gray-600 dark:text-gray-400">Roll: {student.rollNo}</span>}
+                              {isAbsent && <span className="text-xs text-red-600 dark:text-red-400 font-semibold">❌ Absent - Cannot mark</span>}
                             </div>
                             <div className="flex items-center gap-2">
                               <input
@@ -1298,13 +1377,17 @@ export default function TestSchedulesPage() {
                                   })
                                 }
                                 placeholder="0"
-                                disabled={marksSubmitted}
-                                className="w-20 px-2 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-center disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:disabled:bg-gray-600"
+                                disabled={marksSubmitted || isAbsent}
+                                className={`w-20 px-2 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-center ${
+                                  isAbsent
+                                    ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 cursor-not-allowed opacity-50"
+                                    : "disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:disabled:bg-gray-600"
+                                }`}
                               />
                               <span className="text-sm text-gray-600 dark:text-gray-400 min-w-fit">
                                 / {selectedTestForMarks.totalMarks}
                               </span>
-                              {marks > 0 && (
+                              {marks > 0 && !isAbsent && (
                                 <span className={`text-xs font-semibold px-2 py-1 rounded ${
                                   isPassing 
                                     ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
@@ -1384,6 +1467,7 @@ export default function TestSchedulesPage() {
                       onClick={() => {
                         setSelectedTestForMarks(null);
                         setMarksData({});
+                        setAbsentStudents(new Set()); // Clear absent students list
                       }}
                       className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 font-semibold"
                     >
@@ -1397,6 +1481,7 @@ export default function TestSchedulesPage() {
                         setMarksData({});
                         setMarksSubmitted(false);
                         setSubmittedMarksData({});
+                        setAbsentStudents(new Set()); // Clear absent students list
                       }}
                       className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold"
                     >

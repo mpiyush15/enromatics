@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import type { StudentDTO, StudentFormData, StudentDetailResponse, StudentMutationResponse } from "@/types/student";
 import { api, safeApiCall } from "@/lib/apiClient";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
@@ -192,54 +193,89 @@ export default function StudentProfilePage() {
     
     try {
       setLoadingProgress(true);
-      const [data, err] = await safeApiCall(() =>
-        api.get<any>(`/api/academics/students/${studentId}/tests`)
-      );
+      
+      // Fetch all tests first
+      const testsRes = await fetch(`/api/academics/tests`, {
+        credentials: 'include',
+      });
 
-      if (err) {
-        console.warn("Failed to fetch test marks:", err.message);
-        setTestMarks([]);
-        setProgressStats(null);
-        return;
+      if (!testsRes.ok) throw new Error('Failed to fetch tests');
+
+      const testsData = await testsRes.json();
+      const allTests = testsData.tests || testsData.data || [];
+
+      const results: any[] = [];
+
+      // For each test, fetch marks and find this student's result
+      for (const test of allTests) {
+        try {
+          const marksRes = await fetch(`/api/academics/tests/${test._id}/marks`, {
+            credentials: 'include',
+          });
+
+          if (!marksRes.ok) continue;
+
+          const marksData = await marksRes.json();
+          const marks = marksData.marks || [];
+
+          // Find marks for this student
+          const studentMark = marks.find(
+            (m: any) =>
+              (typeof m.studentId === 'string' ? m.studentId : m.studentId?._id) ===
+              studentId
+          );
+
+          if (studentMark) {
+            const marksObtained = studentMark.marksObtained || 0;
+            const percentage = (marksObtained / test.totalMarks) * 100;
+            const passed = marksObtained >= test.passingMarks;
+
+            results.push({
+              _id: test._id,
+              name: test.name,
+              subject: test.subject || 'General',
+              marks: marksObtained,
+              totalMarks: test.totalMarks,
+              percentage: Math.round(percentage * 100) / 100,
+              date: test.testDate,
+              passed,
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching marks for test ${test._id}:`, err);
+        }
       }
 
-      if (data && data.success) {
-        const marks = data.tests || [];
-        setTestMarks(marks);
-        
-        // Calculate statistics
-        if (marks.length > 0) {
-          const totalTests = marks.length;
-          const passedTests = marks.filter((m: any) => m.passed).length;
-          const totalPercentage = marks.reduce((sum: number, m: any) => sum + m.percentage, 0);
-          const avgPercentage = (totalPercentage / totalTests).toFixed(2);
-          
-          // Calculate rank (if available)
-          const rankedTests = marks.filter((m: any) => m.rank).length;
-          const avgRank = rankedTests > 0 
-            ? (marks.reduce((sum: number, m: any) => sum + (m.rank || 0), 0) / rankedTests).toFixed(1)
-            : 'N/A';
-          
-          // Find best and worst performance
-          const sortedByPercentage = [...marks].sort((a: any, b: any) => b.percentage - a.percentage);
-          const bestTest = sortedByPercentage[0];
-          const worstTest = sortedByPercentage[sortedByPercentage.length - 1];
-          
-          setProgressStats({
-            totalTests,
-            passedTests,
-            failedTests: totalTests - passedTests,
-            avgPercentage,
-            avgRank,
-            bestTest,
-            worstTest,
-            passRate: ((passedTests / totalTests) * 100).toFixed(1)
-          });
-        } else {
-          setProgressStats(null);
-        }
+      // Sort by test date
+      results.sort((a, b) => {
+        const dateA = new Date(a.date || 0).getTime();
+        const dateB = new Date(b.date || 0).getTime();
+        return dateA - dateB;
+      });
+
+      setTestMarks(results);
+
+      // Calculate statistics
+      if (results.length > 0) {
+        const totalTests = results.length;
+        const passedTests = results.filter((r: any) => r.passed).length;
+        const totalPercentage = results.reduce((sum: number, r: any) => sum + r.percentage, 0);
+        const avgPercentage = (totalPercentage / totalTests).toFixed(2);
+
+        const sortedByPercentage = [...results].sort((a: any, b: any) => b.percentage - a.percentage);
+        const bestTest = sortedByPercentage[0];
+        const worstTest = sortedByPercentage[sortedByPercentage.length - 1];
+
+        setProgressStats({
+          totalTests,
+          passedTests,
+          failedTests: totalTests - passedTests,
+          avgPercentage,
+          bestTest,
+          worstTest,
+          passRate: ((passedTests / totalTests) * 100).toFixed(1)
+        });
       } else {
-        setTestMarks([]);
         setProgressStats(null);
       }
     } catch (err: any) {
@@ -451,13 +487,68 @@ export default function StudentProfilePage() {
     );
   }
 
-  const feesPaid = student.balance ?? 0;
+  const feesPaid = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
   const feesTotal = student.fees ?? 0;
-  const feesPending = feesTotal - feesPaid;
+  const feesPending = Math.max(feesTotal - feesPaid, 0);
   const feesPercentage = feesTotal > 0 ? (feesPaid / feesTotal) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6">
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes pulse-soft {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .animate-slideIn {
+          animation: slideIn 0.3s ease-in-out;
+        }
+        
+        .hover-lift {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .hover-lift:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card {
+          transition: all 0.3s ease;
+          transform: translateY(0);
+        }
+        
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+      `}</style>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -570,47 +661,47 @@ export default function StudentProfilePage() {
         </div>
 
         {/* Compact Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Fee</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">₹{feesTotal.toLocaleString()}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="stat-card bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-700 p-3 cursor-pointer">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate">Total Fee</p>
+                <p className="text-xl font-bold text-blue-900 dark:text-blue-200 truncate">₹{feesTotal.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-blue-200 dark:bg-blue-700/50 rounded-lg flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Paid</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">₹{feesPaid.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{payments.length} payments</p>
+          <div className="stat-card bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700 p-3 cursor-pointer">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium truncate">Total Paid</p>
+                <p className="text-xl font-bold text-green-900 dark:text-green-200 truncate">₹{feesPaid.toLocaleString()}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">{payments.length} payments</p>
               </div>
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-green-200 dark:bg-green-700/50 rounded-lg flex-shrink-0">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pending</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">₹{feesPending.toLocaleString()}</p>
-                <div className="mt-2 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div className="bg-green-600 h-1.5 rounded-full transition-all" style={{ width: `${feesPercentage}%` }}></div>
+          <div className="stat-card bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg border border-red-200 dark:border-red-700 p-3 cursor-pointer">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium truncate">Pending</p>
+                <p className="text-xl font-bold text-red-900 dark:text-red-200 truncate">₹{feesPending.toLocaleString()}</p>
+                <div className="mt-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${feesPercentage}%` }}></div>
                 </div>
               </div>
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-red-200 dark:bg-red-700/50 rounded-lg flex-shrink-0">
+                <svg className="w-5 h-5 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -630,28 +721,28 @@ export default function StudentProfilePage() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <div className="flex gap-1 p-1">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-6 shadow-lg hover:shadow-xl transition-shadow">
+          <div className="border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
+            <div className="flex gap-1 p-1 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("overview")}
-                className={`px-4 py-2 rounded font-medium text-sm transition-colors ${
+                className={`px-5 py-3 rounded-t-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                   activeTab === "overview"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-105"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50"
                 }`}
               >
-                Overview
+                👤 Overview
               </button>
               <button
                 onClick={() => setActiveTab("payments")}
-                className={`px-4 py-2 rounded font-medium text-sm transition-colors ${
+                className={`px-5 py-3 rounded-t-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                   activeTab === "payments"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-105"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50"
                 }`}
               >
-                Payments
+                💳 Payments
               </button>
               <button
                 onClick={() => {
@@ -660,13 +751,13 @@ export default function StudentProfilePage() {
                     fetchAttendance();
                   }
                 }}
-                className={`px-4 py-2 rounded font-medium text-sm transition-colors ${
+                className={`px-5 py-3 rounded-t-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                   activeTab === "attendance"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-105"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50"
                 }`}
               >
-                Attendance
+                📋 Attendance
               </button>
               <button
                 onClick={() => {
@@ -675,19 +766,19 @@ export default function StudentProfilePage() {
                     fetchTestProgress();
                   }
                 }}
-                className={`px-4 py-2 rounded font-medium text-sm transition-colors ${
+                className={`px-5 py-3 rounded-t-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                   activeTab === "progress"
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg scale-105"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50"
                 }`}
               >
-                Progress Report
+                📈 Progress Report
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-6 animate-fadeIn">
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1188,219 +1279,185 @@ export default function StudentProfilePage() {
           )}
 
           {activeTab === "progress" && (
-            <div>
+            <div className="space-y-6">
               {loadingProgress ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-                </div>
-              ) : testMarks.length === 0 ? (
-                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No Test Records</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">This student hasn't taken any tests yet</p>
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Loading progress data...</p>
                 </div>
               ) : (
                 <>
-                  {/* Progress Statistics */}
-                  {progressStats && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Tests</p>
-                            <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{progressStats.totalTests}</p>
-                          </div>
-                          <div className="p-3 bg-blue-200 dark:bg-blue-800 rounded-full">
-                            <svg className="w-6 h-6 text-blue-700 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-green-600 dark:text-green-400 font-medium">Pass Rate</p>
-                            <p className="text-3xl font-bold text-green-700 dark:text-green-300">{progressStats.passRate}%</p>
-                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">{progressStats.passedTests}/{progressStats.totalTests} passed</p>
-                          </div>
-                          <div className="p-3 bg-green-200 dark:bg-green-800 rounded-full">
-                            <svg className="w-6 h-6 text-green-700 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Average Score</p>
-                            <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{progressStats.avgPercentage}%</p>
-                          </div>
-                          <div className="p-3 bg-purple-200 dark:bg-purple-800 rounded-full">
-                            <svg className="w-6 h-6 text-purple-700 dark:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Average Rank</p>
-                            <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{progressStats.avgRank}</p>
-                          </div>
-                          <div className="p-3 bg-orange-200 dark:bg-orange-800 rounded-full">
-                            <svg className="w-6 h-6 text-orange-700 dark:text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Tests</p>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{testMarks.length}</p>
                     </div>
-                  )}
-
-                  {/* Best and Worst Performance */}
-                  {progressStats && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border-2 border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-2xl">🏆</span>
-                          <h4 className="font-semibold text-green-800 dark:text-green-300">Best Performance</h4>
-                        </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                          <span className="font-medium">{progressStats.bestTest.testId?.name || 'Test'}</span>
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-green-700 dark:text-green-300">{progressStats.bestTest.percentage}%</span>
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            progressStats.bestTest.grade === 'A+' || progressStats.bestTest.grade === 'A' 
-                              ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200'
-                              : 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                          }`}>
-                            Grade: {progressStats.bestTest.grade}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-4 border-2 border-red-200 dark:border-red-800">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-2xl">📊</span>
-                          <h4 className="font-semibold text-red-800 dark:text-red-300">Needs Improvement</h4>
-                        </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                          <span className="font-medium">{progressStats.worstTest.testId?.name || 'Test'}</span>
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl font-bold text-red-700 dark:text-red-300">{progressStats.worstTest.percentage}%</span>
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            progressStats.worstTest.passed
-                              ? 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
-                              : 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
-                          }`}>
-                            Grade: {progressStats.worstTest.grade}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Passed</p>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {testMarks.filter((t: any) => (t.marks || 0) >= 50).length}
+                      </p>
                     </div>
-                  )}
-
-                  {/* Test Marks Table */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">All Test Results</h4>
+                    <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Avg %</p>
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {testMarks.length > 0 ? Math.round(testMarks.reduce((sum: number, t: any) => sum + (t.marks || 0), 0) / testMarks.length) : 0}%
+                      </p>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 dark:bg-gray-700">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test Name</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Subject</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marks</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Percentage</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grade</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                          {testMarks.map((mark: any, index: number) => (
-                            <tr key={mark._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{index + 1}</td>
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                {mark.testId?.name || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                {mark.testId?.subject || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                {mark.testId?.testDate 
-                                  ? new Date(mark.testId.testDate).toLocaleDateString('en-IN', {
-                                      day: 'numeric',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                  : 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
-                                {mark.marksObtained}/{mark.testId?.totalMarks || 0}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 max-w-[80px]">
-                                    <div 
-                                      className={`h-2 rounded-full transition-all ${
-                                        mark.percentage >= 80 ? 'bg-green-600' :
-                                        mark.percentage >= 60 ? 'bg-blue-600' :
-                                        mark.percentage >= 40 ? 'bg-yellow-600' :
-                                        'bg-red-600'
-                                      }`}
-                                      style={{ width: `${mark.percentage}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {mark.percentage}%
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  mark.grade === 'A+' || mark.grade === 'A' 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    : mark.grade === 'B'
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                    : mark.grade === 'C'
-                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                }`}>
-                                  {mark.grade || 'N/A'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
-                                {mark.rank ? `#${mark.rank}` : 'N/A'}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  mark.passed
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                }`}>
-                                  {mark.passed ? 'Pass' : 'Fail'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Pass Rate</p>
+                      <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                        {testMarks.length > 0 ? Math.round((testMarks.filter((t: any) => (t.marks || 0) >= 50).length / testMarks.length) * 100) : 0}%
+                      </p>
                     </div>
                   </div>
+
+                  {/* Charts Section */}
+                  {testMarks.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* Marks Progression Chart */}
+                      <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📊 Marks Progression</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <LineChart data={testMarks.map((t: any) => ({
+                            date: t.date ? new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
+                            marks: t.marks || 0,
+                            percentage: t.totalMarks ? Math.round((t.marks / t.totalMarks) * 100) : 0,
+                          }))}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" angle={-45} textAnchor="end" height={70} style={{fontSize: '12px'}} />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="percentage" stroke="#8b5cf6" name="Percentage %" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 4 }} />
+                            <Line type="monotone" dataKey="marks" stroke="#3b82f6" name="Marks Obtained" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Subject Performance Chart */}
+                      {(() => {
+                        const subjectMap: { [key: string]: { total: number; count: number; passed: number } } = {};
+                        testMarks.forEach((t: any) => {
+                          const subject = t.subject || 'General';
+                          if (!subjectMap[subject]) {
+                            subjectMap[subject] = { total: 0, count: 0, passed: 0 };
+                          }
+                          subjectMap[subject].total += t.marks || 0;
+                          subjectMap[subject].count += 1;
+                          if ((t.marks || 0) >= 50) {
+                            subjectMap[subject].passed += 1;
+                          }
+                        });
+
+                        const subjectData = Object.entries(subjectMap).map(([subject, stats]) => ({
+                          subject,
+                          avgMarks: stats.count > 0 ? Math.round((stats.total / stats.count) * 100) / 100 : 0,
+                          passRate: stats.count > 0 ? Math.round((stats.passed / stats.count) * 100) : 0,
+                        }));
+
+                        return (
+                          <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📚 Subject Performance</h3>
+                            {subjectData.length > 0 ? (
+                              <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={subjectData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="subject" angle={-45} textAnchor="end" height={70} style={{fontSize: '12px'}} />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Legend />
+                                  <Bar dataKey="avgMarks" fill="#10b981" name="Avg Marks" />
+                                  <Bar dataKey="passRate" fill="#f59e0b" name="Pass Rate %" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            ) : (
+                              <p className="text-gray-500 text-center py-8">No subject data available</p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Test Results Table */}
+                  {testMarks.length > 0 && (
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-gray-900 dark:text-white font-semibold">Test</th>
+                              <th className="px-3 py-2 text-left text-gray-900 dark:text-white font-semibold">Subject</th>
+                              <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Date</th>
+                              <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Marks</th>
+                              <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">%</th>
+                              <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {testMarks.map((test: any) => {
+                              const percentage = test.totalMarks ? Math.round((test.marks / test.totalMarks) * 100) : 0;
+                              const passed = percentage >= 50;
+                              return (
+                                <tr key={test._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                  <td className="px-3 py-2 text-gray-900 dark:text-white font-medium text-xs">{test.name}</td>
+                                  <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{test.subject}</td>
+                                  <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
+                                    {test.date ? new Date(test.date).toLocaleDateString() : '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white text-xs">
+                                    {test.marks || 0}/{test.totalMarks || 100}
+                                  </td>
+                                  <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">{percentage}%</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
+                                      passed 
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                    }`}>
+                                      {passed ? '✅ Pass' : '❌ Fail'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Export Buttons */}
+                  {testMarks.length > 0 && (
+                    <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={() => alert('PDF export logic will be added soon')}
+                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => alert('Print logic will be added soon')}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4H7a2 2 0 01-2-2v-4a2 2 0 012-2h10a2 2 0 012 2v4a2 2 0 01-2 2zm-6 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
+                        </svg>
+                        Print
+                      </button>
+                    </div>
+                  )}
+
+                  {testMarks.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 dark:text-gray-400">No test results available yet</p>
+                    </div>
+                  )}
                 </>
               )}
             </div>

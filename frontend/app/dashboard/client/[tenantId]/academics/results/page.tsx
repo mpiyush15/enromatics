@@ -449,6 +449,7 @@ export default function TestResultsPage() {
                           <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold text-xs">Marks</th>
                           <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold text-xs">%</th>
                           <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold text-xs">Status</th>
+                          <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold text-xs">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -470,6 +471,14 @@ export default function TestResultsPage() {
                               }`}>
                                 {result.status === 'pass' ? '✅ Pass' : '❌ Fail'}
                               </span>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <button
+                                onClick={() => router.push(`/dashboard/client/${tenantId}/academics/student-progress/${result.studentId}`)}
+                                className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                              >
+                                📈
+                              </button>
                             </td>
                           </tr>
                         ))}
