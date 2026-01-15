@@ -149,7 +149,13 @@ export default function MySubscriptionPage() {
 
   // Handle plan upgrade - direct to Cashfree payment modal
   const handleUpgrade = async (planId: string) => {
+    console.log("🚀 handleUpgrade START - planId:", planId);
+    console.log("   tenant:", tenant?.email, tenant?.name);
+    console.log("   tenantId:", tenantId);
+    console.log("   billingCycle:", billingCycle);
+    
     if (!tenant?.email || !tenant?.name) {
+      console.error("❌ Missing tenant data");
       toast.error("User information not available");
       return;
     }
@@ -157,8 +163,12 @@ export default function MySubscriptionPage() {
     setUpgradingPlan(planId);
     try {
       // Find the plan from available plans
+      console.log("   availablePlans:", availablePlans.map(p => p.id));
       const selectedPlan = availablePlans.find(p => p.id === planId);
+      console.log("   selectedPlan:", selectedPlan);
+      
       if (!selectedPlan) {
+        console.error("❌ Plan not found in availablePlans");
         toast.error("Plan not found");
         return;
       }
@@ -168,46 +178,60 @@ export default function MySubscriptionPage() {
         ? (selectedPlan.annualPrice || selectedPlan.monthlyPrice || 0)
         : (selectedPlan.monthlyPrice || 0);
 
+      console.log("   amount:", amount, "billingCycle:", billingCycle);
+
       if (amount === 0) {
+        console.error("❌ Free plan selected");
         toast.error("Free plans cannot be upgraded");
         return;
       }
 
-      console.log("💳 Initiating upgrade payment:", { planId, billingCycle, amount });
+      const payloadData = {
+        tenantId,
+        planId,
+        email: tenant.email,
+        phone: tenant.contact?.phone || "9999999999",
+        name: tenant.name,
+        instituteName: tenant.instituteName || tenant.name,
+        billingCycle: billingCycle === "yearly" ? "annual" : "monthly",
+        amount: Number(amount),
+      };
+
+      console.log("💳 Initiating upgrade payment with payload:", payloadData);
 
       // Call Cashfree payment initiation endpoint directly
       const response = await fetch("/api/payment/initiate-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          tenantId,
-          planId,
-          email: tenant.email,
-          phone: tenant.contact?.phone || "9999999999",
-          name: tenant.name,
-          instituteName: tenant.instituteName || tenant.name,
-          billingCycle: billingCycle === "yearly" ? "annual" : "monthly",
-          amount: Number(amount),
-        }),
+        body: JSON.stringify(payloadData),
       });
+
+      console.log("   Response status:", response.status);
+      console.log("   Response ok:", response.ok);
 
       const data = await response.json();
       console.log("✅ Payment response:", data);
 
       if (!response.ok) {
+        console.error("❌ Payment initiation failed:", data);
         throw new Error(data.message || data.error || "Failed to initiate payment");
       }
 
       if (!data.paymentSessionId) {
+        console.error("❌ No paymentSessionId in response");
         throw new Error("No payment session created");
       }
 
+      console.log("   paymentSessionId:", data.paymentSessionId);
+
       // Initialize Cashfree and open modal
+      console.log("   Initializing Cashfree SDK...");
       const cashfree = await (window as any).Cashfree({
         mode: "production",
       });
 
+      console.log("   Cashfree SDK ready, opening checkout modal...");
       await cashfree.checkout({
         paymentSessionId: data.paymentSessionId,
         redirectTarget: "_modal",
