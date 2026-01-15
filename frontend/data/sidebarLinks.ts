@@ -152,8 +152,8 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/academics/batches",
       },
       {
-        label: "�📅 Test Schedules",
-        href: "/dashboard/academics/schedules",
+        label: "📅 Test Schedules",
+        href: "/dashboard/client/[tenantId]/academics/schedules",
       },
       {
         label: "📊 Test Results",
