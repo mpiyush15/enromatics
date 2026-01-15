@@ -104,188 +104,128 @@ export default function AccountsReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl p-8 text-white mb-6">
-          <h1 className="text-4xl font-bold mb-2">📊 Financial Reports</h1>
-          <p className="text-blue-100">Comprehensive profit & loss analysis</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-gray-900 dark:text-white mb-2">Financial Reports</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">P&L analysis and financial metrics</p>
         </div>
 
         {/* Date Filter */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                 Start Date
               </label>
               <input
                 type="date"
                 value={dateFilter.startDate}
                 onChange={(e) => setDateFilter({ ...dateFilter, startDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                 End Date
               </label>
               <input
                 type="date"
                 value={dateFilter.endDate}
                 onChange={(e) => setDateFilter({ ...dateFilter, endDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <button
               onClick={() => setDateFilter({ startDate: "", endDate: "" })}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
+              className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition"
             >
-              Clear Filter
+              Clear
             </button>
           </div>
         </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Key Metrics - Minimal Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Total Income */}
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-xl p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-green-100 text-sm mb-1">Total Income</p>
-                <p className="text-3xl font-bold">{formatCurrency(summary.totalIncome)}</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-xl">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-green-100 text-xs">Revenue from all sources</p>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Total Income</p>
+            <p className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{formatCurrency(summary.totalIncome)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">Revenue from all sources</p>
           </div>
 
           {/* Total Expenses */}
-          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-xl p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-red-100 text-sm mb-1">Total Expenses</p>
-                <p className="text-3xl font-bold">{formatCurrency(summary.totalExpenses)}</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-xl">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-red-100 text-xs">Operating costs & expenses</p>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Total Expenses</p>
+            <p className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{formatCurrency(summary.totalExpenses)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">Operating costs</p>
           </div>
 
           {/* Net Profit */}
-          <div className={`bg-gradient-to-br rounded-2xl shadow-xl p-6 text-white ${
-            summary.netProfit >= 0 
-              ? "from-emerald-500 to-emerald-600" 
-              : "from-orange-500 to-orange-600"
-          }`}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className={`text-sm mb-1 ${summary.netProfit >= 0 ? "text-emerald-100" : "text-orange-100"}`}>
-                  Net Profit
-                </p>
-                <p className="text-3xl font-bold">{formatCurrency(summary.netProfit)}</p>
-              </div>
-              <div className={`p-3 bg-white bg-opacity-20 rounded-xl`}>
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-            </div>
-            <p className={`text-xs ${summary.netProfit >= 0 ? "text-emerald-100" : "text-orange-100"}`}>
-              {summary.netProfit >= 0 ? "Your institute is profitable" : "Expenses exceed income"}
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Net Profit</p>
+            <p className={`text-2xl font-semibold mb-2 ${summary.netProfit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+              {formatCurrency(summary.netProfit)}
             </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">{summary.netProfit >= 0 ? "Profitable" : "Loss"}</p>
           </div>
 
           {/* Profit Margin */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-blue-100 text-sm mb-1">Profit Margin</p>
-                <p className="text-3xl font-bold">{formatPercentage(summary.profitMargin)}</p>
-              </div>
-              <div className="p-3 bg-white bg-opacity-20 rounded-xl">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8L5.257 19.393A2 2 0 005 18.21V5a2 2 0 012-2h8a2 2 0 012 2z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-blue-100 text-xs">Profit as % of income</p>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Profit Margin</p>
+            <p className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{formatPercentage(summary.profitMargin)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">% of income</p>
           </div>
         </div>
 
         {/* Top Expense Categories */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <span className="text-3xl">📊</span>
-            Top Expense Categories
-          </h2>
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Expense Categories</h2>
           
           {summary.topExpenseCategories.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">No expense data available</p>
-            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No expense data available</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {summary.topExpenseCategories.map((category: any, index: number) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-32">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white capitalize">
-                      {category.category}
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {formatCurrency(category.amount)}
-                    </div>
+                <div key={index}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">{category.category}</span>
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">{formatCurrency(category.amount)}</span>
                   </div>
-                  
-                  <div className="flex-grow">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-500"
-                        style={{ width: `${category.percentage}%` }}
-                      ></div>
-                    </div>
+                  <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gray-900 dark:bg-gray-300 transition-all duration-300"
+                      style={{ width: `${category.percentage}%` }}
+                    ></div>
                   </div>
-                  
-                  <div className="flex-shrink-0 w-16 text-right">
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">
-                      {formatPercentage(category.percentage)}
-                    </div>
-                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{formatPercentage(category.percentage)} of total</p>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Monthly Trends */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <span className="text-3xl">📈</span>
-            Monthly Trends
-          </h2>
+        {/* Monthly Trends Table */}
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Monthly Trends</h2>
+          </div>
 
           {summary.monthlyData.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">No monthly data available</p>
+            <div className="p-6 text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">No monthly data available</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b-2 border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Month</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">Income</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">Expenses</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">Profit</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">Margin</th>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="text-left py-3 px-6 font-semibold text-gray-900 dark:text-white">Month</th>
+                    <th className="text-right py-3 px-6 font-semibold text-gray-900 dark:text-white">Income</th>
+                    <th className="text-right py-3 px-6 font-semibold text-gray-900 dark:text-white">Expenses</th>
+                    <th className="text-right py-3 px-6 font-semibold text-gray-900 dark:text-white">Profit</th>
+                    <th className="text-right py-3 px-6 font-semibold text-gray-900 dark:text-white">Margin</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -294,25 +234,21 @@ export default function AccountsReportsPage() {
                     return (
                       <tr
                         key={index}
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          index % 2 === 0 ? "bg-white dark:bg-gray-800" : "bg-gray-50/50 dark:bg-gray-800/50"
-                        }`}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                       >
-                        <td className="py-3 px-4 font-medium text-gray-900 dark:text-white">
+                        <td className="py-3 px-6 text-gray-900 dark:text-white font-medium">
                           {month.month}
                         </td>
-                        <td className="text-right py-3 px-4 text-green-600 dark:text-green-400 font-semibold">
+                        <td className="py-3 px-6 text-right text-gray-900 dark:text-white">
                           {formatCurrency(month.income)}
                         </td>
-                        <td className="text-right py-3 px-4 text-red-600 dark:text-red-400 font-semibold">
+                        <td className="py-3 px-6 text-right text-gray-900 dark:text-white">
                           {formatCurrency(month.expenses)}
                         </td>
-                        <td className="text-right py-3 px-4 font-semibold">
-                          <span className={month.profit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"}>
-                            {formatCurrency(month.profit)}
-                          </span>
+                        <td className={`py-3 px-6 text-right font-medium ${month.profit >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                          {formatCurrency(month.profit)}
                         </td>
-                        <td className="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">
+                        <td className="py-3 px-6 text-right text-gray-900 dark:text-white">
                           {formatPercentage(margin)}
                         </td>
                       </tr>
@@ -322,25 +258,6 @@ export default function AccountsReportsPage() {
               </table>
             </div>
           )}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Link href={`/dashboard/client/${tenantId}/accounts/overview`}>
-            <button className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all">
-              📊 Overview
-            </button>
-          </Link>
-          <Link href={`/dashboard/client/${tenantId}/accounts/expenses`}>
-            <button className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 font-semibold shadow-lg hover:shadow-xl transition-all">
-              💸 Expenses
-            </button>
-          </Link>
-          <Link href={`/dashboard/client/${tenantId}/accounts/refunds`}>
-            <button className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 font-semibold shadow-lg hover:shadow-xl transition-all">
-              💰 Refunds
-            </button>
-          </Link>
         </div>
       </div>
     </div>

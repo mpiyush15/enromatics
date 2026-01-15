@@ -187,22 +187,10 @@ export const sidebarLinks = [
     href: "#",
     roles: ["tenantAdmin", "Admin"],
     children: [
+      { label: "� Profile", href: "/dashboard/profile", roles: ["tenantAdmin", "Admin"] },
       { label: "👥 Staff Management", href: "/dashboard/client/[tenantId]/settings/staff", roles: ["tenantAdmin", "Admin"] },
       { label: "📄 My Subscription", href: "/dashboard/my-subscription", roles: ["tenantAdmin"] },
       { label: "💳 Payment History", href: "/dashboard/payments", roles: ["tenantAdmin"] },
-    ],
-  },
-
-  // === PRIORITY 14: Personal Settings (Profile + Plan) ===
-  {
-    label: "👤 Personal",
-    href: "#",
-    roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"],
-    children: [
-      { label: "👤 Profile", href: "/dashboard/profile", roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"] },
-      { label: "⚙️ Settings", href: "/dashboard/settings", roles: ["employee", "student", "adsManager", "tenantAdmin", "Admin", "teacher", "manager", "accountant", "marketing"] },
-      { label: "📋 View Plan", href: "/dashboard/subscription/view", roles: ["tenantAdmin", "Admin"] },
-      { label: "❌ Cancel Subscription", href: "/dashboard/subscription/cancel", roles: ["tenantAdmin", "Admin"] },
     ],
   },
 ];

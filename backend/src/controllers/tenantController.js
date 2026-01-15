@@ -5,7 +5,10 @@
 
 import Tenant from "../models/Tenant.js";
 import User from "../models/User.js";
+import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import crypto from "crypto";
+import axios from "axios";
+import { PLANS } from "../config/plans.js";
 import {
   sendTenantRegistrationEmail,
   sendWelcomeEmail,
@@ -13,6 +16,11 @@ import {
   sendSubscriptionConfirmationEmail,
   sendCredentialsEmail
 } from "../services/emailService.js";
+
+// Cashfree config from .env
+const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
 
 // Generate random 6-digit password
 const generatePassword = () => {
@@ -71,68 +79,238 @@ export const getTenantBySubdomain = async (req, res) => {
 
 /* ================================================================
    🔹 1. Upgrade Tenant Plan
+   ✅ Handles both PUT (old way after payment) and POST (new direct payment)
 ================================================================ */
 export const upgradeTenantPlan = async (req, res) => {
   try {
-    const { tenantId, newPlan, paymentId } = req.body;
+    const { planId, billingCycle, newPlan, paymentId } = req.body;
+    const paramTenantId = req.params?.tenantId;
+    const bodyTenantId = req.body?.tenantId;
+    const tenantId = paramTenantId || bodyTenantId;
 
-    if (!tenantId || !newPlan) {
-      return res.status(400).json({ message: "Tenant ID and plan are required" });
+    // Validate tenant ID
+    if (!tenantId) {
+      return res.status(400).json({ error: "Tenant ID is required" });
     }
 
-    const validPlans = ["pro", "enterprise"];
-    if (!validPlans.includes(newPlan.toLowerCase())) {
-      return res.status(400).json({ message: "Invalid plan type" });
-    }
-
+    // Find tenant
     const tenant = await Tenant.findOne({ tenantId });
-    if (!tenant) return res.status(404).json({ message: "Tenant not found" });
-
-    const now = new Date();
-    const endDate = new Date(now);
-    endDate.setMonth(endDate.getMonth() + 1);
-
-    tenant.plan = newPlan.toLowerCase();
-    tenant.subscription = {
-      status: "active",
-      paymentId: paymentId || `manual_${crypto.randomBytes(4).toString("hex")}`,
-      startDate: now,
-      endDate,
-    };
-
-    await tenant.save();
-
-    // Send plan upgrade email to tenant
-    sendSubscriptionConfirmationEmail({
-      to: tenant.email,
-      subscriptionDetails: {
-        planName: tenant.plan,
-        amount: tenant.subscription?.amount || 'N/A',
-        billingCycle: 'monthly',
-        startDate: tenant.subscription?.startDate,
-        endDate: tenant.subscription?.endDate,
-        instituteName: tenant.instituteName || tenant.name
-      },
-      tenantId: tenant.tenantId
-    }).catch(err => console.error('❌ Failed to send plan upgrade email:', err.message));
-
-    // Notify superadmin
-    if (process.env.SUPER_ADMIN_EMAIL) {
-      sendEmail({
-        to: process.env.SUPER_ADMIN_EMAIL,
-        subject: `Tenant Plan Upgraded: ${tenant.name}`,
-        html: `<p>Tenant <strong>${tenant.name}</strong> upgraded to <strong>${tenant.plan}</strong> plan.</p>`
-      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
     }
 
-    res.status(200).json({
-      message: `Plan upgraded to ${newPlan} successfully.`,
-      plan: tenant.plan,
-      subscription: tenant.subscription,
+    console.log(`🚀 Upgrade request for tenant ${tenantId}:`, { planId, billingCycle });
+
+    // ========== CASE 1: POST with planId & billingCycle (NEW - Direct Payment Modal) ==========
+    if (planId && billingCycle) {
+      console.log(`📱 Direct payment upgrade flow - Plan: ${planId}, Cycle: ${billingCycle}`);
+      
+      // Validate plan exists
+      const plan = PLANS.find(p => p.id === planId?.toLowerCase());
+      if (!plan) {
+        return res.status(400).json({ 
+          error: "Invalid plan selected", 
+          availablePlans: PLANS.map(p => p.id) 
+        });
+      }
+
+      // Check if it's a free plan
+      if (plan.priceMonthly === 0 && plan.priceAnnual === 0) {
+        // Free plan - no payment needed, just upgrade immediately
+        const now = new Date();
+        const duration = billingCycle === 'annual' ? 365 : 30;
+        const endDate = new Date(now);
+        endDate.setDate(endDate.getDate() + duration);
+
+        tenant.plan = planId.toLowerCase();
+        tenant.subscription = {
+          status: "active",
+          paymentId: `free_${crypto.randomBytes(4).toString("hex")}`,
+          startDate: now,
+          endDate,
+          billingCycle,
+        };
+        await tenant.save();
+
+        return res.status(200).json({
+          success: true,
+          isFree: true,
+          message: `Upgraded to ${plan.name} plan successfully`,
+          plan: {
+            id: plan.id,
+            name: plan.name,
+            price: 0,
+            billingCycle
+          }
+        });
+      }
+
+      // ✅ Paid plan - Initiate Cashfree payment (NO OTP, NO REGISTRATION)
+      const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
+      const orderAmount = cycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
+
+      // Store pending upgrade info
+      tenant.subscription = tenant.subscription || {};
+      tenant.subscription.pendingPlan = planId.toLowerCase();
+      tenant.subscription.billingCycle = cycle;
+      tenant.subscription.status = tenant.subscription.status === 'active' ? 'active' : 'pending';
+      await tenant.save();
+
+      // Create Cashfree order
+      const orderPayload = {
+        order_id: `upgrade_${tenantId}_${Date.now()}`,
+        order_amount: orderAmount,
+        order_currency: 'INR',
+        customer_details: {
+          customer_id: tenantId,
+          customer_email: tenant.email,
+          customer_phone: tenant.contact?.phone || '9999999999'
+        },
+        order_meta: {
+          return_url: `${process.env.FRONTEND_URL}/dashboard/client/${tenantId}/my-subscription`,
+          plan_id: planId,
+          billing_cycle: cycle,
+          upgrade: true
+        }
+      };
+
+      console.log('💳 Creating Cashfree order for upgrade:', orderPayload);
+
+      const cashfreeResponse = await axios.post(
+        `${CASHFREE_BASE_URL}/orders`,
+        orderPayload,
+        {
+          headers: {
+            'x-client-id': CASHFREE_CLIENT_ID,
+            'x-client-secret': CASHFREE_CLIENT_SECRET,
+            'x-api-version': '2023-08-01',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Store order ID in tenant
+      tenant.subscription.paymentId = cashfreeResponse.data.order_id;
+      await tenant.save();
+
+      // Log pending payment
+      try {
+        let duration = 30 * 24 * 60 * 60 * 1000; // monthly
+        if (cycle === 'annual') {
+          duration = 365 * 24 * 60 * 60 * 1000;
+        }
+        await SubscriptionPayment.create({
+          tenantId,
+          amount: orderAmount,
+          totalAmount: orderAmount,
+          planName: plan.name,
+          planKey: plan.id,
+          billingCycle: cycle,
+          periodStart: new Date(),
+          periodEnd: new Date(Date.now() + duration),
+          paymentMethod: 'cashfree',
+          gatewayOrderId: cashfreeResponse.data.order_id,
+          status: 'pending',
+          notes: `Upgrade initiated - ${new Date().toISOString()}`,
+          tenantSnapshot: {
+            instituteName: tenant.instituteName || tenant.name,
+            email: tenant.email,
+            phone: tenant.contact?.phone || '9999999999',
+          }
+        });
+      } catch (logErr) {
+        console.error('Failed to log pending payment:', logErr?.message);
+      }
+
+      // Send email notification
+      await sendEmail({
+        to: tenant.email,
+        subject: `Plan Upgrade Initiated: ${plan.name} (${cycle})`,
+        html: `<p>Your upgrade to the <strong>${plan.name}</strong> plan (₹${orderAmount}/${cycle}) has been initiated. Complete the payment to activate your new plan.</p>`
+      }).catch(err => console.error('❌ Failed to send upgrade email:', err.message));
+
+      // Return session ID for modal checkout
+      return res.status(200).json({
+        success: true,
+        isFree: false,
+        paymentSessionId: cashfreeResponse.data.payment_session_id,
+        paymentLink: cashfreeResponse.data.payment_link,
+        orderId: cashfreeResponse.data.order_id,
+        tenantId,
+        plan: {
+          id: plan.id,
+          name: plan.name,
+          price: orderAmount,
+          billingCycle: cycle
+        }
+      });
+    }
+
+    // ========== CASE 2: PUT with newPlan & paymentId (OLD - After Payment Confirmation) ==========
+    if (newPlan || paymentId) {
+      console.log(`✅ Finalizing upgrade - Old style`);
+      
+      const validPlans = ["pro", "enterprise", "basic", "starter", "professional"];
+      const planToUpgrade = newPlan?.toLowerCase() || planId?.toLowerCase();
+      
+      if (!validPlans.includes(planToUpgrade)) {
+        return res.status(400).json({ error: "Invalid plan type" });
+      }
+
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      tenant.plan = planToUpgrade;
+      tenant.subscription = {
+        status: "active",
+        paymentId: paymentId || `manual_${crypto.randomBytes(4).toString("hex")}`,
+        startDate: now,
+        endDate,
+      };
+
+      await tenant.save();
+
+      // Send confirmation emails
+      sendSubscriptionConfirmationEmail({
+        to: tenant.email,
+        subscriptionDetails: {
+          planName: tenant.plan,
+          amount: tenant.subscription?.amount || 'N/A',
+          billingCycle: 'monthly',
+          startDate: tenant.subscription?.startDate,
+          endDate: tenant.subscription?.endDate,
+          instituteName: tenant.instituteName || tenant.name
+        },
+        tenantId: tenant.tenantId
+      }).catch(err => console.error('❌ Failed to send upgrade email:', err.message));
+
+      if (process.env.SUPER_ADMIN_EMAIL) {
+        sendEmail({
+          to: process.env.SUPER_ADMIN_EMAIL,
+          subject: `Tenant Plan Upgraded: ${tenant.name}`,
+          html: `<p><strong>${tenant.name}</strong> upgraded to <strong>${tenant.plan}</strong> plan.</p>`
+        }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+      }
+
+      return res.status(200).json({
+        message: `Plan upgraded to ${planToUpgrade} successfully`,
+        plan: tenant.plan,
+        subscription: tenant.subscription,
+      });
+    }
+
+    // Invalid request - neither direct payment nor finalization
+    return res.status(400).json({ 
+      error: "Invalid upgrade request. Provide either planId+billingCycle (direct payment) or paymentId (finalization)" 
     });
+
   } catch (err) {
-    console.error("Upgrade Error:", err);
-    res.status(500).json({ message: err.message });
+    console.error("🚨 Upgrade Error:", err.message || err);
+    res.status(500).json({ 
+      error: err.message || "Upgrade failed", 
+      details: process.env.NODE_ENV === 'development' ? err.toString() : undefined
+    });
   }
 };
 

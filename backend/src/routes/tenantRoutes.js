@@ -136,6 +136,19 @@ router.put(
 );
 
 /**
+ * @route   POST /api/tenants/:tenantId/upgrade
+ * @desc    Initiate plan upgrade with Cashfree payment (modal checkout, skip OTP/registration)
+ * @access  Private – tenantAdmin (own tenant) or superadmin
+ */
+router.post(
+  "/:tenantId/upgrade",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  tenantProtect,
+  upgradeTenantPlan
+);
+
+/**
  * @route   PUT /api/tenants/upgrade
  * @desc    Upgrade tenant plan (after payment)
  * @access  Private – tenantAdmin or superadmin

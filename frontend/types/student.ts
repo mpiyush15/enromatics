@@ -56,6 +56,9 @@ export interface StudentDTO {
   state?: string;
   pincode?: string;
 
+  // 🏫 Institute Info
+  instituteName?: string;
+
   // 📅 Timestamps
   createdAt?: string;
   updatedAt?: string;

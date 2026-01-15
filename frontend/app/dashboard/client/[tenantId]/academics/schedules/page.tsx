@@ -1279,220 +1279,193 @@ export default function TestSchedulesPage() {
             </div>
           ) : (
             <div>
-              <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{selectedTestForMarks.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedTestForMarks.course} {selectedTestForMarks.batch && `- ${selectedTestForMarks.batch}`} • Total Marks: {selectedTestForMarks.totalMarks}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSelectedTestForMarks(null);
-                      setMarksData({});
-                      setMarksSubmitted(false);
-                      setSubmittedMarksData({});
-                      setAbsentStudents(new Set()); // Clear absent students list
-                    }}
-                    className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
-                  >
-                    Change Test
-                  </button>
+              {/* Compact Test Header */}
+              <div className="mb-6 flex justify-between items-center p-3 bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 rounded-lg">
+                <div>
+                  <h3 className="font-bold text-white text-lg">{selectedTestForMarks.name}</h3>
+                  <p className="text-purple-100 text-sm">
+                    {selectedTestForMarks.course} • {selectedTestForMarks.batch} • Max: {selectedTestForMarks.totalMarks} marks
+                  </p>
                 </div>
+                <button
+                  onClick={() => {
+                    setSelectedTestForMarks(null);
+                    setMarksData({});
+                    setMarksSubmitted(false);
+                    setSubmittedMarksData({});
+                    setAbsentStudents(new Set());
+                  }}
+                  className="px-4 py-2 text-sm bg-white text-purple-600 rounded-lg hover:bg-purple-50 font-semibold transition-colors"
+                >
+                  Change Test
+                </button>
               </div>
 
+              {/* Success Message - Minimal */}
               {marksSubmitted && (
-                <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                  <h4 className="font-semibold text-green-800 dark:text-green-200 mb-3">✅ Marks Submitted Successfully!</h4>
-                  <div className="bg-white dark:bg-gray-800 p-4 rounded-lg">
-                    <h5 className="font-semibold text-gray-900 dark:text-white mb-3">Marks Entered:</h5>
-                    <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-                      {batchStudents.map((student) => {
-                        const marks = submittedMarksData[student._id] || 0;
-                        if (marks === 0) return null;
-                        const isPassing = marks >= selectedTestForMarks.passingMarks;
-                        const percentage = ((marks / selectedTestForMarks.totalMarks) * 100).toFixed(1);
-                        return (
-                          <div key={student._id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                            <span className="text-sm text-gray-900 dark:text-white">{student.name}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-900 dark:text-white">{marks}/{selectedTestForMarks.totalMarks}</span>
-                              <span className="text-xs text-gray-600 dark:text-gray-400">({percentage}%)</span>
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isPassing ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}>
-                                {isPassing ? "✅" : "❌"}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded">
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-300">✅ Marks saved successfully!</p>
                 </div>
               )}
 
-              <div className="mb-6">
-                <h3 className="font-semibold mb-4">Enter Student Marks (Batch: {selectedTestForMarks.batch || "N/A"})</h3>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto">
-                  {loadingStudents ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600 dark:text-gray-400">Loading students...</p>
-                    </div>
-                  ) : batchStudents.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600 dark:text-gray-400">No students found in this batch</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {batchStudents.map((student) => {
-                        const studentId = student._id;
-                        const marks = marksData[studentId] || 0;
-                        const isPassing = marks >= selectedTestForMarks.passingMarks;
-                        const isAbsent = absentStudents.has(studentId);
-                        
-                        return (
-                          <div
-                            key={studentId}
-                            className={`flex items-center gap-3 p-3 rounded-lg border ${
-                              isAbsent 
-                                ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700" 
-                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
-                            }`}
-                          >
-                            <div className="flex-1">
-                              <span className="font-medium text-gray-900 dark:text-white block">{student.name}</span>
-                              {student.rollNo && <span className="text-xs text-gray-600 dark:text-gray-400">Roll: {student.rollNo}</span>}
-                              {isAbsent && <span className="text-xs text-red-600 dark:text-red-400 font-semibold">❌ Absent - Cannot mark</span>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max={selectedTestForMarks.totalMarks}
-                                value={marks}
-                                onChange={(e) =>
-                                  setMarksData({
-                                    ...marksData,
-                                    [studentId]: Math.min(Number(e.target.value), selectedTestForMarks.totalMarks),
-                                  })
-                                }
-                                placeholder="0"
-                                disabled={marksSubmitted || isAbsent}
-                                className={`w-20 px-2 py-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-center ${
-                                  isAbsent
-                                    ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 cursor-not-allowed opacity-50"
-                                    : "disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:disabled:bg-gray-600"
-                                }`}
-                              />
-                              <span className="text-sm text-gray-600 dark:text-gray-400 min-w-fit">
-                                / {selectedTestForMarks.totalMarks}
-                              </span>
-                              {marks > 0 && !isAbsent && (
-                                <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                                  isPassing 
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-                                    : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                }`}>
-                                  {isPassing ? "✅ Pass" : "❌ Fail"}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      </div>
-                    )}
+              {/* Clean Marks Entry Table */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-2 p-4 bg-gray-100 dark:bg-gray-700 font-semibold text-sm border-b border-gray-200 dark:border-gray-600">
+                  <div className="col-span-6">Student Name</div>
+                  <div className="col-span-3 text-center">Marks</div>
+                  <div className="col-span-3 text-center">Status</div>
+                </div>
+
+                {/* Students List */}
+                {loadingStudents ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 dark:text-gray-400">Loading students...</p>
                   </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={async () => {
-                      if (!selectedTestForMarks) return;
+                ) : batchStudents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 dark:text-gray-400">No students found in this batch</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                    {batchStudents.map((student) => {
+                      const studentId = student._id;
+                      const marks = marksData[studentId] || 0;
+                      const isPassing = marks >= selectedTestForMarks.passingMarks;
+                      const isAbsent = absentStudents.has(studentId);
                       
-                      setMarksSaving(true);
-                      try {
-                        // Convert marks data to array format
-                        const records = Object.entries(marksData).map(([studentId, marksObtained]) => ({
-                          studentId,
-                          marksObtained: Number(marksObtained)
-                        }));
-                        
-                        // Save to BFF (which forwards to backend)
-                        const response = await fetch(`/api/academics/tests/${selectedTestForMarks._id}/marks`, {
-                          method: "POST",
-                          credentials: "include",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            marksData: records,
-                          }),
-                        });
+                      return (
+                        <div
+                          key={studentId}
+                          className={`grid grid-cols-12 gap-2 p-4 items-center ${
+                            isAbsent 
+                              ? "bg-red-50 dark:bg-red-900/10" 
+                              : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          }`}
+                        >
+                          {/* Student Name */}
+                          <div className="col-span-6">
+                            <span className="font-medium text-gray-900 dark:text-white">{student.name}</span>
+                            {isAbsent && <span className="ml-2 text-xs text-red-600 dark:text-red-400">❌ Absent</span>}
+                          </div>
 
-                        // Get response text first to debug
-                        const responseText = await response.text();
-                        console.log("Marks Response status:", response.status);
-                        console.log("Marks Response text:", responseText);
-                        
-                        let result;
-                        try {
-                          result = JSON.parse(responseText);
-                        } catch (e) {
-                          throw new Error(`Server error (${response.status}): ${responseText.substring(0, 100)}`);
-                        }
-                        
-                        if (!response.ok) {
-                          throw new Error(result.message || `Error: ${response.status}`);
-                        }
-                        
-                        // Success
-                        setStatus("✅ Marks saved successfully!");
-                        setMarksSubmitted(true);
-                        setSubmittedMarksData({...marksData});
-                        
-                      } catch (error) {
-                        const message = error instanceof Error ? error.message : "Unknown error";
-                        setStatus("❌ " + message);
-                        console.error("Marks save error:", error);
-                      } finally {
-                        setMarksSaving(false);
-                      }
-                    }}
-                    disabled={marksSaving}
-                    className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:bg-gray-400 font-semibold transition-colors"
-                  >
-                    {marksSaving ? "Saving..." : "📝 Save Marks"}
-                  </button>
-                  {!marksSubmitted && (
-                    <button
-                      onClick={() => {
-                        setSelectedTestForMarks(null);
-                        setMarksData({});
-                        setAbsentStudents(new Set()); // Clear absent students list
-                      }}
-                      className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 font-semibold"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  {marksSubmitted && (
-                    <button
-                      onClick={() => {
-                        setSelectedTestForMarks(null);
-                        setMarksData({});
-                        setMarksSubmitted(false);
-                        setSubmittedMarksData({});
-                        setAbsentStudents(new Set()); // Clear absent students list
-                      }}
-                      className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-semibold"
-                    >
-                      Enter Marks for Another Test
-                    </button>
-                  )}
-                </div>
+                          {/* Marks Input */}
+                          <div className="col-span-3 flex items-center justify-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max={selectedTestForMarks.totalMarks}
+                              value={marks}
+                              onChange={(e) =>
+                                setMarksData({
+                                  ...marksData,
+                                  [studentId]: Math.min(Number(e.target.value), selectedTestForMarks.totalMarks),
+                                })
+                              }
+                              placeholder="0"
+                              disabled={marksSubmitted || isAbsent}
+                              className={`w-16 px-2 py-1 border rounded text-center text-sm font-medium ${
+                                isAbsent
+                                  ? "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 cursor-not-allowed opacity-50"
+                                  : "border-gray-300 dark:border-gray-600 dark:bg-gray-700 disabled:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:disabled:bg-gray-600"
+                              }`}
+                            />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">/{selectedTestForMarks.totalMarks}</span>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="col-span-3 text-center">
+                            {isAbsent ? (
+                              <span className="text-xs font-semibold text-red-600 dark:text-red-400">Cannot Mark</span>
+                            ) : marks > 0 ? (
+                              <span className={`inline-block text-xs font-semibold px-2 py-1 rounded ${
+                                isPassing 
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                              }`}>
+                                {isPassing ? "✅ Pass" : "❌ Fail"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!selectedTestForMarks) return;
+                    
+                    setMarksSaving(true);
+                    try {
+                      const records = Object.entries(marksData).map(([studentId, marksObtained]) => ({
+                        studentId,
+                        marksObtained: Number(marksObtained)
+                      }));
+                      
+                      const response = await fetch(`/api/academics/tests/${selectedTestForMarks._id}/marks`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          marksData: records,
+                        }),
+                      });
+
+                      const responseText = await response.text();
+                      console.log("Marks Response status:", response.status);
+                      
+                      let result;
+                      try {
+                        result = JSON.parse(responseText);
+                      } catch (e) {
+                        throw new Error(`Server error (${response.status}): ${responseText.substring(0, 100)}`);
+                      }
+                      
+                      if (!response.ok) {
+                        throw new Error(result.message || `Error: ${response.status}`);
+                      }
+                      
+                      setStatus("✅ Marks saved successfully!");
+                      setMarksSubmitted(true);
+                      setSubmittedMarksData({...marksData});
+                      
+                    } catch (error) {
+                      const message = error instanceof Error ? error.message : "Unknown error";
+                      setStatus("❌ " + message);
+                      console.error("Marks save error:", error);
+                    } finally {
+                      setMarksSaving(false);
+                    }
+                  }}
+                  disabled={marksSaving}
+                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 font-semibold transition-colors"
+                >
+                  {marksSaving ? "⏳ Saving..." : "💾 Save Marks"}
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedTestForMarks(null);
+                    setMarksData({});
+                    setMarksSubmitted(false);
+                    setSubmittedMarksData({});
+                    setAbsentStudents(new Set());
+                  }}
+                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold transition-colors"
+                >
+                  {marksSubmitted ? "📝 Another Test" : "Cancel"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );

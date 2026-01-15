@@ -45,6 +45,7 @@ export default function StudentProfilePage() {
   const [testMarks, setTestMarks] = useState<any[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [progressStats, setProgressStats] = useState<any>(null);
+  const [tenant, setTenant] = useState<any>(null);
 
   const fetchStudent = async () => {
     try {
@@ -104,6 +105,25 @@ export default function StudentProfilePage() {
       console.error("Error fetching batches:", err);
     } finally {
       setLoadingBatches(false);
+    }
+  };
+
+  const fetchTenant = async () => {
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}`, { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const tenantData = data.tenant || data.data;
+        setTenant(tenantData);
+        console.log('✅ Tenant fetched:', tenantData);
+        console.log('✅ Tenant name:', tenantData?.name || tenantData?.instituteName);
+      } else {
+        console.warn("Failed to fetch tenant:", data?.message);
+        setTenant({ name: 'Institute' });
+      }
+    } catch (err: any) {
+      console.error("Error fetching tenant:", err);
+      setTenant({ name: 'Institute' });
     }
   };
 
@@ -230,6 +250,14 @@ export default function StudentProfilePage() {
             const percentage = (marksObtained / test.totalMarks) * 100;
             const passed = marksObtained >= test.passingMarks;
 
+            // Calculate rank: sort all marks by marksObtained descending
+            const sortedMarks = [...marks].sort((a, b) => (b.marksObtained || 0) - (a.marksObtained || 0));
+            const rank = sortedMarks.findIndex(
+              (m: any) =>
+                (typeof m.studentId === 'string' ? m.studentId : m.studentId?._id) ===
+                studentId
+            ) + 1;
+
             results.push({
               _id: test._id,
               name: test.name,
@@ -239,6 +267,8 @@ export default function StudentProfilePage() {
               percentage: Math.round(percentage * 100) / 100,
               date: test.testDate,
               passed,
+              rank: rank > 0 ? rank : null,
+              batchRank: rank > 0 ? rank : null,
             });
           }
         } catch (err) {
@@ -300,6 +330,7 @@ export default function StudentProfilePage() {
     fetchStudent();
     fetchBatches();
     fetchCourses();
+    if (tenantId) fetchTenant();
   }, [user, studentId, tenantId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -361,12 +392,24 @@ export default function StudentProfilePage() {
 
   const handleAddPayment = async () => {
     if (!paymentAmount) return setStatus("❌ Enter amount");
+    
+    // Calculate remaining fees to be paid
+    const totalFees = student?.fees || 0;
+    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const remainingFees = totalFees - totalPaid;
+    const paymentAmountNum = Number(paymentAmount);
+    
+    // Validation: Payment amount should not exceed remaining fees
+    if (paymentAmountNum > remainingFees) {
+      return setStatus(`❌ Payment amount (₹${paymentAmountNum}) exceeds remaining fees (₹${remainingFees}). Please enter an amount equal to or less than ₹${remainingFees}`);
+    }
+    
     setStatus("Adding payment...");
     try {
       const [data, err] = await safeApiCall(() =>
         api.post<any>(`/api/payments`, { 
           studentId, 
-          amount: Number(paymentAmount),
+          amount: paymentAmountNum,
           method: paymentMethod,
           remarks: paymentRemarks,
           date: paymentDate
@@ -1070,11 +1113,11 @@ export default function StudentProfilePage() {
                             </svg>
                           </a>
 
-                          {/* Delete Button */}
+                          {/* Delete Button - DISABLED */}
                           <button
-                            onClick={() => handleDeletePayment(payment._id)}
-                            className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded transition-colors"
-                            title="Delete Payment"
+                            disabled
+                            className="p-2 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                            title="Payments cannot be deleted (Use remarks/notes for corrections)"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1319,19 +1362,20 @@ export default function StudentProfilePage() {
                       {/* Marks Progression Chart */}
                       <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📊 Marks Progression</h3>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" height={300}>
                           <LineChart data={testMarks.map((t: any) => ({
                             date: t.date ? new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
                             marks: t.marks || 0,
-                            percentage: t.totalMarks ? Math.round((t.marks / t.totalMarks) * 100) : 0,
+                            percentage: t.totalMarks ? parseFloat(((t.marks / t.totalMarks) * 100).toFixed(1)) : 0,
+                            testName: t.name?.substring(0, 10) || 'Test',
                           }))}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="date" angle={-45} textAnchor="end" height={70} style={{fontSize: '12px'}} />
-                            <YAxis />
-                            <Tooltip />
+                            <YAxis domain={[0, 100]} label={{ value: 'Percentage %', angle: -90, position: 'insideLeft' }} />
+                            <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(1) : value} contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }} />
                             <Legend />
-                            <Line type="monotone" dataKey="percentage" stroke="#8b5cf6" name="Percentage %" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 4 }} />
-                            <Line type="monotone" dataKey="marks" stroke="#3b82f6" name="Marks Obtained" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
+                            <Line type="monotone" dataKey="percentage" stroke="#8b5cf6" name="Percentage %" strokeWidth={2.5} dot={{ fill: '#8b5cf6', r: 5 }} activeDot={{ r: 7 }} />
+                            <Line type="monotone" dataKey="marks" stroke="#3b82f6" name="Marks Obtained" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -1393,13 +1437,15 @@ export default function StudentProfilePage() {
                               <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Date</th>
                               <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Marks</th>
                               <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">%</th>
+                              <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Rank</th>
                               <th className="px-3 py-2 text-center text-gray-900 dark:text-white font-semibold">Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {testMarks.map((test: any) => {
-                              const percentage = test.totalMarks ? Math.round((test.marks / test.totalMarks) * 100) : 0;
+                            {testMarks.map((test: any, index: number) => {
+                              const percentage = test.totalMarks ? parseFloat(((test.marks / test.totalMarks) * 100).toFixed(1)) : 0;
                               const passed = percentage >= 50;
+                              const rank = test.rank || test.batchRank || '-';
                               return (
                                 <tr key={test._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                   <td className="px-3 py-2 text-gray-900 dark:text-white font-medium text-xs">{test.name}</td>
@@ -1410,7 +1456,18 @@ export default function StudentProfilePage() {
                                   <td className="px-3 py-2 text-center font-semibold text-gray-900 dark:text-white text-xs">
                                     {test.marks || 0}/{test.totalMarks || 100}
                                   </td>
-                                  <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">{percentage}%</td>
+                                  <td className="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-semibold">{percentage.toFixed(1)}%</td>
+                                  <td className="px-3 py-2 text-center text-gray-900 dark:text-white font-bold text-xs">
+                                    {typeof rank === 'number' ? (
+                                      <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                                        rank === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                        rank <= 3 ? 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200' :
+                                        'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                      }`}>
+                                        #{rank}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
                                   <td className="px-3 py-2 text-center">
                                     <span className={`px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
                                       passed 
@@ -1433,7 +1490,167 @@ export default function StudentProfilePage() {
                   {testMarks.length > 0 && (
                     <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
-                        onClick={() => alert('PDF export logic will be added soon')}
+                        onClick={() => {
+                          if (!tenant?.name) {
+                            setStatus("⏳ Loading institute name... Please wait a moment and try again.");
+                            setTimeout(() => setStatus(""), 3000);
+                            return;
+                          }
+                          // Generate minimal school-style report
+                          const calculateMonthlyAttendance = () => {
+                            const monthlyData: { [key: string]: { present: number; total: number } } = {};
+                            attendanceHistory.forEach((record: any) => {
+                              const date = new Date(record.date || record.createdAt);
+                              const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                              if (!monthlyData[monthKey]) {
+                                monthlyData[monthKey] = { present: 0, total: 0 };
+                              }
+                              monthlyData[monthKey].total += 1;
+                              if (record.present) monthlyData[monthKey].present += 1;
+                            });
+                            return monthlyData;
+                          };
+
+                          const monthlyAttendance = calculateMonthlyAttendance();
+                          const last3Months = Object.entries(monthlyAttendance).slice(-3).reverse();
+                          const passedTests = testMarks.filter((t: any) => t.passed).length;
+                          const avgPercentage = testMarks.length > 0 
+                            ? (testMarks.reduce((sum: number, t: any) => sum + t.percentage, 0) / testMarks.length).toFixed(1)
+                            : 0;
+
+                          const printWindow = window.open('', '', 'height=900,width=850');
+                          if (printWindow) {
+                            const html = `
+                              <!DOCTYPE html>
+                              <html>
+                              <head>
+                                <title>${student?.name} - Report Card</title>
+                                <style>
+                                  * { margin: 0; padding: 0; }
+                                  body { font-family: 'Arial', sans-serif; color: #333; line-height: 1.6; }
+                                  .page { max-width: 800px; margin: 20px auto; padding: 30px; background: white; }
+                                  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+                                  .header h1 { font-size: 18px; margin-bottom: 5px; }
+                                  .header p { font-size: 12px; color: #666; margin: 3px 0; }
+                                  .header p { font-size: 12px; color: #666; }
+                                  
+                                  .info-row { display: flex; margin: 8px 0; font-size: 13px; }
+                                  .info-label { width: 150px; font-weight: bold; }
+                                  .info-value { flex: 1; }
+                                  
+                                  .section-title { font-weight: bold; font-size: 14px; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 5px; }
+                                  
+                                  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+                                  th { background: #f0f0f0; padding: 8px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+                                  td { padding: 8px; border: 1px solid #ddd; }
+                                  
+                                  .summary { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 15px 0; }
+                                  .summary-item { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+                                  .summary-item .value { font-size: 18px; font-weight: bold; }
+                                  .summary-item .label { font-size: 11px; color: #666; margin-top: 3px; }
+                                  
+                                  .footer { margin-top: 20px; font-size: 11px; color: #666; text-align: center; }
+                                  @media print { body { margin: 0; padding: 0; } .page { margin: 0; padding: 20px; } }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="page">
+                                  <div class="header">
+                                    <h1>${tenant?.name || tenant?.instituteName || 'INSTITUTE'}</h1>
+                                    <p>STUDENT REPORT CARD</p>
+                                    <p style="font-size: 12px; color: #666; margin: 5px 0;">Academic Performance Summary</p>
+                                  </div>
+
+                                  <div class="info-row">
+                                    <span class="info-label">Student Name:</span>
+                                    <span class="info-value">${student?.name || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Course:</span>
+                                    <span class="info-value">${student?.course || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Batch:</span>
+                                    <span class="info-value">${batches.find((b: any) => b._id === student?.batchId)?.name || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Report Date:</span>
+                                    <span class="info-value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                  </div>
+
+                                  <div class="section-title">ACADEMIC PERFORMANCE</div>
+                                  <div class="summary">
+                                    <div class="summary-item">
+                                      <div class="value">${testMarks.length}</div>
+                                      <div class="label">Total Tests</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${passedTests}</div>
+                                      <div class="label">Passed</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${avgPercentage}%</div>
+                                      <div class="label">Avg %</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${testMarks.length > 0 ? Math.round((passedTests / testMarks.length) * 100) : 0}%</div>
+                                      <div class="label">Pass Rate</div>
+                                    </div>
+                                  </div>
+
+                                  <div class="section-title">TEST RESULTS</div>
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Test</th>
+                                        <th>Subject</th>
+                                        <th>Date</th>
+                                        <th>Marks</th>
+                                        <th>%</th>
+                                        <th>Rank</th>
+                                        <th>Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${testMarks.map((test: any) => `
+                                        <tr>
+                                          <td>${test.name}</td>
+                                          <td>${test.subject}</td>
+                                          <td>${new Date(test.date || 0).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}</td>
+                                          <td>${test.marks}/${test.totalMarks}</td>
+                                          <td>${test.percentage.toFixed(1)}</td>
+                                          <td>#${test.rank || '-'}</td>
+                                          <td>${test.passed ? 'PASS' : 'FAIL'}</td>
+                                        </tr>
+                                      `).join('')}
+                                    </tbody>
+                                  </table>
+
+                                  <div class="section-title">PROGRESS GRAPH</div>
+                                  <pre style="font-family: monospace; font-size: 11px; line-height: 1.4; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+${testMarks.map((test: any) => {
+  const barLength = 25;
+  const filledLength = Math.round((test.percentage / 100) * barLength);
+  const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
+  return `${test.name.substring(0, 12).padEnd(12)} ${bar} ${test.percentage.toFixed(1)}%`;
+}).join('\n')}
+                                  </pre>
+
+                                  <div class="footer">
+                                    Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              </body>
+                              </html>
+                            `;
+                            printWindow.document.write(html);
+                            printWindow.document.close();
+                            setTimeout(() => {
+                              printWindow.print();
+                              printWindow.close();
+                            }, 250);
+                          }
+                        }}
                         className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1442,7 +1659,213 @@ export default function StudentProfilePage() {
                         PDF
                       </button>
                       <button
-                        onClick={() => alert('Print logic will be added soon')}
+                        onClick={() => {
+                          if (!tenant?.name) {
+                            setStatus("⏳ Loading institute name... Please wait a moment and try again.");
+                            setTimeout(() => setStatus(""), 3000);
+                            return;
+                          }
+                          // Print minimal school-style report
+                          const calculateMonthlyAttendance = () => {
+                            const monthlyData: { [key: string]: { present: number; total: number } } = {};
+                            attendanceHistory.forEach((record: any) => {
+                              const date = new Date(record.date || record.createdAt);
+                              const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                              if (!monthlyData[monthKey]) {
+                                monthlyData[monthKey] = { present: 0, total: 0 };
+                              }
+                              monthlyData[monthKey].total += 1;
+                              if (record.present) monthlyData[monthKey].present += 1;
+                            });
+                            return monthlyData;
+                          };
+
+                          const monthlyAttendance = calculateMonthlyAttendance();
+                          const last3Months = Object.entries(monthlyAttendance).slice(-3).reverse();
+                          const passedTests = testMarks.filter((t: any) => t.passed).length;
+                          const avgPercentage = testMarks.length > 0 
+                            ? (testMarks.reduce((sum: number, t: any) => sum + t.percentage, 0) / testMarks.length).toFixed(1)
+                            : 0;
+
+                          const printWindow = window.open('', '', 'height=900,width=850');
+                          if (printWindow) {
+                            const html = `
+                              <!DOCTYPE html>
+                              <html>
+                              <head>
+                                <title>${student?.name} - Report Card</title>
+                                <style>
+                                  * { margin: 0; padding: 0; }
+                                  body { font-family: 'Arial', sans-serif; color: #333; line-height: 1.6; }
+                                  .page { max-width: 800px; margin: 20px auto; padding: 30px; background: white; }
+                                  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+                                  .header h1 { font-size: 18px; margin-bottom: 5px; }
+                                  .header p { font-size: 12px; color: #666; margin: 3px 0; }
+                                  
+                                  .info-row { display: flex; margin: 8px 0; font-size: 13px; }
+                                  .info-label { width: 150px; font-weight: bold; }
+                                  .info-value { flex: 1; }
+                                  
+                                  .section-title { font-weight: bold; font-size: 14px; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 5px; }
+                                  
+                                  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+                                  th { background: #f0f0f0; padding: 8px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+                                  td { padding: 8px; border: 1px solid #ddd; }
+                                  
+                                  .summary { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 15px 0; }
+                                  .summary-item { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+                                  .summary-item .value { font-size: 18px; font-weight: bold; }
+                                  .summary-item .label { font-size: 11px; color: #666; margin-top: 3px; }
+                                  
+                                  .footer { margin-top: 20px; font-size: 11px; color: #666; text-align: center; }
+                                  @media print { body { margin: 0; padding: 0; } .page { margin: 0; padding: 20px; } }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="page">
+                                  <div class="header">
+                                    <h1>${tenant?.name || tenant?.instituteName || tenant?.title || 'INSTITUTE'}</h1>
+                                    <p>STUDENT REPORT CARD</p>
+                                    <p style="font-size: 12px; color: #666; margin: 5px 0;">Academic Performance Summary</p>
+                                  </div>
+
+                                  <div class="info-row">
+                                    <span class="info-label">Student Name:</span>
+                                    <span class="info-value">${student?.name || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Course:</span>
+                                    <span class="info-value">${student?.course || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Batch:</span>
+                                    <span class="info-value">${batches.find((b: any) => b._id === student?.batchId)?.name || 'N/A'}</span>
+                                  </div>
+                                  <div class="info-row">
+                                    <span class="info-label">Report Date:</span>
+                                    <span class="info-value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                  </div>
+
+                                  <div class="section-title">ACADEMIC PERFORMANCE</div>
+                                  <div class="summary">
+                                    <div class="summary-item">
+                                      <div class="value">${testMarks.length}</div>
+                                      <div class="label">Total Tests</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${passedTests}</div>
+                                      <div class="label">Passed</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${avgPercentage}%</div>
+                                      <div class="label">Avg %</div>
+                                    </div>
+                                    <div class="summary-item">
+                                      <div class="value">${testMarks.length > 0 ? Math.round((passedTests / testMarks.length) * 100) : 0}%</div>
+                                      <div class="label">Pass Rate</div>
+                                    </div>
+                                  </div>
+
+                                  <div class="section-title">ATTENDANCE (Last 3 Months)</div>
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Month</th>
+                                        <th>Present</th>
+                                        <th>Total</th>
+                                        <th>%</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${last3Months.map(([month, data]: any) => {
+                                        const percentage = data.total > 0 ? ((data.present / data.total) * 100).toFixed(1) : 0;
+                                        return `
+                                          <tr>
+                                            <td><strong>${month}</strong></td>
+                                            <td>${data.present}</td>
+                                            <td>${data.total}</td>
+                                            <td><strong>${percentage}%</strong></td>
+                                          </tr>
+                                        `;
+                                      }).join('')}
+                                    </tbody>
+                                  </table>
+
+                                  <div class="section-title">TEST RESULTS</div>
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Test</th>
+                                        <th>Subject</th>
+                                        <th>Date</th>
+                                        <th>Marks</th>
+                                        <th>%</th>
+                                        <th>Rank</th>
+                                        <th>Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${testMarks.map((test: any) => `
+                                        <tr>
+                                          <td>${test.name}</td>
+                                          <td>${test.subject}</td>
+                                          <td>${new Date(test.date || 0).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}</td>
+                                          <td>${test.marks}/${test.totalMarks}</td>
+                                          <td>${test.percentage.toFixed(1)}</td>
+                                          <td>#${test.rank || '-'}</td>
+                                          <td>${test.passed ? 'PASS' : 'FAIL'}</td>
+                                        </tr>
+                                      `).join('')}
+                                    </tbody>
+                                  </table>
+
+                                  <div class="section-title">PROGRESS GRAPH</div>
+                                  <pre style="font-family: monospace; font-size: 11px; line-height: 1.4; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+${testMarks.map((test: any) => {
+  const barLength = 25;
+  const filledLength = Math.round((test.percentage / 100) * barLength);
+  const bar = '█'.repeat(filledLength) + '░'.repeat(barLength - filledLength);
+  return `${test.name.substring(0, 12).padEnd(12)} ${bar} ${test.percentage.toFixed(1)}%`;
+}).join('\n')}
+                                  </pre>
+
+                                  <div class="section-title">ATTENDANCE (Last 3 Months)</div>
+                                  <table>
+                                    <thead>
+                                      <tr>
+                                        <th>Month</th>
+                                        <th>Present</th>
+                                        <th>Total</th>
+                                        <th>%</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${last3Months.map(([month, data]: any) => {
+                                        const percentage = data.total > 0 ? ((data.present / data.total) * 100).toFixed(1) : 0;
+                                        return `
+                                          <tr>
+                                            <td>${month}</td>
+                                            <td>${data.present}</td>
+                                            <td>${data.total}</td>
+                                            <td>${percentage}</td>
+                                          </tr>
+                                        `;
+                                      }).join('')}
+                                    </tbody>
+                                  </table>
+
+                                  <div class="footer">
+                                    Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              </body>
+                              </html>
+                            `;
+                            printWindow.document.write(html);
+                            printWindow.document.close();
+                            setTimeout(() => printWindow.print(), 250);
+                          }
+                        }}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors flex items-center justify-center gap-2 text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1485,13 +1908,30 @@ export default function StudentProfilePage() {
 
             {/* Modal Body */}
             <div className="p-4 space-y-4">
+              {/* Fee Summary */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">Total Fees:</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">₹{student?.fees || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700 dark:text-gray-300">Already Paid:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">₹{payments.reduce((sum, p) => sum + (p.amount || 0), 0)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-700">
+                  <span className="text-gray-700 dark:text-gray-300 font-semibold">Remaining to Pay:</span>
+                  <span className="font-bold text-orange-600 dark:text-orange-400">₹{(student?.fees || 0) - payments.reduce((sum, p) => sum + (p.amount || 0), 0)}</span>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Amount (₹) *
+                  Amount (₹) * <span className="text-xs text-orange-600 dark:text-orange-400">(Max: ₹{(student?.fees || 0) - payments.reduce((sum, p) => sum + (p.amount || 0), 0)})</span>
                 </label>
                 <input
                   type="number"
                   min={0}
+                  max={(student?.fees || 0) - payments.reduce((sum, p) => sum + (p.amount || 0), 0)}
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   placeholder="Enter amount"
