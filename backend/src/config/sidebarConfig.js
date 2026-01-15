@@ -26,9 +26,9 @@ export const sidebarLinks = [
     children: [
       { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
       { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager", "accountant"] },
-      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "manager"] },
+      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["student"] },
       { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] },
-      { label: "�👤 My Profile", href: "/student/dashboard", roles: ["student"] },
+      { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
   },
 
@@ -47,9 +47,7 @@ export const sidebarLinks = [
         roles: ["tenantAdmin", "manager", "student"],
         children: [
           { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "manager"] },
-          { label: "✅ Test Attendance", href: "/dashboard/academics/attendance", roles: ["tenantAdmin", "manager"] },
-          { label: "📊 Marks Entry", href: "/dashboard/academics/marks", roles: ["tenantAdmin", "manager"] },
-          { label: "📊 Test Reports", href: "/dashboard/academics/reports", roles: ["tenantAdmin", "manager", "student"] },
+          { label: "📊 Results", href: "/dashboard/academics/results", roles: ["tenantAdmin", "manager"] },
           { label: "📖 My Tests", href: "/dashboard/academics/my-tests", roles: ["student"] },
         ]
       },
@@ -68,7 +66,6 @@ export const sidebarLinks = [
       { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
       { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantAdmin", "accountant"] },
       { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantAdmin", "accountant"] },
-      { label: "📈 Reports", href: "/dashboard/accounts/reports", roles: ["tenantAdmin", "accountant"] },
     ]
   },
 
