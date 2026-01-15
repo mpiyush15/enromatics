@@ -150,13 +150,37 @@ export default function MySubscriptionPage() {
   // Handle plan upgrade - direct to Cashfree payment modal
   const handleUpgrade = async (planId: string) => {
     console.log("🚀 handleUpgrade START - planId:", planId);
-    console.log("   tenant:", tenant?.email, tenant?.name);
-    console.log("   tenantId:", tenantId);
-    console.log("   billingCycle:", billingCycle);
+    console.log("   loading:", loading);
+    console.log("   tenant:", tenant);
     
-    if (!tenant?.email || !tenant?.name) {
-      console.error("❌ Missing tenant data");
-      toast.error("User information not available");
+    // Wait for tenant data to load
+    if (loading) {
+      console.log("⏳ Tenant data still loading...");
+      toast.error("Loading your profile. Please wait and try again.");
+      return;
+    }
+
+    if (!tenant) {
+      console.error("❌ tenant object is null");
+      toast.error("Could not load your account information. Please refresh the page.");
+      return;
+    }
+
+    console.log("   tenant.email:", tenant.email);
+    console.log("   tenant.name:", tenant.name);
+    console.log("   tenant.instituteName:", tenant.instituteName);
+    
+    if (!tenant?.email) {
+      console.error("❌ Missing tenant email");
+      toast.error("Email not found. Please refresh the page.");
+      return;
+    }
+
+    // Use name or instituteName as fallback
+    const tenantName = tenant.name || tenant.instituteName;
+    if (!tenantName) {
+      console.error("❌ Missing tenant name and instituteName");
+      toast.error("Institution name not found. Please update your profile.");
       return;
     }
 
@@ -191,8 +215,8 @@ export default function MySubscriptionPage() {
         planId,
         email: tenant.email,
         phone: tenant.contact?.phone || "9999999999",
-        name: tenant.name,
-        instituteName: tenant.instituteName || tenant.name,
+        name: tenantName,
+        instituteName: tenant.instituteName || tenantName,
         billingCycle: billingCycle === "yearly" ? "annual" : "monthly",
         amount: Number(amount),
       };
@@ -611,7 +635,8 @@ export default function MySubscriptionPage() {
                           : "bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
                       }`}
                       onClick={() => handleUpgrade(planId)}
-                      disabled={isUpgrading}
+                      disabled={isUpgrading || loading}
+                      title={loading ? "Loading your profile..." : ""}
                     >
                       {isUpgrading ? (
                         <>

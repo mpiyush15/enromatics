@@ -14,10 +14,15 @@ interface SubscriptionInfo {
 }
 
 interface TenantInfo {
+  tenantId: string;
+  name: string;
   instituteName: string;
   email: string;
   plan: string;
   subscription: SubscriptionInfo;
+  contact?: {
+    phone?: string;
+  };
 }
 
 interface SubscriptionResponse {
