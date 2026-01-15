@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const mongodb_uri = 'mongodb+srv://pixelsagency:Pm02072023@pixelsagency.664wxw1.mongodb.net/enromatics';
+require('dotenv').config();
+const mongodb_uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/enromatics';
 
 (async () => {
   try {

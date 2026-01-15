@@ -135,7 +135,13 @@ export const updateTest = async (req, res) => {
       });
     }
 
-    test = await Test.findByIdAndUpdate(req.params.id, req.body, {
+    // Clean up empty lessonId - convert empty string to undefined (or null)
+    const updateData = { ...req.body };
+    if (updateData.lessonId === "") {
+      delete updateData.lessonId;
+    }
+
+    test = await Test.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -200,9 +206,26 @@ export const deleteTest = async (req, res) => {
 // @access  Private (tenantAdmin, teacher, staff)
 export const markAttendance = async (req, res) => {
   try {
-    const { attendanceData } = req.body; // Array of { studentId, present, remarks }
+    const { attendanceData } = req.body;
     const testId = req.params.id;
     const tenantId = req.user.tenantId;
+
+    console.log("📌 Marking Attendance:", { testId, tenantId, dataCount: attendanceData?.length });
+
+    // Validate input
+    if (!attendanceData || !Array.isArray(attendanceData)) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceData must be an array",
+      });
+    }
+
+    if (!testId) {
+      return res.status(400).json({
+        success: false,
+        message: "testId is required",
+      });
+    }
 
     const test = await Test.findById(testId);
     if (!test) {
@@ -231,12 +254,13 @@ export const markAttendance = async (req, res) => {
 
     await TestAttendance.bulkWrite(bulkOps);
 
+    console.log("✅ Attendance saved successfully");
     res.status(200).json({
       success: true,
       message: "Attendance marked successfully",
     });
   } catch (error) {
-    console.error("Error marking attendance:", error);
+    console.error("❌ Error marking attendance:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Failed to mark attendance",

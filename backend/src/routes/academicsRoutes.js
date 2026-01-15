@@ -45,6 +45,28 @@ router.post(
 
 router.get("/tests", protect, getTests);
 
+// ⚠️ IMPORTANT: Specific routes MUST come before generic :id routes
+// Attendance routes (before /tests/:id)
+router.post(
+  "/tests/:id/attendance",
+  protect,
+  markAttendance
+);
+
+router.get("/tests/:id/attendance", protect, getTestAttendance);
+
+// Marks routes (before /tests/:id)
+router.post(
+  "/tests/:id/marks",
+  protect,
+  authorizeRoles("tenantAdmin", "teacher", "staff"),
+  requirePermission("canAccessTests"),
+  enterMarks
+);
+
+router.get("/tests/:id/marks", protect, getTestMarks);
+
+// Generic test routes (AFTER specific routes)
 router.get("/tests/:id", protect, getTestById);
 
 router.put(
@@ -61,28 +83,6 @@ router.delete(
   authorizeRoles("tenantAdmin"),
   deleteTest
 );
-
-// Attendance routes
-router.post(
-  "/tests/:id/attendance",
-  protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
-  requirePermission("canAccessTests"),
-  markAttendance
-);
-
-router.get("/tests/:id/attendance", protect, getTestAttendance);
-
-// Marks routes
-router.post(
-  "/tests/:id/marks",
-  protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff"),
-  requirePermission("canAccessTests"),
-  enterMarks
-);
-
-router.get("/tests/:id/marks", protect, getTestMarks);
 
 // Student-specific routes
 router.get("/students/:studentId/tests", protect, getStudentTests);

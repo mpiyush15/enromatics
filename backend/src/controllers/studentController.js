@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Student from "../models/Student.js";
 import Payment from "../models/Payment.js";
 import Batch from "../models/Batch.js";
@@ -199,6 +200,32 @@ export const getStudents = async (req, res) => {
               "$batch", // Fallback to existing batch field
             ],
           },
+          batchCourseId: {
+            $cond: [
+              { $gt: [{ $size: "$batchData" }, 0] },
+              { $arrayElemAt: ["$batchData.courseId", 0] },
+              null,
+            ],
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "batchCourseId",
+          foreignField: "_id",
+          as: "courseData",
+        },
+      },
+      {
+        $addFields: {
+          courseName: {
+            $cond: [
+              { $gt: [{ $size: "$courseData" }, 0] },
+              { $arrayElemAt: ["$courseData.name", 0] },
+              "$course", // Fallback to existing course field
+            ],
+          },
         },
       },
       {
@@ -209,7 +236,7 @@ export const getStudents = async (req, res) => {
           email: 1,
           phone: 1,
           gender: 1,
-          course: 1,
+          course: "$courseName", // Use looked-up course name
           batch: 1,
           batchName: "$batch", // Map batch to batchName for consistency
           batchId: 1,
@@ -273,8 +300,91 @@ export const getStudentById = async (req, res) => {
     const { id } = req.params;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    const student = await Student.findOne({ _id: id, tenantId });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+    // 🔥 FIXED: Use aggregation with batch/course lookup (same as getStudents)
+    const students = await Student.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(id),
+          tenantId: tenantId,
+        },
+      },
+      // Lookup batch by batchId to get current batch info
+      {
+        $lookup: {
+          from: "batches",
+          localField: "batchId",
+          foreignField: "_id",
+          as: "batchData",
+        },
+      },
+      // Extract batch name from batch data
+      {
+        $addFields: {
+          batchName: {
+            $cond: [
+              { $gt: [{ $size: "$batchData" }, 0] },
+              { $arrayElemAt: ["$batchData.name", 0] },
+              "$batch", // Fallback to existing batch field if batch not found
+            ],
+          },
+          batchCourseId: {
+            $cond: [
+              { $gt: [{ $size: "$batchData" }, 0] },
+              { $arrayElemAt: ["$batchData.courseId", 0] },
+              null,
+            ],
+          },
+        },
+      },
+      // Lookup course by courseId from batch
+      {
+        $lookup: {
+          from: "courses",
+          localField: "batchCourseId",
+          foreignField: "_id",
+          as: "courseData",
+        },
+      },
+      // Extract course name from course data
+      {
+        $addFields: {
+          course: {
+            $cond: [
+              { $gt: [{ $size: "$courseData" }, 0] },
+              { $arrayElemAt: ["$courseData.name", 0] },
+              "$course", // Fallback to stored course field
+            ],
+          },
+        },
+      },
+      // Project only needed fields
+      {
+        $project: {
+          _id: 1,
+          tenantId: 1,
+          name: 1,
+          email: 1,
+          phone: 1,
+          gender: 1,
+          course: 1,
+          batchName: 1,
+          batchId: 1,
+          rollNumber: 1,
+          address: 1,
+          fees: 1,
+          balance: 1,
+          status: 1,
+          joinDate: 1,
+          createdAt: 1,
+        },
+      },
+    ]);
+
+    if (!students || students.length === 0) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const student = students[0];
 
     // fetch payments for this student
     const payments = await Payment.find({ tenantId, studentId: student._id }).sort({ date: -1 });
@@ -294,7 +404,7 @@ export const updateStudent = async (req, res) => {
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
     // Only allow certain fields to be updated
-    const allowed = ["name", "email", "phone", "gender", "course", "batch", "address", "fees", "status"];
+    const allowed = ["name", "email", "phone", "gender", "course", "batch", "batchId", "address", "fees", "status"];
     const payload = {};
     allowed.forEach((k) => {
       if (updates[k] !== undefined) payload[k] = updates[k];
@@ -303,8 +413,49 @@ export const updateStudent = async (req, res) => {
     // Ensure fees and balance are numeric
     if (payload.fees !== undefined) payload.fees = Number(payload.fees);
 
+    // Get the current student to check if batchId changed
+    const currentStudent = await Student.findOne({ _id: id, tenantId });
+    if (!currentStudent) return res.status(404).json({ message: "Student not found" });
+
+    const oldBatchId = currentStudent.batchId?.toString();
+    const newBatchId = payload.batchId ? payload.batchId.toString() : undefined;
+
+    // 🔥 FIX: If batchId is changing, lookup new batch name and sync it
+    if (newBatchId && oldBatchId !== newBatchId) {
+      const newBatch = await Batch.findById(newBatchId).select('name');
+      if (newBatch) {
+        payload.batchName = newBatch.name;  // 🔥 CRITICAL: Keep batchName in sync with batchId
+        console.log(`[UPDATE STUDENT] Will sync batchName: ${currentStudent.batchName} → ${newBatch.name}`);
+      }
+    }
+
+    // Update the student
     const student = await Student.findOneAndUpdate({ _id: id, tenantId }, { $set: payload }, { new: true });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // Handle BatchStudent sync if batchId changed
+    if (newBatchId && oldBatchId !== newBatchId) {
+      console.log(`[UPDATE STUDENT] Batch changed for student ${id}: ${oldBatchId} → ${newBatchId}`);
+
+      // Remove from old batch
+      if (oldBatchId) {
+        await BatchStudent.deleteMany({ 
+          tenantId, 
+          studentId: id, 
+          batchId: oldBatchId 
+        });
+        console.log(`  ✓ Removed from old batch ${oldBatchId}`);
+      }
+
+      // Add to new batch
+      await BatchStudent.create({
+        tenantId,
+        studentId: id,
+        batchId: newBatchId,
+        status: "active",
+        joinedAt: new Date(),
+      });
+      console.log(`  ✓ Added to new batch ${newBatchId}`);
+    }
 
     res.status(200).json({ success: true, student });
   } catch (err) {

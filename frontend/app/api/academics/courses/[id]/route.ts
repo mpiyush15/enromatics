@@ -1,6 +1,7 @@
 /**
  * BFF Courses [ID] Route (STABILIZED)
  * 
+ * GET /api/academics/courses/[id] - Get single course with batches
  * PUT /api/academics/courses/[id] - Update course
  * DELETE /api/academics/courses/[id] - Delete course
  */
@@ -11,6 +12,46 @@ import { NextRequest, NextResponse } from 'next/server';
 function extractCookies(request: NextRequest) {
   const cookies = request.headers.get('cookie') || '';
   return cookies;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const cookies = extractCookies(request);
+    const { id } = params;
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/academics/courses/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookies,
+      },
+      credentials: 'include',
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      return NextResponse.json(
+        { success: false, message: data.message || 'Failed to fetch course' },
+        { status: res.status }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data.course,
+      course: data.course,
+    });
+  } catch (error) {
+    console.error('❌ BFF Courses GET [ID] error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function PUT(

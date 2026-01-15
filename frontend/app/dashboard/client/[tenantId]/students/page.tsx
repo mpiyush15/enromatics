@@ -125,6 +125,54 @@ export default function StudentsPage() {
     fetchStudents();
   }, [page, appliedFilters, limit]);
 
+  /* ================= LISTEN FOR REFRESH SIGNALS FROM OTHER PAGES ================= */
+  useEffect(() => {
+    // Handle custom events from edit/add student pages
+    const handleStudentUpdate = () => {
+      console.log('[STUDENTS LIST] Detected student data update, refetching...');
+      setPage(1);
+      fetchStudents();
+    };
+
+    const handleStudentAdded = () => {
+      console.log('[STUDENTS LIST] Detected student added, refetching...');
+      setPage(1);
+      fetchStudents();
+    };
+
+    // Handle localStorage changes (for cross-tab sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'studentsRefreshNeeded' && e.newValue) {
+        console.log('[STUDENTS LIST] Detected refresh signal via storage, refetching...');
+        setPage(1);
+        fetchStudents();
+      }
+    };
+
+    window.addEventListener('studentDataUpdated', handleStudentUpdate);
+    window.addEventListener('studentAdded', handleStudentAdded);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('studentDataUpdated', handleStudentUpdate);
+      window.removeEventListener('studentAdded', handleStudentAdded);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  /* ================= LISTEN FOR PAGE VISIBILITY CHANGES ================= */
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[STUDENTS LIST] Page became visible, syncing data...');
+        fetchStudents();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   /* ================= HANDLE ?refresh=1 ================= */
   useEffect(() => {
     if (searchParams?.get("refresh") === "1") {
@@ -722,7 +770,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                         <td className="px-6 py-4">
                           <div className="space-y-1">
                             <div className="text-sm text-gray-900 dark:text-white">
-                              {student.course}
+                              {student.course || "—"}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               {student.batchName || "No Batch"}

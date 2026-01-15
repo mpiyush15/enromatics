@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Eye } from "lucide-react";
@@ -42,6 +42,11 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+// Helper function to generate readable batch ID from MongoDB ObjectId
+const getBatchIdShort = (id: string) => {
+  return `B-${id.substring(0, 6).toUpperCase()}`;
+};
+
 export default function CoursesAndBatchesPage() {
   const params = useParams();
   const router = useRouter();
@@ -67,11 +72,11 @@ export default function CoursesAndBatchesPage() {
     `/api/academics/courses`,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 300000,
-      revalidateIfStale: false,
-      keepPreviousData: true, // Prevent flickering
+      revalidateOnFocus: true, // 🔄 Refetch when user returns to this page
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Allow frequent revalidation
+      revalidateIfStale: true,
+      keepPreviousData: true,
     }
   );
 
@@ -80,11 +85,11 @@ export default function CoursesAndBatchesPage() {
     `/api/academics/batches`,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 300000,
-      revalidateIfStale: false,
-      keepPreviousData: true, // Prevent flickering
+      revalidateOnFocus: true, // 🔄 Refetch when user returns to this page
+      revalidateOnReconnect: true,
+      dedupingInterval: 0, // Allow frequent revalidation
+      revalidateIfStale: true,
+      keepPreviousData: true,
     }
   );
 
@@ -108,6 +113,36 @@ export default function CoursesAndBatchesPage() {
     capacity: "",
     status: "active",
   });
+
+  // 🔄 Listen for refresh signals from student pages
+  useEffect(() => {
+    const handleStudentUpdate = async () => {
+      console.log('[BATCHES PAGE] Detected student update, refreshing batch data...');
+      await refreshBatches();
+    };
+
+    const handleStudentAdded = async () => {
+      console.log('[BATCHES PAGE] Detected student added, refreshing batch data...');
+      await refreshBatches();
+    };
+
+    const handleStorageChange = async (e: StorageEvent) => {
+      if ((e.key === 'studentsRefreshNeeded' || e.key === 'batchesRefreshNeeded') && e.newValue) {
+        console.log('[BATCHES PAGE] Detected refresh signal, refreshing batch data...');
+        await refreshBatches();
+      }
+    };
+
+    window.addEventListener('studentDataUpdated', handleStudentUpdate);
+    window.addEventListener('studentAdded', handleStudentAdded);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('studentDataUpdated', handleStudentUpdate);
+      window.removeEventListener('studentAdded', handleStudentAdded);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [refreshBatches]);
 
   // Course handlers
   const handleCourseInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -472,107 +507,106 @@ export default function CoursesAndBatchesPage() {
       {/* Batches Tab */}
       {activeTab === "batches" && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {batches.map((batch) => (
-          <div
-            key={batch._id}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-5"
-          >
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {batch.name}
-              </h3>
-              <span
-                className={`px-2 py-1 text-xs rounded ${
-                  batch.status === "active"
-                    ? "bg-green-100 text-green-800"
-                    : batch.status === "completed"
-                    ? "bg-gray-100 text-gray-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {batch.status}
-              </span>
-            </div>
-
-            {batch.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {batch.description}
-              </p>
-            )}
-
-            <div className="space-y-2 text-sm mb-4">
-              {batch.startDate && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">📅 Start:</span>
-                  <span>{new Date(batch.startDate).toLocaleDateString()}</span>
-                </div>
-              )}
-              {batch.capacity && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">👥 Capacity:</span>
-                  <span>
-                    {batch.enrolledCount || 0} / {batch.capacity}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {batch.courseName && (
-              <div className="mb-2 px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded inline-block">
-                📖 {batch.courseName}
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {batches.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📚</div>
+                <h3 className="text-lg font-semibold mb-2">No Batches Yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Create your first batch to start organizing students
+                </p>
+                <button
+                  onClick={() => {
+                    resetBatchForm();
+                    setShowModal(true);
+                  }}
+                  className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700"
+                >
+                  Create Batch
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Batch ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Batch Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Course</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Students</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Start Date</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {batches.map((batch) => (
+                      <tr key={batch._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="px-6 py-4 text-sm">
+                          <span className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded font-mono font-semibold text-xs">
+                            {getBatchIdShort(batch._id)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{batch.name}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{batch.courseName || "—"}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
+                            👥 {batch.enrolledCount || 0}
+                            {batch.capacity && ` / ${batch.capacity}`}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                          {batch.startDate ? new Date(batch.startDate).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                              batch.status === "active"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                : batch.status === "completed"
+                                ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            }`}
+                          >
+                            {batch.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setStudentListModal({
+                                isOpen: true,
+                                batchId: batch._id,
+                                batchName: batch.name,
+                              })}
+                              className="p-1.5 text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded transition-colors"
+                              title="View Students"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEditBatch(batch)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded transition-colors"
+                              title="Edit Batch"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBatch(batch._id)}
+                              className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
+                              title="Delete Batch"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStudentListModal({
-                  isOpen: true,
-                  batchId: batch._id,
-                  batchName: batch.name,
-                })}
-                className="p-2 text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
-                title="View Students in this Batch"
-              >
-                <Eye size={18} />
-              </button>
-              <button
-                onClick={() => handleEditBatch(batch)}
-                className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                title="Edit Batch"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <button
-                onClick={() => handleDeleteBatch(batch._id)}
-                className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                title="Delete Batch"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
-            </div>
           </div>
-        ))}
-      </div>
-
-      {batches.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg">
-          <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-lg font-semibold mb-2">No Batches Yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Create your first batch to start organizing students
-          </p>
-          <button
-            onClick={() => {
-              resetBatchForm();
-              setShowModal(true);
-            }}
-            className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700"
-          >
-            Create Batch
-          </button>
-        </div>
-      )}
         </>
       )}
 

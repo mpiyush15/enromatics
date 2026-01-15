@@ -22,6 +22,8 @@ export default function AddStudentPage() {
   
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
   const [loadingRegistration, setLoadingRegistration] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
@@ -59,6 +61,7 @@ export default function AddStudentPage() {
 
   useEffect(() => {
     fetchBatches();
+    fetchCourses();
     if (regId && fromScholarship) {
       fetchRegistrationData();
     }
@@ -66,6 +69,7 @@ export default function AddStudentPage() {
 
   const fetchBatches = async () => {
     try {
+      // Fetch all batches
       const res = await fetch(`/api/academics/batches`, {
         credentials: "include",
       });
@@ -73,11 +77,26 @@ export default function AddStudentPage() {
       if (data.success) {
         const activeBatches = data.batches.filter((b: Batch) => b.status === "active");
         setBatches(activeBatches);
+        setFilteredBatches(activeBatches);
       }
       setLoadingBatches(false);
     } catch (error) {
       console.error("Error fetching batches:", error);
       setLoadingBatches(false);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const res = await fetch(`/api/academics/courses?tenantId=${tenantId}`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success || Array.isArray(data.data)) {
+        setCourses(Array.isArray(data.data) ? data.data : data.courses || []);
+      }
+    } catch (error) {
+      console.error("Error fetching courses:", error);
     }
   };
 
@@ -133,9 +152,25 @@ export default function AddStudentPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (stepErrors[e.target.name]) {
-      setStepErrors(prev => ({ ...prev, [e.target.name]: "" }));
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (stepErrors[name]) {
+      setStepErrors(prev => ({ ...prev, [name]: "" }));
+    }
+
+    // When course is selected, filter batches for that course
+    if (name === "course" && value) {
+      const selectedCourse = courses.find((c: any) => c._id === value);
+      if (selectedCourse) {
+        console.log(`[FORM] Course selected: ${selectedCourse.name} (ID: ${selectedCourse._id})`);
+        // Filter batches that have this courseId
+        const batchesForCourse = batches.filter((b: Batch) => 
+          b.courseId && b.courseId === value
+        );
+        console.log(`[FORM] Found ${batchesForCourse.length} batches for this course`);
+        setFilteredBatches(batchesForCourse);
+        setForm(prev => ({ ...prev, batchId: "" })); // Reset batch selection
+      }
     }
   };
 
@@ -219,7 +254,12 @@ export default function AddStudentPage() {
         setGeneratedPassword(data.newPassword);
       }
       
-      setTimeout(() => router.push(`/dashboard/client/${tenantId}/students?refresh=1`), 3000);
+      // 🔄 Trigger refresh signal for other pages
+      localStorage.setItem('studentsRefreshNeeded', Date.now().toString());
+      localStorage.setItem('batchesRefreshNeeded', Date.now().toString());
+      window.dispatchEvent(new CustomEvent('studentAdded', { detail: { batchId: form.batchId } }));
+      
+      setTimeout(() => router.push(`/dashboard/client/${tenantId}/students`), 3000);
     } catch (err: any) {
       console.error(err);
       setStatus(`❌ ${err.message}`);
@@ -421,16 +461,22 @@ export default function AddStudentPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Course / Program *
               </label>
-              <input
+              <select
                 name="course"
                 value={form.course}
                 onChange={handleChange}
-                placeholder="e.g., JEE Main, NEET, Class 12"
                 className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition ${
                   stepErrors.course ? "border-red-500" : "border-gray-300 dark:border-gray-600"
                 }`}
                 required
-              />
+              >
+                <option value="">-- Select Course --</option>
+                {courses.map((c: any) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
               {stepErrors.course && <p className="text-red-600 text-xs mt-1">{stepErrors.course}</p>}
             </div>
 
@@ -442,7 +488,11 @@ export default function AddStudentPage() {
                 <div className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-800 text-gray-500">
                   Loading batches...
                 </div>
-              ) : (
+              ) : !form.course ? (
+                <div className="w-full px-4 py-3 border border-yellow-300 dark:border-yellow-600 rounded-xl dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300">
+                  📌 Select a course first to see available batches
+                </div>
+              ) : filteredBatches.length > 0 ? (
                 <select
                   name="batchId"
                   value={form.batchId}
@@ -453,12 +503,16 @@ export default function AddStudentPage() {
                   required
                 >
                   <option value="">-- Select Batch --</option>
-                  {batches.map((batch) => (
+                  {filteredBatches.map((batch) => (
                     <option key={batch._id} value={batch._id}>
                       {batch.name}
                     </option>
                   ))}
                 </select>
+              ) : (
+                <div className="w-full px-4 py-3 border border-red-300 dark:border-red-600 rounded-xl dark:bg-red-900/20 text-red-700 dark:text-red-300">
+                  ❌ No batches available for selected course
+                </div>
               )}
               {stepErrors.batchId && <p className="text-red-600 text-xs mt-1">{stepErrors.batchId}</p>}
             </div>

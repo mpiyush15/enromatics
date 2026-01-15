@@ -1,4 +1,5 @@
 import Course from "../models/Course.js";
+import Batch from "../models/Batch.js";
 
 /**
  * Get all courses for a tenant
@@ -23,7 +24,7 @@ export const getCourses = async (req, res) => {
 };
 
 /**
- * Get single course by ID
+ * Get single course by ID (with batches)
  */
 export const getCourseById = async (req, res) => {
   try {
@@ -39,9 +40,19 @@ export const getCourseById = async (req, res) => {
       });
     }
 
+    // Fetch all batches linked to this course
+    const batches = await Batch.find({ courseId: id, tenantId })
+      .select("_id name description startDate endDate capacity enrolledCount status")
+      .sort({ createdAt: -1 });
+
+    console.log(`[GET COURSE] Course ${id} has ${batches.length} batches`);
+
     res.status(200).json({
       success: true,
-      course,
+      course: {
+        ...course.toObject(),
+        batches,
+      },
     });
   } catch (error) {
     console.error("Error fetching course:", error);

@@ -1,4 +1,5 @@
 import Batch from "../models/Batch.js";
+import BatchStudent from "../models/BatchStudent.js";
 
 /**
  * Get all batches for a tenant
@@ -11,11 +12,24 @@ export const getBatches = async (req, res) => {
       .populate("courseId", "name fees duration") // Populate course with fees and duration
       .sort({ createdAt: -1 });
 
-    // Map to include courseName field for easy access
-    const batchesWithCourseName = batches.map((batch) => ({
-      ...batch.toObject(),
-      courseName: batch.courseId?.name || null,
-    }));
+    // Calculate actual enrolled count from BatchStudent collection
+    const batchesWithCourseName = await Promise.all(
+      batches.map(async (batch) => {
+        const enrolledCount = await BatchStudent.countDocuments({
+          tenantId,
+          batchId: batch._id,
+          status: "active",
+        });
+
+        return {
+          ...batch.toObject(),
+          courseName: batch.courseId?.name || null,
+          enrolledCount, // Override with actual count from BatchStudent
+        };
+      })
+    );
+
+    console.log(`✅ Fetched ${batchesWithCourseName.length} batches with actual enrolled counts`);
 
     res.status(200).json({
       success: true,
@@ -48,11 +62,19 @@ export const getBatchById = async (req, res) => {
       });
     }
 
+    // Get actual enrolled count from BatchStudent collection
+    const enrolledCount = await BatchStudent.countDocuments({
+      tenantId,
+      batchId: batch._id,
+      status: "active",
+    });
+
     res.status(200).json({
       success: true,
       batch: {
         ...batch.toObject(),
         courseName: batch.courseId?.name || null,
+        enrolledCount, // Override with actual count
       },
     });
   } catch (error) {

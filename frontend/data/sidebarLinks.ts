@@ -156,12 +156,8 @@ export const sidebarLinks = [
         href: "/dashboard/academics/schedules",
       },
       {
-        label: "✅ Test Attendance",
-        href: "/dashboard/academics/attendance",
-      },
-      {
-        label: "📝 Marks Entry",
-        href: "/dashboard/academics/marks",
+        label: "📊 Test Results",
+        href: "/dashboard/client/[tenantId]/academics/results",
       },
       {
         label: "📊 Test Reports",

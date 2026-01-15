@@ -34,6 +34,8 @@ export default function StudentProfilePage() {
   const [sendingNotification, setSendingNotification] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "payments" | "attendance" | "progress">("overview");
   const [batches, setBatches] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
@@ -104,9 +106,50 @@ export default function StudentProfilePage() {
     }
   };
 
+  const fetchCourses = async () => {
+    console.log("[FETCH COURSES] Starting fetch with tenantId:", tenantId);
+    setLoadingCourses(true);
+    
+    if (!tenantId) {
+      console.warn("[FETCH COURSES] Missing tenantId, skipping fetch");
+      setCourses([]);
+      setLoadingCourses(false);
+      return;
+    }
+
+    try {
+      const url = `/api/academics/courses?tenantId=${tenantId}`;
+      console.log("[FETCH COURSES] Calling:", url);
+      
+      const res = await fetch(url, { credentials: 'include' });
+      console.log("[FETCH COURSES] Response status:", res.status);
+      
+      const data = await res.json();
+      console.log("[FETCH COURSES] Full response:", data);
+
+      if (!res.ok) {
+        console.error("[FETCH COURSES] API returned error:", data.message);
+        setCourses([]);
+        setLoadingCourses(false);
+        return;
+      }
+
+      // Extract courses from response
+      const coursesList = data.data || data.courses || [];
+      console.log("[FETCH COURSES] Extracted courses count:", coursesList.length);
+      console.log("[FETCH COURSES] Courses:", coursesList);
+      
+      setCourses(Array.isArray(coursesList) ? coursesList : []);
+    } catch (err: any) {
+      console.error("[FETCH COURSES] Error:", err.message);
+      setCourses([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
   const fetchAttendance = async () => {
     if (!studentId) return;
-    
     try {
       setLoadingAttendance(true);
       
@@ -220,6 +263,7 @@ export default function StudentProfilePage() {
     if (!user) return;
     fetchStudent();
     fetchBatches();
+    fetchCourses();
   }, [user, studentId, tenantId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -240,6 +284,12 @@ export default function StudentProfilePage() {
 
       if (data && data.student) {
         setStudent(data.student);
+        // 🔄 Broadcast refresh signal to other pages
+        window.dispatchEvent(new CustomEvent('studentDataUpdated', { 
+          detail: { studentId, batchId: data.student.batchId, courseId: data.student.course } 
+        }));
+        // Trigger students list page refresh via localStorage
+        localStorage.setItem('studentsRefreshNeeded', Date.now().toString());
       }
       setEditing(false);
       setStatus("✅ Saved successfully!");
@@ -691,36 +741,99 @@ export default function StudentProfilePage() {
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Course</label>
                   {editing ? (
-                    <input 
-                      name="course" 
-                      value={form.course} 
-                      onChange={handleChange} 
-                      className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600" 
-                    />
+                    <>
+                      {loadingCourses ? (
+                        <div className="w-full px-4 py-2 border-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-600 border-t-transparent"></div>
+                          Loading courses...
+                        </div>
+                      ) : courses.length === 0 ? (
+                        <div className="w-full px-4 py-2 border-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+                          ❌ No courses available
+                        </div>
+                      ) : (
+                        <select
+                          name="course"
+                          value={form.course || ''}
+                          onChange={handleChange}
+                          className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600"
+                        >
+                          <option value="">-- Select Course --</option>
+                          {courses.map((c: any) => (
+                            <option key={c._id} value={c._id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </>
                   ) : (
-                    <p className="text-lg font-semibold">{student.course}</p>
+                    <p className="text-lg font-semibold">
+                      {(() => {
+                        // Find the course name from courses array using the course ID
+                        if (!student.course) return "Not assigned";
+                        
+                        // First try to find using courses array
+                        const foundCourse = courses.find((c: any) => c._id === student.course);
+                        if (foundCourse) return foundCourse.name;
+                        
+                        // Fallback to course name stored on student (for old data)
+                        return student.course;
+                      })()}
+                    </p>
                   )}
                 </div>
 
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
                   <label className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 block">Batch</label>
                   {editing ? (
-                    <select
-                      name="batchId"
-                      value={form.batchId || ''}
-                      onChange={handleChange}
-                      disabled={loadingBatches}
-                      className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600"
-                    >
-                      <option value="">
-                        {loadingBatches ? 'Loading batches...' : 'Select batch'}
-                      </option>
-                      {batches.map((batch) => (
-                        <option key={batch._id} value={batch._id}>
-                          {batch.name}
-                        </option>
-                      ))}                   
-                    </select>
+                    <>
+                      {!form.course ? (
+                        <div className="w-full px-4 py-2 border-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300">
+                          📌 Select a course first to see available batches
+                        </div>
+                      ) : (
+                        <>
+                          {(() => {
+                            const filteredBatches = batches.filter((batch) => {
+                              // Handle batch.courseId as both object and string
+                              const batchCourseId = typeof batch.courseId === 'object' && batch.courseId?._id 
+                                ? batch.courseId._id 
+                                : batch.courseId;
+                              return batchCourseId === form.course;
+                            });
+                            
+                            console.log("[BATCH FILTER]", {
+                              selectedCourse: form.course,
+                              totalBatches: batches.length,
+                              filteredBatches: filteredBatches.length,
+                              batches: batches.map(b => ({ name: b.name, courseId: b.courseId }))
+                            });
+
+                            return filteredBatches.length > 0 ? (
+                              <select
+                                name="batchId"
+                                value={form.batchId || ''}
+                                onChange={handleChange}
+                                disabled={loadingBatches}
+                                className="w-full px-4 py-2 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600"
+                              >
+                                <option value="">-- Select Batch --</option>
+                                {filteredBatches.map((batch) => (
+                                  <option key={batch._id} value={batch._id}>
+                                    {batch.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="w-full px-4 py-2 border-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300">
+                                ❌ No batches available for this course
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </>
                   ) : (
                     <p className="text-lg font-semibold">{student.batchName || "Not assigned"}</p>
                   )}

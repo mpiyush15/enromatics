@@ -57,6 +57,11 @@ const testSchema = new mongoose.Schema(
       enum: ["scheduled", "ongoing", "completed", "cancelled"],
       default: "scheduled",
     },
+    lessonId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lesson",
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

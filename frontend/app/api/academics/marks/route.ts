@@ -67,8 +67,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const EXPRESS_URL = (process as any).env?.EXPRESS_BACKEND_URL;
+    if (!EXPRESS_URL) {
+      return NextResponse.json(
+        { success: false, message: 'Backend configuration error' },
+        { status: 500 }
+      );
+    }
+
+    console.log('📤 Calling Express:', `${EXPRESS_URL}/api/academics/tests/${testId}/marks`);
+
     const cookies = extractCookies(request);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/academics/tests/${testId}/marks`, {
+    const res = await fetch(`${EXPRESS_URL}/api/academics/tests/${testId}/marks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,6 +97,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ Marks saved successfully');
     return NextResponse.json({
       success: true,
       message: 'Marks saved successfully',
