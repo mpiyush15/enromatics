@@ -57,23 +57,34 @@ export default function StudentAttendancePage() {
   const fetchAttendance = async (month: number, year: number) => {
     setLoading(true);
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        setStatus("Not authorized, no token");
+        setLoading(false);
+        return;
+      }
+
+      const headers = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+
       const res = await fetch(
         `${API_BASE_URL}/api/student-auth/attendance?month=${month}&year=${year}`,
-        { credentials: "include" }
+        { headers }
       );
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "Not authenticated");
-
-      setRecords(data.records || []);
-      setSummary(data.summary || null);
-      setStatus("");
+      if (res.ok) {
+        setRecords(data.records || []);
+        setSummary(data.summary || null);
+        setStatus("");
+      } else {
+        setStatus(data.message || "Error loading attendance");
+      }
     } catch (err: any) {
       console.error(err);
       setStatus(err.message || "Error loading attendance");
-      if (err.message.includes("authenticated")) {
-        setTimeout(() => router.push("/student/login"), 800);
-      }
     } finally {
       setLoading(false);
     }
@@ -330,99 +341,86 @@ export default function StudentAttendancePage() {
           </div>
         )}
 
-        {/* Calendar */}
-        {loading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading attendance...</p>
+        {/* Two Column Layout - Calendar + Table */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Calendar Column */}
+          <div>
+            {loading ? (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">Loading...</p>
+              </div>
+            ) : (
+              <AttendanceCalendar
+                records={records}
+                month={currentMonth}
+                year={currentYear}
+                onMonthChange={handleMonthChange}
+              />
+            )}
           </div>
-        ) : (
-          <AttendanceCalendar
-            records={records}
-            month={currentMonth}
-            year={currentYear}
-            onMonthChange={handleMonthChange}
-          />
-        )}
 
-        {/* Recent Records */}
-        {!loading && records.length > 0 && (
-          <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
-              Recent Attendance
-            </h3>
-            <div className="space-y-3">
-              {records.slice(0, 10).map((record) => (
-                <div
-                  key={record._id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
-                        record.status === "present"
-                          ? "bg-green-500"
-                          : record.status === "absent"
-                          ? "bg-red-500"
-                          : record.status === "late"
-                          ? "bg-yellow-500"
-                          : "bg-purple-500"
-                      }`}
-                    >
-                      {record.status === "present"
-                        ? "✓"
-                        : record.status === "absent"
-                        ? "✗"
-                        : record.status === "late"
-                        ? "⏰"
-                        : "📝"}
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-800 dark:text-white">
-                        {new Date(record.date).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </div>
-                      {record.remarks && (
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          {record.remarks}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-                      record.status === "present"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : record.status === "absent"
-                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        : record.status === "late"
-                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                        : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                    }`}
-                  >
-                    {record.status}
-                  </span>
-                </div>
-              ))}
+          {/* Table Column */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                Attendance Records
+              </h3>
+              <button
+                onClick={printAttendanceList}
+                className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-colors text-sm"
+              >
+                🖨️ Print
+              </button>
             </div>
+            
+            {!loading && records.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-2 px-2 font-semibold text-gray-700 dark:text-gray-300">Date</th>
+                      <th className="text-left py-2 px-2 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                      <th className="text-left py-2 px-2 font-semibold text-gray-700 dark:text-gray-300">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((record) => (
+                      <tr key={record._id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="py-3 px-2 text-gray-800 dark:text-gray-200">
+                          {new Date(record.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric"
+                          })}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
+                            record.status === "present"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              : record.status === "absent"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                              : record.status === "late"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                              : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                          {record.remarks || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : !loading ? (
+              <div className="text-center py-6">
+                <p className="text-gray-600 dark:text-gray-400 text-sm">No records for this month</p>
+              </div>
+            ) : null}
           </div>
-        )}
-
-        {!loading && records.length === 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-12 text-center">
-            <div className="text-6xl mb-4">📅</div>
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
-              No Attendance Records
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              No attendance has been marked for this month yet.
-            </p>
-          </div>
-        )}
+        </div>
       </div>
     </ClientDashboard>
   );

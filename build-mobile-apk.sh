@@ -5,7 +5,7 @@
 
 set -e  # Exit on any error
 
-MOBILE_DIR="/Users/mpiyush/Library/Mobile Documents/com~apple~CloudDocs/My Biz/Pixels/Pixels Projects/Pixels web dashboard/EnromaticsMobile"
+MOBILE_DIR="/Users/mpiyush/Documents/Pixels_web_ dashboard/EnromaticsMobile"
 TENANT_ID=${1:-"demo"}
 
 echo "🏗️  Building mobile app APK for tenant: $TENANT_ID"

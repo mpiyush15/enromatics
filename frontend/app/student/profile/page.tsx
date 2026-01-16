@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import { getTenantFromBrowser } from "@/lib/middleware/tenantContext";
 
 export default function StudentProfilePage() {
   const router = useRouter();
+  const [tenant, setTenant] = useState<string | null>(null);
   const [student, setStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -17,8 +19,9 @@ export default function StudentProfilePage() {
     address: "",
   });
 
+  // Student sidebar navigation links
   const studentLinks = [
-    { href: "/student/dashboard", label: "🏠 Dashboard" },
+    { href: "/student/home", label: "🏠 Dashboard" },
     { href: "/student/profile", label: "🧑‍💻 My Profile" },
     { href: "/student/attendance", label: "📅 My Attendance" },
     { href: "/student/fees", label: "💳 Fees & Payments" },
@@ -26,8 +29,8 @@ export default function StudentProfilePage() {
       label: "📚 Academics",
       href: "#",
       children: [
-        { label: "� Test Schedule", href: "/student/test-schedule" },
-        { label: "�📖 My Tests", href: "/student/my-tests" },
+        { label: "📝 Test Schedule", href: "/student/test-schedule" },
+        { label: "📖 My Tests", href: "/student/my-tests" },
         { label: "📊 Test Reports", href: "/student/test-reports" },
       ]
     },
@@ -35,28 +38,47 @@ export default function StudentProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`${process.env.EXPRESS_BACKEND_URL}/api/student-auth/me`, { credentials: "include" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Not authenticated");
-      setStudent(data);
-      setForm({
-        name: data.name || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        address: data.address || "",
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch("http://localhost:5050/api/student-auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (res.ok) {
+        const data = await res.json();
+        setStudent(data.student || data);
+        setForm({
+          name: data.student?.name || data.name || "",
+          email: data.student?.email || data.email || "",
+          phone: data.student?.phone || data.phone || "",
+          address: data.student?.address || data.address || "",
+        });
+      } else {
+        setStatus("Failed to load profile");
+      }
     } catch (err: any) {
       console.error(err);
-      setStatus(err.message || "Error");
-      setTimeout(() => router.push("/student/login"), 800);
+      setStatus(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    const tenantSubdomain = getTenantFromBrowser();
+    setTenant(tenantSubdomain);
+
+    if (!tenantSubdomain) {
+      setLoading(false);
+      return;
+    }
+
     fetchProfile();
-  }, []);
+  }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -65,10 +87,13 @@ export default function StudentProfilePage() {
   const handleSave = async () => {
     setStatus("Saving...");
     try {
-      const res = await fetch(`${process.env.EXPRESS_BACKEND_URL}/api/student-auth/update-profile`, {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`http://localhost:5050/api/student-auth/update-profile`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(form),
       });
       const data = await res.json();

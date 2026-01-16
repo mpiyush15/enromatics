@@ -389,6 +389,23 @@ export const getStudentById = async (req, res) => {
     // fetch payments for this student
     const payments = await Payment.find({ tenantId, studentId: student._id }).sort({ date: -1 });
 
+    console.log(`✅ STUDENT DETAILS RESPONSE:`);
+    console.log(`   Student ID: ${student._id}`);
+    console.log(`   Student Name: ${student.name}`);
+    console.log(`   Fees: ${student.fees}`);
+    console.log(`   Balance: ${student.balance}`);
+    console.log(`   TenantId: ${tenantId}`);
+    console.log(`   Payments found: ${payments.length}`);
+    if (payments.length > 0) {
+      console.log(`   Sample payment:`, {
+        _id: payments[0]._id,
+        amount: payments[0].amount,
+        date: payments[0].date,
+        method: payments[0].method,
+        status: payments[0].status
+      });
+    }
+
     res.status(200).json({ success: true, student, payments });
   } catch (err) {
     console.error("Get student error:", err);

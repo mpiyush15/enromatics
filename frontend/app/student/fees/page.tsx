@@ -30,23 +30,30 @@ export default function StudentFeesPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { credentials: "include" });
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        setStatus("Not authenticated");
+        setLoading(false);
+        return;
+      }
+
+      const headers = { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { headers });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Not authenticated");
-      setStudent(data);
       
-      // Fetch payments for this student
-      const paymentsRes = await fetch(`${API_BASE_URL}/api/student-auth/payments`, { 
-        credentials: "include" 
-      });
-      const paymentsData = await paymentsRes.json();
-      if (paymentsRes.ok && paymentsData.payments) {
-        setPayments(paymentsData.payments);
+      if (res.ok) {
+        setStudent(data);
+        setStatus("");
+      } else {
+        setStatus("Failed to load student data");
       }
     } catch (err: any) {
       console.error(err);
-      setStatus(err.message || "Error");
-      setTimeout(() => router.push("/student/login"), 800);
+      setStatus(err.message || "Error loading data");
     } finally {
       setLoading(false);
     }

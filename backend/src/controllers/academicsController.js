@@ -415,7 +415,11 @@ export const getStudentTests = async (req, res) => {
     const studentId = req.params.studentId;
     const tenantId = req.user.tenantId;
 
-    const student = await Student.findById(studentId);
+    // Get student with batch info
+    const Student = await import("../models/Student.js");
+    const Batch = await import("../models/Batch.js");
+    
+    const student = await Student.default.findById(studentId).lean();
     if (!student) {
       return res.status(404).json({
         success: false,
@@ -423,10 +427,24 @@ export const getStudentTests = async (req, res) => {
       });
     }
 
+    // Get batch name if batchId exists
+    let batchName = student.batch;
+    if (student.batchId) {
+      const batchDoc = await Batch.default.findById(student.batchId).lean();
+      if (batchDoc) {
+        batchName = batchDoc.name;
+      }
+    }
+
+    console.log(`✅ ADMIN TEST FETCH: Student ${student.name}, Course: ${student.course}, Batch: ${batchName}`);
+
     // Get all marks for the student
-    const marks = await TestMarks.find({ studentId, tenantId })
+    const TestMarks = await import("../models/TestMarks.js");
+    const marks = await TestMarks.default.find({ studentId, tenantId })
       .populate("testId")
       .sort({ createdAt: -1 });
+
+    console.log(`✅ Test marks found: ${marks.length}`);
 
     res.status(200).json({
       success: true,
@@ -549,16 +567,31 @@ export const getTestsForStudent = async (req, res) => {
       });
     }
 
+    // Get batch name from batchId
+    let batchName = student.batch; // Fallback to existing batch field
+    if (student.batchId) {
+      const Batch = await import("../models/Batch.js");
+      const batchDoc = await Batch.default.findById(student.batchId).lean();
+      if (batchDoc) {
+        batchName = batchDoc.name;
+        console.log(`✅ STUDENT TEST FETCH: Student ${student.name}, Course: ${student.course}, Batch: ${batchName}`);
+      }
+    }
+
     // Fetch tests for student's course, batch, and tenant
     const query = {
       tenantId: student.tenantId,
       course: student.course,
-      batch: student.batch,
+      batch: batchName, // Use resolved batch name
     };
+
+    console.log(`🔍 Test query:`, query);
 
     const tests = await Test.find(query)
       .populate("createdBy", "name email")
       .sort({ testDate: -1 });
+
+    console.log(`✅ Tests found: ${tests.length}`);
 
     res.status(200).json({
       success: true,

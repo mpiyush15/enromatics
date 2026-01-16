@@ -54,14 +54,27 @@ export default function StudentProfilePage() {
       );
 
       if (err) {
+        console.error("❌ API Error:", err);
         setStatus(err.message || "Failed to fetch student");
         setLoading(false);
         return;
       }
 
+      console.log("✅ STUDENT DETAILS RECEIVED:");
+      console.log(`   Student: ${data?.student?.name}`);
+      console.log(`   Fees: ${data?.student?.fees}`);
+      console.log(`   Balance: ${data?.student?.balance}`);
+      console.log(`   Payments Count: ${data?.payments?.length || 0}`);
+      console.log(`   Full Response:`, data);
+
       if (data && data.success && data.student) {
         setStudent(data.student);
         setPayments(data.payments || []);
+        
+        if (!data.payments || data.payments.length === 0) {
+          console.warn("⚠️  No payments in response!");
+        }
+
         setForm({
           name: data.student.name || "",
           email: data.student.email || "",

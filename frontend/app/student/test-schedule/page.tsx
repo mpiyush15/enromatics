@@ -34,28 +34,36 @@ export default function StudentTestSchedulePage() {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
       // Get student info
       const studentRes = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
-        credentials: "include",
+        headers,
       });
       const studentData = await studentRes.json();
       
-      if (!studentRes.ok) {
-        setTimeout(() => router.push("/student/login"), 800);
-        return;
+      if (studentRes.ok) {
+        setStudent(studentData);
+        console.log("✅ Student fetched:", studentData.name, "Batch:", studentData.batchName);
       }
-      
-      setStudent(studentData);
 
-      // Fetch all tests for student's course and batch using student-specific endpoint
+      // Fetch all tests for student's course and batch
       const testsRes = await fetch(
         `${API_BASE_URL}/api/academics/student/tests`,
-        { credentials: "include" }
+        { headers }
       );
       const testsData = await testsRes.json();
       
       if (testsRes.ok) {
-        setTests(testsData.tests || []);
+        const testsList = testsData.tests || [];
+        setTests(testsList);
+        console.log("✅ Tests fetched:", testsList.length, "tests found");
       }
     } catch (error) {
       console.error("Error fetching data:", error);

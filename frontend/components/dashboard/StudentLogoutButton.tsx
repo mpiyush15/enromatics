@@ -1,15 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { authService } from "@/lib/authService";
 import { useState } from "react";
 
-export default function LogoutButton() {
-  const pathname = usePathname();
+export default function StudentLogoutButton() {
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Check if student portal
-  const isStudentPortal = pathname?.includes('/student/');
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -19,25 +13,15 @@ export default function LogoutButton() {
       localStorage.removeItem("userEmail");
       localStorage.removeItem("userId");
       
-      // Clear token cookies
+      // Clear token cookie
       document.cookie = "jwt=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
       
-      // Call authService if not student portal
-      if (!isStudentPortal) {
-        await authService.logout();
-      }
-      
       console.log("✅ Logout successful");
-      
-      // Redirect based on portal type
-      const redirectUrl = isStudentPortal ? "/student/login" : "/login";
-      window.location.href = redirectUrl;
+      // Use window.location for full page redirect to ensure /student/login path
+      window.location.href = "/student/login";
     } catch (error) {
       console.error("❌ Logout failed:", error);
-      // Still redirect even if logout fails
-      const redirectUrl = isStudentPortal ? "/student/login" : "/login";
-      window.location.href = redirectUrl;
     } finally {
       setIsLoading(false);
     }

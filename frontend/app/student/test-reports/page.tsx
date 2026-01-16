@@ -32,27 +32,35 @@ export default function StudentTestReportsPage() {
 
   const fetchStudentData = async () => {
     try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
       const studentRes = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
-        credentials: "include",
+        headers,
       });
       const studentData = await studentRes.json();
       
-      if (!studentRes.ok) {
-        setTimeout(() => router.push("/student/login"), 800);
-        return;
-      }
-      
-      setStudent(studentData);
+      if (studentRes.ok) {
+        setStudent(studentData);
+        console.log("✅ Student fetched:", studentData.name);
 
-      // Fetch test marks
-      const testsRes = await fetch(
-        `${API_BASE_URL}/api/academics/students/${studentData._id}/tests`,
-        { credentials: "include" }
-      );
-      const testsData = await testsRes.json();
-      
-      if (testsRes.ok) {
-        setTests(testsData.tests || []);
+        // Fetch test marks
+        const testsRes = await fetch(
+          `${API_BASE_URL}/api/academics/students/${studentData._id}/tests`,
+          { headers }
+        );
+        const testsData = await testsRes.json();
+        
+        if (testsRes.ok) {
+          const testsList = testsData.tests || [];
+          setTests(testsList);
+          console.log("✅ Test reports fetched:", testsList.length, "tests with marks");
+        }
       }
     } catch (error) {
       console.error("Error fetching data:", error);

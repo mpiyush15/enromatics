@@ -87,9 +87,6 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
         <div className="px-2 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition">
           <DarkModeToggle />
         </div>
-        
-        {/* Logout Button */}
-        
       </div>
     </div>
   );

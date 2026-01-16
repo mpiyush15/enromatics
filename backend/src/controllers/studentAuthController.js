@@ -1,41 +1,50 @@
 import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
+import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 
 const generateToken = (id, email, tenantId) =>
   jwt.sign({ id, email, role: "student", tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 export const loginStudent = async (req, res) => {
   try {
-    const { email, password, tenantId } = req.body;
+    const { email, password, subdomain } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password required" });
 
-    // Require tenantId for student mobile login to enforce tenant isolation.
-    // If tenantId is not provided, reject and ask client to include the tenant identifier (the tenant app or registration link provides this).
-    if (!tenantId) {
-      console.log("❌ Tenant ID not provided in student login request");
-      return res.status(400).json({ message: "tenantId is required for student login. Please use your institute's app or include the tenant identifier." });
-    }
-
     const emailQuery = String(email).trim();
-    console.log("🔐 Student login attempt for email:", emailQuery, "tenantId:", tenantId);
-    // case-insensitive search and tenant-scoped lookup to avoid cross-tenant logins
+    console.log("🔐 Student login attempt for email:", emailQuery, "subdomain:", subdomain);
+    
+    // 🔒 SECURITY: Resolve subdomain to tenantId
+    if (!subdomain) {
+      return res.status(400).json({ message: "Subdomain is required" });
+    }
+    
+    const tenantId = await resolveTenantFromSubdomain(subdomain);
+    if (!tenantId) {
+      console.log("❌ Invalid subdomain:", subdomain);
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+    
+    console.log("✅ Subdomain resolved:", subdomain, "→ TenantId:", tenantId);
+    
+    // 🔒 SECURITY: Find student by email AND tenant (not global)
     const student = await Student.findOne({ 
       email: { $regex: `^${emailQuery}$`, $options: "i" },
-      tenantId: tenantId
+      tenantId: tenantId  // ⚠️ CRITICAL: Only students from this tenant
     });
 
     if (!student) {
-      console.log("❌ Student not found for email:", emailQuery, "under tenant:", tenantId);
-      return res.status(404).json({ message: "Student not found for this institute. Please ensure you are using the correct institute app or registration link." });
+      console.log("❌ Student not found for email:", emailQuery, "in tenant:", tenantId);
+      return res.status(404).json({ message: "Email not found in this organization. Please check and try again." });
     }
     
-    console.log("✅ Student found:", student.name, "| Has password:", !!student.password);
+    console.log("✅ Student found:", student.name, "| TenantId:", student.tenantId, "| Has password:", !!student.password);
     
     if (!student.password) {
       console.log("❌ Student has no password set");
-      return res.status(401).json({ message: "Password not set for this account. Please contact your administrator to reset your password." });
+      return res.status(401).json({ message: "Password not set for this account. Please contact your administrator." });
     }
 
+    // Verify password
     const isMatch = await student.matchPassword(password);
     
     if (!isMatch) {
@@ -57,7 +66,7 @@ export const loginStudent = async (req, res) => {
 
     res.status(200).json({ 
       success: true, 
-      token, // Include token for mobile apps
+      token,
       student: student.toObject() 
     });
   } catch (err) {
@@ -71,11 +80,35 @@ export const getCurrentStudent = async (req, res) => {
     // protectStudent middleware sets req.student
     if (!req.student) return res.status(401).json({ message: "Not authenticated" });
 
-    // Include payment history for student
+    // Include payment history for student with tenant isolation
     const Payment = await import("../models/Payment.js");
-    const payments = await Payment.default.find({ studentId: req.student._id }).sort({ date: -1 });
+    const payments = await Payment.default.find({ 
+      tenantId: req.student.tenantId,
+      studentId: req.student._id 
+    }).sort({ date: -1 }).lean();
 
-    res.status(200).json({ ...req.student.toObject(), payments });
+    console.log(`✅ STUDENT AUTH GET CURRENT:`);
+    console.log(`   Student ID: ${req.student._id}`);
+    console.log(`   Student Name: ${req.student.name}`);
+    console.log(`   TenantId: ${req.student.tenantId}`);
+    console.log(`   Fees: ${req.student.fees}`);
+    console.log(`   Balance: ${req.student.balance}`);
+    console.log(`   Payments found: ${payments.length}`);
+    if (payments.length > 0) {
+      console.log(`   First payment:`, JSON.stringify(payments[0]));
+    }
+
+    const studentObj = req.student.toObject ? req.student.toObject() : req.student;
+    const responseData = { ...studentObj, payments };
+    
+    console.log(`   Response being sent:`, { 
+      name: responseData.name,
+      fees: responseData.fees,
+      balance: responseData.balance,
+      paymentsCount: responseData.payments.length
+    });
+
+    res.status(200).json(responseData);
   } catch (err) {
     console.error("Get current student error:", err);
     res.status(500).json({ message: "Server error" });
@@ -102,6 +135,7 @@ export const getStudentAttendance = async (req, res) => {
     }
 
     const records = await Attendance.default.find({
+      tenantId: req.student.tenantId,
       studentId: req.student._id,
       date: dateFilter
     }).sort({ date: -1 }).lean();

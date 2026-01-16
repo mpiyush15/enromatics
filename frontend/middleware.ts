@@ -122,9 +122,10 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   
   console.log(`🔐 Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`);
   
-  // Allow /tenant/login route always
-  if (pathname === '/tenant/login' || pathname.startsWith('/tenant/login/')) {
-    console.log(`✅ Allowing /tenant/login for tenant subdomain`);
+  // Allow /tenant/login and /student/login routes always
+  if (pathname === '/tenant/login' || pathname.startsWith('/tenant/login/') ||
+      pathname === '/student/login' || pathname.startsWith('/student/login/')) {
+    console.log(`✅ Allowing ${pathname} for tenant subdomain`);
     const response = NextResponse.next();
     response.cookies.set('tenant-context', subdomain, {
       domain: cookieDomain,
