@@ -7,25 +7,27 @@
 [33m[nodemon] watching path(s): *.*[39m
 [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
 [32m[nodemon] starting `node src/server.js`[39m
-[dotenv@17.2.3] injecting env (37) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (40) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
 📧 Email Configuration:
 - API URL: SET
 - API Token: SET
 - From: no-reply@enromatics.com
 - Agent: 7a9d95f044bb3fe3
-[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+✅ subscriptionNotificationRoutes.js loaded - registering routes
+🔴 Registering POST /send-expiry-notification route
+🔵 subscriptionNotificationRoutes imported: function Function
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
 🔍 Environment check:
 MONGODB_URI exists: true
 MONGODB_URI value: SET
 All env keys: [ 'MONGODB_URI' ]
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"invoiceNumber":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+🟢 Registered /api/subscription-notifications routes
+(node:25404) [MONGOOSE] Warning: Duplicate schema index on {"invoiceNumber":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"tenantId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"tenantId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"waMessageId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"conversationId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
-(node:24266) [MONGOOSE] Warning: Duplicate schema index on {"code":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:25404) [MONGOOSE] Warning: Duplicate schema index on {"code":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
 🚀 Server running on port 5050
+⚠️  Redis: Max reconnection attempts reached
+⚠️  Redis connection failed, using MongoDB fallback
 ✅ MongoDB Connected
 📦 Using database: enromatics
 🔧 Running database migrations...
@@ -43,20 +45,3 @@ All env keys: [ 'MONGODB_URI' ]
 ⏰ Running initial stale payment cleanup...
 Auto-cancel job completed: 0 stale pending payments cancelled
 ✅ Initial stale payment cleanup completed
-⚠️  Redis: Max reconnection attempts reached
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: read EIO
-    at TTY.onStreamRead (node:internal/stream_base_commons:216:20)
-Emitted 'error' event on ReadStream instance at:
-    at emitErrorNT (node:internal/streams/destroy:170:8)
-    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  errno: -5,
-  code: 'EIO',
-  syscall: 'read'
-}
-
-Node.js v22.15.1

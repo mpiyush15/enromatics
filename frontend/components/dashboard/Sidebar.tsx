@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
@@ -52,6 +52,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [cacheBust, setCacheBust] = useState(0); // Cache bust key
 
   // Load expanded state from localStorage on mount
   useEffect(() => {
@@ -77,10 +78,10 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     isExternal ? null : "/api/ui/sidebar",
     sidebarFetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 30 * 60 * 1000,
-      keepPreviousData: true,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 0,
+      keepPreviousData: false,
     }
   );
 
@@ -115,7 +116,8 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   };
 
   // Helper: find which dropdowns are parents of current active route
-  const getRequiredOpenDropdowns = () => {
+  // Memoized to prevent loop when links dependency changes
+  const getRequiredOpenDropdowns = useCallback(() => {
     const requiredOpen = new Set<string>();
     
     const walk = (items: SidebarLink[], parents: string[] = []) => {
@@ -131,7 +133,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     
     walk(links);
     return requiredOpen;
-  };
+  }, [pathname, links]);
 
   /* ======================== AUTO-CLOSE UNRELATED DROPDOWNS ON NAVIGATION ======================== */
   /* When user navigates to a different page, close dropdowns that aren't parents of the new page.    */
@@ -145,7 +147,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     
     // Close dropdowns not needed for this page; keep only required ones
     setExpanded(requiredOpen);
-  }, [pathname, user?.tenantId, user?.role, hasInitialized, links]);
+  }, [pathname, user?.tenantId, user?.role, hasInitialized, getRequiredOpenDropdowns]);
 
   /* ======================== ENSURE ACTIVE PAGE DROPDOWNS STAY OPEN ======================== */
   /* Safety: if a dropdown is needed for the current page but somehow closed, open it again.   */
@@ -162,12 +164,9 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       requiredOpen.forEach(p => next.add(p));
       return next;
     });
-  }, [pathname, user?.tenantId, user?.role, hasInitialized, links]);
+  }, [pathname, user?.tenantId, user?.role, hasInitialized, getRequiredOpenDropdowns]);
 
   /* ------------------------ HELPERS ------------------------ */
-  // Debug: Log user state
-  console.log("🔍 Sidebar render - User:", user?.email, "Role:", user?.role, "TenantID:", user?.tenantId, "Loading:", loading);
-
   function buildHref(href: string) {
     if (!href) return "#";
     
@@ -178,7 +177,6 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
         return "#";
       }
       const built = href.replace("[tenantId]", user.tenantId);
-      console.log(`🔧 buildHref: "${href}" → "${built}"`);
       return built;
     }
     
@@ -190,22 +188,14 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       href.startsWith("/dashboard")
     ) {
       const built = `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
-      console.log(`🔧 buildHref: "${href}" → "${built}"`);
       return built;
     }
-    console.log(`🔧 buildHref: "${href}" → unchanged (no tenant conversion)`);
     return href;
   }
 
   function isActive(href?: string) {
     if (!href) return false;
     const builtHref = buildHref(href);
-    
-    // Debug: Log sidebar active check
-    if (href.includes("overview")) {
-      console.log(`🔗 isActive check - href: "${href}", builtHref: "${builtHref}", pathname: "${pathname}", match: ${pathname === builtHref}`);
-    }
-    
     return pathname === builtHref;
   }
 

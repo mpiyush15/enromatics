@@ -136,6 +136,31 @@ const tenantSchema = new mongoose.Schema(
       updatedAt: { type: Date, default: null },
     },
 
+    // WhatsApp Event Triggers Configuration
+    eventTriggers: {
+      absenceNotifications: {
+        enabled: { type: Boolean, default: false },
+        template: {
+          type: String,
+          default: "Hi {studentName}, you were marked absent on {date}",
+        },
+      },
+      paymentReceipts: {
+        enabled: { type: Boolean, default: false },
+        template: {
+          type: String,
+          default: "Payment of ₹{amount} received on {date}",
+        },
+      },
+      testResults: {
+        enabled: { type: Boolean, default: false },
+        template: {
+          type: String,
+          default: "Your test result: {marks}/{total} ({percentage}%)",
+        },
+      },
+    },
+
     // Analytics and usage tracking (for future scaling)
     usage: {
       studentsCount: { type: Number, default: 0 },

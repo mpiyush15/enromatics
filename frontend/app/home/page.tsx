@@ -62,6 +62,12 @@ export default function Home() {
       title: "Automated Notifications",
       description: "Send automated fee reminders, attendance alerts, and exam notifications via WhatsApp, SMS, and email.",
       highlights: ["Fee Reminders", "Attendance Alerts", "Exam Notifications"]
+    },
+    {
+      icon: "🤖",
+      title: "WhatsApp Automation",
+      description: "⭐ NEW! Automatically send WhatsApp messages when students are marked absent, payments are due, or results are published. Customizable templates with smart placeholders. Optional add-on feature (₹1,000/month) with standard WhatsApp message charges.",
+      highlights: ["Auto Absence Notifications", "Customizable Templates", "Message Logs"]
     }
   ];
 

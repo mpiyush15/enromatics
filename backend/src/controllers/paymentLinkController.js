@@ -1,0 +1,302 @@
+import PaymentSession from '../models/PaymentSession.js';
+import Tenant from '../models/Tenant.js';
+import { PLANS } from '../config/plans.js';
+import { sendEmail } from '../services/emailService.js';
+import crypto from 'crypto';
+
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+
+/**
+ * Generate a unique payment link for tenant upgrade
+ * SuperAdmin selects plan and billing cycle
+ */
+export const generatePaymentLink = async (req, res) => {
+  try {
+    const { tenantId, planId, billingCycle } = req.body;
+    const superAdminId = req.user._id;
+
+    // Validate inputs
+    if (!tenantId || !planId || !billingCycle) {
+      return res.status(400).json({ 
+        message: 'tenantId, planId, and billingCycle are required' 
+      });
+    }
+
+    if (!['monthly', 'annual'].includes(billingCycle)) {
+      return res.status(400).json({ 
+        message: 'billingCycle must be "monthly" or "annual"' 
+      });
+    }
+
+    // Find plan
+    const plan = PLANS.find(p => p.id === planId);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    // Get tenant details
+    const tenant = await Tenant.findOne({ tenantId }).select('name email contactPhone');
+    if (!tenant) {
+      return res.status(404).json({ message: 'Tenant not found' });
+    }
+
+    // Calculate amount based on billing cycle
+    const amount = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceAnnual;
+
+    if (amount === 0) {
+      return res.status(400).json({ 
+        message: 'Cannot create payment link for free plan' 
+      });
+    }
+
+    // Generate unique session ID
+    const sessionId = crypto.randomBytes(16).toString('hex');
+
+    // Create payment session (valid for 48 hours)
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+    const paymentSession = await PaymentSession.create({
+      sessionId,
+      tenantId,
+      planId,
+      planName: plan.name,
+      billingCycle,
+      amount,
+      email: tenant.email || '',
+      phone: tenant.contactPhone || '',
+      expiresAt,
+      createdBy: superAdminId.toString(),
+      status: 'pending'
+    });
+
+    // Generate payment link
+    const paymentLink = `${FRONTEND_URL}/upgrade/checkout?session=${sessionId}`;
+
+    console.log(`✅ Payment link generated for tenant ${tenantId}`);
+    console.log(`   Plan: ${plan.name}, Amount: ₹${amount}`);
+    console.log(`   Link: ${paymentLink}`);
+
+    res.status(200).json({
+      success: true,
+      sessionId,
+      paymentLink,
+      amount,
+      plan: plan.name,
+      billingCycle,
+      email: tenant.email,
+      expiresAt: expiresAt.toISOString(),
+      message: 'Payment link generated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error generating payment link:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Send payment link via email
+ */
+export const sendPaymentLinkEmail = async (req, res) => {
+  try {
+    const { sessionId, recipientEmail } = req.body;
+
+    // Find payment session
+    const session = await PaymentSession.findOne({ sessionId });
+    if (!session) {
+      return res.status(404).json({ message: 'Payment session not found' });
+    }
+
+    // Check if session is expired
+    if (new Date() > session.expiresAt) {
+      return res.status(400).json({ message: 'Payment link has expired' });
+    }
+
+    const paymentLink = `${FRONTEND_URL}/upgrade/checkout?session=${sessionId}`;
+
+    // Send email
+    const emailContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; }
+            .plan-box { background: white; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .amount { font-size: 28px; color: #059669; font-weight: bold; }
+            .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+            .footer { color: #6b7280; font-size: 12px; text-align: center; margin-top: 20px; }
+            .alert { background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 4px; color: #92400e; margin: 15px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>💳 Complete Your Upgrade</h1>
+              <p>Your payment link is ready!</p>
+            </div>
+            
+            <div class="content">
+              <p>Hello,</p>
+              
+              <p>We're excited to help you upgrade your Enromatics subscription. Click the button below to complete your payment.</p>
+              
+              <div class="plan-box">
+                <h3 style="margin-top: 0;">${session.planName}</h3>
+                <p><strong>Billing:</strong> ${session.billingCycle === 'monthly' ? 'Monthly' : 'Annual'}</p>
+                <p><strong>Amount:</strong> <span class="amount">₹${session.amount.toLocaleString('en-IN')}</span></p>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${paymentLink}" class="button">Complete Payment</a>
+              </div>
+              
+              <div class="alert">
+                <strong>⏰ Important:</strong> This payment link expires in 48 hours (${new Date(session.expiresAt).toLocaleString('en-IN')})
+              </div>
+              
+              <h4>Can't click the button?</h4>
+              <p>Copy and paste this link in your browser:</p>
+              <p style="word-break: break-all; background: #f3f4f6; padding: 10px; border-radius: 4px; font-size: 12px;">
+                ${paymentLink}
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+              
+              <h4>Why upgrade?</h4>
+              <ul>
+                <li>✓ Access all premium features</li>
+                <li>✓ Unlimited student management</li>
+                <li>✓ Priority support</li>
+                <li>✓ Advanced analytics</li>
+              </ul>
+              
+              <div class="footer">
+                <p>Questions? <a href="https://enromatics.com/support" style="color: #2563eb;">Contact our support team</a></p>
+                <p>© 2026 Enromatics. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    console.log(`📧 Sending payment link to ${recipientEmail}`);
+
+    // Send email using the email service
+    await sendEmail({
+      to: recipientEmail,
+      subject: `Complete Your Payment - ${session.planName} Plan Upgrade`,
+      html: emailContent,
+      type: 'payment-link',
+      tenantId: session.tenantId
+    });
+
+    console.log(`✅ Payment link email sent successfully to ${recipientEmail}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment link email sent successfully',
+      paymentLink
+    });
+
+  } catch (error) {
+    console.error('Error sending payment email:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message || 'Failed to send payment email' 
+    });
+  }
+};
+
+/**
+ * Get all plans for SuperAdmin to choose from
+ */
+export const getAllPlans = async (req, res) => {
+  try {
+    // Filter out trial and free plans
+    const paidPlans = PLANS.filter(p => p.priceMonthly > 0);
+
+    res.status(200).json({
+      success: true,
+      plans: paidPlans.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        priceMonthly: p.priceMonthly,
+        priceAnnual: p.priceAnnual
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching plans:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get payment session details (for verification)
+ */
+export const getPaymentSessionDetails = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await PaymentSession.findOne({ sessionId });
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    // Check expiry
+    const isExpired = new Date() > session.expiresAt;
+
+    res.status(200).json({
+      success: true,
+      sessionId: session.sessionId,
+      planName: session.planName,
+      billingCycle: session.billingCycle,
+      amount: session.amount,
+      email: session.email,
+      isExpired,
+      expiresAt: session.expiresAt,
+      status: session.status
+    });
+
+  } catch (error) {
+    console.error('Error fetching session details:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Get all payment sessions for a tenant
+ */
+export const getTenantPaymentSessions = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { status, limit = 10, page = 1 } = req.query;
+
+    const query = { tenantId };
+    if (status) query.status = status;
+
+    const sessions = await PaymentSession.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await PaymentSession.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      sessions,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+
+  } catch (error) {
+    console.error('Error fetching payment sessions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

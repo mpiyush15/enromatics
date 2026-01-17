@@ -50,6 +50,31 @@ export const markAttendance = async (req, res) => {
       modified: result.modifiedCount,
       upserted: result.upsertedCount
     });
+
+    // 🔥 NEW: Send WhatsApp absence notifications (async, don't wait)
+    // Wrapped in try-catch so it doesn't break attendance marking
+    try {
+      const whatsappService = await import("../services/whatsappEventService.js");
+      
+      for (const record of records) {
+        if (record.status === "absent") {
+          // Fire async - don't wait for response
+          whatsappService.default
+            .sendAbsenceNotification(tenantId, record.studentId, {
+              date: record.date,
+              remarks: record.remarks,
+            })
+            .catch((err) => {
+              console.error(`⚠️  WhatsApp error for student ${record.studentId}:`, err.message);
+            });
+        }
+      }
+    } catch (error) {
+      // Silently fail - attendance already marked successfully
+      console.error("⚠️  WhatsApp service error:", error.message);
+    }
+    // END NEW CODE
+
   } catch (err) {
     console.error("Mark attendance error:", err);
     res.status(500).json({ message: "Server error" });

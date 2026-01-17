@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Power, Loader, Mail, KeyRound } from "lucide-react";
+import { ArrowLeft, Power, Loader, Mail, KeyRound, CreditCard, Copy, Check } from "lucide-react";
 import { useSendSubscriptionNotification } from "@/hooks/useSendSubscriptionNotification";
+import PaymentLinkCard from "@/components/PaymentLinkCard";
 
 // Plan name mapping
 const PLAN_NAMES: Record<string, string> = {
@@ -504,6 +505,9 @@ export default function TenantDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Payment Link Card */}
+            <PaymentLinkCard tenantId={tenant.tenantId} />
 
             {/* Account Metadata Card */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6">

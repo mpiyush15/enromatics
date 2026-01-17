@@ -26,7 +26,7 @@ export const sidebarLinks = [
     children: [
       { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
       { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager", "accountant"] },
-      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["student"] },
+      { label: "📊 Attendance", href: "/dashboard/client/[tenantId]/students/attendance", roles: ["tenantAdmin", "manager", "student"] },
       { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] },
       { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
@@ -185,12 +185,13 @@ export const sidebarLinks = [
   {
     label: "⚙️ Institute Settings",
     href: "#",
-    roles: ["tenantAdmin", "Admin"],
+    roles: ["tenantAdmin"],
     children: [
-      { label: "� Profile", href: "/dashboard/profile", roles: ["tenantAdmin", "Admin"] },
-      { label: "👥 Staff Management", href: "/dashboard/client/[tenantId]/settings/staff", roles: ["tenantAdmin", "Admin"] },
+      { label: "👤 Profile", href: "/dashboard/profile", roles: ["tenantAdmin"] },
+      { label: "👥 Staff Management", href: "/dashboard/client/[tenantId]/settings/staff", roles: ["tenantAdmin"] },
       { label: "📄 My Subscription", href: "/dashboard/my-subscription", roles: ["tenantAdmin"] },
       { label: "💳 Payment History", href: "/dashboard/payments", roles: ["tenantAdmin"] },
+      { label: "📱 WhatsApp Events", href: "/dashboard/client/[tenantId]/whatsapp-events", roles: ["tenantAdmin"] },
     ],
   },
 ];
