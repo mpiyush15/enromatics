@@ -6,7 +6,8 @@ import {
   getAllPlans,
   getPaymentSessionDetails,
   getTenantPaymentSessions,
-  initiatePaymentLinkPayment
+  initiatePaymentLinkPayment,
+  handlePaymentLinkWebhook
 } from '../controllers/paymentLinkController.js';
 
 const router = express.Router();
@@ -35,6 +36,11 @@ router.get('/plans', getAllPlans);
  * Get payment session details (public - no auth needed)
  */
 router.get('/session/:sessionId', getPaymentSessionDetails);
+
+/**
+ * Webhook for payment link payments (public - called after payment confirmation)
+ */
+router.post('/webhook', handlePaymentLinkWebhook);
 
 /**
  * Get all payment sessions for a tenant

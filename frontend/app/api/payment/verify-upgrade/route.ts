@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         headers: {
           "x-api-version": "2023-08-01",
           "x-client-id": process.env.CASHFREE_CLIENT_ID || "",
-          "x-client-secret": process.env.CASHFREE_SECRET_KEY || "",
+          "x-client-secret": process.env.CASHFREE_CLIENT_SECRET || "",
           "Content-Type": "application/json",
         },
       }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       // Update subscription in backend
       console.log("💰 Payment confirmed - updating subscription...");
       
-      const updateResponse = await fetch(`${BACKEND_URL}/api/payment/webhook/cashfree`, {
+      const updateResponse = await fetch(`${BACKEND_URL}/api/payment-links/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

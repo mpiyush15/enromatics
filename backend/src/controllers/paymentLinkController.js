@@ -63,8 +63,8 @@ export const generatePaymentLink = async (req, res) => {
     // Generate unique session ID
     const sessionId = crypto.randomBytes(16).toString('hex');
 
-    // Create payment session (valid for 48 hours)
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    // Create payment session (valid for 24 hours)
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const paymentSession = await PaymentSession.create({
       sessionId,
@@ -74,7 +74,7 @@ export const generatePaymentLink = async (req, res) => {
       billingCycle,
       amount,
       email: tenant.email || '',
-      phone: tenant.contactPhone || '',
+      phone: tenant.contact?.phone || '',  // Use tenant.contact.phone (not contactPhone)
       expiresAt,
       createdBy: superAdminId.toString(),
       status: 'pending'
@@ -85,6 +85,8 @@ export const generatePaymentLink = async (req, res) => {
 
     console.log(`✅ Payment link generated for tenant ${tenantId}`);
     console.log(`   Plan: ${plan.name}, Amount: ₹${amount}`);
+    console.log(`   Email: ${tenant.email}`);
+    console.log(`   Phone: ${tenant.contact?.phone || '(no phone on file)'}`);
     console.log(`   Link: ${paymentLink}`);
 
     res.status(200).json({
@@ -384,6 +386,8 @@ export const initiatePaymentLinkPayment = async (req, res) => {
     console.log('📤 Sending to Cashfree:', {
       orderId,
       amount: session.amount,
+      email: session.email,
+      phone: session.phone || '(fallback: 9999999999)',
       returnUrl: orderPayload.order_meta.return_url
     });
 
@@ -426,6 +430,137 @@ export const initiatePaymentLinkPayment = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.response?.data?.message || error.message || 'Failed to initiate payment'
+    });
+  }
+};
+
+/**
+ * Webhook handler for payment link payments
+ * Called when payment is confirmed (from frontend verify-upgrade endpoint)
+ * Updates tenant subscription to paid plan
+ */
+export const handlePaymentLinkWebhook = async (req, res) => {
+  try {
+    const { orderId, status, sessionId } = req.body;
+
+    if (!orderId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderId and status are required'
+      });
+    }
+
+    console.log('🔔 Payment link webhook received:', {
+      orderId,
+      status,
+      sessionId
+    });
+
+    // Find the payment session
+    let session = null;
+    if (sessionId) {
+      session = await PaymentSession.findOne({ sessionId });
+    } else {
+      // Try to find by orderId
+      session = await PaymentSession.findOne({ orderId });
+    }
+
+    if (!session) {
+      console.warn('⚠️ Payment session not found for order:', orderId);
+      // Don't fail - payment might still be valid
+    }
+
+    // If payment is confirmed, update tenant subscription
+    if (status === 'PAID' || status === 'completed') {
+      const tenantId = session?.tenantId;
+      
+      if (!tenantId) {
+        console.error('❌ Cannot update tenant - tenantId not found');
+        return res.status(400).json({
+          success: false,
+          message: 'tenantId not found in payment session'
+        });
+      }
+
+      // Find tenant
+      const tenant = await Tenant.findOne({ tenantId });
+      if (!tenant) {
+        console.error('❌ Tenant not found:', tenantId);
+        return res.status(404).json({
+          success: false,
+          message: 'Tenant not found'
+        });
+      }
+
+      // Get the pending plan from session
+      const pendingPlan = session?.planId;
+      if (!pendingPlan) {
+        console.error('❌ No pending plan found in session');
+        return res.status(400).json({
+          success: false,
+          message: 'No plan information in payment session'
+        });
+      }
+
+      // Update tenant subscription to active with the new plan
+      const today = new Date();
+      const endDate = new Date(today);
+      
+      // Calculate end date based on billing cycle
+      if (session.billingCycle === 'annual') {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      } else {
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      tenant.plan = pendingPlan;
+      tenant.subscription = {
+        status: 'active',
+        paymentId: orderId,
+        startDate: today,
+        endDate: endDate,
+        billingCycle: session.billingCycle,
+        pendingPlan: null  // Clear pending plan
+      };
+      
+      await tenant.save();
+
+      // Update payment session to completed
+      if (session) {
+        session.status = 'completed';
+        session.completedAt = new Date();
+        await session.save();
+      }
+
+      console.log('✅ Tenant subscription updated:', {
+        tenantId,
+        plan: pendingPlan,
+        status: 'active',
+        endDate: endDate
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified and tenant subscription upgraded successfully',
+        details: {
+          tenantId,
+          plan: pendingPlan,
+          subscriptionStatus: 'active',
+          endDate: endDate
+        }
+      });
+    }
+
+    return res.status(200).json({
+      success: false,
+      message: `Payment status is ${status}, not confirmed yet`
+    });
+
+  } catch (error) {
+    console.error('❌ Error processing payment link webhook:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to process payment webhook'
     });
   }
 };
