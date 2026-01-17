@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
+/**
+ * PUBLIC API ROUTE - No authentication required
+ * 
+ * This endpoint is called from the public payment checkout page
+ * which is accessed via a public payment link (no login needed)
+ * 
+ * Security: Validated via sessionId which is tied to a specific tenant
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { sessionId, amount, email, planName, billingCycle } = body;
 
     if (!sessionId || !amount || !email) {
+      console.error("❌ Missing required fields:", { sessionId, amount, email });
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
         { status: 400 }
@@ -21,13 +30,25 @@ export async function POST(request: NextRequest) {
       planName,
     });
 
+    // Check if Cashfree credentials are set
+    const clientId = process.env.CASHFREE_CLIENT_ID;
+    const clientSecret = process.env.CASHFREE_SECRET_KEY;
+    
+    if (!clientId || !clientSecret) {
+      console.error("❌ Cashfree credentials not configured");
+      return NextResponse.json(
+        { success: false, message: "Payment gateway not configured" },
+        { status: 500 }
+      );
+    }
+
     // Call Cashfree API v3 to create payment session
     const response = await fetch("https://api.cashfree.com/pg/orders", {
       method: "POST",
       headers: {
         "x-api-version": "2023-08-01",
-        "x-client-id": process.env.CASHFREE_CLIENT_ID || "",
-        "x-client-secret": process.env.CASHFREE_SECRET_KEY || "",
+        "x-client-id": clientId,
+        "x-client-secret": clientSecret,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * PUBLIC PAYMENT CHECKOUT PAGE
+ * 
+ * Accessed via public payment link: /upgrade/checkout?session=[sessionId]
+ * No authentication required - link can be shared via email
+ * 
+ * Security: Each session is tied to a specific tenant and payment request
+ * SessionId acts as the authentication token for the payment
+ */
+
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader, AlertCircle, CheckCircle, ArrowLeft, CreditCard, Shield } from "lucide-react";
@@ -93,10 +103,11 @@ function UpgradeCheckoutContent() {
 
     try {
       // Initialize Cashfree payment
+      console.log("💳 Initiating payment for session:", session.sessionId);
+      
       const response = await fetch("/api/payment/initiate-upgrade", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           sessionId: session.sessionId,
           amount: session.amount,
@@ -106,9 +117,23 @@ function UpgradeCheckoutContent() {
         }),
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log("📋 Payment response status:", response.status);
+      console.log("📋 Payment response:", responseText.substring(0, 200));
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error("❌ Failed to parse response:", responseText.substring(0, 500));
+        setError("Server error: Invalid response");
+        setPaymentStatus("failed");
+        setProcessingPayment(false);
+        return;
+      }
 
       if (data.success && data.paymentSessionId) {
+        console.log("✅ Payment session created:", data.paymentSessionId);
         // Initialize Cashfree checkout
         const script = document.createElement("script");
         script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
@@ -116,6 +141,7 @@ function UpgradeCheckoutContent() {
         script.onload = () => {
           const cashfree = (window as any).Cashfree;
           if (cashfree) {
+            console.log("🎯 Opening Cashfree checkout");
             cashfree.checkout({
               paymentSessionId: data.paymentSessionId,
               redirectTarget: "_modal",
@@ -124,10 +150,12 @@ function UpgradeCheckoutContent() {
         };
         document.body.appendChild(script);
       } else {
+        console.error("❌ Payment API error:", data);
         setError(data.message || "Failed to initiate payment");
         setPaymentStatus("failed");
       }
     } catch (err: any) {
+      console.error("❌ Payment error:", err);
       setError(err.message || "Error processing payment");
       setPaymentStatus("failed");
     } finally {
