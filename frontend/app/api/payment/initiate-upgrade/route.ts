@@ -32,10 +32,12 @@ export async function POST(request: NextRequest) {
 
     // Check if Cashfree credentials are set
     const clientId = process.env.CASHFREE_CLIENT_ID;
-    const clientSecret = process.env.CASHFREE_SECRET_KEY;
+    const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
     
     if (!clientId || !clientSecret) {
       console.error("❌ Cashfree credentials not configured");
+      console.error("CASHFREE_CLIENT_ID:", clientId ? "✅ Set" : "❌ Missing");
+      console.error("CASHFREE_CLIENT_SECRET:", clientSecret ? "✅ Set" : "❌ Missing");
       return NextResponse.json(
         { success: false, message: "Payment gateway not configured" },
         { status: 500 }
