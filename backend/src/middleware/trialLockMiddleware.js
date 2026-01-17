@@ -2,7 +2,8 @@ import Tenant from '../models/Tenant.js';
 
 /**
  * Trial lock middleware: enforce 14-day trial window
- * If trial expired and no active subscription, block access
+ * If trial expired and no active subscription, block access to features
+ * BUT allow: subscription/upgrade routes, tenant settings, pricing
  */
 export const trialLock = async (req, res, next) => {
   try {
@@ -26,12 +27,26 @@ export const trialLock = async (req, res, next) => {
       return next(); // Trial still active
     }
 
-    // Trial expired and no active subscription
-    console.log(`Trial lock triggered for tenant: ${tenantId}`);
+    // Trial expired - check if this is an ALLOWED route
+    const allowedRoutes = [
+      '/api/tenants/', // Tenant settings/profile
+      '/api/subscription', // Subscription pages
+      '/api/payment', // Payment/upgrade
+      '/api/pricing', // Pricing info
+    ];
+
+    const isAllowedRoute = allowedRoutes.some(route => req.path.includes(route));
+
+    if (isAllowedRoute) {
+      return next(); // Allow access to settings/upgrade routes
+    }
+
+    // Trial expired and trying to access blocked feature
+    console.log(`Trial lock triggered for tenant: ${tenantId} on route: ${req.path}`);
     return res.status(402).json({
       success: false,
       code: 'trial_expired',
-      message: 'Your trial has expired. Please upgrade to continue.',
+      message: 'Your trial has expired. Please upgrade to continue using this feature.',
       upgradeUrl: `${process.env.FRONTEND_URL}/pricing`,
     });
   } catch (err) {

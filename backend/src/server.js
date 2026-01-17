@@ -55,6 +55,7 @@ import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
 console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
 import { dropOldStaffIndexes } from './migrations/dropOldIndexes.js';
+import { trialLock } from './middleware/trialLockMiddleware.js';
 
 
 
@@ -131,32 +132,39 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/auth", authRoutes);
-app.use("/api/tenants", tenantRoutes);
-app.use("/api/form", formRoutes);
-app.use("/api/subscribe", subscribeRoutes);
-app.use("/api/test", testRoutes);
-app.use("/api/leads", leadRoutes);
-app.use('/api/facebook', facebookRoutes);
-app.use('/api/ui', uiRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use("/api/tenants", tenantRoutes);  // Allow all tenant routes (includes settings)
+
+// 🔒 Trial lock for feature routes (but allows settings/upgrade)
+app.use('/api/students', trialLock, studentRoutes);
+app.use('/api/dashboard', trialLock, dashboardRoutes);
+app.use('/api/attendance', trialLock, attendanceRoutes);
+app.use('/api/accounts', trialLock, accountsRoutes);
+app.use('/api/academics', trialLock, academicsRoutes);
+app.use('/api/employees', trialLock, employeeRoutes);
+app.use('/api/batches', trialLock, batchRoutes);
+app.use('/api/batch-students', trialLock, batchStudentRoutes);
+app.use('/api/academics/courses', trialLock, courseRoutes);
+app.use('/api/staff', trialLock, staffRoutes);
+app.use('/api/scholarship-exams', trialLock, scholarshipExamRoutes);
+app.use('/api/scholarship-results', trialLock, scholarshipResultRoutes);
+app.use('/api/analytics', trialLock, analyticsRoutes);
+
+// ✅ Allow these routes (no trial lock - upgrade/settings)
 app.use('/api/payments', paymentRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/student-auth', studentAuthRoutes);
-app.use('/api/attendance', attendanceRoutes);
-app.use('/api/accounts', accountsRoutes);
-app.use('/api/academics', academicsRoutes);
-app.use('/api/employees', employeeRoutes);
-app.use('/api/batches', batchRoutes);
-app.use('/api/batch-students', batchStudentRoutes);
-app.use('/api/academics/courses', courseRoutes);
-app.use('/api/staff', staffRoutes);
-app.use('/api/scholarship-exams', scholarshipExamRoutes);
-app.use('/api/scholarship-results', scholarshipResultRoutes);
-app.use('/api/scholarship-rewards', scholarshipRewardRoutes);
+app.use('/api/payment-links', paymentLinkRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/subscription', subscriptionCheckoutRoutes);
 app.use('/api/subscription-plans', subscriptionPlansRoutes);
+app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
+
+// Other routes
+app.use('/api/form', formRoutes);
+app.use('/api/subscribe', subscribeRoutes);
+app.use('/api/test', testRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/facebook', facebookRoutes);
+app.use('/api/ui', uiRoutes);
+app.use('/api/student-auth', studentAuthRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
 app.use('/api/mobile-scholarship', mobileScholarshipRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -171,13 +179,13 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappTemplateRoutes);
 app.use('/api/whatsapp', whatsappChatbotRoutes);
 app.use('/api/whatsapp', whatsappEventRoutes);
-app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
-console.log('🟢 Registered /api/subscription-notifications routes');
-app.use('/api/payment-links', paymentLinkRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+
+// Scholarship rewards - add trial lock
+app.use('/api/scholarship-rewards', trialLock, scholarshipRewardRoutes);
 
 app.get("/", (req, res) => res.send("✅ Enro Matics Backend Running"));
 
