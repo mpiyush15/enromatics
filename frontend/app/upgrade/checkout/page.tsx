@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Loader, AlertCircle, CheckCircle, ArrowLeft, CreditCard } from "lucide-react";
+import { Loader, AlertCircle, CheckCircle, ArrowLeft, CreditCard, Shield } from "lucide-react";
 import Link from "next/link";
 
 type PaymentSession = {
