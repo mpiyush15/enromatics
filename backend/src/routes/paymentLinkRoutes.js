@@ -5,7 +5,8 @@ import {
   sendPaymentLinkEmail,
   getAllPlans,
   getPaymentSessionDetails,
-  getTenantPaymentSessions
+  getTenantPaymentSessions,
+  initiatePaymentLinkPayment
 } from '../controllers/paymentLinkController.js';
 
 const router = express.Router();
@@ -19,6 +20,11 @@ router.post('/generate', protect, generatePaymentLink);
  * Send payment link via email
  */
 router.post('/send-email', protect, sendPaymentLinkEmail);
+
+/**
+ * Initiate Cashfree payment for a payment link (public - via sessionId)
+ */
+router.post('/initiate', initiatePaymentLinkPayment);
 
 /**
  * Get all available plans (public - no auth needed)

@@ -30,19 +30,15 @@ export async function POST(request: NextRequest) {
       planName,
     });
 
-    // Call backend payment initiation endpoint
+    // Call backend payment link initiation endpoint
     // Backend will handle Cashfree API calls with its own credentials
-    const response = await fetch(`${BACKEND_URL}/api/payments/initiate-subscription`, {
+    const response = await fetch(`${BACKEND_URL}/api/payment-links/initiate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         sessionId,
-        amount,
-        email,
-        planName,
-        billingCycle,
       }),
     });
 

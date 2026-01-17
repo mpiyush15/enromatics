@@ -305,3 +305,132 @@ export const getTenantPaymentSessions = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * Initiate Cashfree payment session for a payment link (sessionId-based)
+ * Called from frontend when customer clicks "Proceed to Payment"
+ */
+export const initiatePaymentLinkPayment = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'sessionId is required' 
+      });
+    }
+
+    // Fetch the payment session details
+    const session = await PaymentSession.findOne({ sessionId });
+    if (!session) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Payment session not found' 
+      });
+    }
+
+    // Check if session is expired
+    const isExpired = new Date() > session.expiresAt;
+    if (isExpired) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Payment session has expired' 
+      });
+    }
+
+    // Check Cashfree credentials
+    const clientId = process.env.CASHFREE_CLIENT_ID;
+    const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
+    
+    if (!clientId || !clientSecret) {
+      console.error('❌ Cashfree credentials not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment gateway not configured'
+      });
+    }
+
+    console.log('💳 Creating Cashfree payment session for payment link:', {
+      sessionId,
+      tenantId: session.tenantId,
+      amount: session.amount,
+      email: session.email
+    });
+
+    // Create Cashfree order
+    const orderId = `order_${sessionId.substring(0, 12)}_${Date.now()}`;
+    
+    const cashfreeResponse = await fetch('https://api.cashfree.com/pg/orders', {
+      method: 'POST',
+      headers: {
+        'x-api-version': '2023-08-01',
+        'x-client-id': clientId,
+        'x-client-secret': clientSecret,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        order_id: orderId,
+        order_amount: session.amount,
+        order_currency: 'INR',
+        customer_details: {
+          customer_id: session.tenantId,
+          customer_email: session.email,
+          customer_phone: session.phone || '9999999999'
+        },
+        order_meta: {
+          return_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/upgrade/status?session=${sessionId}`,
+          notify_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payment-links/webhook`
+        },
+        order_note: `${session.planName} - ${session.billingCycle} - Session: ${sessionId}`
+      })
+    });
+
+    const responseText = await cashfreeResponse.text();
+    console.log('📋 Cashfree response status:', cashfreeResponse.status);
+    
+    let cashfreeData;
+    try {
+      cashfreeData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('❌ Failed to parse Cashfree response:', responseText.substring(0, 200));
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid response from payment gateway'
+      });
+    }
+
+    if (!cashfreeResponse.ok) {
+      console.error('❌ Cashfree API error:', cashfreeData);
+      return res.status(500).json({
+        success: false,
+        message: cashfreeData.message || 'Failed to create payment session with gateway'
+      });
+    }
+
+    // Update session status to processing
+    session.status = 'processing';
+    session.orderId = orderId;
+    session.cashfreeOrderId = cashfreeData.order_id;
+    await session.save();
+
+    console.log('✅ Cashfree payment session created:', {
+      orderId: cashfreeData.order_id,
+      paymentSessionId: cashfreeData.payment_session_id
+    });
+
+    return res.status(200).json({
+      success: true,
+      payment_session_id: cashfreeData.payment_session_id,
+      order_id: cashfreeData.order_id,
+      message: 'Payment session created successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error initiating payment link payment:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to initiate payment'
+    });
+  }
+};
