@@ -4,7 +4,12 @@ import { PLANS } from '../config/plans.js';
 import { sendEmail } from '../services/emailService.js';
 import crypto from 'crypto';
 
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+// Use production FRONTEND_URL from environment, fallback to localhost for dev
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL 
+  || process.env.FRONTEND_URL 
+  || 'http://localhost:3000';
+
+console.log(`🌐 Payment link generator using FRONTEND_URL: ${FRONTEND_URL}`);
 
 /**
  * Generate a unique payment link for tenant upgrade
