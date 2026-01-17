@@ -138,15 +138,37 @@ function UpgradeCheckoutContent() {
         const script = document.createElement("script");
         script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
         script.async = true;
-        script.onload = () => {
-          const cashfree = (window as any).Cashfree;
-          if (cashfree) {
-            console.log("🎯 Opening Cashfree checkout");
-            cashfree.checkout({
-              paymentSessionId: data.paymentSessionId,
-              redirectTarget: "_modal",
+        script.onload = async () => {
+          try {
+            // Initialize Cashfree with production mode
+            const cashfree = await (window as any).Cashfree({
+              mode: "production",
             });
+            
+            if (cashfree && cashfree.checkout) {
+              console.log("🎯 Opening Cashfree checkout with session:", data.paymentSessionId);
+              await cashfree.checkout({
+                paymentSessionId: data.paymentSessionId,
+                redirectTarget: "_self",
+              });
+            } else {
+              console.error("❌ Cashfree checkout not available");
+              setError("Payment gateway not ready. Please try again.");
+              setPaymentStatus("failed");
+              setProcessingPayment(false);
+            }
+          } catch (err: any) {
+            console.error("❌ Cashfree initialization error:", err);
+            setError(err.message || "Failed to open payment gateway");
+            setPaymentStatus("failed");
+            setProcessingPayment(false);
           }
+        };
+        script.onerror = () => {
+          console.error("❌ Failed to load Cashfree SDK");
+          setError("Failed to load payment gateway SDK");
+          setPaymentStatus("failed");
+          setProcessingPayment(false);
         };
         document.body.appendChild(script);
       } else {
