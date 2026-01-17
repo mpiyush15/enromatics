@@ -3,10 +3,16 @@ import Tenant from '../models/Tenant.js';
 import { PLANS } from '../config/plans.js';
 import { sendEmail } from '../services/emailService.js';
 import crypto from 'crypto';
+import axios from 'axios';
+
+// Cashfree config from .env
+const CASHFREE_BASE_URL = 'https://api.cashfree.com/pg';
+const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
 
 // Use production FRONTEND_URL from environment, fallback to localhost for dev
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL 
-  || process.env.FRONTEND_URL 
+const FRONTEND_URL = process.env.FRONTEND_URL 
+  || process.env.NEXT_PUBLIC_FRONTEND_URL 
   || 'http://localhost:3000';
 
 console.log(`🌐 Payment link generator using FRONTEND_URL: ${FRONTEND_URL}`);
@@ -340,10 +346,7 @@ export const initiatePaymentLinkPayment = async (req, res) => {
     }
 
     // Check Cashfree credentials
-    const clientId = process.env.CASHFREE_CLIENT_ID;
-    const clientSecret = process.env.CASHFREE_CLIENT_SECRET;
-    
-    if (!clientId || !clientSecret) {
+    if (!CASHFREE_CLIENT_ID || !CASHFREE_CLIENT_SECRET) {
       console.error('❌ Cashfree credentials not configured');
       return res.status(500).json({
         success: false,
@@ -358,79 +361,71 @@ export const initiatePaymentLinkPayment = async (req, res) => {
       email: session.email
     });
 
-    // Create Cashfree order
-    const orderId = `order_${sessionId.substring(0, 12)}_${Date.now()}`;
+    // Create Cashfree order using same approach as subscriptionCheckoutController
+    const orderId = `paylink_${sessionId.substring(0, 12)}_${Date.now()}`;
     
-    const cashfreeResponse = await fetch('https://api.cashfree.com/pg/orders', {
-      method: 'POST',
-      headers: {
-        'x-api-version': '2023-08-01',
-        'x-client-id': clientId,
-        'x-client-secret': clientSecret,
-        'Content-Type': 'application/json'
+    const orderPayload = {
+      order_id: orderId,
+      order_amount: session.amount,
+      order_currency: 'INR',
+      customer_details: {
+        customer_id: session.tenantId,
+        customer_email: session.email,
+        customer_phone: session.phone || '9999999999'
       },
-      body: JSON.stringify({
-        order_id: orderId,
-        order_amount: session.amount,
-        order_currency: 'INR',
-        customer_details: {
-          customer_id: session.tenantId,
-          customer_email: session.email,
-          customer_phone: session.phone || '9999999999'
-        },
-        order_meta: {
-          return_url: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/upgrade/status?session=${sessionId}`,
-          notify_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/payment-links/webhook`
-        },
-        order_note: `${session.planName} - ${session.billingCycle} - Session: ${sessionId}`
-      })
+      order_meta: {
+        return_url: `${FRONTEND_URL}/upgrade/status?session=${sessionId}`,
+        sessionId: sessionId,
+        tenantId: session.tenantId
+      },
+      order_note: `${session.planName} - ${session.billingCycle} - Session: ${sessionId}`
+    };
+
+    console.log('📤 Sending to Cashfree:', {
+      orderId,
+      amount: session.amount,
+      returnUrl: orderPayload.order_meta.return_url
     });
 
-    const responseText = await cashfreeResponse.text();
-    console.log('📋 Cashfree response status:', cashfreeResponse.status);
-    
-    let cashfreeData;
-    try {
-      cashfreeData = JSON.parse(responseText);
-    } catch (e) {
-      console.error('❌ Failed to parse Cashfree response:', responseText.substring(0, 200));
-      return res.status(500).json({
-        success: false,
-        message: 'Invalid response from payment gateway'
-      });
-    }
-
-    if (!cashfreeResponse.ok) {
-      console.error('❌ Cashfree API error:', cashfreeData);
-      return res.status(500).json({
-        success: false,
-        message: cashfreeData.message || 'Failed to create payment session with gateway'
-      });
-    }
+    const response = await axios.post(
+      `${CASHFREE_BASE_URL}/orders`,
+      orderPayload,
+      {
+        headers: {
+          'x-client-id': CASHFREE_CLIENT_ID,
+          'x-client-secret': CASHFREE_CLIENT_SECRET,
+          'x-api-version': '2023-08-01',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
     // Update session status to processing
     session.status = 'processing';
     session.orderId = orderId;
-    session.cashfreeOrderId = cashfreeData.order_id;
+    session.cashfreeOrderId = response.data.order_id;
     await session.save();
 
     console.log('✅ Cashfree payment session created:', {
-      orderId: cashfreeData.order_id,
-      paymentSessionId: cashfreeData.payment_session_id
+      orderId: response.data.order_id,
+      paymentSessionId: response.data.payment_session_id
     });
 
     return res.status(200).json({
       success: true,
-      payment_session_id: cashfreeData.payment_session_id,
-      order_id: cashfreeData.order_id,
+      payment_session_id: response.data.payment_session_id,
+      order_id: response.data.order_id,
       message: 'Payment session created successfully'
     });
 
   } catch (error) {
-    console.error('❌ Error initiating payment link payment:', error);
+    console.error('❌ Error initiating payment link payment:', error.message);
+    if (error.response?.data) {
+      console.error('Cashfree error details:', error.response.data);
+    }
     return res.status(500).json({
       success: false,
-      message: error.message || 'Failed to initiate payment'
+      message: error.response?.data?.message || error.message || 'Failed to initiate payment'
     });
   }
 };
