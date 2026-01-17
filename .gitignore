@@ -135,6 +135,29 @@ yarn.lock
 coverage/
 .nyc_output/
 
+# Test and script files - archived
+tests-archived/
+test-*.mjs
+test-*.js
+test-*.sh
+check-*.mjs
+check-*.js
+verify-*.mjs
+verify-*.sh
+
+# Quick scripts and utilities - don't commit
+quick-*.js
+quick-*.mjs
+build-mobile-apk.sh
+SETUP_*.sh
+update_*.py
+update-*.sh
+*-quick.sh
+debug-*.js
+
+# Email and preview files
+EMAIL_PREVIEW.html
+
 # Misc
 *.tgz
 *.tar.gz
