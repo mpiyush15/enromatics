@@ -40,20 +40,38 @@ function UpgradeCheckoutContent() {
   const fetchSessionDetails = async () => {
     try {
       console.log("🔍 Fetching session details for:", sessionId);
-      const res = await fetch(`/api/payment-links/session/${sessionId}`);
-      const data = await res.json();
+      
+      if (!sessionId) {
+        console.error("❌ No session ID provided");
+        setError("Invalid payment link - no session ID");
+        setLoading(false);
+        return;
+      }
 
+      const res = await fetch(`/api/payment-links/session/${sessionId}`);
+      console.log("📋 Response status:", res.status);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ API error:", errorText);
+        setError(`API Error: ${res.status}`);
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
       console.log("📋 Session response:", data);
 
-      if (data.success) {
+      if (data.success && data.sessionId) {
         console.log("✅ Session loaded successfully");
         setSession(data);
         if (data.isExpired) {
+          console.warn("⚠️ Session is expired");
           setError("This payment link has expired. Please request a new one.");
         }
       } else {
-        console.error("❌ Session error:", data.message);
-        setError(data.message || "Failed to load payment session");
+        console.error("❌ Invalid session response:", data);
+        setError(data.message || "Invalid session data");
       }
     } catch (err: any) {
       console.error("❌ Fetch error:", err);
