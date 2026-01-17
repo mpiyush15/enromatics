@@ -39,18 +39,24 @@ function UpgradeCheckoutContent() {
 
   const fetchSessionDetails = async () => {
     try {
+      console.log("🔍 Fetching session details for:", sessionId);
       const res = await fetch(`/api/payment-links/session/${sessionId}`);
       const data = await res.json();
 
+      console.log("📋 Session response:", data);
+
       if (data.success) {
+        console.log("✅ Session loaded successfully");
         setSession(data);
         if (data.isExpired) {
           setError("This payment link has expired. Please request a new one.");
         }
       } else {
+        console.error("❌ Session error:", data.message);
         setError(data.message || "Failed to load payment session");
       }
     } catch (err: any) {
+      console.error("❌ Fetch error:", err);
       setError(err.message || "Error loading payment session");
     } finally {
       setLoading(false);
@@ -151,6 +157,25 @@ function UpgradeCheckoutContent() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               This payment link expired on {new Date(session.expiresAt).toLocaleString()}. Please request a new link.
             </p>
+            <Link href="/">
+              <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                ← Back to Home
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 text-center">
+            <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Payment Not Ready</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Session details are still loading. Please wait...</p>
             <Link href="/">
               <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                 ← Back to Home
