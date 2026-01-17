@@ -401,7 +401,7 @@ export const initiatePaymentLinkPayment = async (req, res) => {
     );
 
     // Update session status to processing
-    session.status = 'processing';
+    session.status = 'pending';  // Keep as pending, will update to completed when payment succeeds
     session.orderId = orderId;
     session.cashfreeOrderId = response.data.order_id;
     await session.save();
