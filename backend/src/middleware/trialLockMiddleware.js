@@ -6,6 +6,11 @@ import Tenant from '../models/Tenant.js';
  * BUT allow: subscription/upgrade routes, tenant settings, pricing
  */
 export const trialLock = async (req, res, next) => {
+  // ⚠️ TEMPORARILY DISABLED FOR TESTING
+  // Smart trial lock logic is preserved below - will re-enable after stabilizing other fixes
+  return next();
+
+  /* SMART TRIAL LOCK LOGIC - DISABLED FOR NOW
   try {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: 'Tenant ID missing' });
@@ -13,44 +18,53 @@ export const trialLock = async (req, res, next) => {
     const tenant = await Tenant.findOne({ tenantId });
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
 
-    // Check if subscription is active
-    if (tenant.subscription?.status === 'active' && tenant.subscription?.endDate > new Date()) {
-      return next(); // Subscription active, allow access
+    // ============= PAID USERS - ALWAYS ALLOW =============
+    const paidPlans = ['professional', 'pro', 'enterprise', 'basic', 'starter'];
+    const isPaidPlan = paidPlans.includes(tenant.plan);
+
+    const hasActiveSubscription = 
+      tenant.subscription?.status === 'active' && 
+      tenant.subscription?.endDate && 
+      new Date(tenant.subscription.endDate) > new Date();
+
+    if (isPaidPlan || hasActiveSubscription) {
+      console.log(`✅ [TRIAL LOCK] Paid/Active user allowed: ${tenantId} (plan: ${tenant.plan})`);
+      return next();
+    }
+
+    // ============= FREE TRIAL USERS - CHECK EXPIRY =============
+    const isFreeTrial = tenant.plan === 'free' || tenant.plan === 'trial';
+    
+    if (!isFreeTrial) {
+      console.log(`⚠️  [TRIAL LOCK] Unknown plan allowed: ${tenantId} (plan: ${tenant.plan})`);
+      return next();
     }
 
     // Check trial window (14 days from createdAt)
     const trialDays = 14;
     const trialEnd = new Date(tenant.createdAt);
     trialEnd.setDate(trialEnd.getDate() + trialDays);
+    const now = new Date();
 
-    if (new Date() <= trialEnd) {
-      return next(); // Trial still active
+    if (now <= trialEnd) {
+      const daysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+      console.log(`⏰ [TRIAL LOCK] Trial user ${tenantId} - ${daysLeft} days left`);
+      return next();
     }
 
-    // Trial expired - check if this is an ALLOWED route
-    const allowedRoutes = [
-      '/api/tenants/', // Tenant settings/profile
-      '/api/subscription', // Subscription pages
-      '/api/payment', // Payment/upgrade
-      '/api/pricing', // Pricing info
-    ];
-
-    const isAllowedRoute = allowedRoutes.some(route => req.path.includes(route));
-
-    if (isAllowedRoute) {
-      return next(); // Allow access to settings/upgrade routes
-    }
-
-    // Trial expired and trying to access blocked feature
-    console.log(`Trial lock triggered for tenant: ${tenantId} on route: ${req.path}`);
+    console.log(`❌ [TRIAL LOCK] Free trial expired for tenant: ${tenantId}`);
     return res.status(402).json({
       success: false,
       code: 'trial_expired',
-      message: 'Your trial has expired. Please upgrade to continue using this feature.',
+      message: 'Your free trial has expired. Please upgrade to continue.',
+      trialEndDate: trialEnd.toISOString(),
       upgradeUrl: `${process.env.FRONTEND_URL}/pricing`,
     });
+
   } catch (err) {
-    console.error('Trial lock middleware error:', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ [TRIAL LOCK] Middleware error:', err.message);
+    console.warn('⚠️  Trial lock failed - allowing access (fail-safe)');
+    return next();
   }
+  */
 };

@@ -78,10 +78,10 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     isExternal ? null : "/api/ui/sidebar",
     sidebarFetcher,
     {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 0,
-      keepPreviousData: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30 * 60 * 1000, // 30 minutes
+      keepPreviousData: true,
     }
   );
 

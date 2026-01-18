@@ -57,12 +57,23 @@ export async function apiClient<T = any>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    // Get token from localStorage if available
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(fetchOptions.headers || {}),
+    };
+
+    // Add Authorization header if token exists
+    if (token && !skipAuth) {
+      headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔐 Added Authorization header from localStorage');
+    }
+
     const response = await fetch(fullUrl, {
       credentials: skipAuth ? 'omit' : 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(fetchOptions.headers || {}),
-      },
+      headers,
       signal: controller.signal,
       ...fetchOptions,
     });

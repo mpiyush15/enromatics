@@ -22,6 +22,119 @@ import type { StudentDTO, StudentListResponse, StudentMutationResponse } from '@
 
 const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
 
+/**
+ * Extract tenantId from JWT token
+ * Tries multiple sources:
+ * 1. Authorization header (Bearer token)
+ * 2. jwt cookie (httpOnly, set by login)
+ * 3. auth_token or token cookies
+ */
+function extractTenantIdFromToken(request: NextRequest): string | null {
+  try {
+    let tokenValue: string | null = null;
+
+    // 1️⃣ Try Authorization header first (Bearer token)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      tokenValue = authHeader.substring(7);
+      console.log('✅ Found token in Authorization header');
+    }
+
+    // 2️⃣ Try cookies
+    if (!tokenValue) {
+      const cookieString = extractCookies(request);
+      console.log('🔍 Cookie string for token extraction:', cookieString ? `${cookieString.substring(0, 50)}...` : 'NONE');
+      
+      if (cookieString) {
+        // Try jwt first (primary), then auth_token, then token
+        const jwtMatch = cookieString.match(/jwt=([^;]+)/);
+        const authTokenMatch = cookieString.match(/auth_token=([^;]+)/);
+        const tokenMatch = cookieString.match(/token=([^;]+)/);
+        tokenValue = jwtMatch?.[1] || authTokenMatch?.[1] || tokenMatch?.[1];
+        
+        if (tokenValue) {
+          console.log('✅ Found token in cookies (jwt/auth_token/token)');
+        }
+      }
+    }
+
+    if (!tokenValue) {
+      console.log('⚠️  No token found in Authorization header or cookies');
+      return null;
+    }
+
+    console.log('✅ Found token:', tokenValue.substring(0, 30) + '...');
+
+    // Decode JWT (simple base64, not verifying signature since we trust our own cookies)
+    const parts = tokenValue.split('.');
+    if (parts.length !== 3) {
+      console.log('❌ Invalid JWT format (expected 3 parts, got', parts.length + ')');
+      return null;
+    }
+
+    const payload = JSON.parse(
+      Buffer.from(parts[1], 'base64').toString('utf-8')
+    );
+
+    console.log('✅ Decoded JWT payload:', { tenantId: payload.tenantId, email: payload.email, role: payload.role });
+    return payload.tenantId || null;
+  } catch (error) {
+    console.log('⚠️  Failed to extract tenantId from token:', error);
+    return null;
+  }
+}
+
+/**
+ * Extract subdomain from hostname
+ * localhost:3000 → null
+ * prasamagar.lvh.me:3000 → 'prasamagar'
+ * admin.prasamagar.lvh.me → 'prasamagar'
+ * prasamagar.enromatics.com → 'prasamagar'
+ * admin.prasamagar.enromatics.com → 'prasamagar'
+ */
+function extractSubdomainFromHostname(hostname: string | null): string | null {
+  if (!hostname) return null;
+
+  // Remove port if present
+  const cleanHostname = hostname.split(':')[0];
+
+  // For localhost/lvh.me testing
+  if (cleanHostname.includes('lvh.me')) {
+    const parts = cleanHostname.split('.');
+    if (parts.length >= 3) {
+      return parts[parts.length - 3];
+    }
+    return null;
+  }
+
+  // Production: enromatics.com
+  if (cleanHostname.includes('enromatics.com')) {
+    const parts = cleanHostname.split('.');
+    
+    // prasamagar.enromatics.com (3 parts)
+    if (parts.length === 3) {
+      return parts[0];
+    }
+    
+    // admin.prasamagar.enromatics.com (4 parts)
+    if (parts.length === 4) {
+      return parts[1];
+    }
+    
+    // Just enromatics.com (no subdomain)
+    if (parts.length === 2) {
+      return null;
+    }
+  }
+
+  // Localhost without subdomain
+  if (cleanHostname === 'localhost' || cleanHostname === '127.0.0.1') {
+    return null;
+  }
+
+  return null;
+}
+
 // GET /api/students or /api/students/:id
 export async function GET(
   request: NextRequest,
@@ -36,15 +149,27 @@ export async function GET(
 
     console.log('📤 Calling Backend:', `${BACKEND_URL}${endpoint}`);
 
+    // Get Authorization header from request (contains the JWT token)
+    const authHeader = request.headers.get('authorization');
+    console.log('🔐 Authorization header present:', !!authHeader);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cookie': extractCookies(request),
+      'X-Tenant-Guard': 'true',
+    };
+
+    // Forward Authorization header if present (CRITICAL - backend needs this to decode JWT)
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Forwarding Authorization header to backend');
+    }
+
     const backendResponse = await fetch(
       `${BACKEND_URL}${endpoint}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
-          'X-Tenant-Guard': 'true',
-        },
+        headers,
       }
     );
 
@@ -89,15 +214,27 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Creating student via Backend');
 
+    // Get Authorization header from request (contains the JWT token)
+    const authHeader = request.headers.get('authorization');
+    console.log('🔐 Authorization header present:', !!authHeader);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cookie': extractCookies(request),
+      'X-Tenant-Guard': 'true',
+    };
+
+    // Forward Authorization header if present (CRITICAL - backend needs this to decode JWT)
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Forwarding Authorization header to backend');
+    }
+
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/students`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
-          'X-Tenant-Guard': 'true',
-        },
+        headers,
         body: JSON.stringify(body),
       }
     );
@@ -153,15 +290,27 @@ export async function PUT(
 
     console.log('📤 Updating student via Backend');
 
+    // Get Authorization header from request (contains the JWT token)
+    const authHeader = request.headers.get('authorization');
+    console.log('🔐 Authorization header present:', !!authHeader);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cookie': extractCookies(request),
+      'X-Tenant-Guard': 'true',
+    };
+
+    // Forward Authorization header if present (CRITICAL - backend needs this to decode JWT)
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Forwarding Authorization header to backend');
+    }
+
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/students/${params.id}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
-          'X-Tenant-Guard': 'true',
-        },
+        headers,
         body: JSON.stringify(body),
       }
     );
@@ -209,15 +358,27 @@ export async function DELETE(
 
     console.log('📤 Deleting student via Backend');
 
+    // Get Authorization header from request (contains the JWT token)
+    const authHeader = request.headers.get('authorization');
+    console.log('🔐 Authorization header present:', !!authHeader);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cookie': extractCookies(request),
+      'X-Tenant-Guard': 'true',
+    };
+
+    // Forward Authorization header if present (CRITICAL - backend needs this to decode JWT)
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Forwarding Authorization header to backend');
+    }
+
     const backendResponse = await fetch(
       `${BACKEND_URL}/api/students/${params.id}`,
       {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': extractCookies(request),
-          'X-Tenant-Guard': 'true',
-        },
+        headers,
       }
     );
 

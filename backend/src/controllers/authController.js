@@ -277,6 +277,7 @@ export const loginUser = async (req, res) => {
     console.log('   - Name:', user.name);
     console.log('   - Email:', user.email);
     console.log('   - Role:', user.role);
+    console.log('   - TenantId:', user.tenantId || '❌ MISSING');
     console.log('   - Password field:', user.password ? 'EXISTS' : 'MISSING');
     
     console.log('\n🔐 PASSWORD DEBUG:');
@@ -385,11 +386,19 @@ export const loginUser = async (req, res) => {
     }
 
     // ✅ Include sessionId in JWT token
+    console.log('\n🔐 Creating JWT with payload:');
+    console.log('   - id:', user._id);
+    console.log('   - email:', user.email);
+    console.log('   - role:', user.role);
+    console.log('   - tenantId:', user.tenantId || '❌ MISSING!');
+    
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role, tenantId: user.tenantId, sessionId },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+    
+    console.log('✅ JWT created successfully');
 
     // ✅ Set cookie after successful login (cross-domain compatible)
     res.cookie("jwt", token, {
