@@ -1,0 +1,9 @@
+rollNumber,status,remarks
+2025JEE001,present,On time
+2025JEE002,absent,Sick leave
+2025JEE003,late,Arrived 15 minutes late
+2025JEE004,present,
+2025IIT001,excused,Medical emergency
+2025IIT002,present,On time
+2025NEET005,absent,
+2025NEET006,late,Traffic delay
