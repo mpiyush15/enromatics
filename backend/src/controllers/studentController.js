@@ -154,6 +154,23 @@ export const addStudent = async (req, res) => {
             err => console.error("Email enrollment notification failed:", err.message)
           );
         }
+
+        // 📧 Send welcome email to student as well
+        if (student.email) {
+          console.log(`📧 Sending welcome email to student ${student.email}`);
+          emailService.sendStudentEnrollmentEmail({
+            to: student.email,
+            studentName: student.name,
+            batchName: student.batch || batchName || "Program",
+            rollNumber: student.rollNumber,
+            password: studentPassword,
+            portalUrl,
+            instituteName: tenant.instituteName || "Our Institute",
+            tenantId
+          }).catch(
+            err => console.error("Student welcome email failed:", err.message)
+          );
+        }
       } else {
         console.log(`⚠️  Enrollment notifications disabled for tenant ${tenantId}`);
       }

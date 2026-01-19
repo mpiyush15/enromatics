@@ -23,6 +23,16 @@ export default function DemoRequestsPage() {
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    email: "",
+    phone: "",
+    googleMeetLink: "",
+    name: "",
+    scheduleDate: "",
+    scheduleTime: "",
+  });
 
   useEffect(() => {
     fetchDemoRequests();
@@ -62,6 +72,53 @@ export default function DemoRequestsPage() {
     setPage(1);
   };
 
+  const handleCreateDemoSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+
+    try {
+      // Combine date and time
+      const demoDateTime = new Date(`${createForm.scheduleDate}T${createForm.scheduleTime}`);
+
+      const res = await fetch("/api/demo-requests", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: createForm.name,
+          email: createForm.email,
+          phone: createForm.phone,
+          company: "Manual Demo Session",
+          demoDateTime: demoDateTime.toISOString(),
+          date: createForm.scheduleDate,
+          time: createForm.scheduleTime,
+          message: `Google Meet Link: ${createForm.googleMeetLink}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create demo session");
+      }
+
+      const data = await res.json();
+      console.log("✅ Demo session created:", data);
+
+      // Reset form and close modal
+      setCreateForm({ email: "", phone: "", googleMeetLink: "", name: "", scheduleDate: "", scheduleTime: "" });
+      setShowCreateModal(false);
+
+      // Refresh demo requests list
+      fetchDemoRequests();
+      alert("Demo session created successfully!");
+    } catch (err: any) {
+      console.error("❌ Error creating demo session:", err);
+      alert("Error: " + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const getStatusColor = (s: string) => {
     switch (s) {
       case "pending":
@@ -89,8 +146,16 @@ export default function DemoRequestsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           📅 Demo Requests
         </h1>
-        <div className="text-sm text-gray-600 dark:text-gray-300">
-          Total: <strong>{total}</strong> requests
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Total: <strong>{total}</strong> requests
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium transition"
+          >
+            + Create Demo Session
+          </button>
         </div>
       </div>
 
@@ -228,6 +293,193 @@ export default function DemoRequestsPage() {
             Next
           </button>
         </div>
+      )}
+
+      {/* Create Demo Session Drawer */}
+      {showCreateModal && (
+        <>
+          {/* Backdrop with Blur */}
+          <div
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 cursor-pointer"
+            onClick={() => {
+              setShowCreateModal(false);
+              setCreateForm({
+                email: "",
+                phone: "",
+                googleMeetLink: "",
+                name: "",
+              });
+            }}
+          />
+
+          {/* Right Side Drawer */}
+          <div className="fixed right-0 top-0 h-screen w-full max-w-md bg-white dark:bg-gray-800 shadow-lg z-50 overflow-y-auto transform transition-transform duration-300">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Create Demo Session
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setCreateForm({
+                      email: "",
+                      phone: "",
+                      googleMeetLink: "",
+                      name: "",
+                      scheduleDate: "",
+                      scheduleTime: "",
+                    });
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateDemoSession} className="space-y-4">
+                {/* Name Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Client Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createForm.name}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    placeholder="Enter client name"
+                  />
+                </div>
+
+                {/* Email Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={createForm.email}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    placeholder="client@example.com"
+                  />
+                </div>
+
+                {/* Phone Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={createForm.phone}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    placeholder="+91 9876543210"
+                  />
+                </div>
+
+                {/* Google Meet Link Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Google Meet Link
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={createForm.googleMeetLink}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        googleMeetLink: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    placeholder="https://meet.google.com/..."
+                  />
+                </div>
+
+                {/* Schedule Date Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Schedule Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.scheduleDate}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        scheduleDate: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                {/* Schedule Time Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Schedule Time
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={createForm.scheduleTime}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        scheduleTime: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-6 sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 -mx-6 px-6 py-4">
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    {creating ? "Creating..." : "Create Session"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setCreateForm({
+                        email: "",
+                        phone: "",
+                        googleMeetLink: "",
+                        name: "",
+                        scheduleDate: "",
+                        scheduleTime: "",
+                      });
+                    }}
+                    disabled={creating}
+                    className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -78,6 +78,25 @@ export default function ScholarshipResultsPage() {
   const [resultFilter, setResultFilter] = useState<string>("all");
   const [rewardFilter, setRewardFilter] = useState<string>("all");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+
+  // Fetch tenant info
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/settings/tenant-profile`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant || data);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant info:", err);
+      }
+    };
+    fetchTenantInfo();
+  }, []);
 
   useEffect(() => {
     fetchExams();
@@ -205,6 +224,7 @@ export default function ScholarshipResultsPage() {
       return;
     }
 
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
     const headers = [
       "Exam Name",
       "Registration Number", 
@@ -224,7 +244,9 @@ export default function ScholarshipResultsPage() {
     ];
 
     const csvRows = [
-      headers.join(","),
+      [instituteName],
+      [""],
+      [headers.join(",")],
       ...filteredResults.map(result => [
         result.examName,
         result.registrationNumber,
@@ -244,7 +266,29 @@ export default function ScholarshipResultsPage() {
       ].map(field => `"${field}"`).join(","))
     ];
 
-    const csvContent = csvRows.join("\n");
+    const csvContent = [
+      instituteName,
+      "",
+      headers.join(","),
+      ...filteredResults.map(result => [
+        result.examName,
+        result.registrationNumber,
+        result.studentName,
+        result.email,
+        result.phone,
+        result.currentClass,
+        result.school,
+        result.marksObtained,
+        result.maxMarks,
+        result.percentage.toFixed(2),
+        result.rank,
+        result.result,
+        result.rewardEligible ? "Yes" : "No",
+        result.rewardDetails?.type || "",
+        result.rewardDetails?.description || ""
+      ].map(field => `"${field}"`).join(","))
+    ].join("\n");
+    
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");

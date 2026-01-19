@@ -1030,9 +1030,8 @@ export const addPayment = async (req, res) => {
       remarks: remarks || "",
     });
 
-    // Update student's balance (sum of payments made)
-    // We'll increment balance by the amount paid
-    await Student.findOneAndUpdate({ _id: studentId, tenantId }, { $inc: { balance: Number(amount) } });
+    // Update student's balance (reduce pending fees by payment amount)
+    await Student.findOneAndUpdate({ _id: studentId, tenantId }, { $inc: { balance: -Number(amount) } });
 
     res.status(201).json({ success: true, payment });
   } catch (err) {

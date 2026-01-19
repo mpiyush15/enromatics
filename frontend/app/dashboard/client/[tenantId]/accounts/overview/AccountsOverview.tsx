@@ -67,13 +67,6 @@ export default function AccountsOverview({ tenantId }: { tenantId: string }) {
     swrConfig
   );
 
-  // Fetch analytics data
-  const { data: stats, isLoading: statsLoading } = useSWR(
-    `/api/analytics/accounts/stats?tenantId=${tenantId}`,
-    fetcher,
-    swrConfig
-  );
-
   const { data: revenueData, isLoading: revenueLoading, mutate: mutateRevenue } = useSWR(
     `/api/accounts/revenue-trend?period=${revenuePeriod}&months=${revenuePeriod === 'monthly' ? 6 : revenuePeriod === 'quarterly' ? 12 : 24}&refresh=${refreshKey}`,
     fetcher,
@@ -105,12 +98,6 @@ export default function AccountsOverview({ tenantId }: { tenantId: string }) {
     }
     return 0;
   }, [overviewData]);
-
-  const { data: topPerformers, isLoading: performersLoading } = useSWR(
-    `/api/analytics/accounts/top-performers?tenantId=${tenantId}&limit=5`,
-    fetcher,
-    swrConfig
-  );
 
   // Auto-refresh revenue data when revenue period changes
   React.useEffect(() => {
@@ -168,7 +155,6 @@ export default function AccountsOverview({ tenantId }: { tenantId: string }) {
   const chartRevenueData = revenueData?.data?.length > 0 ? revenueData.data : null;
   const chartEnrollmentData = enrollmentData?.data?.length > 0 ? enrollmentData.data : null;
   const chartBatchData = enrollmentByBatchData?.data?.length > 0 ? enrollmentByBatchData.data : null;
-  const chartTopPerformers = topPerformers?.length > 0 ? topPerformers : null;
 
   // Calculate key metrics from real data
   const totalRevenue = useMemo(() => {

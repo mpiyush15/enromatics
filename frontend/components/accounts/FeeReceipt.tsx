@@ -27,10 +27,11 @@ interface ReceiptProps {
     };
   };
   tenantInfo?: {
-    name: string;
-    address: string;
-    phone: string;
-    email: string;
+    instituteName?: string;
+    name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
     logo?: string;
   };
   onClose?: () => void;
@@ -235,7 +236,7 @@ export default function FeeReceipt({ payment, tenantInfo, onClose }: ReceiptProp
             {/* Header */}
             <div className="header text-center border-b-2 border-black pb-3 mb-4">
               <div className="institute-name text-2xl font-bold mb-2 uppercase">
-                {tenantInfo?.name || "INSTITUTE NAME"}
+                {tenantInfo?.instituteName || tenantInfo?.name || "INSTITUTE NAME"}
               </div>
               <div className="contact-info text-sm">
                 {tenantInfo?.address || "Institute Address"}<br />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { api, safeApiCall } from "@/lib/apiClient";
 
 export default function AddPaymentPage() {
   const params = useParams();
@@ -37,15 +38,20 @@ export default function AddPaymentPage() {
   // Fetch batches
   const fetchBatches = async () => {
     try {
-      const res = await fetch(`/api/academics/batches`, {
+      console.log("🔄 Fetching batches for tenantId:", tenantId);
+      const res = await fetch(`/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       const data = await res.json();
+      console.log("✅ Batches response:", data);
       if (data.success) {
+        console.log("📊 Found batches:", data.batches?.length);
         setAvailableBatches(data.batches || []);
+      } else {
+        console.error("❌ Failed to fetch batches:", data.message);
       }
     } catch (err) {
-      console.error("Failed to fetch batches:", err);
+      console.error("❌ Failed to fetch batches:", err);
     }
   };
 
@@ -55,10 +61,12 @@ export default function AddPaymentPage() {
 
     try {
       setLoading(true);
+      console.log("🔄 Fetching students for batch:", selectedBatch);
       const res = await fetch(`/api/students?batch=${selectedBatch}&limit=1000`, {
         credentials: "include",
       });
       const data = await res.json();
+      console.log("✅ Students response:", { success: data.success, count: data.students?.length });
       if (data.success) {
         // Filter students with pending fees
         const studentsWithPending = (data.students || [])
@@ -70,10 +78,13 @@ export default function AddPaymentPage() {
             ...s,
             pendingAmount: (s.fees || 0) - (s.balance || 0),
           }));
+        console.log("📊 Found students with pending fees:", studentsWithPending.length);
         setStudents(studentsWithPending);
+      } else {
+        console.error("❌ Failed to fetch students:", data.message);
       }
     } catch (err) {
-      console.error("Failed to fetch students:", err);
+      console.error("❌ Failed to fetch students:", err);
     } finally {
       setLoading(false);
     }
@@ -119,9 +130,9 @@ export default function AddPaymentPage() {
     e.preventDefault();
     if (!selectedStudent) return;
 
+    setSubmitting(true);
+    
     try {
-      setSubmitting(true);
-      
       console.log('📤 Submitting payment:', {
         studentId: selectedStudent._id,
         studentName: selectedStudent.name,
@@ -129,47 +140,45 @@ export default function AddPaymentPage() {
         form: paymentForm
       });
 
-      const res = await fetch(`/api/accounts/receipts/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
+      // Use unified API client with 45-second timeout for large datasets
+      const [data, err] = await safeApiCall(() =>
+        api.post<any>(`/api/accounts/receipts/create`, {
           studentId: selectedStudent._id,
           ...paymentForm,
           amount: Number(paymentForm.amount),
-        }),
-      });
+        }, { timeout: 45000 })
+      );
 
-      const data = await res.json();
-      
+      if (err) {
+        console.error("❌ Payment submission error:", err);
+        alert(`❌ Error recording payment: ${err.message || 'Network error'}`);
+        setSubmitting(false);
+        return;
+      }
+
       console.log('📥 Payment response:', { 
-        status: res.status, 
-        success: data.success, 
-        message: data.message 
+        success: data?.success, 
+        message: data?.message 
       });
 
-      if (data.success) {
-        alert("✅ Payment recorded successfully!");
-        // Reset and go back to selection
-        setStep("select");
-        setSelectedStudent(null);
-        setPaymentForm({
-          amount: "",
-          method: "cash",
-          date: new Date().toISOString().split("T")[0],
-          feeType: "tuition",
-          month: "",
-          academicYear: "2024-25",
-          transactionId: "",
-          remarks: "",
-          generateReceipt: true,
-        });
-        // Refresh student list
-        if (selectedBatch) {
-          fetchStudentsByBatch();
-        }
-      } else {
-        alert(`❌ Failed to record payment: ${data.message || 'Unknown error'}`);
+      alert("✅ Payment recorded successfully!");
+      // Reset and go back to selection
+      setStep("select");
+      setSelectedStudent(null);
+      setPaymentForm({
+        amount: "",
+        method: "cash",
+        date: new Date().toISOString().split("T")[0],
+        feeType: "tuition",
+        month: "",
+        academicYear: "2024-25",
+        transactionId: "",
+        remarks: "",
+        generateReceipt: true,
+      });
+      // Refresh student list
+      if (selectedBatch) {
+        fetchStudentsByBatch();
       }
     } catch (err: any) {
       console.error("❌ Payment submission error:", err);
@@ -247,7 +256,7 @@ export default function AddPaymentPage() {
                     <option value="">-- Select Batch --</option>
                     {availableBatches.map((batch) => (
                       <option key={batch._id} value={batch.name}>
-                        {batch.name} ({batch.course})
+                        {batch.name} ({batch.courseName || 'N/A'})
                       </option>
                     ))}
                   </select>

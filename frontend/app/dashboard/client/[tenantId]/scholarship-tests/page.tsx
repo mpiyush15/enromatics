@@ -77,6 +77,25 @@ export default function ScholarshipTestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [attendanceFilter, setAttendanceFilter] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+
+  // Fetch tenant info
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/settings/tenant-profile`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant || data);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant info:", err);
+      }
+    };
+    fetchTenantInfo();
+  }, []);
 
   useEffect(() => {
     fetchExams();
@@ -227,6 +246,7 @@ export default function ScholarshipTestsPage() {
   const exportToCSV = () => {
     if (filteredRegistrations.length === 0) return;
 
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
     const headers = [
       "Registration Number",
       "Student Name", 
@@ -253,9 +273,13 @@ export default function ScholarshipTestsPage() {
       reg.result || "Pending"
     ]);
 
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(","))
-      .join("\n");
+    const csvContent = [
+      [instituteName],
+      [""],
+      [headers, ...csvData]
+        .map(row => row.map(field => `"${field}"`).join(","))
+        .join("\n")
+    ].join("");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");

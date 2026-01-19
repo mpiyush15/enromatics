@@ -46,7 +46,7 @@ export default function FeesPendingPage() {
   const fetchFiltersData = async () => {
     try {
       // Fetch batches
-      const batchRes = await fetch(`/api/academics/batches`, {
+      const batchRes = await fetch(`/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       const batchData = await batchRes.json();

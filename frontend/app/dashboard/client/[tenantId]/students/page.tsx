@@ -29,6 +29,7 @@ export default function StudentsPage() {
   const [quota, setQuota] = useState<Quota | null>(null);
   const [limit, setLimit] = useState(10); // Per page limit
   const [batches, setBatches] = useState<string[]>([]);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
 
   /* ================= FILTER INPUTS ================= */
   const [batchFilter, setBatchFilter] = useState("");
@@ -124,6 +125,27 @@ export default function StudentsPage() {
   useEffect(() => {
     fetchStudents();
   }, [page, appliedFilters, limit]);
+
+  /* ================= FETCH TENANT INFO ================= */
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/tenant/${tenantId}`, {
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant);
+        }
+      } catch (err) {
+        console.error("Failed to fetch tenant info:", err);
+      }
+    };
+
+    if (tenantId) {
+      fetchTenantInfo();
+    }
+  }, [tenantId]);
 
   /* ================= LISTEN FOR REFRESH SIGNALS FROM OTHER PAGES ================= */
   useEffect(() => {
@@ -372,6 +394,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
 
   // Actual Excel export
   const performExcelExport = (studentsToExport: StudentDTO[]) => {
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
     const headers = ["Name", "Email", "Phone", "Gender", "Course", "Batch", "Roll Number", "Address", "Fees Status"];
     const rows = studentsToExport.map(student => [
       student.name || "",
@@ -386,7 +409,9 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
     ]);
 
     const csvContent = [
-      headers.join(","),
+      [instituteName],
+      [""],
+      [headers.join(",")],
       ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     ].join("\n");
 
@@ -407,18 +432,23 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
       return;
     }
 
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
+
     const html = `
       <html>
       <head>
         <title>Students List</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+          .header h1 { color: #333; margin: 0 0 5px 0; }
+          .header p { color: #666; margin: 5px 0; }
           h1 { text-align: center; color: #333; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
           th { background-color: #f2f2f2; font-weight: bold; }
           tr:nth-child(even) { background-color: #f9f9f9; }
-          .header { margin-bottom: 10px; color: #666; }
+          .info { color: #666; }
           @media print {
             body { margin: 0; padding: 10px; }
             table { font-size: 12px; }
@@ -426,10 +456,13 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
         </style>
       </head>
       <body>
-        <h1>📚 Students List</h1>
         <div class="header">
+          <h1>${instituteName}</h1>
+          <p><strong>Students List</strong></p>
+          <p class="info">Generated on: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
+        </div>
+        <div>
           <p><strong>Total Students:</strong> ${studentsToExport.length}</p>
-          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
         </div>
         <table>
           <thead>
@@ -450,7 +483,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                 <td>${student.email || "-"}</td>
                 <td>${student.phone || "-"}</td>
                 <td>${student.course || "-"}</td>
-                <td>${student.batch || "-"}</td>
+                <td>${student.batchName || "-"}</td>
                 <td>${student.rollNumber || "-"}</td>
                 <td>${student.feesStatus || "Pending"}</td>
               </tr>

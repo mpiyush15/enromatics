@@ -115,6 +115,25 @@ export default function RegistrationsPage() {
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+
+  // Fetch tenant info
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/settings/tenant-profile`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant || data);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant info:", err);
+      }
+    };
+    fetchTenantInfo();
+  }, []);
 
   useEffect(() => {
     fetchExamAndRegistrations();
@@ -359,6 +378,7 @@ export default function RegistrationsPage() {
   };
 
   const exportToCSV = () => {
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
     const headers = [
       "Registration Number",
       "Name",
@@ -389,7 +409,12 @@ export default function RegistrationsPage() {
       reg.enrollmentStatus,
     ]);
 
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const csvContent = [
+      [instituteName],
+      [""],
+      [headers, ...rows].map((row) => row.join(",")).join("\n")
+    ].join("");
+    
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");

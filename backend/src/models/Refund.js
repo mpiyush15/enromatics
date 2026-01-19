@@ -79,6 +79,11 @@ const refundSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// Add indexes for faster queries
+refundSchema.index({ tenantId: 1, refundDate: -1 });
+refundSchema.index({ tenantId: 1, studentId: 1 });
+refundSchema.index({ tenantId: 1, status: 1 });
+
 // Generate refund receipt number
 refundSchema.pre("save", async function (next) {
   if (!this.receiptNumber && this.status === "completed") {

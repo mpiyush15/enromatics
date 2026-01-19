@@ -264,25 +264,31 @@ export const createPaymentWithReceipt = async (req, res) => {
     });
 
     // Create payment
-    const payment = await Payment.create({
-      tenantId,
-      studentId,
-      amount: Number(amount),
-      method: method || 'cash',
-      date: date || new Date(),
-      feeType: feeType || 'tuition',
-      month,
-      academicYear,
-      transactionId,
-      remarks,
-      status: "success",
-      receiptGenerated: shouldGenerateReceipt || false,
-      receiptGeneratedAt: shouldGenerateReceipt ? new Date() : undefined,
-      receiptGeneratedBy: shouldGenerateReceipt ? userId : undefined,
-      receiptDelivered: deliveryMethod ? true : false,
-      receiptDeliveryMethod: deliveryMethod || "none",
-      receiptDeliveredAt: deliveryMethod ? new Date() : undefined
-    });
+    let payment;
+    try {
+      payment = await Payment.create({
+        tenantId,
+        studentId,
+        amount: Number(amount),
+        method: method || 'cash',
+        date: date || new Date(),
+        feeType: feeType || 'tuition',
+        month,
+        academicYear,
+        transactionId,
+        remarks,
+        status: "success",
+        receiptGenerated: shouldGenerateReceipt || false,
+        receiptGeneratedAt: shouldGenerateReceipt ? new Date() : undefined,
+        receiptGeneratedBy: shouldGenerateReceipt ? userId : undefined,
+        receiptDelivered: deliveryMethod ? true : false,
+        receiptDeliveryMethod: deliveryMethod || "none",
+        receiptDeliveredAt: deliveryMethod ? new Date() : undefined
+      });
+    } catch (createErr) {
+      console.error('❌ Payment creation failed:', createErr.message);
+      throw createErr;
+    }
 
     console.log('✅ Payment created:', { 
       paymentId: payment._id, 
@@ -290,13 +296,14 @@ export const createPaymentWithReceipt = async (req, res) => {
       amount: payment.amount 
     });
 
-    // Update student balance
+    // Update student balance (reduce pending fees)
     const previousBalance = student.balance || 0;
-    student.balance = previousBalance + Number(amount);
+    student.balance = Math.max(0, previousBalance - Number(amount)); // Subtract payment, don't go below 0
     await student.save();
 
     console.log('✅ Student balance updated:', { 
       previousBalance, 
+      paymentAmount: Number(amount),
       newBalance: student.balance 
     });
 
@@ -677,27 +684,28 @@ export const getAllTransactions = async (req, res) => {
     // Sort by date descending (most recent first)
     const sortObj = { date: -1 };
 
+    // Debug: Check how many payments exist for this tenant
+    const paymentCount = await Payment.countDocuments(baseFilter);
+    const refundCount = await Refund.countDocuments(baseFilter);
+    console.log('📈 Database counts:', {
+      tenantId,
+      paymentCount,
+      refundCount,
+    });
+
     // Fetch payments and refunds in parallel
     const [payments, refunds] = await Promise.all([
       Payment.find(baseFilter)
         .populate({
           path: "studentId",
-          select: "name rollNumber batchId",
-          populate: {
-            path: "batchId",
-            select: "name",
-          },
+          select: "name rollNumber batchName batchId",
         })
         .sort(sortObj)
         .lean(),
       Refund.find(baseFilter)
         .populate({
           path: "studentId",
-          select: "name rollNumber batchId",
-          populate: {
-            path: "batchId",
-            select: "name",
-          },
+          select: "name rollNumber batchName batchId",
         })
         .sort(sortObj)
         .lean()
@@ -712,7 +720,7 @@ export const getAllTransactions = async (req, res) => {
           _id: p.studentId?._id || p.studentId,
           name: p.studentId?.name || "N/A",
           rollNumber: p.studentId?.rollNumber || "N/A",
-          batchName: p.studentId?.batchId?.name || "N/A",
+          batchName: p.studentId?.batchName || "N/A",
         },
       })),
       ...refunds.map((r) => ({
@@ -722,7 +730,7 @@ export const getAllTransactions = async (req, res) => {
           _id: r.studentId?._id || r.studentId,
           name: r.studentId?.name || "N/A",
           rollNumber: r.studentId?.rollNumber || "N/A",
-          batchName: r.studentId?.batchId?.name || "N/A",
+          batchName: r.studentId?.batchName || "N/A",
         },
       })),
     ];

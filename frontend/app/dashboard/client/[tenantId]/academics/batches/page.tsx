@@ -82,7 +82,7 @@ export default function CoursesAndBatchesPage() {
 
   // Fetch batches
   const { data: batchesData, isLoading: loadingBatches, mutate: refreshBatches } = useSWR(
-    `/api/academics/batches`,
+    `/api/batches`,
     fetcher,
     {
       revalidateOnFocus: true, // 🔄 Refetch when user returns to this page
@@ -245,8 +245,8 @@ export default function CoursesAndBatchesPage() {
 
     try {
       const url = editingBatch
-        ? `/api/academics/batches/${editingBatch._id}`
-        : `/api/academics/batches`;
+        ? `/api/batches/${editingBatch._id}`
+        : `/api/batches`;
       const method = editingBatch ? "PUT" : "POST";
 
       const payload = {
@@ -307,7 +307,7 @@ export default function CoursesAndBatchesPage() {
     if (!confirm("Are you sure you want to delete this batch? This cannot be undone.")) return;
 
     try {
-      const res = await fetch(`/api/academics/batches/${id}`, {
+      const res = await fetch(`/api/batches/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

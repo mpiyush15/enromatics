@@ -27,6 +27,13 @@ interface Summary {
   notMarked: number;
 }
 
+interface TenantInfo {
+  tenantId: string;
+  name: string;
+  instituteName?: string;
+  email?: string;
+}
+
 export default function AttendancePage() {
   const params = useParams();
   const tenantId = params?.tenantId as string;
@@ -50,6 +57,25 @@ export default function AttendancePage() {
   const [studentMonthAttendance, setStudentMonthAttendance] = useState<any>(null);
   const [loadingStudentAttendance, setLoadingStudentAttendance] = useState(false);
   const [selectedModalMonth, setSelectedModalMonth] = useState(new Date());
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
+
+  // Fetch tenant info for institute name
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/settings/tenant-profile`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant || data);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant info:", err);
+      }
+    };
+    fetchTenantInfo();
+  }, []);
 
   // Fetch unique batches and courses for filters
   useEffect(() => {
@@ -332,6 +358,7 @@ export default function AttendancePage() {
     }
 
     const filteredStudents = students.filter(s => !statusFilter || s.attendance?.status === statusFilter);
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
 
     const html = `
       <html>
@@ -339,13 +366,15 @@ export default function AttendancePage() {
         <title>Attendance Report - ${new Date(date).toLocaleDateString()}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { text-align: center; color: #333; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+          .header h1 { color: #333; margin: 0 0 5px 0; }
+          .header p { color: #666; margin: 5px 0; }
           h2 { color: #555; margin-top: 15px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
           th { background-color: #f2f2f2; font-weight: bold; }
           tr:nth-child(even) { background-color: #f9f9f9; }
-          .header { margin-bottom: 15px; color: #666; }
+          .info { color: #666; }
           .summary { margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px; }
           .summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
           .summary-item { padding: 10px; background-color: white; border-radius: 5px; text-align: center; }
@@ -358,9 +387,13 @@ export default function AttendancePage() {
         </style>
       </head>
       <body>
-        <h1>📋 Daily Attendance Report</h1>
         <div class="header">
-          <p><strong>Date:</strong> ${new Date(date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+          <h1>${instituteName}</h1>
+          <p><strong>Daily Attendance Report</strong></p>
+          <p class="info">Date: ${new Date(date).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+        </div>
+
+        <div class="info" style="margin-bottom: 15px;">
           ${batch ? `<p><strong>Batch:</strong> ${batch}</p>` : ""}
           ${course ? `<p><strong>Course:</strong> ${course}</p>` : ""}
           <p><strong>Total Students:</strong> ${filteredStudents.length}</p>
@@ -501,13 +534,23 @@ export default function AttendancePage() {
                     <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200">
                       📋 CSV Format Requirements
                     </h3>
-                    <a
-                      href="/sample-attendance.csv"
-                      download
-                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    <button
+                      onClick={() => {
+                        const csvContent = `rollNumber,status,remarks\n2025JE001,present,On time\n2025JE002,absent,Sick leave\n2025JE003,late,Arrived 15 minutes late\n2025JE004,present,\n2025IT001,excused,Medical emergency\n2025IT002,present,On time\n2026NE001,absent,\n2026NE002,late,Traffic delay`;
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement('a');
+                        const url = URL.createObjectURL(blob);
+                        link.setAttribute('href', url);
+                        link.setAttribute('download', 'sample-attendance.csv');
+                        link.style.visibility = 'hidden';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium cursor-pointer"
                     >
                       ⬇️ Download Sample
-                    </a>
+                    </button>
                   </div>
                   <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
                     <li>• Columns: <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">rollNumber</code>, <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">status</code>, <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded">remarks</code> (optional)</li>

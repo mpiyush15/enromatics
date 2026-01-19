@@ -70,7 +70,7 @@ export default function AddStudentPage() {
   const fetchBatches = async () => {
     try {
       // Fetch all batches
-      const res = await fetch(`/api/academics/batches`, {
+      const res = await fetch(`/api/batches`, {
         credentials: "include",
       });
       const data = await res.json();

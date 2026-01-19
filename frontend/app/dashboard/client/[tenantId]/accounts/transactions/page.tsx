@@ -87,7 +87,7 @@ export default function AllTransactionsPage() {
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        const res = await fetch("/api/academics/batches", {
+        const res = await fetch("/api/batches?tenantId=" + tenantId, {
           credentials: "include",
         });
         const data = await res.json();
@@ -114,7 +114,7 @@ export default function AllTransactionsPage() {
       console.log("🔍 Fetching all transactions...", { attempt: retryCount + 1 });
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout for large datasets
 
       const res = await fetch(`/api/accounts/transactions`, {
         credentials: "include",
@@ -254,12 +254,39 @@ export default function AllTransactionsPage() {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+  // Format date in IST (Indian Standard Time - UTC+5:30)
+  const formatDateIST = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
-    });
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata"
+    }).format(date);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Kolkata"
+    }).format(date);
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata"
+    }).format(date);
   };
 
   // Apply filters and sorting to transactions
@@ -717,10 +744,7 @@ export default function AllTransactionsPage() {
                           {formatDate(transaction.date)}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(transaction.date).toLocaleTimeString("en-IN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatTime(transaction.date)} IST
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

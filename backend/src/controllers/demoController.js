@@ -75,7 +75,7 @@ export const createDemoRequest = async (req, res) => {
               <div class="demo-box">
                 <h3 style="margin-top: 0; color: #1e40af;">📋 Your Demo Details:</h3>
                 <p><strong>Name:</strong> ${name}</p>
-                <p><strong>Company:</strong> ${company}</p>
+                ${company !== "Manual Demo Session" ? `<p><strong>Company:</strong> ${company}</p>` : ''}
                 <p><strong>Email:</strong> ${email}</p>
                 <p><strong>Phone:</strong> ${phone}</p>
                 <p><strong>Requested Date & Time:</strong> ${new Date(demoDateTime).toLocaleString()}</p>

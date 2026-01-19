@@ -846,6 +846,103 @@ export const sendEnrollmentNotificationEmail = async ({
     return sendEmail({ to, subject, html, tenantId, type: 'enrollment' });
 };
 
+/**
+ * Send enrollment welcome email to the student
+ */
+export const sendStudentEnrollmentEmail = async ({ 
+    to, 
+    studentName, 
+    batchName,
+    rollNumber,
+    password,
+    portalUrl, 
+    instituteName = 'Our Institute',
+    tenantId = null 
+}) => {
+    const subject = `Welcome to ${instituteName} - Your Account is Ready!`;
+    
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+                .credentials-box { background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                .credential-item { padding: 10px 0; font-size: 14px; }
+                .credential-item strong { display: block; color: #1e40af; margin-bottom: 3px; }
+                .credential-value { background: white; padding: 8px 12px; border-radius: 4px; font-family: monospace; color: #1f2937; }
+                .cta-button { display: inline-block; background: #3b82f6; color: white; padding: 14px 30px; text-decoration: none; border-radius: 6px; margin-top: 15px; font-weight: bold; }
+                .footer { background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 12px; border-radius: 0 0 10px 10px; }
+                .steps { background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                .step { margin: 12px 0; padding-left: 25px; position: relative; }
+                .step:before { content: counter(step-counter); counter-increment: step-counter; position: absolute; left: 0; background: #3b82f6; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0;">🎓 Welcome to ${instituteName}!</h1>
+                </div>
+                <div class="content">
+                    <p>Hello ${studentName},</p>
+                    <p>Congratulations! Your account has been successfully created at <strong>${instituteName}</strong>. You're now ready to access your courses, assignments, and track your progress.</p>
+                    
+                    <div class="credentials-box">
+                        <h3 style="margin: 0 0 15px 0; color: #1e40af;">🔐 Your Login Credentials:</h3>
+                        
+                        <div class="credential-item">
+                            <strong>Roll Number (Username):</strong>
+                            <div class="credential-value">${rollNumber}</div>
+                        </div>
+                        
+                        <div class="credential-item">
+                            <strong>Password:</strong>
+                            <div class="credential-value">${password}</div>
+                        </div>
+                        
+                        <div class="credential-item">
+                            <strong>Batch:</strong>
+                            <div style="padding: 8px 12px;">${batchName}</div>
+                        </div>
+                    </div>
+
+                    <h3 style="color: #1e40af; margin-top: 25px;">Getting Started:</h3>
+                    <div class="steps" style="counter-reset: step-counter;">
+                        <div class="step">Open the student portal and log in with your credentials above</div>
+                        <div class="step">Update your profile with a profile picture (optional)</div>
+                        <div class="step">Browse your courses and view assignments</div>
+                        <div class="step">Submit assignments before deadlines</div>
+                        <div class="step">Check your attendance and performance</div>
+                    </div>
+
+                    <p style="text-align: center;">
+                        <a href="${portalUrl}" class="cta-button">Access Student Portal</a>
+                    </p>
+
+                    <p style="background: #fef3c7; padding: 15px; border-radius: 5px; border-left: 4px solid #f59e0b; margin: 20px 0; font-size: 14px;">
+                        <strong>💡 Tip:</strong> You'll also receive a WhatsApp message with these details. Save it for quick reference. For security, change your password after first login.
+                    </p>
+
+                    <p style="color: #6b7280; font-size: 14px;">
+                        <strong>📱 Download the App:</strong> For a better experience, download the Enromatics app from Google Play Store (available soon).
+                    </p>
+                </div>
+                <div class="footer">
+                    <p><strong>${instituteName}</strong></p>
+                    <p>Need help? Contact support at support@enromatics.com</p>
+                    <p>&copy; ${new Date().getFullYear()} Enromatics. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({ to, subject, html, tenantId, type: 'student_enrollment' });
+};
+
 export default {
     sendEmail,
     sendOTPEmail,
@@ -856,5 +953,6 @@ export default {
     sendPaymentConfirmationEmail,
     sendCredentialsEmail,
     sendSubscriptionConfirmationEmail,
-    sendEnrollmentNotificationEmail
+    sendEnrollmentNotificationEmail,
+    sendStudentEnrollmentEmail
 };

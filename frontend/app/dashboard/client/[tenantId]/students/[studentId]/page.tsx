@@ -101,7 +101,7 @@ export default function StudentProfilePage() {
     try {
       setLoadingBatches(true);
       const [data, err] = await safeApiCall(() =>
-        api.get<any>(`/api/academics/batches?tenantId=${tenantId}&active=true`)
+        api.get<any>(`/api/batches?tenantId=${tenantId}&active=true`)
       );
 
       if (err) {

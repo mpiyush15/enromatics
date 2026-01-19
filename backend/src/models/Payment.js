@@ -102,6 +102,11 @@ const paymentSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// Add indexes for faster queries
+paymentSchema.index({ tenantId: 1, date: -1 });
+paymentSchema.index({ tenantId: 1, studentId: 1 });
+paymentSchema.index({ tenantId: 1, status: 1 });
+
 // Generate receipt number before saving (atomic counter approach)
 paymentSchema.pre("save", async function (next) {
   try {

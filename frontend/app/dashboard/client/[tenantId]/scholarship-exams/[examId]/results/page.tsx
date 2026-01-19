@@ -77,7 +77,26 @@ export default function ResultManagementPage() {
   const [resultFilter, setResultFilter] = useState("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadingResults, setUploadingResults] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch tenant info
+  useEffect(() => {
+    const fetchTenantInfo = async () => {
+      try {
+        const res = await fetch(`/api/settings/tenant-profile`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTenantInfo(data.tenant || data);
+        }
+      } catch (err) {
+        console.error("Error fetching tenant info:", err);
+      }
+    };
+    fetchTenantInfo();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -196,8 +215,11 @@ export default function ResultManagementPage() {
   };
 
   const exportResults = () => {
+    const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute";
     const csvContent = [
-      ["Registration Number", "Student Name", "Email", "Phone", "Marks", "Percentage", "Rank", "Result", "Reward Eligible"].join(","),
+      [instituteName],
+      [""],
+      [["Registration Number", "Student Name", "Email", "Phone", "Marks", "Percentage", "Rank", "Result", "Reward Eligible"].join(",")],
       ...filteredRegistrations.map(reg => [
         reg.registrationNumber,
         reg.studentName,
