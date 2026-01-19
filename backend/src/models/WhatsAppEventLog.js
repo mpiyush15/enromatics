@@ -30,7 +30,7 @@ const whatsappEventLogSchema = new mongoose.Schema(
 
     eventType: {
       type: String,
-      enum: ["absence", "payment", "result"],
+      enum: ["absence", "payment", "result", "enrollment"],
       required: true,
     },
 
