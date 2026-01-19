@@ -77,6 +77,90 @@ export const getInstituteOverview = async (req, res) => {
   }
 };
 
+export const getMonthlyFeesCollection = async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(400).json({ message: "Tenant ID missing" });
+
+    const { months = 6 } = req.query; // Get last N months (default 6)
+    const monthsCount = parseInt(months) || 6;
+
+    console.log("Fetching monthly fees collection for tenant:", tenantId, "Months:", monthsCount);
+
+    const monthlyData = [];
+    const now = new Date();
+
+    // Generate data for the last N months
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      
+      // Fetch fees collected in this month
+      const feesCollected = await Payment.aggregate([
+        {
+          $match: {
+            tenantId,
+            status: "success",
+            $or: [
+              { date: { $gte: startDate, $lte: endDate } },
+              { createdAt: { $gte: startDate, $lte: endDate } }
+            ]
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" }
+          }
+        }
+      ]);
+
+      // Fetch pending fees for this month (based on student records)
+      const studentStats = await Student.aggregate([
+        { $match: { tenantId } },
+        {
+          $group: {
+            _id: null,
+            totalFees: { $sum: "$fees" },
+            totalPaid: { $sum: "$balance" }
+          }
+        }
+      ]);
+
+      const collected = feesCollected[0]?.total || 0;
+      const totalFees = studentStats[0]?.totalFees || 0;
+      const totalPaid = studentStats[0]?.totalPaid || 0;
+      const pending = totalFees - totalPaid;
+
+      const monthName = date.toLocaleDateString("en-US", { month: "short" });
+
+      monthlyData.push({
+        month: monthName,
+        fullMonth: date.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+        fees: collected,
+        pending: pending,
+        students: totalFees > 0 ? Math.round((totalPaid / totalFees) * 100) : 0 // percentage
+      });
+    }
+
+    console.log('✅ Monthly fees data generated:', monthlyData);
+
+    return res.status(200).json({
+      success: true,
+      data: monthlyData
+    });
+  } catch (error) {
+    console.error("Monthly fees collection error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const getRevenueData = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;

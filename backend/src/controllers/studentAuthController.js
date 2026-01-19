@@ -82,6 +82,7 @@ export const getCurrentStudent = async (req, res) => {
 
     const Student = await import("../models/Student.js");
     const Batch = await import("../models/Batch.js");
+    const Course = await import("../models/Course.js");
     
     // 🔥 CRITICAL: Always fetch fresh data from database to match tenant admin portal exactly
     const freshStudent = await Student.default.findById(req.student._id);
@@ -116,6 +117,24 @@ export const getCurrentStudent = async (req, res) => {
       studentData.batchName = studentData.batch;
     }
 
+    // 🔥 SYNC COURSE: Resolve course name - check if course field is an ID or already a name
+    if (studentData.course) {
+      try {
+        // Try to find course by ID first
+        const courseDoc = await Course.default.findById(studentData.course).select('name').lean();
+        if (courseDoc && courseDoc.name) {
+          studentData.courseName = courseDoc.name;
+          console.log(`   ✅ Resolved course from ID: ${studentData.course} → ${courseDoc.name}`);
+        } else {
+          // If no document found, assume course is already a name
+          studentData.courseName = studentData.course;
+        }
+      } catch (courseErr) {
+        console.warn(`   ⚠️  Could not fetch course:`, courseErr.message);
+        studentData.courseName = studentData.course; // Fallback to course value
+      }
+    }
+
     // Include payment history for student with tenant isolation
     const Payment = await import("../models/Payment.js");
     const payments = await Payment.default.find({ 
@@ -131,6 +150,7 @@ export const getCurrentStudent = async (req, res) => {
     console.log(`   Student Email: ${responseData.email}`);
     console.log(`   TenantId: ${responseData.tenantId}`);
     console.log(`   Course: ${responseData.course}`);
+    console.log(`   CourseName: ${responseData.courseName}`);
     console.log(`   Batch: ${responseData.batch}`);
     console.log(`   BatchName: ${responseData.batchName}`);
     console.log(`   BatchId: ${responseData.batchId}`);

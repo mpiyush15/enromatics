@@ -612,13 +612,30 @@ export const getTestsForStudent = async (req, res) => {
             studentId: student._id,
           }).lean();
 
+          // Calculate student's rank for this test
+          let rank = "-";
+          if (marks?.marksObtained !== undefined) {
+            try {
+              // Count how many students scored more than this student
+              const higherScores = await TestMarks.default.countDocuments({
+                tenantId: student.tenantId,
+                testId: test._id,
+                marksObtained: { $gt: marks.marksObtained },
+              });
+              rank = higherScores + 1; // Rank is position, so add 1 to count
+            } catch (rankErr) {
+              console.warn(`Could not calculate rank for test ${test._id}:`, rankErr.message);
+            }
+          }
+
           return {
             ...test,
             marksObtained: marks?.marksObtained || 0,
             totalMarks: marks?.totalMarks || test.totalMarks || 100,
             percentage: marks ? ((marks.marksObtained / (marks.totalMarks || test.totalMarks || 100)) * 100).toFixed(1) : 0,
             passed: marks ? (marks.marksObtained >= 50) : false,
-            marks,
+            rank: rank,
+            marks: marks ? { ...marks, rank } : null,
           };
         } catch (err) {
           console.warn(`Could not fetch marks for test ${test._id}:`, err.message);

@@ -159,7 +159,7 @@ export default function StudentTestsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">📚 My Tests</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Course: <span className="font-semibold">{student?.course || "N/A"}</span> | 
+            Course: <span className="font-semibold">{student?.courseName || student?.course || "N/A"}</span> | 
             Batch: <span className="font-semibold">{student?.batchName || "N/A"}</span>
           </p>
         </div>
@@ -234,6 +234,7 @@ export default function StudentTestsPage() {
                         <th className="px-6 py-3 text-center text-gray-900 dark:text-white font-semibold">Date</th>
                         <th className="px-6 py-3 text-center text-gray-900 dark:text-white font-semibold">Marks</th>
                         <th className="px-6 py-3 text-center text-gray-900 dark:text-white font-semibold">%</th>
+                        <th className="px-6 py-3 text-center text-gray-900 dark:text-white font-semibold">Rank</th>
                         <th className="px-6 py-3 text-center text-gray-900 dark:text-white font-semibold">Status</th>
                       </tr>
                     </thead>
@@ -241,6 +242,7 @@ export default function StudentTestsPage() {
                       {tests.map((test: any) => {
                         const percentage = test.totalMarks ? ((test.marksObtained || 0) / test.totalMarks * 100).toFixed(1) : 0;
                         const passed = (test.marksObtained || 0) >= 50;
+                        const rank = test.marks?.rank || test.batchRank || "-";
                         return (
                           <tr key={test._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <td className="px-6 py-3 text-gray-900 dark:text-white font-medium">{test.name}</td>
@@ -252,6 +254,19 @@ export default function StudentTestsPage() {
                               {test.marksObtained || 0}/{test.totalMarks || 100}
                             </td>
                             <td className="px-6 py-3 text-center text-gray-600 dark:text-gray-400">{percentage}%</td>
+                            <td className="px-6 py-3 text-center">
+                              {typeof rank === 'number' ? (
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                                  rank === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                  rank <= 3 ? 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200' :
+                                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                }`}>
+                                  #{rank}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">-</span>
+                              )}
+                            </td>
                             <td className="px-6 py-3 text-center">
                               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                 passed 

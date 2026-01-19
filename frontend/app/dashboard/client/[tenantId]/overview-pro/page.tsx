@@ -52,6 +52,8 @@ export default function OverviewProPage() {
 
   const [leads, setLeads] = useState<Lead[]>([]);
 
+  const [monthlyFeesData, setMonthlyFeesData] = useState<TrendData[]>([]);
+
   const [trendData, setTrendData] = useState<TrendData[]>([
     { month: 'Jul', revenue: 45000, students: 120, fees: 38000, pending: 7000 },
     { month: 'Aug', revenue: 52000, students: 135, fees: 42000, pending: 10000 },
@@ -74,8 +76,33 @@ export default function OverviewProPage() {
     if (user) {
       fetchDashboardData();
       fetchLeadsData();
+      fetchMonthlyFeesData();
     }
   }, [user, tenantId]);
+
+  const fetchMonthlyFeesData = async () => {
+    try {
+      const [data, err] = await safeApiCall(() =>
+        api.get<any>('/api/dashboard/monthly-fees?months=6')
+      );
+
+      if (!err && data?.success && data?.data) {
+        // Transform backend data to chart format
+        const chartData = data.data.map((item: any) => ({
+          month: item.month,
+          revenue: 0, // Not needed for fees graph
+          students: 0, // Not needed for fees graph
+          fees: item.fees || 0,
+          pending: item.pending || 0,
+        }));
+        setMonthlyFeesData(chartData);
+      } else {
+        console.log("No monthly fees data available");
+      }
+    } catch (error: any) {
+      console.error("Error fetching monthly fees data:", error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     if (!user) return;
@@ -281,7 +308,7 @@ export default function OverviewProPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Last 6 months collection summary</p>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
+            <LineChart data={monthlyFeesData.length > 0 ? monthlyFeesData : trendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="month" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
@@ -292,6 +319,7 @@ export default function OverviewProPage() {
                   borderRadius: '8px',
                   color: '#fff',
                 }}
+                formatter={(value: any) => `₹${(value as number).toLocaleString()}`}
               />
               <Legend />
               <Line type="monotone" dataKey="fees" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} name="Fees Collected" />
