@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import { API_BASE_URL } from "@/lib/apiConfig";
 import { getTenantFromBrowser } from "@/lib/middleware/tenantContext";
 
 export default function StudentProfilePage() {
@@ -30,8 +31,7 @@ export default function StudentProfilePage() {
       href: "#",
       children: [
         { label: "📝 Test Schedule", href: "/student/test-schedule" },
-        { label: "📖 My Tests", href: "/student/my-tests" },
-        { label: "📊 Test Reports", href: "/student/test-reports" },
+        { label: "📖 My Tests", href: "/student/tests" },
       ]
     },
   ];
@@ -44,19 +44,21 @@ export default function StudentProfilePage() {
         return;
       }
 
-      const res = await fetch("http://localhost:5050/api/student-auth/me", {
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (res.ok) {
         const data = await res.json();
-        setStudent(data.student || data);
+        // API returns student directly, not wrapped in .student property
+        setStudent(data);
         setForm({
-          name: data.student?.name || data.name || "",
-          email: data.student?.email || data.email || "",
-          phone: data.student?.phone || data.phone || "",
-          address: data.student?.address || data.address || "",
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
         });
+        console.log("✅ Student profile loaded:", { name: data.name, email: data.email, course: data.course });
       } else {
         setStatus("Failed to load profile");
       }
@@ -88,7 +90,7 @@ export default function StudentProfilePage() {
     setStatus("Saving...");
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`http://localhost:5050/api/student-auth/update-profile`, {
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/update-profile`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",

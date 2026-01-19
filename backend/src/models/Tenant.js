@@ -28,7 +28,10 @@ const tenantSchema = new mongoose.Schema(
       type: String,
       required: false,
       trim: true,
-      default: null,
+      default: function() {
+        // Use name as default if instituteName not provided
+        return this.name;
+      }
     },
 
     // Owner (tenantAdmin) email address

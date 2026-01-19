@@ -20,7 +20,8 @@ export default function StudentTestReportsPage() {
       label: "📚 Academics",
       href: "#",
       children: [
-        { label: "📖 My Tests", href: "/student/my-tests" },
+        { label: "� Test Schedule", href: "/student/test-schedule" },
+        { label: "�📖 My Tests", href: "/student/my-tests" },
         { label: "📊 Test Reports", href: "/student/test-reports" },
       ]
     },
@@ -47,19 +48,20 @@ export default function StudentTestReportsPage() {
       
       if (studentRes.ok) {
         setStudent(studentData);
-        console.log("✅ Student fetched:", studentData.name);
+        console.log("✅ Student fetched:", studentData.name, "Course:", studentData.course, "Batch:", studentData.batchName);
 
-        // Fetch test marks
+        // Fetch tests for this student using student endpoint
         const testsRes = await fetch(
-          `${API_BASE_URL}/api/academics/students/${studentData._id}/tests`,
+          `${API_BASE_URL}/api/academics/student/tests`,
           { headers }
         );
         const testsData = await testsRes.json();
         
-        if (testsRes.ok) {
-          const testsList = testsData.tests || [];
-          setTests(testsList);
-          console.log("✅ Test reports fetched:", testsList.length, "tests with marks");
+        if (testsRes.ok && testsData.tests) {
+          setTests(testsData.tests);
+          console.log("✅ Test Reports fetched:", testsData.tests.length, "tests");
+        } else {
+          console.error("❌ Failed to fetch test reports:", testsData);
         }
       }
     } catch (error) {

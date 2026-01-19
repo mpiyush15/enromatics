@@ -77,32 +77,44 @@ export const loginStudent = async (req, res) => {
 
 export const getCurrentStudent = async (req, res) => {
   try {
-    // protectStudent middleware sets req.student
+    // protectStudent middleware sets req.student, but we'll fetch fresh data from DB to ensure accuracy
     if (!req.student) return res.status(401).json({ message: "Not authenticated" });
+
+    const Student = await import("../models/Student.js");
+    
+    // 🔥 CRITICAL: Always fetch fresh data from database to match tenant admin portal exactly
+    const freshStudent = await Student.default.findById(req.student._id);
+    if (!freshStudent) {
+      console.error(`❌ Student not found in DB for ID: ${req.student._id}`);
+      return res.status(404).json({ message: "Student not found" });
+    }
 
     // Include payment history for student with tenant isolation
     const Payment = await import("../models/Payment.js");
     const payments = await Payment.default.find({ 
-      tenantId: req.student.tenantId,
-      studentId: req.student._id 
+      tenantId: freshStudent.tenantId,
+      studentId: freshStudent._id 
     }).sort({ date: -1 }).lean();
 
-    console.log(`✅ STUDENT AUTH GET CURRENT:`);
-    console.log(`   Student ID: ${req.student._id}`);
-    console.log(`   Student Name: ${req.student.name}`);
-    console.log(`   TenantId: ${req.student.tenantId}`);
-    console.log(`   Fees: ${req.student.fees}`);
-    console.log(`   Balance: ${req.student.balance}`);
+    console.log(`✅ STUDENT AUTH GET CURRENT (Fresh from DB):`);
+    console.log(`   Student ID: ${freshStudent._id}`);
+    console.log(`   Student Name: ${freshStudent.name}`);
+    console.log(`   Student Email: ${freshStudent.email}`);
+    console.log(`   TenantId: ${freshStudent.tenantId}`);
+    console.log(`   Course: ${freshStudent.course}`);
+    console.log(`   Batch: ${freshStudent.batch}`);
+    console.log(`   Fees: ${freshStudent.fees}`);
+    console.log(`   Balance: ${freshStudent.balance}`);
     console.log(`   Payments found: ${payments.length}`);
-    if (payments.length > 0) {
-      console.log(`   First payment:`, JSON.stringify(payments[0]));
-    }
 
-    const studentObj = req.student.toObject ? req.student.toObject() : req.student;
+    const studentObj = freshStudent.toObject ? freshStudent.toObject() : freshStudent;
     const responseData = { ...studentObj, payments };
     
-    console.log(`   Response being sent:`, { 
+    console.log(`   ✅ Response being sent:`, { 
       name: responseData.name,
+      email: responseData.email,
+      course: responseData.course,
+      batch: responseData.batch,
       fees: responseData.fees,
       balance: responseData.balance,
       paymentsCount: responseData.payments.length

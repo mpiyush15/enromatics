@@ -22,8 +22,7 @@ export default function StudentFeesPage() {
       href: "#",
       children: [
         { label: "� Test Schedule", href: "/student/test-schedule" },
-        { label: "�📖 My Tests", href: "/student/my-tests" },
-        { label: "📊 Test Reports", href: "/student/test-reports" },
+        { label: "📖 My Tests", href: "/student/tests" },
       ]
     },
   ];
@@ -42,12 +41,25 @@ export default function StudentFeesPage() {
         "Authorization": `Bearer ${token}`
       };
 
+      // Fetch student data
       const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { headers });
       const data = await res.json();
       
       if (res.ok) {
         setStudent(data);
         setStatus("");
+        
+        // Fetch student payments
+        try {
+          const paymentsRes = await fetch(`${API_BASE_URL}/api/student-auth/payments`, { headers });
+          const paymentsData = await paymentsRes.json();
+          
+          if (paymentsRes.ok && paymentsData.payments) {
+            setPayments(paymentsData.payments);
+          }
+        } catch (paymentErr) {
+          console.error("Error fetching payments:", paymentErr);
+        }
       } else {
         setStatus("Failed to load student data");
       }
@@ -56,6 +68,59 @@ export default function StudentFeesPage() {
       setStatus(err.message || "Error loading data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadReceipt = async (paymentId: string) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        alert("Please login again to download receipt");
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/payments/${paymentId}/receipt/download`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const contentDisposition = res.headers.get("content-disposition");
+        let filename = `Receipt.pdf`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename=([^;]+)/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        console.log("✅ Receipt PDF downloaded successfully!");
+      } else {
+        const contentType = res.headers.get("content-type");
+        let errorMessage = "Failed to download receipt";
+        
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await res.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          errorMessage = await res.text();
+        }
+        alert('❌ ' + errorMessage);
+      }
+    } catch (err: any) {
+      console.error("❌ Download receipt error:", err);
+      alert('❌ Error downloading receipt: ' + err.message);
     }
   };
 
@@ -217,14 +282,12 @@ export default function StudentFeesPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {payment.receiptNumber ? (
-                              <a
-                                href={`${API_BASE_URL}/api/payments/${payment._id}/receipt/download`}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                onClick={() => handleDownloadReceipt(payment._id)}
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-medium shadow-md hover:shadow-lg transition-all transform hover:scale-105 text-sm"
                               >
                                 📥 Download
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-sm text-gray-500 dark:text-gray-400">
                                 No receipt

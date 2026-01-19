@@ -1066,6 +1066,7 @@ export const deletePayment = async (req, res) => {
 
 export const getReceipt = async (req, res) => {
   try {
+    const PDFDocument = (await import("pdfkit")).default;
     const tenantId = req.user?.tenantId || req.student?.tenantId;
     const { id } = req.params; // payment id
 
@@ -1087,46 +1088,99 @@ export const getReceipt = async (req, res) => {
     const tenant = await Tenant.default.findOne({ tenantId });
 
     const instituteName = tenant?.name || "Institute";
+    
+    // Generate standard receipt number format: YYYYMMDD-SEQUENCE
+    const paymentDate = new Date(payment.date);
+    const year = paymentDate.getFullYear();
+    const month = String(paymentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(paymentDate.getDate()).padStart(2, "0");
+    const datePrefix = `${year}${month}${day}`;
+    
+    // Get sequence number for this date (count payments from this date)
+    const paymentCount = await Payment.countDocuments({ 
+      tenantId, 
+      date: { $gte: new Date(year, paymentDate.getMonth(), paymentDate.getDate()), $lt: new Date(year, paymentDate.getMonth(), paymentDate.getDate() + 1) }
+    });
+    const receiptNumber = `${datePrefix}-${String(paymentCount).padStart(3, "0")}`;
 
-    const html = `<!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Receipt ${payment._id}</title>
-        <style>body{font-family: Arial, sans-serif; padding:20px} .header{display:flex;justify-content:space-between} .box{border:1px solid #ddd;padding:16px;border-radius:6px}</style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <h2>${instituteName}</h2>
-            <div>${tenant?.email || ""}</div>
-            <div>${tenant?.address || ""}</div>
-          </div>
-          <div>
-            <strong>Receipt</strong>
-            <div>ID: ${payment._id}</div>
-            <div>Date: ${new Date(payment.date).toLocaleString()}</div>
-          </div>
-        </div>
-        <hr />
-        <div class="box">
-          <h3>Student</h3>
-          <div>Name: ${student?.name || "-"}</div>
-          <div>Email: ${student?.email || "-"}</div>
-          <div>Roll Number: ${student?.rollNumber || "-"}</div>
-        </div>
-        <div class="box" style="margin-top:12px">
-          <h3>Payment Details</h3>
-          <div>Amount: ₹${payment.amount}</div>
-          <div>Method: ${payment.method}</div>
-          <div>Status: ${payment.status}</div>
-        </div>
-      </body>
-    </html>`;
+    // Create PDF
+    const doc = new PDFDocument({
+      margin: 40,
+      size: "A4"
+    });
 
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("Content-Disposition", `attachment; filename=receipt_${payment._id}.html`);
-    res.send(html);
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=Receipt-${receiptNumber}.pdf`);
+    
+    // Pipe to response
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(24).font("Helvetica-Bold").text(instituteName, { align: "center" });
+    doc.fontSize(10).font("Helvetica").text(tenant?.email || "", { align: "center" });
+    doc.fontSize(10).font("Helvetica").text(tenant?.address || "", { align: "center" });
+    
+    doc.moveDown(0.5);
+    doc.moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    // Receipt title and number
+    doc.fontSize(16).font("Helvetica-Bold").text("RECEIPT", { align: "center" });
+    doc.fontSize(11).font("Helvetica").text(`Receipt No: ${receiptNumber}`, { align: "right" });
+    doc.fontSize(11).font("Helvetica").text(`Date: ${paymentDate.toLocaleDateString("en-IN")}`, { align: "right" });
+    
+    doc.moveDown(1);
+
+    // Student Details Section
+    doc.fontSize(12).font("Helvetica-Bold").text("Student Details", { underline: true });
+    doc.fontSize(10).font("Helvetica");
+    doc.text(`Name: ${student?.name || "-"}`, { width: 250 });
+    doc.text(`Email: ${student?.email || "-"}`, { width: 250 });
+    doc.text(`Roll Number: ${student?.rollNumber || "-"}`, { width: 250 });
+    doc.text(`Batch: ${student?.batchName || "-"}`, { width: 250 });
+    
+    doc.moveDown(1);
+
+    // Payment Details Section
+    doc.fontSize(12).font("Helvetica-Bold").text("Payment Details", { underline: true });
+    doc.fontSize(10).font("Helvetica");
+    
+    // Create table for payment details
+    const tableTop = doc.y;
+    doc.text("Description", 60, tableTop);
+    doc.text("Amount", 400, tableTop, { align: "right" });
+    
+    doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+    
+    doc.fontSize(10).font("Helvetica");
+    const itemY = tableTop + 25;
+    doc.text("Payment Amount", 60, itemY);
+    doc.text(`₹${payment.amount.toLocaleString()}`, 400, itemY, { align: "right" });
+    
+    doc.moveDown(2);
+    
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+    const totalY = doc.y + 10;
+    doc.fontSize(11).font("Helvetica-Bold");
+    doc.text("Total Amount:", 60, totalY);
+    doc.text(`₹${payment.amount.toLocaleString()}`, 400, totalY, { align: "right" });
+    
+    doc.moveDown(2);
+
+    // Payment method and status
+    doc.fontSize(10).font("Helvetica");
+    doc.text(`Payment Method: ${payment.method}`);
+    doc.text(`Payment Status: ${payment.status}`);
+    
+    doc.moveDown(2);
+
+    // Footer
+    doc.fontSize(9).font("Helvetica").text("This is a computer-generated receipt. No signature is required.", { align: "center", color: "#666" });
+    doc.fontSize(8).font("Helvetica").text(`Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`, { align: "center", color: "#999" });
+
+    // Finalize PDF
+    doc.end();
   } catch (err) {
     console.error("Get receipt error:", err);
     res.status(500).json({ message: "Server error" });

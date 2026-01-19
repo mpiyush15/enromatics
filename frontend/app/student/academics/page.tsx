@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import StatCard from "@/components/dashboard/StatCard";
 import { getTenantFromBrowser } from "@/lib/middleware/tenantContext";
+import { API_BASE_URL } from "@/lib/apiConfig";
 import { 
   BookOpen, 
   TrendingUp, 
@@ -40,8 +41,7 @@ export default function AcademicsPage() {
       href: "#",
       children: [
         { label: "📝 Test Schedule", href: "/student/test-schedule" },
-        { label: "📖 My Tests", href: "/student/my-tests" },
-        { label: "📊 Test Reports", href: "/student/test-reports" },
+        { label: "📖 My Tests", href: "/student/tests" },
       ]
     },
   ];
@@ -61,7 +61,7 @@ export default function AcademicsPage() {
         const token = localStorage.getItem("authToken");
         if (!token) return;
         
-        const res = await fetch("http://localhost:5050/api/student-auth/me", {
+        const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         

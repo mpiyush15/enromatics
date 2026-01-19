@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import { getTenantFromBrowser } from "@/lib/middleware/tenantContext";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 interface StudentData {
   _id: string;
@@ -35,8 +36,7 @@ export default function StudentDashboardPage() {
       href: "#",
       children: [
         { label: "📝 Test Schedule", href: "/student/test-schedule" },
-        { label: "📖 My Tests", href: "/student/my-tests" },
-        { label: "📊 Test Reports", href: "/student/test-reports" },
+        { label: "📖 My Tests", href: "/student/tests" },
       ]
     },
   ];
@@ -62,8 +62,8 @@ export default function StudentDashboardPage() {
         return;
       }
 
-      console.log("🔑 Token found, fetching student data from /api/student-auth/me...");
-      const res = await fetch("http://localhost:5050/api/student-auth/me", {
+      console.log("🔑 Token found, fetching student data...");
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

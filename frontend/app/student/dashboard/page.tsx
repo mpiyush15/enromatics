@@ -46,8 +46,7 @@ export default function StudentDashboardPage() {
       href: "#",
       children: [
         { label: "� Test Schedule", href: "/student/test-schedule" },
-        { label: "�📖 My Tests", href: "/student/my-tests" },
-        { label: "📊 Test Reports", href: "/student/test-reports" },
+        { label: "📖 My Tests", href: "/student/tests" },
       ]
     },
   ];
