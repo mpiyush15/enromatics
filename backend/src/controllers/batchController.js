@@ -6,11 +6,25 @@ import BatchStudent from "../models/BatchStudent.js";
  */
 export const getBatches = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user?.tenantId;
+    
+    if (!tenantId) {
+      console.error("❌ TenantId missing - User object:", {
+        userId: req.user?._id,
+        email: req.user?.email,
+        role: req.user?.role,
+        tenantId: req.user?.tenantId,
+        userKeys: req.user ? Object.keys(req.user) : 'no user'
+      });
+      // Still try to return batches, it might work
+    }
 
+    console.log(`🔍 Fetching batches for tenantId: ${tenantId}`);
     const batches = await Batch.find({ tenantId })
-      .populate("courseId", "name fees duration") // Populate course with fees and duration
+      .populate("courseId", "name fees duration")
       .sort({ createdAt: -1 });
+
+    console.log(`📦 Found ${batches.length} raw batches`, batches.map(b => ({ name: b.name, courseId: b.courseId, status: b.status })));
 
     // Calculate actual enrolled count from BatchStudent collection
     const batchesWithCourseName = await Promise.all(
@@ -24,22 +38,23 @@ export const getBatches = async (req, res) => {
         return {
           ...batch.toObject(),
           courseName: batch.courseId?.name || null,
-          enrolledCount, // Override with actual count from BatchStudent
+          enrolledCount,
         };
       })
     );
 
-    console.log(`✅ Fetched ${batchesWithCourseName.length} batches with actual enrolled counts`);
+    console.log(`✅ Fetched ${batchesWithCourseName.length} batches with enrolled counts`);
 
     res.status(200).json({
       success: true,
       batches: batchesWithCourseName,
     });
   } catch (error) {
-    console.error("Error fetching batches:", error);
+    console.error("❌ Error fetching batches:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch batches",
+      error: error.message,
     });
   }
 };
@@ -50,7 +65,7 @@ export const getBatches = async (req, res) => {
 export const getBatchById = async (req, res) => {
   try {
     const { id } = req.params;
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user?.tenantId;
 
     const batch = await Batch.findOne({ _id: id, tenantId })
       .populate("courseId", "name fees duration");
@@ -92,7 +107,7 @@ export const getBatchById = async (req, res) => {
 export const createBatch = async (req, res) => {
   try {
     const { name, courseId, description, startDate, endDate, capacity, status } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user?.tenantId;
 
     // Check if batch name already exists for this tenant
     const existingBatch = await Batch.findOne({ tenantId, name });
@@ -141,7 +156,14 @@ export const updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, courseId, description, startDate, endDate, capacity, status } = req.body;
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      console.error("❌ TenantId missing from user:", req.user);
+      return res.status(400).json({ 
+        message: "Tenant ID missing. Please log in again." 
+      });
+    }
 
     console.log('[BATCH UPDATE] Request:', { id, name, courseId, description, startDate, endDate, capacity, status });
 
@@ -213,7 +235,14 @@ export const updateBatch = async (req, res) => {
 export const deleteBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user?.tenantId;
+
+    if (!tenantId) {
+      console.error("❌ TenantId missing from user:", req.user);
+      return res.status(400).json({ 
+        message: "Tenant ID missing. Please log in again." 
+      });
+    }
 
     const batch = await Batch.findOneAndDelete({ _id: id, tenantId });
 

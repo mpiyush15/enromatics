@@ -70,14 +70,18 @@ export default function AddStudentPage() {
   const fetchBatches = async () => {
     try {
       // Fetch all batches
-      const res = await fetch(`/api/batches`, {
+      const res = await fetch(`/api/batches?tenantId=${tenantId}`, {
         credentials: "include",
       });
       const data = await res.json();
+      console.log("📦 Batches fetched:", data);
       if (data.success) {
-        const activeBatches = data.batches.filter((b: Batch) => b.status === "active");
+        const activeBatches = data.batches.filter((b: any) => b.status === "active");
+        console.log("✅ Active batches:", activeBatches.length, activeBatches);
         setBatches(activeBatches);
         setFilteredBatches(activeBatches);
+      } else {
+        console.error("❌ Failed to fetch batches:", data.message);
       }
       setLoadingBatches(false);
     } catch (error) {
@@ -163,13 +167,18 @@ export default function AddStudentPage() {
       const selectedCourse = courses.find((c: any) => c._id === value);
       if (selectedCourse) {
         console.log(`[FORM] Course selected: ${selectedCourse.name} (ID: ${selectedCourse._id})`);
+        console.log(`[FORM] All batches available:`, batches);
+        
         // Filter batches that have this courseId
         // Note: courseId can be either a string (if not populated) or an object with _id (if populated)
         const batchesForCourse = batches.filter((b: any) => {
-          const batchCourseId = typeof b.courseId === 'object' ? b.courseId?._id : b.courseId;
+          const batchCourseId = typeof b.courseId === 'object' && b.courseId?._id 
+            ? b.courseId._id 
+            : b.courseId;
+          console.log(`[FILTER] Batch ${b.name}: courseId=${batchCourseId}, selectedCourseId=${value}, match=${batchCourseId === value}`);
           return batchCourseId && batchCourseId === value;
         });
-        console.log(`[FORM] Found ${batchesForCourse.length} batches for this course`);
+        console.log(`[FORM] Found ${batchesForCourse.length} batches for this course:`, batchesForCourse);
         setFilteredBatches(batchesForCourse);
         setForm(prev => ({ ...prev, batchId: "" })); // Reset batch selection
       }

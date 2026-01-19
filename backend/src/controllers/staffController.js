@@ -1,5 +1,6 @@
 import Staff from "../models/Staff.js";
 import User from "../models/User.js";
+import Employee from "../models/Employee.js";
 import Tenant from "../models/Tenant.js";
 import bcrypt from "bcryptjs";
 import * as planGuard from "../../lib/planGuard.js";
