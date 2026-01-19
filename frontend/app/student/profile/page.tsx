@@ -273,7 +273,7 @@ export default function StudentProfilePage() {
                     🎓 Batch
                   </label>
                   <p className="text-lg font-medium text-gray-900 dark:text-white px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    {student.batchName}
+                    {student.batchName || student.batch || "Not assigned"}
                   </p>
                 </div>
               </div>

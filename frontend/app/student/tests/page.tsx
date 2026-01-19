@@ -61,8 +61,13 @@ export default function StudentTestsPage() {
           const testsData = await testsRes.json();
           
           if (testsRes.ok && testsData.tests) {
+            console.log("✅ Tests fetched with marks:", testsData.tests.map((t: any) => ({
+              name: t.name,
+              marksObtained: t.marksObtained,
+              totalMarks: t.totalMarks,
+              percentage: t.percentage,
+            })));
             setTests(testsData.tests);
-            console.log("✅ Tests fetched:", testsData.tests.length);
           } else {
             console.error("❌ Failed to fetch tests:", testsData);
           }

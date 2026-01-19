@@ -567,8 +567,10 @@ export const getTestsForStudent = async (req, res) => {
       });
     }
 
-    // Get batch name from batchId
+    // 🔥 SYNC BATCH: Ensure we have the correct batch name
     let batchName = student.batch; // Fallback to existing batch field
+    let resolvedBatchId = student.batchId;
+    
     if (student.batchId) {
       const Batch = await import("../models/Batch.js");
       const batchDoc = await Batch.default.findById(student.batchId).lean();
@@ -578,6 +580,12 @@ export const getTestsForStudent = async (req, res) => {
       }
     }
 
+    console.log(`🔍 Fetching tests with query:`, {
+      tenantId: student.tenantId,
+      course: student.course,
+      batch: batchName,
+    });
+
     // Fetch tests for student's course, batch, and tenant
     const query = {
       tenantId: student.tenantId,
@@ -585,18 +593,53 @@ export const getTestsForStudent = async (req, res) => {
       batch: batchName, // Use resolved batch name
     };
 
-    console.log(`🔍 Test query:`, query);
-
+    const TestMarks = await import("../models/TestMarks.js");
+    
     const tests = await Test.find(query)
       .populate("createdBy", "name email")
-      .sort({ testDate: -1 });
+      .sort({ testDate: -1 })
+      .lean();
 
     console.log(`✅ Tests found: ${tests.length}`);
 
+    // 🔥 CRITICAL: Fetch marks for each test and attach them to the test object
+    const testsWithMarks = await Promise.all(
+      tests.map(async (test) => {
+        try {
+          const marks = await TestMarks.default.findOne({
+            tenantId: student.tenantId,
+            testId: test._id,
+            studentId: student._id,
+          }).lean();
+
+          return {
+            ...test,
+            marksObtained: marks?.marksObtained || 0,
+            totalMarks: marks?.totalMarks || test.totalMarks || 100,
+            percentage: marks ? ((marks.marksObtained / (marks.totalMarks || test.totalMarks || 100)) * 100).toFixed(1) : 0,
+            passed: marks ? (marks.marksObtained >= 50) : false,
+            marks,
+          };
+        } catch (err) {
+          console.warn(`Could not fetch marks for test ${test._id}:`, err.message);
+          return {
+            ...test,
+            marksObtained: 0,
+            totalMarks: test.totalMarks || 100,
+            percentage: 0,
+            passed: false,
+            marks: null,
+          };
+        }
+      })
+    );
+
+    console.log(`✅ Tests with marks fetched for student ${student.name}`);
+
     res.status(200).json({
       success: true,
-      count: tests.length,
-      tests,
+      count: testsWithMarks.length,
+      tests: testsWithMarks,
     });
   } catch (error) {
     console.error("Error fetching tests for student:", error);

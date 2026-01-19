@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
+import { API_BASE_URL } from "@/lib/apiConfig";
 
 export default function StudentDashboardPage() {
   const router = useRouter();
@@ -12,20 +13,50 @@ export default function StudentDashboardPage() {
 
   const fetchProfile = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch(`/api/student-auth/me`, { headers });
-      const data = await res.json();
-      if (res.ok) {
-        setStudent(data);
-      } else {
-        setStatus(data.message || "Error loading profile");
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        console.log("❌ No auth token found");
+        setStatus("Not authenticated");
+        setLoading(false);
+        return;
       }
+
+      const headers: HeadersInit = { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+
+      console.log("🔍 Fetching student profile from:", `${API_BASE_URL}/api/student-auth/me`);
+      const res = await fetch(`${API_BASE_URL}/api/student-auth/me`, { headers });
+      
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type");
+        let errorMessage = `Error ${res.status}`;
+        
+        if (contentType?.includes("application/json")) {
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            errorMessage = await res.text();
+          }
+        } else {
+          errorMessage = await res.text();
+        }
+        
+        console.error("❌ API error:", errorMessage);
+        setStatus(errorMessage || "Failed to load profile");
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("✅ Student profile loaded:", { name: data.name, email: data.email, batch: data.batch });
+      setStudent(data);
+      setStatus("");
     } catch (err: any) {
-      console.error(err);
-      setStatus(err.message || "Error");
+      console.error("❌ Fetch error:", err);
+      setStatus(err.message || "Error loading profile");
     } finally {
       setLoading(false);
     }

@@ -81,6 +81,7 @@ export const getCurrentStudent = async (req, res) => {
     if (!req.student) return res.status(401).json({ message: "Not authenticated" });
 
     const Student = await import("../models/Student.js");
+    const Batch = await import("../models/Batch.js");
     
     // 🔥 CRITICAL: Always fetch fresh data from database to match tenant admin portal exactly
     const freshStudent = await Student.default.findById(req.student._id);
@@ -89,36 +90,53 @@ export const getCurrentStudent = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
+    let studentData = freshStudent.toObject ? freshStudent.toObject() : freshStudent;
+
+    // 🔥 SYNC BATCH: Ensure batch name is always populated from batchId if missing
+    if (studentData.batchId && (!studentData.batch || studentData.batch === '')) {
+      try {
+        const batchDoc = await Batch.default.findById(studentData.batchId).select('name');
+        if (batchDoc) {
+          studentData.batch = batchDoc.name;
+          studentData.batchName = batchDoc.name;
+          console.log(`   ✅ Synced batch from batchId: ${batchDoc.name}`);
+          
+          // Also update the student document to keep batch field in sync for future queries
+          await Student.default.findByIdAndUpdate(studentData._id, {
+            batch: batchDoc.name,
+          }, { new: false }).catch(err => console.warn("Could not update batch field:", err.message));
+        }
+      } catch (batchErr) {
+        console.warn(`   ⚠️  Could not fetch batch:`, batchErr.message);
+      }
+    }
+
+    // Ensure batchName is set even if batch field exists
+    if (!studentData.batchName) {
+      studentData.batchName = studentData.batch;
+    }
+
     // Include payment history for student with tenant isolation
     const Payment = await import("../models/Payment.js");
     const payments = await Payment.default.find({ 
-      tenantId: freshStudent.tenantId,
-      studentId: freshStudent._id 
+      tenantId: studentData.tenantId,
+      studentId: studentData._id 
     }).sort({ date: -1 }).lean();
 
-    console.log(`✅ STUDENT AUTH GET CURRENT (Fresh from DB):`);
-    console.log(`   Student ID: ${freshStudent._id}`);
-    console.log(`   Student Name: ${freshStudent.name}`);
-    console.log(`   Student Email: ${freshStudent.email}`);
-    console.log(`   TenantId: ${freshStudent.tenantId}`);
-    console.log(`   Course: ${freshStudent.course}`);
-    console.log(`   Batch: ${freshStudent.batch}`);
-    console.log(`   Fees: ${freshStudent.fees}`);
-    console.log(`   Balance: ${freshStudent.balance}`);
-    console.log(`   Payments found: ${payments.length}`);
+    const responseData = { ...studentData, payments };
 
-    const studentObj = freshStudent.toObject ? freshStudent.toObject() : freshStudent;
-    const responseData = { ...studentObj, payments };
-    
-    console.log(`   ✅ Response being sent:`, { 
-      name: responseData.name,
-      email: responseData.email,
-      course: responseData.course,
-      batch: responseData.batch,
-      fees: responseData.fees,
-      balance: responseData.balance,
-      paymentsCount: responseData.payments.length
-    });
+    console.log(`✅ STUDENT AUTH GET CURRENT (Fresh from DB + Synced):`);
+    console.log(`   Student ID: ${freshStudent._id}`);
+    console.log(`   Student Name: ${responseData.name}`);
+    console.log(`   Student Email: ${responseData.email}`);
+    console.log(`   TenantId: ${responseData.tenantId}`);
+    console.log(`   Course: ${responseData.course}`);
+    console.log(`   Batch: ${responseData.batch}`);
+    console.log(`   BatchName: ${responseData.batchName}`);
+    console.log(`   BatchId: ${responseData.batchId}`);
+    console.log(`   Fees: ${responseData.fees}`);
+    console.log(`   Balance: ${responseData.balance}`);
+    console.log(`   Payments found: ${payments.length}`);
 
     res.status(200).json(responseData);
   } catch (err) {
