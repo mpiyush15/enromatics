@@ -345,17 +345,20 @@ export default function CreateExamPage() {
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tenant Website URL
+                      Tenant Website URL (Optional)
                     </label>
                     <input
                       type="url"
                       value={tenantWebsite}
                       onChange={(e) => setTenantWebsite(e.target.value)}
-                      placeholder="https://your-website.com"
+                      placeholder="https://your-website.com (Leave blank for automatic subdomain URL)"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Students will be redirected to this website when they click "Go to Home" after successful registration
+                      {tenantWebsite 
+                        ? `Students will be redirected to ${tenantWebsite} after successful registration`
+                        : `If blank, a dynamic registration URL will be automatically generated: subdomain/scholarship-registration/{exam-code}`
+                      }
                     </p>
                   </div>
 

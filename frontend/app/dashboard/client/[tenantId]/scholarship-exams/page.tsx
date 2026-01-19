@@ -36,6 +36,7 @@ interface ScholarshipExam {
   _id: string;
   examName: string;
   examCode: string;
+  registrationUrl?: string;
   description: string;
   registrationCount?: number;
   registrationStartDate: string;
@@ -70,10 +71,11 @@ export default function ScholarshipExamsPage() {
     `/api/scholarship-exams`,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 300000, // 5 min cache
-      revalidateIfStale: false,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000, // 5 sec deduping
+      revalidateIfStale: true,
+      focusThrottleInterval: 0,
     }
   );
 
@@ -144,7 +146,8 @@ export default function ScholarshipExamsPage() {
       }
 
       alert("Exam deleted successfully");
-      refreshExams(); // Use SWR mutate to refresh
+      // Force refresh immediately - clear cache and refetch
+      await refreshExams(undefined, { revalidate: true });
     } catch (error) {
       console.error("❌ Error deleting exam:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -324,6 +327,31 @@ export default function ScholarshipExamsPage() {
                             <Copy size={16} />
                           )}
                         </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Registration URL</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono font-semibold text-green-600 text-sm">{exam.registrationUrl || 'N/A'}</p>
+                        {exam.registrationUrl && (
+                          <button
+                            onClick={() =>
+                              copyToClipboard(
+                                `${window.location.origin}/${exam.registrationUrl}`,
+                                `reg-${exam.examCode}`
+                              )
+                            }
+                            className="text-gray-400 hover:text-green-600 transition-colors"
+                            title="Copy registration URL"
+                          >
+                            {copiedCode === `reg-${exam.examCode}` ? (
+                              <CheckCircle size={16} className="text-green-600" />
+                            ) : (
+                              <Copy size={16} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
 

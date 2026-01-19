@@ -252,6 +252,13 @@ const scholarshipExamSchema = new mongoose.Schema(
       },
     },
 
+    // Registration URL
+    registrationUrl: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
     // SEO & Sharing
     metaTitle: String,
     metaDescription: String,
@@ -285,10 +292,11 @@ const scholarshipExamSchema = new mongoose.Schema(
 
 // Indexes
 scholarshipExamSchema.index({ tenantId: 1, examCode: 1 }, { unique: true });
+scholarshipExamSchema.index({ tenantId: 1, registrationUrl: 1 }, { unique: true, sparse: true });
 scholarshipExamSchema.index({ tenantId: 1, status: 1 });
 scholarshipExamSchema.index({ examDate: 1 });
 
-// Generate unique exam code
+// Generate unique exam code and registration URL
 scholarshipExamSchema.pre("save", async function (next) {
   try {
     if (!this.examCode && this.isNew) {
@@ -316,9 +324,28 @@ scholarshipExamSchema.pre("save", async function (next) {
       
       console.log(`✅ Generated examCode: ${this.examCode} for tenant: ${this.tenantId}`);
     }
+
+    // Generate registration URL automatically
+    if (!this.registrationUrl && this.isNew) {
+      // If user has provided a website URL, use that as primary redirect
+      // Otherwise, create a dynamic subdomain-based registration URL
+      if (this.tenantWebsite) {
+        // URL format: website-url/scholarship-registration/{exam-code}
+        const baseSite = this.tenantWebsite.replace(/\/$/, ''); // Remove trailing slash
+        this.registrationUrl = `${baseSite}/scholarship-registration/${this.examCode.toLowerCase()}`;
+        console.log(`✅ Generated registrationUrl with website: ${this.registrationUrl}`);
+      } else {
+        // Auto-generated dynamic subdomain URL
+        // Format: scholarship-registration/{exam-code}
+        const slug = this.examCode.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        this.registrationUrl = `scholarship-registration/${slug}`;
+        console.log(`✅ Generated dynamic registrationUrl: ${this.registrationUrl}`);
+      }
+    }
+
     next();
   } catch (error) {
-    console.error("❌ Error generating examCode:", error);
+    console.error("❌ Error in pre-save hook:", error);
     next(error);
   }
 });
