@@ -109,17 +109,19 @@ class WhatsAppEventService {
    */
   async sendViaWhatsApp(tenantId, phone, message, logId) {
     try {
-      console.log(`🔍 [SEND] sendViaWhatsApp called for phone: ${phone}`);
+      console.log(`🔍 [SEND] sendViaWhatsApp called - Phone: ${phone}, LogId: ${logId}`);
       
       // Get tenant WhatsApp config
       const tenant = await Tenant.findOne({ tenantId }).select("whatsappConfig");
       console.log(`🔍 [SEND] Tenant config loaded, isConfigured:`, tenant?.whatsappConfig?.isConfigured);
+      console.log(`🔍 [SEND] WhatsApp connection status:`, tenant?.whatsappConfig?.connectionStatus);
       
       if (!tenant?.whatsappConfig?.isConfigured) {
         throw new Error("WhatsApp not configured");
       }
 
-      console.log(`📤 [SEND] Calling whatsappClient.sendMessage(${phone}, message, null, null, apiKey)`);
+      console.log(`📤 [SEND] Calling whatsappClient.sendMessage to ${phone}`);
+      console.log(`📤 [SEND] Message preview:`, message.substring(0, 100) + "...");
 
       // Call WhatsApp Platform Client
       // Signature: sendMessage(recipientPhone, message, mediaUrl, mediaType, tenantApiKey)
@@ -137,11 +139,12 @@ class WhatsAppEventService {
         status: "sent",
         sentAt: new Date(),
       });
-      console.log(`✅ [SEND] Log updated to "sent"`);
+      console.log(`✅ [SEND] Log updated to "sent" for logId: ${logId}`);
       console.log(`✅ WhatsApp sent to ${phone}`);
     } catch (error) {
       // Silently fail, just log the error
-      console.error(`⚠️  [SEND] WhatsApp send failed: ${error.message}`);
+      console.error(`⚠️  [SEND] WhatsApp send failed for phone ${phone}: ${error.message}`);
+      console.error(`⚠️  [SEND] Full error:`, error);
 
       // Update log to failed
       await WhatsAppEventLog.findByIdAndUpdate(logId, {
@@ -158,32 +161,40 @@ class WhatsAppEventService {
    */
   async sendEnrollmentNotification(tenantId, studentData) {
     try {
-      console.log(`📚 [SERVICE] sendEnrollmentNotification called for student ${studentData.name}`);
+      console.log(`📚 [ENROLLMENT] Called for student: ${studentData.name}, Phone: ${studentData.phone}`);
+      console.log(`📚 [ENROLLMENT] Full student data:`, JSON.stringify(studentData, null, 2));
 
       // 1. Get tenant config
       const tenant = await Tenant.findOne({ tenantId }).select(
         "whatsappConfig eventTriggers whatsappOptIn"
       );
-      console.log(`🔍 [SERVICE] Tenant found:`, tenant?.tenantId);
-      console.log(`🔍 [SERVICE] WhatsApp configured:`, tenant?.whatsappConfig?.isConfigured);
-      console.log(`🔍 [SERVICE] Event triggers:`, tenant?.eventTriggers?.enrollmentNotifications);
+      console.log(`🔍 [ENROLLMENT] Tenant found:`, tenant?.tenantId);
+      console.log(`🔍 [ENROLLMENT] WhatsApp isConfigured:`, tenant?.whatsappConfig?.isConfigured);
+      console.log(`🔍 [ENROLLMENT] WhatsApp config details:`, {
+        phoneNumber: tenant?.whatsappConfig?.phoneNumber,
+        businessAccountId: tenant?.whatsappConfig?.businessAccountId,
+        connectionStatus: tenant?.whatsappConfig?.connectionStatus
+      });
+      console.log(`🔍 [ENROLLMENT] Event triggers:`, tenant?.eventTriggers?.enrollmentNotifications);
 
       if (!tenant?.whatsappConfig?.isConfigured) {
-        console.log(`⚠️  WhatsApp not configured for tenant ${tenantId}`);
+        console.log(`⚠️  [ENROLLMENT] WhatsApp not configured for tenant ${tenantId}`);
         return { success: false, reason: "WhatsApp not configured" };
       }
 
       // 1.5. Check if enrollment notifications are enabled
       if (!tenant?.eventTriggers?.enrollmentNotifications?.enabled) {
-        console.log(`⚠️  Enrollment notifications disabled for tenant ${tenantId}`);
+        console.log(`⚠️  [ENROLLMENT] Enrollment notifications disabled for tenant ${tenantId}`);
         return { success: false, reason: "Enrollment notifications disabled" };
       }
 
       // 2. Validate student has phone number
       if (!studentData?.phone) {
-        console.log(`⚠️  Student ${studentData.name} has no phone number`);
+        console.log(`⚠️  [ENROLLMENT] Student ${studentData.name} has no phone number`);
         return { success: false, reason: "No phone number" };
       }
+
+      console.log(`✅ [ENROLLMENT] All checks passed, proceeding to send message`);
 
       // 3. Build message with template placeholders
       const template = tenant?.eventTriggers?.enrollmentNotifications?.whatsappTemplate || 
@@ -198,7 +209,7 @@ class WhatsAppEventService {
         studentData.googlePlayUrl || "",
         template
       );
-      console.log(`🔍 [SERVICE] Enrollment message built:`, message);
+      console.log(`🔍 [ENROLLMENT] Message built:`, message);
 
       // 4. Log attempt
       const logEntry = await WhatsAppEventLog.create({
@@ -210,17 +221,19 @@ class WhatsAppEventService {
         message,
         status: "pending",
       });
-      console.log(`🔍 [SERVICE] Log entry created:`, logEntry._id);
+      console.log(`✅ [ENROLLMENT] Log entry created with ID:`, logEntry._id);
 
       // 5. Send via WhatsApp (async, don't wait)
+      console.log(`📱 [ENROLLMENT] Calling sendViaWhatsApp for phone: ${studentData.phone}`);
       this.sendViaWhatsApp(tenantId, studentData.phone, message, logEntry._id).catch(
-        (err) => console.error("WhatsApp send error:", err.message)
+        (err) => console.error("❌ [ENROLLMENT] WhatsApp send error:", err.message)
       );
-      console.log(`🔍 [SERVICE] sendViaWhatsApp called (async)`);
+      console.log(`📱 [ENROLLMENT] sendViaWhatsApp called (async, non-blocking)`);
 
       return { success: true, logId: logEntry._id };
     } catch (error) {
-      console.error("❌ Enrollment notification error:", error.message);
+      console.error("❌ [ENROLLMENT] Enrollment notification error:", error.message);
+      console.error("❌ [ENROLLMENT] Full error:", error);
       return { success: false, error: error.message };
     }
   }
