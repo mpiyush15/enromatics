@@ -1,0 +1,6 @@
+name,email,phone,source,status,priority
+Rajesh Kumar,rajesh.kumar@example.com,9876543210,walk-in,new,high
+Priya Singh,priya.singh@example.com,9876543211,referral,contacted,medium
+Amit Patel,amit.patel@example.com,9876543212,online,new,low
+Neha Sharma,neha.sharma@example.com,9876543213,walk-in,interested,high
+Vikram Desai,vikram.desai@example.com,9876543214,referral,converted,medium

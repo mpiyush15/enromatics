@@ -1,11 +1,15 @@
 import express from "express";
 import Lead from "../models/Lead.js";
 import CallLog from "../models/CallLog.js";
+import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { requirePermission } from "../middleware/permissionMiddleware.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ============================================
 // 📊 DASHBOARD & ANALYTICS
@@ -969,6 +973,144 @@ router.get(
     } catch (err) {
       console.error("❌ Counsellor Performance Error:", err);
       res.status(500).json({ message: "Server error", error: err.message });
+    }
+  }
+);
+
+/**
+ * @route POST /api/leads/bulk-upload
+ * @desc Upload leads from CSV file
+ * @access Private - tenantAdmin, manager
+ * @fileFormat CSV with columns: name, email, phone, source, status, priority
+ */
+router.post(
+  "/bulk-upload",
+  protect,
+  authorizeRoles("tenantAdmin", "manager"),
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const tenantId = req.user.tenantId;
+      const records = [];
+      const errors = [];
+
+      // Parse CSV using stream
+      Readable.from([req.file.buffer])
+        .pipe(csv())
+        .on("data", (row) => records.push(row))
+        .on("end", async () => {
+          try {
+            if (records.length === 0) {
+              return res.status(400).json({ message: "CSV file is empty" });
+            }
+
+            // Validate required columns
+            const requiredColumns = ["name", "email", "phone"];
+            const firstRecord = records[0];
+            const missingColumns = requiredColumns.filter(
+              (col) => !(col in firstRecord)
+            );
+
+            if (missingColumns.length > 0) {
+              return res.status(400).json({
+                message: `Missing required columns: ${missingColumns.join(", ")}`,
+              });
+            }
+
+            // Create leads
+            const leadsToCreate = [];
+
+            for (let i = 0; i < records.length; i++) {
+              const row = records[i];
+              try {
+                // Trim whitespace from all fields
+                const cleanRow = {};
+                Object.keys(row).forEach((key) => {
+                  cleanRow[key] = String(row[key]).trim();
+                });
+
+                // Validate email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(cleanRow.email)) {
+                  errors.push(
+                    `Row ${i + 2}: Invalid email "${cleanRow.email}"`
+                  );
+                  continue;
+                }
+
+                // Validate phone
+                const phoneDigits = cleanRow.phone.replace(/\D/g, "");
+                if (phoneDigits.length < 10) {
+                  errors.push(
+                    `Row ${i + 2}: Phone number must have at least 10 digits`
+                  );
+                  continue;
+                }
+
+                leadsToCreate.push({
+                  tenantId,
+                  name: cleanRow.name,
+                  email: cleanRow.email.toLowerCase(),
+                  phone: phoneDigits.slice(-10),
+                  source: cleanRow.source || "other",
+                  status: cleanRow.status || "new",
+                  priority: cleanRow.priority || "medium",
+                  notes: cleanRow.notes || "",
+                  assignedTo: req.user._id,
+                  createdAt: new Date(),
+                });
+              } catch (err) {
+                errors.push(`Row ${i + 2}: ${err.message}`);
+              }
+            }
+
+            if (leadsToCreate.length === 0) {
+              return res.status(400).json({
+                message: "No valid leads to import",
+                errors: errors.slice(0, 10), // Return first 10 errors
+              });
+            }
+
+            // Insert leads
+            const insertedLeads = await Lead.insertMany(leadsToCreate);
+
+            res.json({
+              success: true,
+              message: `Successfully imported ${insertedLeads.length} leads`,
+              count: insertedLeads.length,
+              errors:
+                errors.length > 0
+                  ? {
+                      total: errors.length,
+                      samples: errors.slice(0, 10),
+                    }
+                  : null,
+            });
+          } catch (err) {
+            console.error("❌ CSV Processing Error:", err);
+            res.status(500).json({
+              message: "Failed to process CSV",
+              error: err.message,
+            });
+          }
+        })
+        .on("error", (err) => {
+          console.error("❌ CSV Parse Error:", err);
+          res.status(400).json({
+            message: "Failed to parse CSV file",
+            error: err.message,
+          });
+        });
+    } catch (err) {
+      console.error("❌ CSV Upload Error:", err);
+      res.status(500).json({
+        message: "Failed to upload CSV",
+        error: err.message,
+      });
     }
   }
 );

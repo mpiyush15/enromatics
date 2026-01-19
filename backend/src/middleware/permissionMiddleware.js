@@ -16,8 +16,8 @@ export const checkPermission = (requiredPermission) => {
         return next();
       }
 
-      // For staff, teacher, counsellor, manager - check permissions in Employee model
-      if (["staff", "teacher", "counsellor", "manager"].includes(userRole)) {
+      // For staff, teacher, counsellor, manager, accountant - check permissions in Employee model
+      if (["staff", "teacher", "counsellor", "manager", "accountant"].includes(userRole)) {
         // Find employee record by userId or email
         const employee = await Employee.findOne({
           tenantId,
@@ -38,6 +38,12 @@ export const checkPermission = (requiredPermission) => {
           return res.status(403).json({ 
             message: "Staff members cannot access Accounts section." 
           });
+        }
+
+        // Allow accountant full access to account-related permissions
+        if (userRole === "accountant" && 
+            ["canAccessAccounts", "canViewTransactions", "canViewStudentDetails", "canManageFees"].includes(requiredPermission)) {
+          return next();
         }
 
         // Check if employee has the required permission
@@ -80,7 +86,7 @@ export const requirePermission = (requiredPermission) => {
       }
 
       // For employee roles, check permissions
-      if (["staff", "teacher", "counsellor", "manager"].includes(userRole)) {
+      if (["staff", "teacher", "counsellor", "manager", "accountant"].includes(userRole)) {
         const employee = await Employee.findOne({
           tenantId,
           $or: [
@@ -100,6 +106,12 @@ export const requirePermission = (requiredPermission) => {
           return res.status(403).json({ 
             message: "Staff members cannot access Accounts section." 
           });
+        }
+
+        // Allow accountant full access to account-related permissions
+        if (userRole === "accountant" && 
+            ["canAccessAccounts", "canViewTransactions", "canViewStudentDetails", "canManageFees"].includes(requiredPermission)) {
+          return next();
         }
 
         // Check permission

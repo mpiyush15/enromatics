@@ -26,12 +26,15 @@ const employeeSchema = new mongoose.Schema({
 
   status: { type: String, default: "active" },
 
-  // Permissions for staff members
+  // Permissions for staff members and other roles
   permissions: {
     canAccessStudents: { type: Boolean, default: false },
     canAccessTests: { type: Boolean, default: false },
     canCreateFees: { type: Boolean, default: false },
-    canAccessAccounts: { type: Boolean, default: false }, // Will be blocked for staff role
+    canAccessAccounts: { type: Boolean, default: false },
+    canViewStudentDetails: { type: Boolean, default: false }, // For accountant to view student financial details
+    canViewTransactions: { type: Boolean, default: false },   // For accountant to view all transactions
+    canManageFees: { type: Boolean, default: false },         // For accountant to manage fees
   },
 
 }, { timestamps: true });

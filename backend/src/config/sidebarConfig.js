@@ -25,7 +25,7 @@ export const sidebarLinks = [
     tenantSpecific: true,
     children: [
       { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
-      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager", "accountant"] },
+      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager"] },
       { label: "📊 Attendance", href: "/dashboard/client/[tenantId]/students/attendance", roles: ["tenantAdmin", "manager", "student"] },
       { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] },
       { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
@@ -66,6 +66,7 @@ export const sidebarLinks = [
       { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
       { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantAdmin", "accountant"] },
       { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantAdmin", "accountant"] },
+      { label: "💼 Student Details", href: "/dashboard/client/[tenantId]/accounts/student-details", roles: ["tenantAdmin", "accountant"] },
     ]
   },
 

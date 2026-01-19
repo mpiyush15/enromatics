@@ -43,7 +43,7 @@ router.post(
 router.get(
   "/",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor", "accountant"),
   requirePermission("canAccessStudents"),
   getStudents
 );
@@ -52,7 +52,7 @@ router.get(
 router.get(
   "/:id",
   protect,
-  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor"),
+  authorizeRoles("tenantAdmin", "teacher", "staff", "manager", "counsellor", "accountant"),
   requirePermission("canAccessStudents"),
   getStudentById
 );

@@ -95,6 +95,13 @@ export default function TenantLeadsCRMPage() {
   const [showCallModal, setShowCallModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showCallHistoryModal, setShowCallHistoryModal] = useState(false);
+  const [showCSVUploadModal, setShowCSVUploadModal] = useState(false);
+  
+  // CSV Upload
+  const [csvFile, setCSVFile] = useState<File | null>(null);
+  const [csvUploading, setCSVUploading] = useState(false);
+  const [csvError, setCSVError] = useState<string | null>(null);
+  const [csvSuccess, setCSVSuccess] = useState<string | null>(null);
   
   // View mode
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
@@ -185,6 +192,47 @@ export default function TenantLeadsCRMPage() {
     }
   };
 
+  // Upload CSV leads
+  const handleCSVUpload = async (file: File) => {
+    if (!file) return;
+    
+    setCSVUploading(true);
+    setCSVError(null);
+    setCSVSuccess(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/leads/bulk-upload`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to upload CSV");
+      }
+
+      setCSVSuccess(`✅ Successfully imported ${data.count} leads`);
+      setCSVFile(null);
+      fetchLeads();
+      fetchStats();
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowCSVUploadModal(false);
+        setCSVSuccess(null);
+      }, 2000);
+    } catch (err: any) {
+      setCSVError(err.message || "Failed to upload CSV");
+    } finally {
+      setCSVUploading(false);
+    }
+  };
+
   // Format date
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "-";
@@ -241,6 +289,12 @@ export default function TenantLeadsCRMPage() {
             onClick={() => setViewMode("pipeline")}
           >
             🔀 Pipeline
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowCSVUploadModal(true)}
+          >
+            📤 Upload CSV
           </Button>
           <Button onClick={() => setShowAddModal(true)}>+ Add Lead</Button>
         </div>
@@ -572,6 +626,153 @@ export default function TenantLeadsCRMPage() {
             setSelectedLead(null);
           }}
         />
+      )}
+
+      {/* CSV Upload Drawer */}
+      {showCSVUploadModal && (
+        <div className="fixed inset-0 z-50">
+          {/* Blurred Background */}
+          <div 
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+            onClick={() => {
+              setShowCSVUploadModal(false);
+              setCSVFile(null);
+              setCSVError(null);
+              setCSVSuccess(null);
+            }}
+          />
+          
+          {/* Right Side Drawer */}
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">📤 Upload Leads</h2>
+              <button 
+                onClick={() => {
+                  setShowCSVUploadModal(false);
+                  setCSVFile(null);
+                  setCSVError(null);
+                  setCSVSuccess(null);
+                }} 
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {csvSuccess && (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-200 rounded-lg text-sm">
+                  {csvSuccess}
+                </div>
+              )}
+
+              {csvError && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded-lg text-sm">
+                  {csvError}
+                </div>
+              )}
+
+              {/* Sample CSV Download */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-3">📋 Need a Template?</p>
+                <button
+                  onClick={() => {
+                    const csvContent = `name,email,phone,source,status,priority
+Rajesh Kumar,rajesh@example.com,9876543210,walk-in,new,high
+Priya Singh,priya@example.com,9876543211,referral,contacted,medium
+Amit Patel,amit@example.com,9876543212,online,new,low`;
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sample-leads.csv';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  }}
+                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                >
+                  📥 Download Sample CSV
+                </button>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Select CSV File
+                </label>
+                <div 
+                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors"
+                  onClick={() => document.getElementById('csv-input')?.click()}
+                >
+                  <input
+                    id="csv-input"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setCSVFile(e.target.files[0]);
+                        setCSVError(null);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    {csvFile ? `✅ ${csvFile.name}` : "📁 Click or drag CSV file"}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                    Max 5000 leads per upload
+                  </p>
+                </div>
+              </div>
+
+              {/* CSV Format Info */}
+              <div className="bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">📊 Required Columns:</p>
+                <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                  <p><span className="font-semibold text-red-600 dark:text-red-400">*</span> name</p>
+                  <p><span className="font-semibold text-red-600 dark:text-red-400">*</span> email</p>
+                  <p><span className="font-semibold text-red-600 dark:text-red-400">*</span> phone</p>
+                  <p className="text-gray-500 dark:text-gray-500 mt-2">Optional: source, status, priority, notes</p>
+                </div>
+              </div>
+
+              {/* Example */}
+              <div className="bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">💡 Example:</p>
+                <code className="text-xs block whitespace-pre-wrap font-mono text-gray-600 dark:text-gray-400 leading-relaxed">
+{`Rajesh Kumar,rajesh@example.com,9876543210,walk-in,new,high
+Priya Singh,priya@example.com,9876543211,referral,contacted`}
+                </code>
+              </div>
+            </div>
+
+            {/* Footer - Action Buttons */}
+            <div className="border-t border-gray-200 dark:border-gray-700 p-6 space-y-3 bg-gray-50 dark:bg-gray-800/50">
+              <Button
+                onClick={() => csvFile && handleCSVUpload(csvFile)}
+                disabled={!csvFile || csvUploading}
+                className="w-full"
+              >
+                {csvUploading ? "⏳ Uploading..." : "📤 Upload Leads"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCSVUploadModal(false);
+                  setCSVFile(null);
+                  setCSVError(null);
+                }}
+                disabled={csvUploading}
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
