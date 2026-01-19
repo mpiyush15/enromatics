@@ -69,32 +69,42 @@ export default function CoursesAndBatchesPage() {
 
   // Fetch courses
   const { data: coursesData, isLoading: loadingCourses, mutate: refreshCourses } = useSWR(
-    `/api/academics/courses`,
+    `/api/academics/courses?tenantId=${tenantId}`,
     fetcher,
     {
-      revalidateOnFocus: true, // 🔄 Refetch when user returns to this page
+      revalidateOnFocus: false, // Disable auto-refetch on focus
       revalidateOnReconnect: true,
-      dedupingInterval: 0, // Allow frequent revalidation
-      revalidateIfStale: true,
+      dedupingInterval: 5000, // Wait 5 seconds before revalidating
+      revalidateIfStale: false,
       keepPreviousData: true,
     }
   );
 
   // Fetch batches
-  const { data: batchesData, isLoading: loadingBatches, mutate: refreshBatches } = useSWR(
-    `/api/batches`,
+  const { data: batchesData, isLoading: loadingBatches, mutate: refreshBatches, error: batchesError } = useSWR(
+    `/api/batches?tenantId=${tenantId}`,
     fetcher,
     {
-      revalidateOnFocus: true, // 🔄 Refetch when user returns to this page
+      revalidateOnFocus: false, // Disable auto-refetch on focus to prevent clearing data
       revalidateOnReconnect: true,
-      dedupingInterval: 0, // Allow frequent revalidation
-      revalidateIfStale: true,
+      dedupingInterval: 5000, // Wait 5 seconds before revalidating
+      revalidateIfStale: false,
       keepPreviousData: true,
     }
   );
 
+  // Debug log batches fetch
+  useEffect(() => {
+    if (batchesError) {
+      console.error('❌ Error fetching batches:', batchesError);
+    }
+    if (batchesData) {
+      console.log('✅ Batches loaded:', batchesData.batches?.length || 0);
+    }
+  }, [batchesData, batchesError]);
+
   const courses: Course[] = coursesData?.success ? coursesData.courses : [];
-  const batches: Batch[] = batchesData?.success ? batchesData.batches : [];
+  const batches: Batch[] = batchesData?.success && Array.isArray(batchesData.batches) ? batchesData.batches : [];
 
   const [courseForm, setCourseForm] = useState({
     name: "",
