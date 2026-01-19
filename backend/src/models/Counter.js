@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const counterSchema = new mongoose.Schema({
   tenantId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,  // tenantId is a string, not ObjectId
     required: true,
-    ref: "Tenant"
+    index: true
   },
   type: {
     type: String,
