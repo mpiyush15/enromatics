@@ -17,6 +17,8 @@ import {
   cancelSubscription,
   getTenantBySubdomain,
   updateTenantSubdomain,
+  updateEventTriggers,
+  getEventTriggers,
 } from "../controllers/tenantController.js";
 import {
   getPaymentHistory,
@@ -247,6 +249,32 @@ router.delete(
   protect,
   authorizeRoles("superadmin"),
   deleteTenant
+);
+
+/**
+ * @route   GET /api/tenants/:tenantId/event-triggers
+ * @desc    Get event trigger settings (absence, enrollment, payment, results)
+ * @access  Private – tenantAdmin (own tenant) or superadmin
+ */
+router.get(
+  "/:tenantId/event-triggers",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  tenantProtect,
+  getEventTriggers
+);
+
+/**
+ * @route   PATCH /api/tenants/:tenantId/event-triggers
+ * @desc    Update event trigger settings (enable/disable enrollment notifications, etc.)
+ * @access  Private – tenantAdmin (own tenant) or superadmin
+ */
+router.patch(
+  "/:tenantId/event-triggers",
+  protect,
+  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  tenantProtect,
+  updateEventTriggers
 );
 
 export default router;

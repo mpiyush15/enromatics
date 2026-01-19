@@ -5,6 +5,8 @@ import Batch from "../models/Batch.js";
 import BatchStudent from "../models/BatchStudent.js";
 import Tenant from "../models/Tenant.js";
 import * as planGuard from "../../lib/planGuard.js";
+import whatsappEventService from "../services/whatsappEventService.js";
+import emailService from "../services/emailService.js";
 
 export const addStudent = async (req, res) => {
   try {
@@ -101,6 +103,63 @@ export const addStudent = async (req, res) => {
         joinedAt: new Date(),
       });
       console.log(`✅ Student ${student.name} added to batch via BatchStudent`);
+    }
+
+    // 🔥 TRIGGER: Send enrollment notifications if enabled
+    try {
+      const tenant = await Tenant.findOne({ tenantId }).select(
+        "eventTriggers email instituteName contact subdomain"
+      );
+      
+      if (tenant?.eventTriggers?.enrollmentNotifications?.enabled) {
+        console.log(`🎯 [TRIGGER] Enrollment notifications enabled for tenant ${tenantId}`);
+        
+        // Build portal URL (use subdomain if available)
+        const portalUrl = tenant?.subdomain 
+          ? `https://${tenant.subdomain}.enromatics.com/student/login`
+          : `https://portal.enromatics.com/student/login`;
+
+        // Prepare student data for notifications
+        const studentDataForNotification = {
+          _id: student._id,
+          name: student.name,
+          phone: student.phone,
+          rollNumber: student.rollNumber,
+          batch: student.batch || batchName,
+          portalUrl,
+          password: studentPassword,
+          googlePlayUrl: "" // For now, blank as app not available
+        };
+
+        // 📱 Send WhatsApp notification to student
+        console.log(`📱 Sending WhatsApp enrollment notification to ${student.name}`);
+        whatsappEventService.sendEnrollmentNotification(tenantId, studentDataForNotification).catch(
+          err => console.error("WhatsApp enrollment notification failed:", err.message)
+        );
+
+        // 📧 Send email notification to tenant/client if email trigger enabled
+        if (tenant?.eventTriggers?.enrollmentNotifications?.emailEnabled && tenant?.email) {
+          console.log(`📧 Sending email enrollment notification to ${tenant.email}`);
+          emailService.sendEnrollmentNotificationEmail({
+            to: tenant.email,
+            studentName: student.name,
+            batchName: student.batch || batchName || "Program",
+            studentPhone: student.phone,
+            rollNumber: student.rollNumber,
+            portalUrl,
+            loginId: student.rollNumber,
+            instituteName: tenant.instituteName || "Our Institute",
+            tenantId
+          }).catch(
+            err => console.error("Email enrollment notification failed:", err.message)
+          );
+        }
+      } else {
+        console.log(`⚠️  Enrollment notifications disabled for tenant ${tenantId}`);
+      }
+    } catch (triggerError) {
+      console.error("❌ Enrollment trigger error (non-blocking):", triggerError.message);
+      // Don't block student creation if trigger fails
     }
 
     res.status(201).json({

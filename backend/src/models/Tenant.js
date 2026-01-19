@@ -145,6 +145,14 @@ const tenantSchema = new mongoose.Schema(
           default: "Hi {studentName}, you were marked absent on {date}",
         },
       },
+      enrollmentNotifications: {
+        enabled: { type: Boolean, default: false },
+        emailEnabled: { type: Boolean, default: false },
+        whatsappTemplate: {
+          type: String,
+          default: "Hi {studentName}, welcome! You have been enrolled in {batchName}. 📚\n\nYour Portal Access:\n🔗 URL: {portalUrl}\n👤 Login ID: {loginId}\n🔐 Password: {password}\n\nDownload our app: {googlePlayUrl}\n\nHappy Learning!",
+        },
+      },
       paymentReceipts: {
         enabled: { type: Boolean, default: false },
         template: {

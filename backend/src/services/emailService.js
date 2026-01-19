@@ -744,6 +744,108 @@ export const sendSubscriptionConfirmationEmail = async ({
     return sendEmail({ to, subject, html, tenantId, userId, type: 'subscription' });
 };
 
+/**
+ * Send Student Enrollment Notification Email to Client/Admin
+ */
+export const sendEnrollmentNotificationEmail = async ({ 
+    to, 
+    studentName, 
+    batchName, 
+    studentPhone, 
+    rollNumber, 
+    portalUrl, 
+    loginId, 
+    instituteName = 'Our Institute',
+    tenantId = null 
+}) => {
+    const subject = `New Student Enrollment: ${studentName} - ${batchName}`;
+    
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+                .student-card { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px solid #10b981; border-radius: 8px; padding: 25px; margin: 20px 0; }
+                .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+                .detail-row:last-child { border-bottom: none; }
+                .label { font-weight: bold; color: #6b7280; }
+                .value { color: #1f2937; font-weight: 600; }
+                .footer { background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 12px; border-radius: 0 0 10px 10px; }
+                .portal-btn { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1 style="margin: 0;">✅ New Student Enrollment</h1>
+                </div>
+                <div class="content">
+                    <p>Hello,</p>
+                    <p>A new student has been successfully enrolled in your institute.</p>
+                    
+                    <div class="student-card">
+                        <h2 style="margin: 0 0 20px 0; color: #059669; text-align: center;">📚 Enrollment Details</h2>
+                        
+                        <div class="detail-row">
+                            <span class="label">Student Name:</span>
+                            <span class="value">${studentName}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Roll Number:</span>
+                            <span class="value">${rollNumber}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Batch:</span>
+                            <span class="value">${batchName}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Phone:</span>
+                            <span class="value">${studentPhone}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Portal Access:</span>
+                            <span class="value">${loginId}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">Enrollment Date:</span>
+                            <span class="value">${new Date().toLocaleDateString('en-IN')}</span>
+                        </div>
+                    </div>
+
+                    <p style="background: #eff6ff; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                        💡 <strong>Access Portal:</strong> Student has been notified via WhatsApp with login credentials and portal URL.
+                    </p>
+
+                    <p style="margin-top: 20px;">A WhatsApp notification with the following details has been sent to the student:</p>
+                    <ul style="background: #f9fafb; padding: 15px 30px; border-radius: 5px; margin: 15px 0;">
+                        <li>Student Name & Batch</li>
+                        <li>Portal URL: ${portalUrl}</li>
+                        <li>Login ID: ${loginId}</li>
+                        <li>Password (auto-generated)</li>
+                        <li>Google Play Store Link (when available)</li>
+                    </ul>
+
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                        ✨ Student will now have access to course materials, assignments, and can track their progress.
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>Institute: ${instituteName}</p>
+                    <p>Questions? Contact us at support@enromatics.com</p>
+                    <p>&copy; ${new Date().getFullYear()} Enromatics. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({ to, subject, html, tenantId, type: 'enrollment' });
+};
+
 export default {
     sendEmail,
     sendOTPEmail,
@@ -753,5 +855,6 @@ export default {
     sendStudentRegistrationEmail,
     sendPaymentConfirmationEmail,
     sendCredentialsEmail,
-    sendSubscriptionConfirmationEmail
+    sendSubscriptionConfirmationEmail,
+    sendEnrollmentNotificationEmail
 };

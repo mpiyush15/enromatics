@@ -853,3 +853,97 @@ export const updateTenantSubdomain = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+/* ================================================================
+   🔥 Update Event Trigger Settings (e.g., Enrollment Notifications)
+================================================================ */
+export const updateEventTriggers = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { triggerType, enabled, emailEnabled = false, template = null } = req.body;
+
+    // Validate input
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    if (!triggerType || !['absenceNotifications', 'enrollmentNotifications', 'paymentReceipts', 'testResults'].includes(triggerType)) {
+      return res.status(400).json({ message: "Valid trigger type is required: absenceNotifications, enrollmentNotifications, paymentReceipts, testResults" });
+    }
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: "enabled flag (boolean) is required" });
+    }
+
+    console.log(`🔥 [TRIGGER] Updating ${triggerType} for tenant ${tenantId}`);
+
+    // Get tenant
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Update specific trigger settings
+    const updateData = {
+      [`eventTriggers.${triggerType}.enabled`]: enabled
+    };
+
+    // For enrollment notifications, also update emailEnabled
+    if (triggerType === 'enrollmentNotifications' && typeof emailEnabled === 'boolean') {
+      updateData[`eventTriggers.${triggerType}.emailEnabled`] = emailEnabled;
+    }
+
+    // Update template if provided
+    if (template && typeof template === 'string') {
+      const templateField = triggerType === 'enrollmentNotifications' ? 'whatsappTemplate' : 'template';
+      updateData[`eventTriggers.${triggerType}.${templateField}`] = template;
+    }
+
+    // Save changes
+    const updatedTenant = await Tenant.findOneAndUpdate(
+      { tenantId },
+      updateData,
+      { new: true }
+    ).select('eventTriggers');
+
+    console.log(`✅ ${triggerType} updated successfully for tenant ${tenantId}`);
+
+    res.status(200).json({
+      success: true,
+      message: `${triggerType} ${enabled ? 'enabled' : 'disabled'} successfully`,
+      eventTriggers: updatedTenant.eventTriggers
+    });
+  } catch (err) {
+    console.error("Update Event Triggers Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================================================================
+   🔍 Get Event Trigger Settings
+================================================================ */
+export const getEventTriggers = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    if (!tenantId) {
+      return res.status(400).json({ message: "Tenant ID is required" });
+    }
+
+    const tenant = await Tenant.findOne({ tenantId }).select('eventTriggers whatsappConfig');
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    console.log(`📊 Event triggers retrieved for tenant ${tenantId}`);
+
+    res.status(200).json({
+      success: true,
+      eventTriggers: tenant.eventTriggers,
+      whatsappConfigured: tenant.whatsappConfig?.isConfigured || false
+    });
+  } catch (err) {
+    console.error("Get Event Triggers Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
