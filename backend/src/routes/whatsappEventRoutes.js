@@ -36,15 +36,15 @@ router.get("/events/settings", protect, async (req, res) => {
 
 /**
  * PUT /api/whatsapp/events/settings
- * Update event trigger settings
+ * Update event trigger settings (absence, enrollment, etc.)
  */
 router.put("/events/settings", protect, async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    const { eventType, enabled, template } = req.body;
-    console.log("🔍 [PUT SETTINGS] Request received:", { tenantId, eventType, enabled, template });
+    const { eventType, enabled, template, emailEnabled, whatsappTemplate } = req.body;
+    console.log("🔍 [PUT SETTINGS] Request received:", { tenantId, eventType, enabled, template, emailEnabled, whatsappTemplate });
 
     if (!eventType) {
       return res.status(400).json({ message: "eventType is required" });
@@ -52,10 +52,22 @@ router.put("/events/settings", protect, async (req, res) => {
 
     // Update specific event trigger
     const updateData = {};
-    updateData[`eventTriggers.${eventType}`] = {
-      enabled: enabled ?? false,
-      template: template || "",
-    };
+    
+    if (eventType === "enrollmentNotifications") {
+      // For enrollment notifications, handle both email and WhatsApp
+      updateData[`eventTriggers.${eventType}`] = {
+        enabled: enabled ?? false,
+        emailEnabled: emailEnabled ?? false,
+        whatsappTemplate: whatsappTemplate || "Hi {studentName}, welcome! You have been enrolled in {batchName}. 📚\n\nYour Portal Access:\n🔗 URL: {portalUrl}\n👤 Login ID: {loginId}\n🔐 Password: {password}\n\nDownload our app: {googlePlayUrl}\n\nHappy Learning!",
+      };
+    } else {
+      // For other triggers (absence, payment, results), use standard template
+      updateData[`eventTriggers.${eventType}`] = {
+        enabled: enabled ?? false,
+        template: template || "",
+      };
+    }
+    
     console.log("🔍 [PUT SETTINGS] Update data:", updateData);
 
     const tenant = await Tenant.findOneAndUpdate({ tenantId }, updateData, {

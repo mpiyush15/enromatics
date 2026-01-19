@@ -41,6 +41,11 @@ export default function WhatsAppEventsSettings({ tenantId }: Props) {
       enabled: false,
       template: "Hi {studentName}, you were marked absent on {date}",
     },
+    enrollmentNotifications: {
+      enabled: false,
+      emailEnabled: false,
+      whatsappTemplate: "Hi {studentName}, welcome! You have been enrolled in {batchName}. 📚\n\nYour Portal Access:\n🔗 URL: {portalUrl}\n👤 Login ID: {loginId}\n🔐 Password: {password}\n\nDownload our app: {googlePlayUrl}\n\nHappy Learning!",
+    },
   });
 
   const [testPhone, setTestPhone] = useState("");
@@ -139,6 +144,28 @@ export default function WhatsAppEventsSettings({ tenantId }: Props) {
     });
   };
 
+  const handleEnrollmentToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setEventTriggers({
+      ...eventTriggers,
+      enrollmentNotifications: {
+        ...eventTriggers.enrollmentNotifications,
+        enabled: checked,
+      },
+    });
+  };
+
+  const handleEnrollmentEmailToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setEventTriggers({
+      ...eventTriggers,
+      enrollmentNotifications: {
+        ...eventTriggers.enrollmentNotifications,
+        emailEnabled: checked,
+      },
+    });
+  };
+
   const handleTemplateChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const template = e.target.value;
     setEventTriggers({
@@ -150,18 +177,39 @@ export default function WhatsAppEventsSettings({ tenantId }: Props) {
     });
   };
 
+  const handleEnrollmentTemplateChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const template = e.target.value;
+    setEventTriggers({
+      ...eventTriggers,
+      enrollmentNotifications: {
+        ...eventTriggers.enrollmentNotifications,
+        whatsappTemplate: template,
+      },
+    });
+  };
+
   const handleSaveSettings = async () => {
     try {
       setMessage("");
       setSaving(true);
-      const response = await api.put(`/api/whatsapp/events/settings?tenantId=${tenantId}`, {
+      
+      // Save absence notifications via WhatsApp events settings endpoint
+      const absenceResponse = await api.put(`/api/whatsapp/events/settings?tenantId=${tenantId}`, {
         eventType: "absenceNotifications",
         enabled: eventTriggers.absenceNotifications.enabled,
         template: eventTriggers.absenceNotifications.template,
       });
 
-      if (response?.success) {
-        setMessage("✅ Settings saved successfully");
+      // Save enrollment notifications via same WhatsApp events settings endpoint
+      const enrollmentResponse = await api.put(`/api/whatsapp/events/settings?tenantId=${tenantId}`, {
+        eventType: "enrollmentNotifications",
+        enabled: eventTriggers.enrollmentNotifications.enabled,
+        emailEnabled: eventTriggers.enrollmentNotifications.emailEnabled,
+        whatsappTemplate: eventTriggers.enrollmentNotifications.whatsappTemplate,
+      });
+
+      if (absenceResponse?.success || enrollmentResponse?.success) {
+        setMessage("✅ All settings saved successfully");
         setMessageType("success");
       }
     } catch (error: any) {
@@ -356,6 +404,93 @@ export default function WhatsAppEventsSettings({ tenantId }: Props) {
           className="mt-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
         >
           {saving ? "💾 Saving..." : "💾 Save Settings"}
+        </button>
+      </div>
+
+      {/* Enrollment Notifications Section */}
+      <div className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 ${
+        whatsappConfig?.connectionStatus !== "connected" ? "opacity-50 pointer-events-none" : ""
+      }`}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              🎓 Enrollment Notifications
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Send WhatsApp messages when new students enroll with their portal access details
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={eventTriggers.enrollmentNotifications.enabled}
+              onChange={handleEnrollmentToggle}
+              className="w-6 h-6 rounded cursor-pointer"
+            />
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              {eventTriggers.enrollmentNotifications.enabled
+                ? "🟢 Enabled"
+                : "🔴 Disabled"}
+            </span>
+          </div>
+        </div>
+
+        {/* Email Notification Toggle */}
+        <div className="mb-4 p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="enrollmentEmail"
+              checked={eventTriggers.enrollmentNotifications.emailEnabled}
+              onChange={handleEnrollmentEmailToggle}
+              disabled={!eventTriggers.enrollmentNotifications.enabled}
+              className="w-4 h-4 rounded cursor-pointer"
+            />
+            <label htmlFor="enrollmentEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+              📧 Also send email notification to tenant admin
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-7">
+            When enabled, tenant admin will receive an email with enrollment details
+          </p>
+        </div>
+
+        {/* Message Template */}
+        <div className="mt-6">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            WhatsApp Message Template
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Available placeholders: {"{studentName}"}, {"{batchName}"}, {"{portalUrl}"}, {"{loginId}"}, {"{password}"}, {"{googlePlayUrl}"}
+          </p>
+          <textarea
+            value={eventTriggers.enrollmentNotifications.whatsappTemplate}
+            onChange={handleEnrollmentTemplateChange}
+            disabled={!eventTriggers.enrollmentNotifications.enabled}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50"
+            rows={6}
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <strong>Preview:</strong>
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 p-2 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 whitespace-pre-wrap">
+            {eventTriggers.enrollmentNotifications.whatsappTemplate
+              .replace("{studentName}", "John Doe")
+              .replace("{batchName}", "Class A")
+              .replace("{portalUrl}", "https://portal.enromatics.com")
+              .replace("{loginId}", "2025MA001")
+              .replace("{password}", "XXXXX")
+              .replace("{googlePlayUrl}", "Coming soon")}
+          </p>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSaveSettings}
+          disabled={saving}
+          className="mt-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+        >
+          {saving ? "💾 Saving..." : "💾 Save All Settings"}
         </button>
       </div>
 

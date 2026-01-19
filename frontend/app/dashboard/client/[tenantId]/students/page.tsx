@@ -32,14 +32,14 @@ export default function StudentsPage() {
 
   /* ================= FILTER INPUTS ================= */
   const [batchFilter, setBatchFilter] = useState("");
-  const [courseFilter, setCourseFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
   const [rollFilter, setRollFilter] = useState("");
   const [feesStatus, setFeesStatus] = useState("all");
 
   /* ================= APPLIED FILTERS ================= */
   const [appliedFilters, setAppliedFilters] = useState({
     batch: "",
-    course: "",
+    name: "",
     roll: "",
     fees: "all",
   });
@@ -49,7 +49,7 @@ export default function StudentsPage() {
     setPage(1);
     setAppliedFilters({
       batch: batchFilter,
-      course: courseFilter,
+      name: nameFilter,
       roll: rollFilter,
       fees: feesStatus,
     });
@@ -58,13 +58,13 @@ export default function StudentsPage() {
   /* ================= CLEAR FILTERS ================= */
   const clearFilters = () => {
     setBatchFilter("");
-    setCourseFilter("");
+    setNameFilter("");
     setRollFilter("");
     setFeesStatus("all");
     setPage(1);
     setAppliedFilters({
       batch: "",
-      course: "",
+      name: "",
       roll: "",
       fees: "all",
     });
@@ -97,7 +97,7 @@ export default function StudentsPage() {
       params.set("limit", String(limit));
 
       if (appliedFilters.batch) params.set("batch", appliedFilters.batch);
-      if (appliedFilters.course) params.set("course", appliedFilters.course);
+      if (appliedFilters.name) params.set("name", appliedFilters.name);
       if (appliedFilters.roll) params.set("rollNumber", appliedFilters.roll);
       if (appliedFilters.fees !== "all") params.set("feesStatus", appliedFilters.fees);
 
@@ -625,13 +625,13 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                📚 Course
+                � Student Name
               </label>
               <input
                 type="text"
-                placeholder="Enter course..."
-                value={courseFilter}
-                onChange={(e) => setCourseFilter(e.target.value)}
+                placeholder="Enter student name..."
+                value={nameFilter}
+                onChange={(e) => setNameFilter(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && applyFilters()}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition"
               />
@@ -699,7 +699,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
               No Students Found
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {batchFilter || courseFilter || rollFilter || feesStatus !== "all"
+              {batchFilter || nameFilter || rollFilter || feesStatus !== "all"
                 ? "Try adjusting your filters to see more results."
                 : "Get started by adding your first student."}
             </p>

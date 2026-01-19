@@ -180,8 +180,8 @@ export const getStudents = async (req, res) => {
     console.log("🔍 getStudents called - tenantId:", tenantId, "user:", req.user);
     if (!tenantId) return res.status(403).json({ message: "Tenant ID missing" });
 
-    const { page = 1, limit = 10, batchId, batch, course, rollNumber, feesStatus } = req.query;
-    console.log("📋 Query params:", { batchId, batch, course, rollNumber, feesStatus, page, limit });
+    const { page = 1, limit = 10, batchId, batch, name, rollNumber, feesStatus } = req.query;
+    console.log("📋 Query params:", { batchId, batch, name, rollNumber, feesStatus, page, limit });
     const pageNum = Number(page);
     const lim = Math.min(Number(limit), 100);
 
@@ -204,10 +204,10 @@ export const getStudents = async (req, res) => {
       }
     }
 
-    // Flexible course search - case insensitive partial match
-    if (course) {
-      match.course = { $regex: course, $options: "i" };
-      console.log("🔍 Filtering by course:", course);
+    // Flexible student name search - case insensitive partial match
+    if (name) {
+      match.name = { $regex: name, $options: "i" };
+      console.log("🔍 Filtering by student name:", name);
     }
 
     // Flexible roll number search - case insensitive partial match

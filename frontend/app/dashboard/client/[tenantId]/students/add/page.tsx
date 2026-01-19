@@ -164,9 +164,11 @@ export default function AddStudentPage() {
       if (selectedCourse) {
         console.log(`[FORM] Course selected: ${selectedCourse.name} (ID: ${selectedCourse._id})`);
         // Filter batches that have this courseId
-        const batchesForCourse = batches.filter((b: Batch) => 
-          b.courseId && b.courseId === value
-        );
+        // Note: courseId can be either a string (if not populated) or an object with _id (if populated)
+        const batchesForCourse = batches.filter((b: any) => {
+          const batchCourseId = typeof b.courseId === 'object' ? b.courseId?._id : b.courseId;
+          return batchCourseId && batchCourseId === value;
+        });
         console.log(`[FORM] Found ${batchesForCourse.length} batches for this course`);
         setFilteredBatches(batchesForCourse);
         setForm(prev => ({ ...prev, batchId: "" })); // Reset batch selection
