@@ -131,6 +131,7 @@ export default function Navbar() {
               )}
             </li>
             <li><Link href="/plans" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Pricing</Link></li>
+            <li><Link href="/user-guide" className="hover:text-blue-600 dark:hover:text-blue-400 transition">User Guide</Link></li>
             <li><Link href="/contact" className="hover:text-blue-600 dark:hover:text-blue-400 transition">Contact</Link></li>
           </ul>
 
@@ -230,6 +231,7 @@ export default function Navbar() {
           </div>
           
           <Link href="/plans" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Pricing</Link>
+          <Link href="/user-guide" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>User Guide</Link>
           <Link href="/contact" className="block py-2 hover:text-blue-600 dark:hover:text-blue-400 transition" onClick={handleLinkClick}>Contact</Link>
 
           {!user && (
