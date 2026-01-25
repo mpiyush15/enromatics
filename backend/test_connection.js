@@ -27,7 +27,7 @@ async function testConnection() {
         tenantId: '4b778ad5',
         businessAccountId: '1111111111111111',
         phoneNumberId: '2222222222222222',
-        phoneNumber: '+919766504856',
+        phoneNumber: '+918087131777',
         apiKey: 'test_key'
       })
     });

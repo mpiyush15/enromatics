@@ -91,7 +91,7 @@ export default function Contact() {
     },
     {
       q: "What kind of support do you provide after signup?",
-      a: "We provide 24/7 email support, priority WhatsApp support (+91 9766504856), phone support (+91 8087131777), and dedicated account managers for enterprise plans. Our team is always ready to help."
+      a: "We provide 24/7 email support, priority WhatsApp support (+91 8087131777), phone support (+91 8087131777), and dedicated account managers for enterprise plans. Our team is always ready to help."
     },
     {
       q: "Can I cancel my subscription anytime?",
