@@ -17,7 +17,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const whatsappLink = 'https://wa.me/919766504856?text=Hi,%20I%20want%20to%20know%20more%20about%20Enromatics%20for%20my%20coaching%20institute';
+  const whatsappLink = 'https://wa.me/918087131777?text=Hello%20Enromatics%2C%20I%20want%20to%20know%20more%20about%20your%20Institute%20Managemnt%20System';
 
   // Pricing data with monthly and annual
   const pricing = {

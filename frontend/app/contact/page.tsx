@@ -52,7 +52,7 @@ export default function Contact() {
       icon: "📱",
       title: "WhatsApp",
       description: "Chat with us on WhatsApp for instant support",
-      value: "+91 9766504856"
+      value: "+91 8087131777"
     },
     {
       icon: "📞",
@@ -452,7 +452,7 @@ export default function Contact() {
                 Start Free Trial - Go Digital Now
               </button>
               <button 
-                onClick={() => window.open(`https://wa.me/919766504856?text=Hi, I want to schedule a demo for Enromatics`, '_blank')}
+                onClick={() => window.open(`https://wa.me/918087131777?text=Hello%20Enromatics%2C%20I%20want%20to%20know%20more%20about%20your%20Institute%20Managemnt%20System`, '_blank')}
                 className="px-10 py-5 bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white rounded-xl font-bold hover:bg-white/20 transition text-lg"
               >
                 WhatsApp Us for Demo
