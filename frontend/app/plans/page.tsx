@@ -35,15 +35,20 @@ export default function PlansPage() {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
+        console.log("Fetching offers...");
         const res = await fetch('/api/offers/public/active?limit=10');
         if (res.ok) {
           const data = await res.json();
           if (data.offers && Array.isArray(data.offers)) {
+            console.log("✅ Offers loaded:", data.offers);
             setAvailableOffers(data.offers);
           }
+        } else {
+          console.warn("Offers API returned status:", res.status);
         }
       } catch (error) {
         console.error("Failed to fetch offers:", error);
+        // Silently fail - page will work without banner
       }
     };
     fetchOffers();
