@@ -55,11 +55,17 @@ const offerSchema = new mongoose.Schema(
       default: true
     },
 
-    // Applicable Plans
+    // Applicable Plans & Billing Cycles
     applicableTo: {
       type: String,
       enum: ["all_plans", "specific_plans"],
       default: "all_plans"
+    },
+    applicableBillingCycles: {
+      type: [String],
+      enum: ["monthly", "annual"],
+      default: ["monthly", "annual"], // Both by default
+      example: ["annual"] // Only for annual plans
     },
     planIds: [
       {
@@ -142,6 +148,17 @@ offerSchema.methods.isEligibleForPlan = function (planId) {
     return true;
   }
   return this.planIds.some(id => id.toString() === planId.toString());
+};
+
+// Method to check if billing cycle is eligible
+offerSchema.methods.isEligibleForBillingCycle = function (billingCycle) {
+  // If applicableBillingCycles not set, allow all (backwards compatibility)
+  if (!this.applicableBillingCycles || this.applicableBillingCycles.length === 0) {
+    return true;
+  }
+  // Normalize cycle (yearly → annual)
+  const normalizedCycle = billingCycle === "yearly" ? "annual" : billingCycle;
+  return this.applicableBillingCycles.includes(normalizedCycle);
 };
 
 // Method to calculate discount

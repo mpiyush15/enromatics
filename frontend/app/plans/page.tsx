@@ -107,6 +107,18 @@ export default function PlansPage() {
         <div className="absolute bottom-20 left-20 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
       </div>
 
+      {/* Republic Day Sale Banner */}
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white py-4 px-4 text-center shadow-lg">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-lg sm:text-xl font-bold">
+            🇮🇳 Republic Day Sale! Get <span className="text-yellow-200">26% OFF</span> on all plans
+          </p>
+          <p className="text-sm sm:text-base mt-1">
+            Use coupon code <span className="bg-white/20 px-3 py-1 rounded-full font-mono font-bold">REPUBLIC26</span> at checkout
+          </p>
+        </div>
+      </div>
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Active Offers Banner */}
         {availableOffers.length > 0 && (

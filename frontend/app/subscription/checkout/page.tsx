@@ -518,6 +518,7 @@ function CheckoutPageContent() {
         body: JSON.stringify({
           planId: planId,
           totalAmount: totalAmount,
+          billingCycle: selectedCycle, // ✅ Send billing cycle (monthly/annual)
         }),
       });
 
@@ -558,9 +559,12 @@ function CheckoutPageContent() {
 
     try {
       // Calculate correct price based on selected cycle
-      const amount = selectedCycle === "monthly"
+      const originalAmount = selectedCycle === "monthly"
         ? (plan.monthlyPrice ?? plan.price ?? 0)
         : (plan.annualPrice ?? plan.price ?? 0);
+
+      // Calculate final amount after coupon discount
+      const finalAmount = originalAmount - couponDiscount;
 
       // Initiate payment with billing cycle
       // Use plan.id (e.g., "basic", "pro") not plan._id (MongoDB ObjectId)
@@ -573,7 +577,7 @@ function CheckoutPageContent() {
         isNewTenant,
         tenantId: tenantId || undefined,
         billingCycle: selectedCycle, // ✅ CRITICAL: Send selected billing cycle
-        amount: Number(amount),      // ✅ CRITICAL: Send correct amount
+        amount: Number(finalAmount),      // ✅ CRITICAL: Send FINAL amount after discount
         couponCode: appliedCoupon?.code || undefined,  // ✅ Send coupon code if applied
         discountAmount: couponDiscount,  // ✅ Send discount amount
       };
@@ -705,11 +709,11 @@ function CheckoutPageContent() {
                       </div>
 
                       {/* Coupon Banner Section */}
-                      <div className="mt-6 pt-4 border-t">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">🎁 Have a Coupon?</h4>
+                      <div className="mt-6 pt-4 border-t space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-700">🎁 Have a Coupon?</h4>
                         
                         {!appliedCoupon ? (
-                          <div className="flex gap-2 mb-3">
+                          <div className="flex gap-2">
                             <Input
                               placeholder="Enter coupon code"
                               value={couponCode}
@@ -728,14 +732,11 @@ function CheckoutPageContent() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="p-3 bg-green-50 rounded border border-green-200 mb-3">
+                          <div className="p-3 bg-green-50 rounded border border-green-200">
                             <div className="flex justify-between items-start">
                               <div>
                                 <p className="text-xs font-medium text-green-700">✅ {appliedCoupon.name}</p>
                                 <p className="text-xs text-green-600 mt-1">{appliedCoupon.code}</p>
-                                <p className="text-xs font-semibold text-green-700 mt-2">
-                                  Save: ₹{Number(couponDiscount).toLocaleString('en-IN')}
-                                </p>
                               </div>
                               <button
                                 onClick={handleRemoveCoupon}
@@ -746,6 +747,39 @@ function CheckoutPageContent() {
                             </div>
                           </div>
                         )}
+
+                        {/* Price Breakdown */}
+                        <div className="bg-gray-50 p-3 rounded-lg space-y-2 text-sm mt-3 border border-gray-200">
+                          {(() => {
+                            const subtotal = selectedCycle === "monthly"
+                              ? (plan.monthlyPrice ?? plan.price ?? 0)
+                              : (plan.annualPrice ?? plan.price ?? 0);
+                            const discount = couponDiscount;
+                            const total = subtotal - discount;
+
+                            return (
+                              <>
+                                <div className="flex justify-between text-gray-700">
+                                  <span>Subtotal:</span>
+                                  <span className="font-medium">₹{Number(subtotal).toLocaleString('en-IN')}</span>
+                                </div>
+                                {discount > 0 && (
+                                  <div className="flex justify-between text-green-600 font-medium">
+                                    <span>Discount:</span>
+                                    <span>-₹{Number(discount).toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                <hr className="border-gray-300" />
+                                <div className="flex justify-between font-bold text-base">
+                                  <span>Total:</span>
+                                  <span className={discount > 0 ? "text-green-600" : "text-blue-600"}>
+                                    ₹{Number(total).toLocaleString('en-IN')}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
                     </>
                   );
@@ -1084,6 +1118,74 @@ function CheckoutPageContent() {
                         <span className="text-gray-600">Plan:</span>
                         <span className="font-medium">{plan.name}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Billing:</span>
+                        <span className="font-medium capitalize">{selectedCycle === "annual" ? "Annual" : "Monthly"}</span>
+                      </div>
+                      <hr className="my-2" />
+                      
+                      {/* Coupon Section on Payment Page */}
+                      {!appliedCoupon && (
+                        <div className="mb-3">
+                          <label className="text-xs font-medium text-gray-700 block mb-2">Have a coupon code?</label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter code"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              disabled={isValidatingCoupon}
+                              className="text-sm"
+                              size={32}
+                            />
+                            <Button
+                              onClick={handleApplyCoupon}
+                              disabled={isValidatingCoupon || !couponCode.trim()}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs whitespace-nowrap"
+                            >
+                              {isValidatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {appliedCoupon && (
+                        <div className="mb-3 p-2 bg-green-50 rounded border border-green-200">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-xs font-medium text-green-700">✅ {appliedCoupon.code}</p>
+                              <p className="text-xs text-green-600">Save: ₹{Number(couponDiscount).toLocaleString('en-IN')}</p>
+                            </div>
+                            <button
+                              onClick={handleRemoveCoupon}
+                              className="text-xs text-red-600 hover:text-red-700 underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(() => {
+                        const displayPrice = selectedCycle === "monthly"
+                          ? (plan.monthlyPrice ?? plan.price ?? 0)
+                          : (plan.annualPrice ?? plan.price ?? 0);
+                        return (
+                          <div className="flex justify-between text-sm font-semibold text-gray-700 mb-2">
+                            <span>Subtotal:</span>
+                            <span>₹{Number(displayPrice).toLocaleString('en-IN')}</span>
+                          </div>
+                        );
+                      })()}
+                      
+                      {couponDiscount > 0 && (
+                        <div className="flex justify-between text-sm font-semibold text-green-600 mb-2">
+                          <span>Discount:</span>
+                          <span>-₹{Number(couponDiscount).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      
                       <hr className="my-2" />
                       {(() => {
                         const displayPrice = selectedCycle === "monthly"

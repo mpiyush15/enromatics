@@ -40,7 +40,7 @@ router.get("/public/active", async (req, res) => {
 router.post("/validate/:code", async (req, res) => {
   try {
     const { code } = req.params;
-    const { planId, totalAmount } = req.body;
+    const { planId, totalAmount, billingCycle } = req.body;
 
     const offer = await Offer.findOne({ code: code.toUpperCase() });
 
@@ -64,6 +64,14 @@ router.post("/validate/:code", async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "This offer is not applicable to the selected plan",
+      });
+    }
+
+    // Check if eligible for billing cycle
+    if (billingCycle && !offer.isEligibleForBillingCycle(billingCycle)) {
+      return res.status(400).json({
+        success: false,
+        message: `This offer is only valid for ${offer.applicableBillingCycles.join(", ")} plans`,
       });
     }
 
