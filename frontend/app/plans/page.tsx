@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
 import useSWR from 'swr';
@@ -29,6 +29,25 @@ const fetcher = async (url: string) => {
 export default function PlansPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [showComparison, setShowComparison] = useState(false);
+  const [availableOffers, setAvailableOffers] = useState<any[]>([]);
+
+  // Fetch available offers
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const res = await fetch('/api/offers/public/active?limit=10');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.offers && Array.isArray(data.offers)) {
+            setAvailableOffers(data.offers);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch offers:", error);
+      }
+    };
+    fetchOffers();
+  }, []);
 
   // SWR for live data - revalidates on focus, every 30 seconds, and no cache
   const { data, error, isLoading, mutate } = useSWR<PlansApiResponse>(
@@ -84,6 +103,34 @@ export default function PlansPage() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        {/* Active Offers Banner */}
+        {availableOffers.length > 0 && (
+          <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-5 shadow-lg">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">🎁</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg text-amber-900 mb-3">Limited Time Offers Available!</h3>
+                <div className="flex flex-wrap gap-3">
+                  {availableOffers.map((offer: any) => (
+                    <div
+                      key={offer._id}
+                      className="bg-white px-4 py-2 rounded-lg text-sm border-2 border-amber-200 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group"
+                    >
+                      <p className="font-bold text-amber-900 group-hover:text-amber-700">{offer.code}</p>
+                      <p className="text-amber-700 text-xs">
+                        {offer.discountType === "percentage" 
+                          ? `${offer.discountValue}% OFF` 
+                          : `₹${offer.discountValue} OFF`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-800 mt-3 font-medium">💡 Use these coupon codes during checkout to get your discount!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">

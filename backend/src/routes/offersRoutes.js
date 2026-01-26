@@ -7,8 +7,104 @@ import Subscription from "../models/Subscription.js";
 const router = express.Router();
 
 // ============================================
-// SUPERADMIN: CREATE OFFER
+// PUBLIC ROUTES (No auth required)
 // ============================================
+
+// GET ALL ACTIVE OFFERS (PUBLIC - For checkout banner)
+router.get("/public/active", async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const offers = await Offer.find({
+      isActive: true,
+      validUntil: { $gt: new Date() }, // Only offers that haven't expired
+    })
+      .select("code name description discountType discountValue validUntil")
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      offers,
+    });
+  } catch (error) {
+    console.error("Error fetching active offers:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// VALIDATE OFFER (For checkout)
+router.post("/validate/:code", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { planId, totalAmount } = req.body;
+
+    const offer = await Offer.findOne({ code: code.toUpperCase() });
+
+    if (!offer) {
+      return res.status(404).json({
+        success: false,
+        message: "Offer code not found",
+      });
+    }
+
+    // Check if valid
+    if (!offer.isValid()) {
+      return res.status(400).json({
+        success: false,
+        message: "This offer has expired or is no longer available",
+      });
+    }
+
+    // Check if eligible for plan
+    if (!offer.isEligibleForPlan(planId)) {
+      return res.status(400).json({
+        success: false,
+        message: "This offer is not applicable to the selected plan",
+      });
+    }
+
+    // Check minimum order value
+    if (totalAmount < offer.minimumOrderValue) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum order value of ₹${offer.minimumOrderValue} required`,
+      });
+    }
+
+    // Calculate discount
+    const discount = offer.calculateDiscount(totalAmount);
+    const finalAmount = totalAmount - discount;
+
+    res.status(200).json({
+      success: true,
+      offer: {
+        id: offer._id,
+        code: offer.code,
+        name: offer.name,
+        discountType: offer.discountType,
+        discountValue: offer.discountValue,
+      },
+      discount,
+      finalAmount,
+    });
+  } catch (error) {
+    console.error("Error validating offer:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// ============================================
+// PROTECTED ROUTES (Superadmin only)
+// ============================================
+
+// SUPERADMIN: CREATE OFFER
 router.post("/", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const {
@@ -232,72 +328,6 @@ router.delete("/:id", protect, authorizeRoles("superadmin"), async (req, res) =>
     });
   } catch (error) {
     console.error("Error deleting offer:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-// ============================================
-// VALIDATE OFFER (For checkout)
-// ============================================
-router.post("/validate/:code", async (req, res) => {
-  try {
-    const { code } = req.params;
-    const { planId, totalAmount } = req.body;
-
-    const offer = await Offer.findOne({ code: code.toUpperCase() });
-
-    if (!offer) {
-      return res.status(404).json({
-        success: false,
-        message: "Offer code not found",
-      });
-    }
-
-    // Check if valid
-    if (!offer.isValid()) {
-      return res.status(400).json({
-        success: false,
-        message: "This offer has expired or is no longer available",
-      });
-    }
-
-    // Check if eligible for plan
-    if (!offer.isEligibleForPlan(planId)) {
-      return res.status(400).json({
-        success: false,
-        message: "This offer is not applicable to the selected plan",
-      });
-    }
-
-    // Check minimum order value
-    if (totalAmount < offer.minimumOrderValue) {
-      return res.status(400).json({
-        success: false,
-        message: `Minimum order value of ₹${offer.minimumOrderValue} required`,
-      });
-    }
-
-    // Calculate discount
-    const discount = offer.calculateDiscount(totalAmount);
-    const finalAmount = totalAmount - discount;
-
-    res.status(200).json({
-      success: true,
-      offer: {
-        id: offer._id,
-        code: offer.code,
-        name: offer.name,
-        discountType: offer.discountType,
-        discountValue: offer.discountValue,
-      },
-      discount,
-      finalAmount,
-    });
-  } catch (error) {
-    console.error("Error validating offer:", error);
     res.status(500).json({
       success: false,
       message: error.message,

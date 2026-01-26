@@ -157,6 +157,34 @@ function CheckoutPageContent() {
   const [verifiedEmail, setVerifiedEmail] = useState("");
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [signupComplete, setSignupComplete] = useState(false); // Track signup completion for redirect message
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [availableOffers, setAvailableOffers] = useState<any[]>([]);
+
+  // Fetch available offers from backend
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        console.log("Fetching available offers...");
+        const res = await fetch("/api/offers/public/active?limit=10");
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log("✅ Offers fetched:", data);
+          if (data.offers && Array.isArray(data.offers)) {
+            setAvailableOffers(data.offers);
+          }
+        } else {
+          console.warn("Failed to fetch offers, status:", res.status);
+        }
+      } catch (error) {
+        console.error("Failed to fetch offers:", error);
+      }
+    };
+    fetchOffers();
+  }, []);
 
   // Fetch plan details - supports both old (price) and new (monthlyPrice/annualPrice) schemas
   useEffect(() => {
@@ -467,6 +495,61 @@ function CheckoutPageContent() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+
+    if (!plan) {
+      toast.error("Plan not found");
+      return;
+    }
+
+    const totalAmount = selectedCycle === "monthly"
+      ? (plan.monthlyPrice ?? plan.price ?? 0)
+      : (plan.annualPrice ?? plan.price ?? 0);
+
+    setIsValidatingCoupon(true);
+    try {
+      const res = await fetch(`/api/offers/validate/${couponCode.toUpperCase()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: planId,
+          totalAmount: totalAmount,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setAppliedCoupon(data.offer);
+        setCouponDiscount(data.discount);
+        toast.success(`✅ ${data.offer.code} Applied! You saved ₹${Number(data.discount).toLocaleString('en-IN')}`);
+      } else {
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        const errorMsg = data.message || "Invalid coupon code";
+        toast.error(`❌ ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Coupon validation error:", error);
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      toast.error("❌ Failed to validate coupon. Please try again.");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    toast.success("✅ Coupon removed");
+  };
+
   const handlePayment = async () => {
     if (!plan || !verifiedEmail) return;
 
@@ -491,6 +574,8 @@ function CheckoutPageContent() {
         tenantId: tenantId || undefined,
         billingCycle: selectedCycle, // ✅ CRITICAL: Send selected billing cycle
         amount: Number(amount),      // ✅ CRITICAL: Send correct amount
+        couponCode: appliedCoupon?.code || undefined,  // ✅ Send coupon code if applied
+        discountAmount: couponDiscount,  // ✅ Send discount amount
       };
 
       console.log("💰 Payment payload:", payload); // Debug log
@@ -554,6 +639,35 @@ function CheckoutPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12">
       <div className="container mx-auto px-4 max-w-4xl">
+        {/* Active Offers Banner */}
+        {availableOffers.length > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🎁</span>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-2">Limited Time Offers Available!</h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableOffers.map((offer: any) => (
+                    <div
+                      key={offer._id}
+                      className="bg-white px-3 py-1.5 rounded-full text-sm border border-amber-200 hover:border-amber-400 transition-colors cursor-pointer"
+                      title={offer.description}
+                    >
+                      <span className="font-medium text-amber-900">{offer.code}</span>
+                      <span className="text-amber-700 ml-2">
+                        {offer.discountType === "percentage" 
+                          ? `${offer.discountValue}% OFF` 
+                          : `₹${offer.discountValue} OFF`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-800 mt-2">💡 Enter any code below in the plan details section</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Link href="/subscription/plans" className="inline-flex items-center text-blue-600 hover:underline mb-6">
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to Plans
         </Link>
@@ -588,6 +702,50 @@ function CheckoutPageContent() {
                         {plan.features?.slice(2, 5).map((feature: any, i: number) => (
                           <p key={i}>✓ {typeof feature === 'string' ? feature.replace('✓ ', '') : feature.name}</p>
                         ))}
+                      </div>
+
+                      {/* Coupon Banner Section */}
+                      <div className="mt-6 pt-4 border-t">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">🎁 Have a Coupon?</h4>
+                        
+                        {!appliedCoupon ? (
+                          <div className="flex gap-2 mb-3">
+                            <Input
+                              placeholder="Enter coupon code"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              disabled={isValidatingCoupon}
+                              className="text-sm"
+                            />
+                            <Button
+                              onClick={handleApplyCoupon}
+                              disabled={isValidatingCoupon || !couponCode.trim()}
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              {isValidatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-green-50 rounded border border-green-200 mb-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-xs font-medium text-green-700">✅ {appliedCoupon.name}</p>
+                                <p className="text-xs text-green-600 mt-1">{appliedCoupon.code}</p>
+                                <p className="text-xs font-semibold text-green-700 mt-2">
+                                  Save: ₹{Number(couponDiscount).toLocaleString('en-IN')}
+                                </p>
+                              </div>
+                              <button
+                                onClick={handleRemoveCoupon}
+                                className="text-xs text-red-600 hover:text-red-700 underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </>
                   );
@@ -926,22 +1084,26 @@ function CheckoutPageContent() {
                         <span className="text-gray-600">Plan:</span>
                         <span className="font-medium">{plan.name}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Billing:</span>
-                        <span className="font-medium capitalize">{selectedCycle === "annual" ? "Annual" : "Monthly"}</span>
-                      </div>
                       <hr className="my-2" />
                       {(() => {
                         const displayPrice = selectedCycle === "monthly"
                           ? (plan.monthlyPrice ?? plan.price ?? 0)
                           : (plan.annualPrice ?? plan.price ?? 0);
+                        const finalAmount = displayPrice - couponDiscount;
                         return (
                           <div className="flex justify-between text-lg font-bold">
                             <span>Total:</span>
-                            <span className="text-blue-600">₹{Number(displayPrice).toLocaleString('en-IN')}</span>
+                            <span className={couponDiscount > 0 ? "text-green-600" : "text-blue-600"}>
+                              ₹{Number(finalAmount).toLocaleString('en-IN')}
+                            </span>
                           </div>
                         );
                       })()}
+                      {couponDiscount > 0 && (
+                        <p className="text-xs text-green-600 mt-2 text-center">
+                          ✅ Coupon applied: Save ₹{Number(couponDiscount).toLocaleString('en-IN')}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -949,6 +1111,7 @@ function CheckoutPageContent() {
                     const payAmount = selectedCycle === "monthly"
                       ? (plan.monthlyPrice ?? plan.price ?? 0)
                       : (plan.annualPrice ?? plan.price ?? 0);
+                    const finalAmount = payAmount - couponDiscount;
                     return (
                       <Button
                         onClick={handlePayment}
@@ -959,7 +1122,7 @@ function CheckoutPageContent() {
                         {isSubmitting ? (
                           <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
                         ) : (
-                          <>Pay ₹{Number(payAmount).toLocaleString('en-IN')} <CreditCard className="h-4 w-4 ml-2" /></>
+                          <>Pay ₹{Number(finalAmount).toLocaleString('en-IN')} <CreditCard className="h-4 w-4 ml-2" /></>
                         )}
                       </Button>
                     );
