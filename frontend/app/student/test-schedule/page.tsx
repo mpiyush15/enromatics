@@ -47,23 +47,27 @@ export default function StudentTestSchedulePage() {
       });
       const studentData = await studentRes.json();
       
-      if (studentRes.ok) {
-        setStudent(studentData);
-        console.log("✅ Student fetched:", studentData.name, "Batch:", studentData.batchName);
+      if (!studentRes.ok) {
+        setLoading(false);
+        return;
       }
 
-      // Fetch all tests for student's course and batch
+      setStudent(studentData);
+      console.log("✅ Student fetched:", studentData.name);
+
+      // Fetch all tests
       const testsRes = await fetch(
-        `${API_BASE_URL}/api/academics/student/tests`,
+        `${API_BASE_URL}/api/academics/tests`,
         { headers }
       );
-      const testsData = await testsRes.json();
       
-      if (testsRes.ok) {
-        const testsList = testsData.tests || [];
-        setTests(testsList);
-        console.log("✅ Tests fetched:", testsList.length, "tests found");
-      }
+      if (!testsRes.ok) throw new Error("Failed to fetch tests");
+
+      const testsData = await testsRes.json();
+      const testsList = testsData.tests || testsData.data || [];
+      
+      setTests(testsList);
+      console.log("✅ Tests fetched:", testsList.length);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {

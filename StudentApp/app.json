@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Student App",
+    "slug": "student-app",
+    "version": "1.0.0",
+    "description": "Student Portal App - Minimal Setup",
+    "sdkVersion": "51.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "android": {
+      "package": "com.shrecoaching.student",
+      "versionCode": 1
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0cde7ec3-077b-4096-b153-bdf4b1b84592"
+      }
+    }
+  }
+}
