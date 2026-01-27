@@ -2,11 +2,10 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const studentSchema = new mongoose.Schema({
-  // User-like fields (unified auth)
   tenantId: {
     type: String,
     required: true,
-    index: true,
+    index: true, // so we can quickly find students by tenant
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -25,38 +24,10 @@ const studentSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
-  password: {
-    type: String,
-  },
   whatsappOptIn: { 
     type: Boolean, 
     default: false 
-  },
-  role: {
-    type: String,
-    enum: ["student", "staff", "teacher"],
-    default: "student",
-  },
-  status: {
-    type: String,
-    enum: ["active", "inactive", "suspended"],
-    default: "active",
-  },
-  plan: {
-    type: String,
-    enum: ["trial", "free", "starter", "professional", "enterprise"],
-    default: "free",
-  },
-  subscriptionStatus: {
-    type: String,
-    enum: ["trial", "active", "expired", "cancelled"],
-    default: "active",
-  },
-  subscriptionEndDate: {
-    type: Date,
-  },
-
-  // Student-specific fields
+  }, // Consent for WhatsApp messages
   gender: {
     type: String,
     enum: ["male", "female", "other", "Male", "Female", "Other"],
@@ -77,26 +48,45 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  address: {
+  role: {
+    type: String,
+    default: "student",
+  },
+  address:
+  {
     type: String,
   },
   dateOfBirth: {
     type: Date,
   },
-  fees: {
+  fees : {
     type: Number,
     default: 0,
   },
+
   profilePicture: {
     type: String,
+
   },
+
   balance: {
     type: Number,
     default: 0,
   },
+
+  // Roll number format: <year><batch><seq> e.g. 2025A001
   rollNumber: {
     type: String,
     index: true,
+  },
+
+  status: {
+    type: String,
+    enum: ["active", "inactive"],
+    default: "active",
+  },
+  password: {
+    type: String,
   },
 }, { timestamps: true });
 

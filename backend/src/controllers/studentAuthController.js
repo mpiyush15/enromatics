@@ -1,10 +1,9 @@
-import User from "../models/User.js";
 import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 
-const generateToken = (id, email, role, tenantId) =>
-  jwt.sign({ id, email, role, tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+const generateToken = (id, email, tenantId) =>
+  jwt.sign({ id, email, role: "student", tenantId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 export const loginStudent = async (req, res) => {
   try {
@@ -27,67 +26,35 @@ export const loginStudent = async (req, res) => {
     
     console.log("✅ Subdomain resolved:", subdomain, "→ TenantId:", tenantId);
     
-    // 🔒 SECURITY: Check User model first (unified auth) - student with role: "student"
-    let user = await User.findOne({ 
+    // 🔒 SECURITY: Find student by email AND tenant (not global)
+    const student = await Student.findOne({ 
       email: { $regex: `^${emailQuery}$`, $options: "i" },
-      tenantId: tenantId,
-      role: "student"
+      tenantId: tenantId  // ⚠️ CRITICAL: Only students from this tenant
     });
 
-    // Fallback: Check legacy Student model
-    if (!user) {
-      console.log("ℹ️ Not found in User model. Checking legacy Student model...");
-      const student = await Student.findOne({ 
-        email: { $regex: `^${emailQuery}$`, $options: "i" },
-        tenantId: tenantId
-      });
-
-      if (!student) {
-        console.log("❌ Student not found for email:", emailQuery, "in tenant:", tenantId);
-        return res.status(404).json({ message: "Email not found in this organization. Please check and try again." });
-      }
-
-      console.log("⚠️ Student found in legacy Student model. Creating User entry...");
-      // Create user entry in User model from legacy Student data
-      user = await User.create({
-        name: student.name,
-        email: student.email,
-        password: student.password,
-        tenantId: student.tenantId,
-        role: "student",
-        phone: student.phone || null,
-      });
-      console.log("✅ User created from legacy Student record");
+    if (!student) {
+      console.log("❌ Student not found for email:", emailQuery, "in tenant:", tenantId);
+      return res.status(404).json({ message: "Email not found in this organization. Please check and try again." });
     }
-
-    console.log("✅ Student user found:", user.name, "| TenantId:", user.tenantId, "| Has password:", !!user.password);
     
-    if (!user.password) {
+    console.log("✅ Student found:", student.name, "| TenantId:", student.tenantId, "| Has password:", !!student.password);
+    
+    if (!student.password) {
       console.log("❌ Student has no password set");
       return res.status(401).json({ message: "Password not set for this account. Please contact your administrator." });
     }
 
     // Verify password
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await student.matchPassword(password);
     
     if (!isMatch) {
-      console.log("❌ Password mismatch for student:", user.name);
+      console.log("❌ Password mismatch for student:", student.name);
       return res.status(401).json({ message: "Invalid password" });
     }
     
-    console.log("✅ Login successful for student:", user.name);
-    console.log("🔑 User ID in token:", user._id);
-    console.log("📋 User full object:", JSON.stringify({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      tenantId: user.tenantId,
-      role: user.role
-    }, null, 2));
+    console.log("✅ Login successful for student:", student.name);
 
-    // Use unified token generation (same as admins)
-    const token = generateToken(user._id, user.email, "student", user.tenantId);
-    console.log("✅ Token generated:", token.substring(0, 50) + "...");
+    const token = generateToken(student._id, student.email, student.tenantId);
 
     res.cookie("jwt", token, {
       httpOnly: true,
@@ -100,7 +67,7 @@ export const loginStudent = async (req, res) => {
     res.status(200).json({ 
       success: true, 
       token,
-      user: user.toObject() 
+      student: student.toObject() 
     });
   } catch (err) {
     console.error("Student login error:", err);

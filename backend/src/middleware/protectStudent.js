@@ -28,29 +28,10 @@ export const protectStudent = async (req, res, next) => {
       finalStudentId: studentId 
     });
     
-    console.log("🔍 Querying Student.findById with ID:", studentId);
     req.student = await Student.findById(studentId).select("-password");
-    
-    console.log("🔍 findById result:", req.student ? "✅ Found" : "❌ Not found");
-    if (req.student) {
-      console.log("   Student:", {
-        _id: req.student._id,
-        name: req.student.name,
-        email: req.student.email
-      });
-    } else {
-      // Try to find by email instead
-      console.log("❌ Student not found by ID. Trying to find by email from token...");
-      const studentByEmail = await Student.findOne({ email: decoded.email }).select("-password");
-      if (studentByEmail) {
-        console.log("⚠️  Found student by email but ID mismatch:");
-        console.log("   Expected ID:", studentId);
-        console.log("   Actual ID:", studentByEmail._id);
-        req.student = studentByEmail;
-      } else {
-        console.log("❌ protectStudent: Student not found for ID:", studentId);
-        return res.status(401).json({ message: "Student not found" });
-      }
+    if (!req.student) {
+      console.log("❌ protectStudent: Student not found for ID:", studentId);
+      return res.status(401).json({ message: "Student not found" });
     }
     
     console.log("✅ protectStudent: Student authenticated:", req.student.email);
