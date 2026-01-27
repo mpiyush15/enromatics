@@ -76,32 +76,29 @@ export const getStudentTests = async (req, res) => {
         const testObj = test.toObject();
         
         try {
+          // Query with correct field names (testId, studentId - flat structure)
           const marksDoc = await TestMarks.findOne({
-            test: test._id,
-            "students.studentId": studentId
+            testId: test._id,  // Use testId (not test)
+            studentId: studentId  // Flat structure, not nested array
           });
 
           if (marksDoc) {
-            const studentMark = marksDoc.students.find(
-              s => s.studentId.toString() === studentId.toString()
-            );
+            testObj.myMarks = marksDoc.marksObtained;
+            testObj.myPercentage = marksDoc.percentage;
+            testObj.myGrade = marksDoc.grade;
+            testObj.myPassed = marksDoc.passed;
             
-            if (studentMark) {
-              testObj.myMarks = studentMark.marks;
-              testObj.myAttendance = studentMark.attendance;
-              
-              // Calculate percentage
-              const percentage = (studentMark.marks / test.totalMarks) * 100;
-              testObj.myPercentage = Math.round(percentage * 100) / 100;
-              testObj.myGrade = getGrade(percentage);
-              
-              // Calculate rank
-              const betterScores = marksDoc.students.filter(
-                s => s.marks > studentMark.marks
-              ).length;
-              testObj.myRank = betterScores + 1;
-              testObj.totalStudents = marksDoc.students.length;
-            }
+            // Calculate rank - get all marks for this test sorted
+            const allMarks = await TestMarks.find({
+              testId: test._id
+            }).sort({ marksObtained: -1 });
+            
+            const studentRank = allMarks.findIndex(
+              m => m.studentId.toString() === studentId.toString()
+            ) + 1;
+            
+            testObj.myRank = studentRank;
+            testObj.totalStudents = allMarks.length;
           }
         } catch (err) {
           console.error(`⚠️ Error fetching marks for test:`, err.message);
@@ -133,10 +130,11 @@ export const getStudentTestMarks = async (req, res) => {
     const { testId } = req.params;
     const studentId = req.student._id;
 
+    // Query for marks document with correct field names
     const marksDoc = await TestMarks.findOne({
-      test: testId,
-      "students.studentId": studentId
-    }).populate("test");
+      testId: testId,  // Use testId field (not test)
+      studentId: studentId  // Use studentId field (flat structure, not nested array)
+    }).populate("testId");  // Populate the test details
 
     if (!marksDoc) {
       return res.status(404).json({
@@ -145,23 +143,17 @@ export const getStudentTestMarks = async (req, res) => {
       });
     }
 
-    const studentMark = marksDoc.students.find(
-      s => s.studentId.toString() === studentId.toString()
-    );
-
-    if (!studentMark) {
-      return res.status(404).json({
-        success: false,
-        message: "Your marks not found"
-      });
-    }
+    const test = marksDoc.testId;
 
     res.status(200).json({
       success: true,
-      test: marksDoc.test,
-      marks: studentMark.marks,
-      attendance: studentMark.attendance,
-      totalMarks: marksDoc.test.totalMarks
+      test: test,
+      marks: marksDoc.marksObtained,  // Use marksObtained field
+      percentage: marksDoc.percentage,
+      grade: marksDoc.grade,
+      passed: marksDoc.passed,
+      remarks: marksDoc.remarks,
+      totalMarks: test?.totalMarks || 0
     });
   } catch (error) {
     console.error("Error fetching student marks:", error);
