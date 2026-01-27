@@ -34,6 +34,10 @@ export async function GET(
     const testId = params?.id;
     const endpoint = testId ? `/api/academics/tests/${testId}` : `/api/academics/tests${url.search}`;
 
+    // Get authorization header (Bearer token for student auth)
+    const authHeader = request.headers.get('authorization');
+    const cookies = extractCookies(request);
+
     // Check Redis cache for list requests
     if (!testId) {
       const cacheKey = `tests:${url.search}`;
@@ -52,12 +56,22 @@ export async function GET(
 
     console.log('📤 Calling Express:', `${EXPRESS_URL}${endpoint}`);
 
+    // Build headers with auth (Bearer token takes priority, fallback to cookies)
+    const headers: any = {
+      'Content-Type': 'application/json',
+    };
+
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Using Bearer token for auth');
+    } else if (cookies) {
+      headers['Cookie'] = cookies;
+      console.log('✅ Using Cookie for auth');
+    }
+
     const expressResponse = await fetch(`${EXPRESS_URL}${endpoint}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': extractCookies(request),
-      },
+      headers,
     });
 
     const data = await expressResponse.json();

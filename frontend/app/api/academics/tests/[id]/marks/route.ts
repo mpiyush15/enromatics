@@ -25,12 +25,26 @@ export async function GET(
 
     console.log('📤 Fetching marks:', `${EXPRESS_URL}/api/academics/tests/${testId}/marks`);
 
+    // Get authorization header (Bearer token for student auth)
+    const authHeader = request.headers.get('authorization');
+    const cookies = extractCookies(request);
+
+    // Build headers with auth (Bearer token takes priority, fallback to cookies)
+    const headers: any = {
+      'Content-Type': 'application/json',
+    };
+
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+      console.log('✅ Using Bearer token for marks fetch');
+    } else if (cookies) {
+      headers['Cookie'] = cookies;
+      console.log('✅ Using Cookie for marks fetch');
+    }
+
     const expressResponse = await fetch(`${EXPRESS_URL}/api/academics/tests/${testId}/marks`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': extractCookies(request),
-      },
+      headers,
     });
 
     const data = await expressResponse.json();
