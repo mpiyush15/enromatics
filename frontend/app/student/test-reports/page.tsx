@@ -55,7 +55,7 @@ export default function StudentTestReportsPage() {
       console.log("✅ Student fetched:", studentData.name);
 
       // Fetch all tests
-      const testsRes = await fetch(`${API_BASE_URL}/api/academics/tests`, {
+      const testsRes = await fetch(`${API_BASE_URL}/api/student/tests`, {
         headers,
       });
 
@@ -68,7 +68,7 @@ export default function StudentTestReportsPage() {
       // For each test, fetch marks and find this student's result
       for (const test of allTests) {
         try {
-          const marksRes = await fetch(`${API_BASE_URL}/api/academics/tests/${test._id}/marks`, {
+          const marksRes = await fetch(`${API_BASE_URL}/api/student/tests/${test._id}/marks`, {
             headers,
           });
 

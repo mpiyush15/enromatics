@@ -57,7 +57,7 @@ export default function StudentTestSchedulePage() {
 
       // Fetch all tests
       const testsRes = await fetch(
-        `${API_BASE_URL}/api/academics/tests`,
+        `${API_BASE_URL}/api/student/tests`,
         { headers }
       );
       
