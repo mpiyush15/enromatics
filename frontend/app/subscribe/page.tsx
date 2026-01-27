@@ -1,6 +1,6 @@
 // app/subscribe/[planId]/page.tsx
 import { plans } from "@/data/plans";
-import SubscriptionForm from "./form/page"; // Adjust the import path as necessary
+import SubscriptionForm from "./form"; // ✅ Import from form.tsx component
 
 type Props = {
   params: Promise<{ planId: string }>; // ✅ Now a Promise
