@@ -54,7 +54,7 @@ export default function StudentTestReportsPage() {
       setStudent(studentData);
       console.log("✅ Student fetched:", studentData.name);
 
-      // Fetch all tests
+      // Fetch all tests (includes marks data now)
       const testsRes = await fetch(`${API_BASE_URL}/api/student/tests`, {
         headers,
       });
@@ -63,55 +63,21 @@ export default function StudentTestReportsPage() {
 
       const testsData = await testsRes.json();
       const allTests = testsData.tests || testsData.data || [];
-      const results: any[] = [];
-
-      // For each test, fetch marks and find this student's result
-      for (const test of allTests) {
-        try {
-          const marksRes = await fetch(`${API_BASE_URL}/api/student/tests/${test._id}/marks`, {
-            headers,
-          });
-
-          if (!marksRes.ok) continue;
-
-          const marksData = await marksRes.json();
-          const marks = marksData.marks || [];
-
-          const studentMark = marks.find(
-            (m: any) =>
-              (typeof m.studentId === "string" ? m.studentId : m.studentId?._id) ===
-              studentData._id
-          );
-
-          if (studentMark) {
-            const marksObtained = studentMark.marksObtained || 0;
-            const percentage = (marksObtained / test.totalMarks) * 100;
-            const passed = marksObtained >= test.passingMarks;
-
-            const sortedMarks = [...marks].sort((a, b) => (b.marksObtained || 0) - (a.marksObtained || 0));
-            const rank = sortedMarks.findIndex(
-              (m: any) =>
-                (typeof m.studentId === "string" ? m.studentId : m.studentId?._id) ===
-                studentData._id
-            ) + 1;
-
-            results.push({
-              _id: test._id,
-              testName: test.name,
-              subject: test.subject || "General",
-              marksObtained,
-              totalMarks: test.totalMarks,
-              percentage: Math.round(percentage * 100) / 100,
-              testDate: test.testDate,
-              passed,
-              rank,
-              grade: percentage >= 90 ? "A+" : percentage >= 80 ? "A" : percentage >= 70 ? "B" : percentage >= 60 ? "C" : percentage >= 50 ? "D" : "F",
-            });
-          }
-        } catch (err) {
-          console.error(`Error fetching marks for test ${test._id}:`, err);
-        }
-      }
+      
+      // Map tests to results - marks are already included in response
+      const results = allTests.map((test: any) => ({
+        _id: test._id,
+        testName: test.name,
+        subject: test.subject || "General",
+        marksObtained: test.myMarks || 0,
+        totalMarks: test.totalMarks,
+        percentage: test.myPercentage || 0,
+        testDate: test.testDate,
+        passed: test.myPassed || false,
+        rank: test.myRank || 0,
+        totalStudents: test.totalStudents || 0,
+        grade: test.myGrade || "F",
+      }));
 
       results.sort((a, b) => new Date(b.testDate || 0).getTime() - new Date(a.testDate || 0).getTime());
       setTests(results);
