@@ -16,6 +16,13 @@ export const sidebarLinks = [
     roles: ["tenantAdmin"],
     tenantSpecific: true,
   },
+  // === PRIORITY 2A: CRM / Lead Management (Tenant-specific only) ===
+  {
+    href: "/dashboard/lead",
+    label: "📊 Students Enquiry",
+    roles: ["tenantAdmin", "manager", "counsellor"],
+    tenantSpecific: true,
+  },
 
   // === PRIORITY 3: Students ===
   {
@@ -135,12 +142,12 @@ export const sidebarLinks = [
   },
 
   // === PRIORITY 8: CRM / Lead Management (Tenant-specific only) ===
-  {
-    href: "/dashboard/lead",
-    label: "📊 Students Enquiry",
-    roles: ["tenantAdmin", "manager", "counsellor"],
-    tenantSpecific: true,
-  },
+  //{
+    //href: "/dashboard/lead",
+    //label: "📊 Students Enquiry",
+    //roles: ["tenantAdmin", "manager", "counsellor"],
+    //tenantSpecific: true,
+  //},
   
   // === PRIORITY 9: SuperAdmin Only - Tenants ===
   {
