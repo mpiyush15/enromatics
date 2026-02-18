@@ -1518,3 +1518,196 @@ export const triggerAutoCancelPendingPayments = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+/**
+ * SuperAdmin: Manually log payment (cash/bank transfer) and activate account
+ * @route   POST /api/payment/admin/manual-payment
+ * @access  Private – SuperAdmin only
+ * @body    { tenantId, planId, amount, paymentMethod, billingCycle, remarks }
+ */
+export const logManualPayment = async (req, res) => {
+  try {
+    const { tenantId, planId, amount, paymentMethod, billingCycle = 'monthly', remarks } = req.body;
+    const superadminId = req.user?._id;
+
+    // Validation
+    if (!tenantId || !planId || !amount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'tenantId, planId, and amount are required' 
+      });
+    }
+
+    if (!['cash', 'bank_transfer', 'cheque', 'online_transfer'].includes(paymentMethod)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid payment method' 
+      });
+    }
+
+    // Find tenant
+    const tenant = await Tenant.findOne({ tenantId });
+    if (!tenant) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Tenant not found' 
+      });
+    }
+
+    // Find plan
+    const plan = PLANS.find(p => p.id === planId || p.id === planId?.toLowerCase());
+    if (!plan) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid plan selected' 
+      });
+    }
+
+    console.log('💳 Manual payment logging:', {
+      tenantId,
+      planId,
+      amount,
+      paymentMethod,
+      superadminId
+    });
+
+    // Calculate subscription period
+    const startDate = new Date();
+    let duration = 30 * 24 * 60 * 60 * 1000; // 30 days for monthly
+    if (billingCycle === 'annual' || billingCycle === 'yearly') {
+      duration = 365 * 24 * 60 * 60 * 1000;
+    }
+    const endDate = new Date(Date.now() + duration);
+
+    // Generate invoice number
+    const maxInvoice = await Tenant.findOne({ 'subscription.invoiceNumber': { $exists: true, $ne: null } })
+      .sort({ 'subscription.invoiceNumber': -1 })
+      .select('subscription.invoiceNumber');
+    const nextInvoiceNumber = (maxInvoice?.subscription?.invoiceNumber || 0) + 1;
+
+    // Update tenant subscription to active
+    tenant.plan = planId;
+    tenant.subscription = {
+      status: 'active',
+      paymentId: `manual_${tenantId}_${Date.now()}`,
+      startDate: startDate,
+      endDate: endDate,
+      billingCycle: billingCycle === 'annual' ? 'annual' : 'monthly',
+      amount: amount,
+      currency: 'INR',
+      invoiceNumber: nextInvoiceNumber,
+      pendingPlan: null
+    };
+    
+    await tenant.save();
+    console.log('✅ Tenant subscription activated:', tenantId);
+
+    // Create subscription payment record
+    const paymentRecord = await SubscriptionPayment.create({
+      tenantId,
+      amount,
+      currency: 'INR',
+      totalAmount: amount,
+      planName: plan.name,
+      planKey: planId,
+      billingCycle: billingCycle === 'annual' ? 'annual' : 'monthly',
+      periodStart: startDate,
+      periodEnd: endDate,
+      paymentMethod: paymentMethod,
+      status: 'success',
+      paidAt: new Date(),
+      notes: `Manual payment logged by superadmin. Method: ${paymentMethod}. ${remarks ? 'Remarks: ' + remarks : ''}`,
+      tenantSnapshot: {
+        instituteName: tenant.instituteName || tenant.name,
+        email: tenant.email,
+        phone: tenant.contact?.phone || 'N/A',
+        address: tenant.address || 'N/A'
+      }
+    });
+
+    console.log('✅ Payment record created:', paymentRecord._id);
+
+    // Generate invoice PDF
+    try {
+      const pdfBuffer = await generateInvoicePdf(paymentRecord, tenant);
+      
+      // TODO: Upload to S3 if needed
+      // const s3Key = getInvoiceS3Key(tenantId, nextInvoiceNumber);
+      // await uploadToS3(pdfBuffer, s3Key, 'application/pdf');
+      // paymentRecord.invoiceS3Key = s3Key;
+      // paymentRecord.invoiceGenerated = true;
+      // await paymentRecord.save();
+
+      console.log('✅ Invoice PDF generated for tenant:', tenantId);
+    } catch (pdfErr) {
+      console.error('⚠️ Invoice PDF generation failed:', pdfErr.message);
+      // Don't fail the entire operation if PDF fails
+    }
+
+    // Send activation email to tenant
+    try {
+      await sendEmail({
+        to: tenant.email,
+        subject: `✅ Your Account Upgraded to ${plan.name} Plan`,
+        html: `
+          <h2>Welcome! Your Account is Now Active</h2>
+          <p>Dear ${tenant.name || 'Valued Customer'},</p>
+          <p>Your subscription has been successfully activated!</p>
+          <hr>
+          <h3>Subscription Details</h3>
+          <ul>
+            <li><strong>Plan:</strong> ${plan.name}</li>
+            <li><strong>Amount Paid:</strong> ₹${amount}</li>
+            <li><strong>Billing Cycle:</strong> ${billingCycle === 'annual' ? 'Annual' : 'Monthly'}</li>
+            <li><strong>Valid From:</strong> ${startDate.toLocaleDateString('en-IN')}</li>
+            <li><strong>Valid Until:</strong> ${endDate.toLocaleDateString('en-IN')}</li>
+            <li><strong>Invoice Number:</strong> ${paymentRecord.invoiceNumber}</li>
+          </ul>
+          <p>You can now log in to your dashboard and start using all features of the ${plan.name} plan.</p>
+          <p>If you have any questions, please contact our support team.</p>
+          <br>
+          <p>Best regards,<br>Enromatics Team</p>
+        `
+      });
+      console.log('✅ Activation email sent to:', tenant.email);
+    } catch (emailErr) {
+      console.error('⚠️ Email sending failed:', emailErr.message);
+      // Don't fail if email fails
+    }
+
+    // Notify superadmin
+    try {
+      await notifyNewSubscription({
+        tenantId,
+        instituteName: tenant.instituteName || tenant.name,
+        email: tenant.email,
+        plan: plan.name,
+        amount,
+        paymentMethod: 'manual'
+      });
+    } catch (notifyErr) {
+      console.error('⚠️ Superadmin notification failed:', notifyErr.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment logged successfully. Account activated.',
+      data: {
+        tenantId,
+        planName: plan.name,
+        amount,
+        invoiceNumber: paymentRecord.invoiceNumber,
+        activatedAt: startDate,
+        expiresAt: endDate
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Manual payment logging error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};

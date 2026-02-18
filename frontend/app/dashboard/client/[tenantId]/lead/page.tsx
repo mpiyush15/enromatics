@@ -270,7 +270,7 @@ export default function TenantLeadsCRMPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📋 CRM / Lead Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📋 Students Enquiry Management</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Manage leads, track follow-ups, and convert prospects
           </p>
@@ -296,7 +296,7 @@ export default function TenantLeadsCRMPage() {
           >
             📤 Upload CSV
           </Button>
-          <Button onClick={() => setShowAddModal(true)}>+ Add Lead</Button>
+          <Button onClick={() => setShowAddModal(true)}>+ Add Enquiry</Button>
         </div>
       </div>
 

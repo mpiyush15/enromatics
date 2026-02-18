@@ -14,7 +14,8 @@ import {
   getSubscriptionStats,
   downloadInvoice,
   sendInvoiceEmail,
-  triggerAutoCancelPendingPayments
+  triggerAutoCancelPendingPayments,
+  logManualPayment
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -47,6 +48,8 @@ router.get("/admin/invoices/:tenantId/download", protect, authorizeRoles("SuperA
 router.post("/admin/invoices/:tenantId/send", protect, authorizeRoles("SuperAdmin"), sendInvoiceEmail);
 // Auto-cancel stale pending payments - SuperAdmin only
 router.post("/admin/auto-cancel-pending", protect, authorizeRoles("SuperAdmin"), triggerAutoCancelPendingPayments);
+// Log manual payment (cash/bank transfer) and activate account - SuperAdmin only
+router.post("/admin/manual-payment", protect, authorizeRoles("SuperAdmin"), logManualPayment);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

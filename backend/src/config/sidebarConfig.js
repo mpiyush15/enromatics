@@ -137,7 +137,7 @@ export const sidebarLinks = [
   // === PRIORITY 8: CRM / Lead Management (Tenant-specific only) ===
   {
     href: "/dashboard/lead",
-    label: "📊 CRM / Leads",
+    label: "📊 Students Enquiry",
     roles: ["tenantAdmin", "manager", "counsellor"],
     tenantSpecific: true,
   },
