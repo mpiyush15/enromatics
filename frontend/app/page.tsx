@@ -116,17 +116,13 @@ export default function LandingPage() {
               >
                 Request Demo
               </button>
-              <a
-                href="#plans-section"
-                className="inline-block bg-white border-2 border-gray-900 hover:bg-gray-50 text-gray-900 font-bold px-8 py-3 rounded-lg transition-all"
-              >
-                Start Free Trial
-              </a>
+              
+              
+              
+              
             </div>
 
-            <div className="text-sm text-gray-600">
-              <p>No credit card required • 14 days free access</p>
-            </div>
+           
           </div>
 
           {/* Big Centered Image */}
@@ -396,7 +392,7 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 max-w-4xl mx-auto mb-12">
-            {/* Try for 14 Days Card */}
+            {/* Try for 14 Days Card 
             <div className="bg-white border-2 border-indigo-200 rounded-2xl p-10 hover:shadow-lg transition-shadow flex flex-col flex-1 max-w-xs">
               <div className="text-5xl mb-4">🚀</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Try for 14 Days</h3>
@@ -416,8 +412,11 @@ export default function LandingPage() {
                 Start Free Trial →
               </a>
             </div>
+            
 
             <div className="hidden md:flex items-center justify-center text-3xl text-gray-400">OR</div>
+
+              */}
 
             {/* Explore Plans Card */}
             <div className="bg-indigo-600 rounded-2xl p-10 text-white shadow-lg flex flex-col flex-1 max-w-xs">

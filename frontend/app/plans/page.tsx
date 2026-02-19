@@ -107,7 +107,7 @@ export default function PlansPage() {
         <div className="absolute bottom-20 left-20 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Republic Day Sale Banner */}
+      {/* Republic Day Sale Banner 
       <div className="bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 text-white py-4 px-4 text-center shadow-lg">
         <div className="max-w-7xl mx-auto">
           <p className="text-lg sm:text-xl font-bold">
@@ -118,6 +118,8 @@ export default function PlansPage() {
           </p>
         </div>
       </div>
+
+      */}
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
         {/* Active Offers Banner */}
@@ -186,7 +188,7 @@ export default function PlansPage() {
         </div>
 
   {/* Plans Grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 mb-16">
           {plans.map((plan) => {
             const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
             return (
