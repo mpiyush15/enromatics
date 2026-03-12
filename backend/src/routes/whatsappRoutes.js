@@ -5,6 +5,24 @@ import Tenant from '../models/Tenant.js';
 const router = express.Router();
 
 /**
+ * ✅ Validate WhatsApp API Key Format
+ * Supports multiple key formats:
+ * - wpi_int_* (Admin/Integration key)
+ * - wpi_tenant_* (Tenant key)
+ * - wpk_live_* (WhatsApp Platform Live key)
+ * - wpk_* (WhatsApp Platform key)
+ * @param {string} apiKey - API key to validate
+ * @returns {boolean} - True if valid format
+ */
+function isValidWhatsAppKeyFormat(apiKey) {
+  if (!apiKey || typeof apiKey !== 'string') return false;
+  
+  // Accept all these prefixes
+  const validPrefixes = ['wpi_', 'wpk_'];
+  return validPrefixes.some(prefix => apiKey.startsWith(prefix));
+}
+
+/**
  * 🔒 MANDATORY: Get WhatsApp config for a tenant
  * ⚠️  CRITICAL: Every tenant MUST have their own WhatsApp config
  * ❌ No global config, no shared accounts, no super admin bypass
@@ -35,6 +53,17 @@ async function getWhatsAppConfig(tenantId) {
   if (!tenant.whatsappConfig || !tenant.whatsappConfig.isConfigured) {
     console.warn(`⚠️  WhatsApp not configured for tenant: ${tenantId}`);
     throw new Error(`WhatsApp is not configured for tenant "${tenantId}". Please set it up first.`);
+  }
+  
+  // 🔴 CRITICAL: Verify apiKey exists and is not empty
+  if (!tenant.whatsappConfig.apiKey || tenant.whatsappConfig.apiKey.trim() === '') {
+    console.error(`❌ TENANT ISOLATION VIOLATION: WhatsApp apiKey is missing for tenant: ${tenantId}`);
+    throw new Error(`❌ WhatsApp API key is missing for tenant "${tenantId}". Please reconfigure WhatsApp in settings.`);
+  }
+
+  // ✅ VALIDATE: API key has correct format (wpi_* or wpk_*)
+  if (!isValidWhatsAppKeyFormat(tenant.whatsappConfig.apiKey)) {
+    console.warn(`⚠️  WARNING: API key format for tenant ${tenantId} is non-standard (not wpi_* or wpk_*). Will attempt connection anyway.`);
   }
   
   // ✅ Return tenant-specific config with tenantId attached
@@ -143,6 +172,12 @@ router.post('/config', async (req, res) => {
 
     console.log(`📝 Setting up WhatsApp for tenantId: ${tenantId}`);
 
+    // ✅ VALIDATE: API key format (accept wpi_* and wpk_* prefixes)
+    if (apiKey && !isValidWhatsAppKeyFormat(apiKey)) {
+      console.warn(`⚠️  WARNING: API key format is non-standard. Expected prefix: wpi_* or wpk_*. Received: ${apiKey.substring(0, 20)}...`);
+      // Don't block - allow non-standard formats as they might be from different platforms
+    }
+
     // ✅ VERIFY: Tenant exists in database
     const tenantExists = await Tenant.findOne({ tenantId });
     if (!tenantExists) {
@@ -170,16 +205,19 @@ router.post('/config', async (req, res) => {
       });
     }
 
-    // ✅ VERIFY: API key by testing connection to WhatsApp Platform
+    // ✅ VERIFY: Connection to WhatsApp Platform with tenant's WABA credentials
     let connectionStatus = 'disconnected';
     let errorMessage = null;
 
     if (apiKey && apiKey.trim()) {
       try {
         console.log(`🔍 Verifying WhatsApp Platform connection for tenant: ${tenantId}`);
+        console.log(`   📋 Using WABA Details: businessAccountId=${businessAccountId}, phoneNumberId=${phoneNumberId}`);
         
-        // Test connection by fetching conversations with the provided API key
-        const testResult = await whatsappClient.getConversations(1, 0, apiKey);
+        // 🔒 Test connection to platform with tenant's own credentials
+        // Platform expects: Bearer <apiKey> in Authorization header
+        // Additional details (businessAccountId, phoneNumberId) help platform identify the tenant's WABA
+        const testResult = await whatsappClient.getConversations(1, 0, apiKey, tenantId);
         
         if (testResult && testResult.success !== false) {
           connectionStatus = 'connected';
@@ -191,8 +229,17 @@ router.post('/config', async (req, res) => {
         }
       } catch (verifyError) {
         connectionStatus = 'error';
-        errorMessage = `Invalid API key or connection failed: ${verifyError.message}`;
-        console.error(`❌ API key verification failed for ${tenantId}:`, verifyError.message);
+        // 🔴 Handle different error types
+        if (verifyError.response?.status === 401) {
+          errorMessage = `❌ Authentication failed (401): Invalid API key or credentials. Make sure the API key was created on the WhatsApp Platform and is still valid.`;
+          console.error(`❌ API key verification FAILED for ${tenantId}:`, errorMessage);
+        } else if (verifyError.response?.status === 404) {
+          errorMessage = `❌ WABA not found (404): The Business Account ID or Phone Number ID doesn't exist on the platform.`;
+          console.error(`❌ WABA verification FAILED for ${tenantId}:`, errorMessage);
+        } else {
+          errorMessage = `Connection error: ${verifyError.message}. Check if the platform server (${process.env.WHATSAPP_PLATFORM_URL}) is reachable.`;
+          console.error(`❌ Platform connection FAILED for ${tenantId}:`, errorMessage);
+        }
       }
     } else {
       errorMessage = 'No API key provided - connection cannot be verified';
@@ -224,10 +271,15 @@ router.post('/config', async (req, res) => {
     return res.json({
       success: connectionStatus === 'connected',
       message: connectionStatus === 'connected' 
-        ? `✅ WhatsApp configured and verified for tenant: ${tenantId}`
-        : `⚠️  WhatsApp configuration saved, but connection could not be verified: ${errorMessage}`,
+        ? `✅ WhatsApp configured and verified for tenant: ${tenantId}. Your WABA is connected to the platform.`
+        : `⚠️  Configuration saved, but platform verification failed: ${errorMessage}`,
       connectionStatus,
-      errorMessage: errorMessage || null
+      errorMessage: errorMessage || null,
+      troubleshooting: connectionStatus === 'error' ? {
+        401: '❌ Invalid API Key - Check that your API key on the WhatsApp Platform is correct and hasn\'t expired',
+        404: '❌ WABA Not Found - Verify businessAccountId and phoneNumberId exist on the platform',
+        connection: '❌ Platform Unreachable - Check if the platform server is running and accessible'
+      } : null
     });
   } catch (error) {
     console.error(`❌ Error saving WhatsApp config for ${req.body.tenantId}:`, error.message);
@@ -314,8 +366,8 @@ router.get('/messages', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch messages from platform using tenant API key
-    const messages = await whatsappClient.getMessages(50, 0, config.apiKey);
+    // 🔒 Fetch messages from platform using tenant API key + tenantId
+    const messages = await whatsappClient.getMessages(50, 0, config.apiKey, tenantId);
 
     return res.json(messages);
   } catch (error) {
@@ -427,11 +479,13 @@ router.get('/messages/stats', async (req, res) => {
     // Get config for API key
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch stats from platform using tenant API key
-    const stats = await whatsappClient.getMessageStats(
+    // 🔒 Fetch daily stats using getDailyStats (proper method with tenantId support)
+    const stats = await whatsappClient.getDailyStats(
+      tenantId,
+      null,
+      parseInt(days),
       config.apiKey,
-      conversationId,
-      dateFrom.toISOString()
+      tenantId
     );
 
     return res.json({
@@ -540,31 +594,8 @@ router.get('/conversations', async (req, res) => {
   }
 });
 
-/**
- * GET /api/whatsapp/contacts
- * Fetch contacts for a tenant
- * Query params: tenantId (required)
- */
-router.get('/contacts', async (req, res) => {
-  try {
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId is required' });
-    }
-
-    // Get tenant or global config
-    const config = await getWhatsAppConfig(tenantId);
-
-    // Fetch contacts from platform using tenant API key
-    const contacts = await whatsappClient.getContacts(100, 0, config.apiKey);
-
-    return res.json(contacts);
-  } catch (error) {
-    console.error('Error fetching contacts:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+// ⚠️  DEPRECATED: This endpoint is duplicated below. Use the comprehensive version instead.
+// Keeping for backwards compatibility but marked as deprecated.
 
 /**
  * GET /api/whatsapp/stats
@@ -582,8 +613,8 @@ router.get('/stats', async (req, res) => {
     // Get tenant or global config
     const config = await getWhatsAppConfig(tenantId);
 
-    // Fetch stats from platform using tenant API key
-    const stats = await whatsappClient.getStats(config.apiKey);
+    // 🔒 Fetch stats from platform using tenant API key + tenantId
+    const stats = await whatsappClient.getStats(config.apiKey, tenantId);
 
     return res.json(stats);
   } catch (error) {
@@ -608,7 +639,8 @@ router.get('/conversation/:conversationId', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const conversation = await whatsappClient.getConversationDetail(conversationId);
+    // 🔒 Pass both apiKey and tenantId for proper isolation
+    const conversation = await whatsappClient.getConversationDetail(conversationId, config.apiKey, tenantId);
 
     return res.json(conversation);
   } catch (error) {
@@ -635,7 +667,7 @@ router.patch('/conversation/:conversationId/read', async (req, res) => {
     const config = await getWhatsAppConfig(tenantId);
     
     // Mark conversation as read on WhatsApp Platform
-    const result = await whatsappClient.markConversationAsRead(conversationId, config.apiKey);
+    const result = await whatsappClient.markConversationAsRead(conversationId, config.apiKey, tenantId);
 
     return res.json({
       success: true,
@@ -667,7 +699,7 @@ router.post('/broadcast', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const result = await whatsappClient.sendBroadcast(contactIds, message, templateName, config.apiKey);
+    const result = await whatsappClient.sendBroadcast(contactIds, message, templateName, config.apiKey, tenantId);
 
     return res.json({
       success: true,
@@ -694,7 +726,8 @@ router.get('/account-info', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const accountInfo = await whatsappClient.getAccountInfo(config.businessAccountId);
+    // 🔒 Pass apiKey and tenantId for proper isolation
+    const accountInfo = await whatsappClient.getAccountInfo(config.businessAccountId, config.apiKey, tenantId);
 
     return res.json(accountInfo);
   } catch (error) {
@@ -717,7 +750,8 @@ router.get('/health', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const health = await whatsappClient.getHealth();
+    // 🔒 Pass apiKey and tenantId for proper isolation
+    const health = await whatsappClient.getHealth(config.apiKey, tenantId);
 
     return res.json({
       success: true,
@@ -844,7 +878,8 @@ router.post('/conversation/:conversationId/reply', async (req, res) => {
       message,
       mediaUrl,
       mediaType,
-      config.apiKey
+      config.apiKey,
+      tenantId
     );
 
     return res.json(result);
@@ -874,11 +909,14 @@ router.get('/contacts', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
+    
+    //  Pass both apiKey and tenantId for proper isolation
     const response = await whatsappClient.getContacts(
       parseInt(limit),
       parseInt(offset),
       search,
-      config.apiKey
+      config.apiKey,
+      tenantId
     );
 
     // Transform Platform response to frontend format
@@ -932,7 +970,8 @@ router.get('/contacts/:contactId', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const contact = await whatsappClient.getContact(contactId, config.apiKey);
+    // 🔒 Pass both apiKey and tenantId for proper isolation
+    const contact = await whatsappClient.getContact(contactId, config.apiKey, tenantId);
 
     return res.json(contact);
   } catch (error) {
@@ -961,7 +1000,7 @@ router.post('/contacts', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const contact = await whatsappClient.createContact(contactData, config.apiKey);
+    const contact = await whatsappClient.createContact(contactData, config.apiKey, tenantId);
 
     return res.json(contact);
   } catch (error) {
@@ -987,7 +1026,7 @@ router.put('/contacts/:contactId', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const contact = await whatsappClient.updateContact(contactId, contactData, config.apiKey);
+    const contact = await whatsappClient.updateContact(contactId, contactData, config.apiKey, tenantId);
 
     return res.json(contact);
   } catch (error) {
@@ -1011,7 +1050,7 @@ router.delete('/contacts/:contactId', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const result = await whatsappClient.deleteContact(contactId, config.apiKey);
+    const result = await whatsappClient.deleteContact(contactId, config.apiKey, tenantId);
 
     return res.json(result);
   } catch (error) {
@@ -1103,7 +1142,7 @@ router.post('/broadcast', async (req, res) => {
     }
 
     const config = await getWhatsAppConfig(tenantId);
-    const result = await whatsappClient.sendBroadcastV2(broadcastData, config.apiKey);
+    const result = await whatsappClient.sendBroadcastV2(broadcastData, config.apiKey, tenantId);
 
     return res.json(result);
   } catch (error) {

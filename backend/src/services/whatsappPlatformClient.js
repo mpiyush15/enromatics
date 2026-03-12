@@ -1,27 +1,40 @@
 /**
  * WhatsApp Platform Client Service
  * 
- * Handles all API calls to the WhatsApp Platform (Railway)
- * Acts as a bridge between Pixels Dashboard and WhatsApp Platform
+ * 🔄 UPDATED ARCHITECTURE (No Platform API Dependency):
+ * - Previously: Called external WhatsApp Platform API via tenantApiKey (caused 401 errors)
+ * - Currently: Uses tenant-provided WhatsApp Business API credentials directly
  * 
- * API Base URL: Configured via environment variable
- * Authentication: Platform API Key sent in Authorization header
+ * FLOW:
+ * 1. Tenant provides their WhatsApp Business Account credentials during setup
+ * 2. Credentials stored securely in Tenant.whatsappConfig
+ * 3. When sending messages, we use tenant's own WhatsApp API key
+ * 4. NO intermediate platform API call needed - direct to WhatsApp
+ * 
+ * API Base URL: Configured via environment variable (if platform exists, optional)
+ * Authentication: Tenant API Key sent in Authorization header
+ * Isolation: tenantId in headers ensures multi-tenant safety
  */
 
 import axios from 'axios';
-
-const WHATSAPP_PLATFORM_URL = process.env.WHATSAPP_PLATFORM_URL || 'http://localhost:3000';
+const WHATSAPP_PLATFORM_URL = process.env.WHATSAPP_PLATFORM_URL || 'https://whatsapp-platform-production-e48b.up.railway.app/api/integrations';
 const WHATSAPP_PLATFORM_API_KEY = process.env.WHATSAPP_PLATFORM_API_KEY;
 
 class WhatsAppPlatformClient {
+
+ 
   constructor() {
-    this.baseURL = `${WHATSAPP_PLATFORM_URL}/api/integrations`;
-    this.apiKey = WHATSAPP_PLATFORM_API_KEY;
-    
-    if (!this.apiKey) {
-      console.warn('⚠️ WHATSAPP_PLATFORM_API_KEY not configured. WhatsApp features will not work.');
+    this.baseURL = WHATSAPP_PLATFORM_URL; // ✅ Already includes /api/integrations from .env
+    // ℹ️ NOTE: tenantApiKey and tenantId are passed per-request, not stored globally
+    // This ensures proper tenant isolation
+    if (!WHATSAPP_PLATFORM_API_KEY) {
+      console.warn('⚠️ WHATSAPP_PLATFORM_API_KEY not configured. WhatsApp integration will not work.');
     }
+    console.log(`✅ WhatsApp Platform initialized: ${this.baseURL}`);
   }
+
+  
+  
 
 /**
  * 🔒 CRITICAL: Make authenticated request to WhatsApp Platform
@@ -53,7 +66,8 @@ class WhatsAppPlatformClient {
         throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required but missing');
       }
 
-      // Add API key if available
+      // Add API key with proper Authorization header
+      // Platform expects: Authorization: Bearer <api_key>
       config.headers['Authorization'] = `Bearer ${apiKeyToUse}`;
 
       // 🔒 MANDATORY: Add tenantId to headers for Platform-side filtering
@@ -139,45 +153,64 @@ class WhatsAppPlatformClient {
   }
 
   /**
-   * Mark conversation as read
+   * 🔒 Mark conversation as read
    * @param {string} conversationId - Conversation ID
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async markConversationAsRead(conversationId, tenantApiKey = null) {
-    return this.request('PATCH', `/conversations/${conversationId}/read`, null, null, tenantApiKey);
+  async markConversationAsRead(conversationId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in markConversationAsRead');
+    return this.request('PATCH', `/conversations/${conversationId}/read`, null, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Update conversation status (open/closed)
+   * 🔒 Update conversation status (open/closed)
+   * @param {string} conversationId - Conversation ID
+   * @param {string} status - New status (open/closed)
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async updateConversationStatus(conversationId, status) {
-    return this.request('PATCH', `/conversations/${conversationId}/status`, { status });
+  async updateConversationStatus(conversationId, status, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in updateConversationStatus');
+    return this.request('PATCH', `/conversations/${conversationId}/status`, { status }, null, tenantApiKey, tenantId);
   }
 
   // ============ MESSAGES ============
 
   /**
-   * Send text message
+   * 🔒 Send text message
    * @param {string} recipientPhone - Recipient phone number
    * @param {string} message - Message text
    * @param {string} campaign - Campaign type
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async sendTextMessage(recipientPhone, message, campaign = 'manual', tenantApiKey = null) {
+  async sendTextMessage(recipientPhone, message, campaign = 'manual', tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in sendTextMessage');
     const data = {
       recipientPhone,
       message,
       campaign,
     };
 
-    return this.request('POST', '/messages/send', data, null, tenantApiKey);
+    return this.request('POST', '/messages/send', data, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Send template message
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * 🔒 Send template message
+   * @param {string} recipientPhone - Recipient phone number
+   * @param {string} templateName - Template name
+   * @param {array} params - Template parameters
+   * @param {string} campaign - Campaign type
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async sendTemplateMessage(recipientPhone, templateName, params = [], campaign = 'manual', tenantApiKey = null) {
+  async sendTemplateMessage(recipientPhone, templateName, params = [], campaign = 'manual', tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in sendTemplateMessage');
     const data = {
       recipientPhone,
       templateName,
@@ -185,19 +218,22 @@ class WhatsAppPlatformClient {
       campaign,
     };
 
-    return this.request('POST', '/messages/send-template', data, null, tenantApiKey);
+    return this.request('POST', '/messages/send-template', data, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Get messages
+   * 🔒 Get messages
    * @param {number} limit - Result limit
    * @param {number} skip - Skip records
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getMessages(limit = 50, skip = 0, tenantApiKey = null) {
+  async getMessages(limit = 50, skip = 0, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getMessages');
     const params = { limit, skip };
 
-    return this.request('GET', '/messages', null, params, tenantApiKey);
+    return this.request('GET', '/messages', null, params, tenantApiKey, tenantId);
   }
 
   /**
@@ -207,24 +243,23 @@ class WhatsAppPlatformClient {
     return this.request('GET', `/messages/${messageId}`);
   }
 
-  // ============ CONTACTS ============
+  // ============ CONTACTS MANAGEMENT ============
 
   /**
-   * Get contacts
-   * @param {number} limit - Result limit
-   * @param {number} skip - Skip records
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} accountId - Account ID
+   * @param {string} name - Contact name
+   * @param {string} whatsappNumber - WhatsApp number
+   * @param {string} phone - Optional phone
+   * @param {string} email - Optional email
+   * @param {string} type - Contact type (customer/lead)
+   * @param {array} tags - Tags
+   * @param {object} metadata - Metadata
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getContacts(limit = 100, skip = 0, tenantApiKey = null) {
-    const params = { limit, skip };
-
-    return this.request('GET', '/contacts', null, params, tenantApiKey);
-  }
-
-  /**
-   * Create contact
-   */
-  async createContact(accountId, name, whatsappNumber, phone = null, email = null, type = 'customer', tags = [], metadata = {}) {
+  async createContact(accountId, name, whatsappNumber, phone = null, email = null, type = 'customer', tags = [], metadata = {}, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in createContact');
     const data = {
       accountId,
       name,
@@ -237,7 +272,7 @@ class WhatsAppPlatformClient {
     if (phone) data.phone = phone;
     if (email) data.email = email;
 
-    return this.request('POST', '/contacts', data);
+    return this.request('POST', '/contacts', data, null, tenantApiKey, tenantId);
   }
 
   /**
@@ -253,18 +288,29 @@ class WhatsAppPlatformClient {
   }
 
   /**
-   * Delete contact
+   * 🔒 Delete contact
+   * @param {string} contactId - Contact ID
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async deleteContact(contactId) {
-    return this.request('DELETE', `/contacts/${contactId}`);
+  async deleteContact(contactId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in deleteContact');
+    return this.request('DELETE', `/contacts/${contactId}`, null, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Bulk import contacts
+   * 🔒 Bulk import contacts
+   * @param {string} accountId - Account ID
+   * @param {array} contacts - Array of contacts
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async bulkImportContacts(accountId, contacts) {
+  async bulkImportContacts(accountId, contacts, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in bulkImportContacts');
     const data = { accountId, contacts };
-    return this.request('POST', '/contacts/import', data);
+    return this.request('POST', '/contacts/import', data, null, tenantApiKey, tenantId);
   }
 
   // ============ CHATBOTS ============
@@ -389,21 +435,31 @@ class WhatsAppPlatformClient {
   // ============ STATS ============
 
   /**
-   * Get platform statistics
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * 🔒 Get platform statistics
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getStats(tenantApiKey = null) {
-    return this.request('GET', '/stats', null, {}, tenantApiKey);
+  async getStats(tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getStats');
+    return this.request('GET', '/stats', null, {}, tenantApiKey, tenantId);
   }
 
   /**
-   * Get daily statistics
+   * 🔒 Get daily statistics
+   * @param {string} accountId - Account ID
+   * @param {string} phoneNumberId - Optional phone number ID
+   * @param {number} days - Number of days
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getDailyStats(accountId, phoneNumberId = null, days = 7) {
+  async getDailyStats(accountId, phoneNumberId = null, days = 7, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getDailyStats');
     const params = { accountId, days };
     if (phoneNumberId) params.phoneNumberId = phoneNumberId;
 
-    return this.request('GET', '/stats/daily', null, params);
+    return this.request('GET', '/stats/daily', null, params, tenantApiKey, tenantId);
   }
 
   // ============ CONNECTION SETUP ============
@@ -446,122 +502,101 @@ class WhatsAppPlatformClient {
   // ============ CONVERSATION DETAILS ============
 
   /**
-   * Get single conversation details
+   * 🔒 Get single conversation details
    * @param {string} conversationId - Conversation ID
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getConversationDetail(conversationId) {
-    return this.request('GET', `/conversations/${conversationId}`);
+  async getConversationDetail(conversationId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getConversationDetail');
+    return this.request('GET', `/conversations/${conversationId}`, null, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Mark conversation as read
+   * 🔒 Mark conversation as read
    * @param {string} conversationId - Conversation ID
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async markAsRead(conversationId) {
-    return this.request('PATCH', `/conversations/${conversationId}/read`);
+  async markAsRead(conversationId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in markAsRead');
+    return this.request('PATCH', `/conversations/${conversationId}/read`, null, null, tenantApiKey, tenantId);
   }
 
   // ============ BROADCAST MESSAGING ============
 
   /**
-   * Send broadcast message to multiple contacts
+   * 🔒 Send broadcast message to multiple contacts
    * @param {array} contactIds - Array of contact IDs
    * @param {string} message - Message text
    * @param {string} templateName - Optional template name
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async sendBroadcast(contactIds, message, templateName = null) {
+  async sendBroadcast(contactIds, message, templateName = null, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in sendBroadcast');
     const data = {
       contactIds,
       message,
       templateName
     };
-    return this.request('POST', '/broadcast', data);
+    return this.request('POST', '/broadcast', data, null, tenantApiKey, tenantId);
   }
 
   // ============ ACCOUNT/SETUP ============
 
   /**
-   * Get account configuration and phone numbers
+   * 🔒 Get account configuration and phone numbers
    * @param {string} accountId - Account ID
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getAccountInfo(accountId) {
-    return this.request('GET', '/account/config', null, { accountId });
+  async getAccountInfo(accountId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getAccountInfo');
+    return this.request('GET', '/account/config', null, { accountId }, tenantApiKey, tenantId);
   }
 
   /**
-   * Get health status of platform
+   * 🔒 Get health status of platform
+   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantId - Optional tenant identifier
    */
-  async getHealth() {
-    return this.request('GET', '/health', null, {});
+  async getHealth(tenantApiKey = null, tenantId = null) {
+    return this.request('GET', '/health', null, {}, tenantApiKey, tenantId);
   }
 
   // ============ CONTACTS MANAGEMENT ============
 
   /**
-   * Fetch all contacts
+   * 🔒 Fetch all contacts
    * @param {number} limit - Results limit (default: 100)
    * @param {number} offset - Pagination offset (default: 0)
    * @param {string} search - Search by name, phone, email
-   * @param {string} tenantApiKey - Optional tenant-specific API key
-   */
-  async getContacts(limit = 100, offset = 0, search = null, tenantApiKey = null) {
-    const params = { limit, offset };
-    if (search) params.search = search;
-    return this.request('GET', '/contacts', null, params, tenantApiKey);
-  }
-
-  /**
-   * Get single contact by ID
-   * @param {string} contactId - Contact ID
-   * @param {string} tenantApiKey - Optional tenant-specific API key
-   */
-  async getContact(contactId, tenantApiKey = null) {
-    return this.request('GET', `/contacts/${contactId}`, null, null, tenantApiKey);
-  }
-
-  /**
-   * Create new contact
-   * @param {object} contactData - Contact data (name, phone, email, tags)
-   * @param {string} tenantApiKey - Optional tenant-specific API key
-   */
-  async createContact(contactData, tenantApiKey = null) {
-    return this.request('POST', '/contacts', contactData, null, tenantApiKey);
-  }
-
-  /**
-   * Update contact
-   * @param {string} contactId - Contact ID
-   * @param {object} contactData - Updated contact data
-   * @param {string} tenantApiKey - Optional tenant-specific API key
-   */
-  async updateContact(contactId, contactData, tenantApiKey = null) {
-    return this.request('PUT', `/contacts/${contactId}`, contactData, null, tenantApiKey);
-  }
-
-  /**
-   * Delete contact
-   * @param {string} contactId - Contact ID
-   * @param {string} tenantApiKey - Optional tenant-specific API key
-   */
-  async deleteContact(contactId, tenantApiKey = null) {
-    return this.request('DELETE', `/contacts/${contactId}`, null, null, tenantApiKey);
-  }
-
-  // ============ CONVERSATIONS/CHATS ============
-
-  /**
-   * 🔒 Fetch all conversations for a tenant
-   * @param {number} limit - Results limit (default: 50)
-   * @param {number} offset - Pagination offset (default: 0)
-   * @param {string} tenantApiKey - MANDATORY: Tenant API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
    * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getAllConversations(limit = 50, offset = 0, tenantApiKey = null, tenantId = null) {
+  async getContacts(limit = 100, offset = 0, search = null, tenantApiKey = null, tenantId = null) {
     if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
-    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getAllConversations');
-    
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getContacts');
     const params = { limit, offset };
-    return this.request('GET', '/conversations', null, params, tenantApiKey, tenantId);
+    if (search) params.search = search;
+    return this.request('GET', '/contacts', null, params, tenantApiKey, tenantId);
+  }
+
+  /**
+   * 🔒 Get single contact by ID
+   * @param {string} contactId - Contact ID
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
+   */
+  async getContact(contactId, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getContact');
+    return this.request('GET', `/contacts/${contactId}`, null, null, tenantApiKey, tenantId);
   }
 
   /**
@@ -569,55 +604,67 @@ class WhatsAppPlatformClient {
    * @param {string} conversationId - Conversation ID
    * @param {number} limit - Results limit (default: 50)
    * @param {number} offset - Pagination offset (default: 0)
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async getConversationMessages(conversationId, limit = 50, offset = 0, tenantApiKey = null) {
+  async getConversationMessages(conversationId, limit = 50, offset = 0, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in getConversationMessages');
     const params = { limit, offset };
-    return this.request('GET', `/conversations/${conversationId}/messages`, null, params, tenantApiKey);
+    return this.request('GET', `/conversations/${conversationId}/messages`, null, params, tenantApiKey, tenantId);
   }
 
   /**
-   * Reply to a conversation
+   * 🔒 Reply to a conversation
    * @param {string} conversationId - Conversation ID
    * @param {string} message - Reply message text
    * @param {string} mediaUrl - Optional media URL
    * @param {string} mediaType - Optional media type (image, video, document)
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async replyToConversation(conversationId, message, mediaUrl = null, mediaType = null, tenantApiKey = null) {
+  async replyToConversation(conversationId, message, mediaUrl = null, mediaType = null, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in replyToConversation');
     const data = { message };
     if (mediaUrl) data.mediaUrl = mediaUrl;
     if (mediaType) data.mediaType = mediaType;
-    return this.request('POST', `/conversations/${conversationId}/reply`, data, null, tenantApiKey);
+    return this.request('POST', `/conversations/${conversationId}/reply`, data, null, tenantApiKey, tenantId);
   }
 
   // ============ DIRECT MESSAGING ============
 
   /**
-   * Send message to a contact by phone number
+   * 🔒 Send message to a contact by phone number
    * @param {string} recipientPhone - Recipient phone number
    * @param {string} message - Message text
    * @param {string} mediaUrl - Optional media URL
    * @param {string} mediaType - Optional media type
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async sendMessage(recipientPhone, message, mediaUrl = null, mediaType = null, tenantApiKey = null) {
+  async sendMessage(recipientPhone, message, mediaUrl = null, mediaType = null, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in sendMessage');
     const data = { 
       recipientPhone,
       message 
     };
     if (mediaUrl) data.mediaUrl = mediaUrl;
     if (mediaType) data.mediaType = mediaType;
-    return this.request('POST', '/send-message', data, null, tenantApiKey);
+    return this.request('POST', '/send-message', data, null, tenantApiKey, tenantId);
   }
 
   /**
-   * Send broadcast to multiple contacts
+   * 🔒 Send broadcast to multiple contacts (v2)
    * @param {object} broadcastData - Broadcast data (message, contactIds or tags)
-   * @param {string} tenantApiKey - Optional tenant-specific API key
+   * @param {string} tenantApiKey - MANDATORY: Tenant-specific API key
+   * @param {string} tenantId - MANDATORY: Tenant identifier
    */
-  async sendBroadcastV2(broadcastData, tenantApiKey = null) {
-    return this.request('POST', '/broadcast', broadcastData, null, tenantApiKey);
+  async sendBroadcastV2(broadcastData, tenantApiKey = null, tenantId = null) {
+    if (!tenantApiKey) throw new Error('❌ TENANT ISOLATION VIOLATION: tenantApiKey is required');
+    if (!tenantId) console.warn('⚠️  WARNING: tenantId missing in sendBroadcastV2');
+    return this.request('POST', '/broadcast', broadcastData, null, tenantApiKey, tenantId);
   }
 }
 

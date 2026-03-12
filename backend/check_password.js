@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
 (async () => {
   try {
-    const uri = 'mongodb+srv://admin:Secure%402024@pixels-cluster.mongodb.net/pixels_app';
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
     
     const Student = require('./src/models/Student.js').default;
