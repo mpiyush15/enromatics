@@ -7,10 +7,10 @@ import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 function SessionTimeoutWrapper({ children }: { children: React.ReactNode }) {
   const { showWarning, remainingTime, extendSession } = useSessionTimeout({
-    timeout: 30 * 60 * 1000, // 30 minutes (increased from 3 minutes)
-    warningTime: 2 * 60 * 1000, // 2 minutes warning before logout
+    timeout: 3 * 60 * 1000, // 3 minutes idle
+    warningTime: 1 * 60 * 1000, // 1 minute warning before logout
     onTimeout: () => {
-      console.log("Session expired due to inactivity");
+      console.log("Session expired due to 3 minutes of inactivity");
     },
   });
 
@@ -19,14 +19,18 @@ function SessionTimeoutWrapper({ children }: { children: React.ReactNode }) {
       {children}
       {showWarning && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 animate-bounce">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4">
             <div className="text-center">
               <div className="text-6xl mb-4">⚠️</div>
               <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
                 Session Timeout Warning
               </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-2">
+                Your session will expire in
+              </p>
+              <p className="text-red-600 font-bold text-4xl mb-6">{remainingTime}s</p>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Your session will expire in <span className="text-red-600 font-bold text-2xl">{remainingTime}</span> seconds due to inactivity.
+                due to inactivity. Click below to stay logged in.
               </p>
               <button
                 onClick={extendSession}
@@ -34,6 +38,9 @@ function SessionTimeoutWrapper({ children }: { children: React.ReactNode }) {
               >
                 Stay Logged In
               </button>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
+                Logging out in {remainingTime} seconds...
+              </p>
             </div>
           </div>
         </div>

@@ -12,8 +12,8 @@ interface UseSessionTimeoutProps {
 }
 
 export const useSessionTimeout = ({
-  timeout = 30 * 60 * 1000, // 30 minutes default (increased from 3 minutes)
-  warningTime = 2 * 60 * 1000, // 2 minutes warning
+  timeout = 3 * 60 * 1000, // 3 minutes idle timeout
+  warningTime = 1 * 60 * 1000, // 1 minute warning before logout
   onTimeout,
   onWarning,
 }: UseSessionTimeoutProps = {}) => {
@@ -21,6 +21,7 @@ export const useSessionTimeout = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const alertShownRef = useRef(false);
+  const activityTrackedRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
   const [remainingTime, setRemainingTime] = useState(0);
 
@@ -60,12 +61,13 @@ export const useSessionTimeout = ({
 
   const handleWarning = useCallback(() => {
     setShowWarning(true);
+    activityTrackedRef.current = false; // Reset activity tracking for warning phase
     setRemainingTime(warningTime / 1000);
     if (onWarning) {
       onWarning();
     }
 
-    // Countdown timer
+    // Countdown timer for warning display
     const countdownInterval = setInterval(() => {
       setRemainingTime((prev) => {
         if (prev <= 1) {
@@ -78,6 +80,11 @@ export const useSessionTimeout = ({
   }, [warningTime, onWarning]);
 
   const resetTimer = useCallback(() => {
+    // Don't reset if warning is being shown (user should click "Stay Logged In" button)
+    if (showWarning) {
+      return;
+    }
+
     // Clear existing timeouts
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -89,24 +96,25 @@ export const useSessionTimeout = ({
     // Hide warning if showing
     setShowWarning(false);
     alertShownRef.current = false;
+    activityTrackedRef.current = true;
 
-    // Set warning timeout
+    // Set warning timeout (3 min idle - 1 min warning = show warning at 2 min)
     warningTimeoutRef.current = setTimeout(() => {
       handleWarning();
     }, timeout - warningTime);
 
-    // Set logout timeout
+    // Set logout timeout (actual logout at 3 min of inactivity)
     timeoutRef.current = setTimeout(() => {
       handleTimeout();
     }, timeout);
-  }, [timeout, warningTime, handleTimeout, handleWarning]);
+  }, [timeout, warningTime, handleTimeout, handleWarning, showWarning]);
 
   const extendSession = useCallback(() => {
     resetTimer();
   }, [resetTimer]);
 
   useEffect(() => {
-    // Events that should reset the timer
+    // Events that should reset the timer (only during active use)
     const events = [
       "mousedown",
       "mousemove",
@@ -116,9 +124,15 @@ export const useSessionTimeout = ({
       "click",
     ];
 
-    // Reset timer on any user activity
+    // Reset timer on any user activity (debounced to avoid excessive resets)
     const handleActivity = () => {
-      resetTimer();
+      // Only reset if we're actively using (not in warning state)
+      if (!showWarning && activityTrackedRef.current) {
+        resetTimer();
+        activityTrackedRef.current = false; // Prevent rapid resets
+      } else if (!showWarning && !activityTrackedRef.current) {
+        activityTrackedRef.current = true;
+      }
     };
 
     // Add event listeners
@@ -126,7 +140,7 @@ export const useSessionTimeout = ({
       window.addEventListener(event, handleActivity);
     });
 
-    // Initialize timer
+    // Initialize timer on mount
     resetTimer();
 
     // Cleanup
@@ -141,7 +155,7 @@ export const useSessionTimeout = ({
         clearTimeout(warningTimeoutRef.current);
       }
     };
-  }, [resetTimer]);
+  }, [resetTimer, showWarning]);
 
   return { resetTimer, extendSession, showWarning, remainingTime };
 };
