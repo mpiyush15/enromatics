@@ -5,7 +5,7 @@
 
 import express from 'express';
 import crypto from 'crypto';
-import WhatsAppEventLog from '../models/WhatsAppEventLog.js';
+import WhatsAppEventLog from '../../models/WhatsAppEventLog.js';
 
 const router = express.Router();
 
