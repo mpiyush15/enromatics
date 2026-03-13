@@ -1,7 +1,7 @@
 import express from 'express';
 import Tenant from '../models/Tenant.js';
 import WhatsAppEventLog from '../models/WhatsAppEventLog.js';
-import { whatsappEventService } from '../services/whatsappEventService.js';
+import whatsappEventService from '../services/whatsappEventService.js';
 
 const router = express.Router();
 
