@@ -215,10 +215,11 @@ router.post('/templates/sync', protect, async (req, res) => {
       });
     }
 
-    // Fetch templates from WhatsApp Platform API
+    // Fetch templates from WhatsApp Platform API using tenant's credentials
     const businessAccountId = tenant.whatsappConfig.businessAccountId;
-    // Use global access token from environment (shared credential for Meta Graph API)
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = tenant.whatsappConfig.phoneNumberId;
+    // 🔒 CRITICAL: Use tenant's own API key (NOT global hardcoded token)
+    const tenantApiKey = tenant.whatsappConfig.apiKey;
 
     if (!businessAccountId) {
       return res.status(400).json({
@@ -227,42 +228,47 @@ router.post('/templates/sync', protect, async (req, res) => {
       });
     }
 
-    if (!accessToken) {
-      return res.status(500).json({
-        error: 'Server Configuration Error',
-        message: 'WhatsApp Access Token is not configured on the server. Contact your administrator.',
+    if (!phoneNumberId) {
+      return res.status(400).json({
+        error: 'Missing Phone Number ID',
+        message: 'Phone Number ID is missing. Please configure WhatsApp settings first.',
+      });
+    }
+
+    if (!tenantApiKey) {
+      return res.status(400).json({
+        error: 'Missing WhatsApp API Key',
+        message: 'Your WhatsApp API key is missing. Please reconfigure WhatsApp in settings.',
       });
     }
 
     try {
-      // Call WhatsApp Platform to fetch templates for this phone number
+      // Call WhatsApp Platform to fetch templates using tenant's credentials
       const platformUrl = process.env.WHATSAPP_PLATFORM_URL;
-      const platformApiKey = process.env.WHATSAPP_PLATFORM_API_KEY;
-
-      if (!platformUrl || !platformApiKey) {
+      if (!platformUrl) {
         return res.status(500).json({
           error: 'Platform Configuration Error',
-          message: 'WhatsApp Platform is not configured on the server.',
+          message: 'WhatsApp Platform URL is not configured on the server.',
         });
       }
 
-      const phoneNumberId = tenant.whatsappConfig.phoneNumberId;
-      if (!phoneNumberId) {
-        return res.status(400).json({
-          error: 'Missing Phone Number ID',
-          message: 'Phone Number ID is missing. Please configure WhatsApp settings first.',
+      if (!platformUrl) {
+        return res.status(500).json({
+          error: 'Platform Configuration Error',
+          message: 'WhatsApp Platform URL is not configured on the server.',
         });
       }
 
       console.log(`📞 Fetching templates from WhatsApp Platform`);
       console.log(`🔗 URL: ${platformUrl}/api/integrations/templates`);
-      console.log(`📱 Phone Number ID: ${phoneNumberId}`);
+      console.log(`📱 Tenant: ${tenantId} | Phone Number ID: ${phoneNumberId}`);
       
+      // 🔒 Use tenant's API key for the request
       const response = await axios.get(
         `${platformUrl}/api/integrations/templates`,
         {
           headers: {
-            'Authorization': `Bearer ${platformApiKey}`,
+            'Authorization': `Bearer ${tenantApiKey}`,
             'X-Tenant-Id': tenantId,
             'Content-Type': 'application/json',
           },
