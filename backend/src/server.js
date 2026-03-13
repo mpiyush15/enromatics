@@ -50,6 +50,7 @@ import whatsappRoutes from './routes/whatsappRoutes.js';
 import whatsappTemplateRoutes from './routes/whatsappTemplateRoutes.js';
 import whatsappChatbotRoutes from './routes/whatsappChatbotRoutes.js';
 import whatsappEventRoutes from './routes/whatsappEventRoutes.js';
+import whatsappWebhookRoutes from './routes/whatsappWebhookRoutes.js';
 import subscriptionNotificationRoutes from './routes/subscriptionNotificationRoutes.js';
 import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
 
@@ -181,6 +182,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappTemplateRoutes);
 app.use('/api/whatsapp', whatsappChatbotRoutes);
 app.use('/api/whatsapp', whatsappEventRoutes);
+app.use('/api/whatsapp', whatsappWebhookRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);
