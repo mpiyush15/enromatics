@@ -196,7 +196,7 @@ class WhatsAppPlatformClient {
       campaign,
     };
 
-    return this.request('POST', '/messages/send', data, null, tenantApiKey, tenantId);
+    return this.request('POST', '/send-message', data, null, tenantApiKey, tenantId);
   }
 
   /**
@@ -218,7 +218,7 @@ class WhatsAppPlatformClient {
       campaign,
     };
 
-    return this.request('POST', '/messages/send-template', data, null, tenantApiKey, tenantId);
+    return this.request('POST', '/templates/send', data, null, tenantApiKey, tenantId);
   }
 
   /**
