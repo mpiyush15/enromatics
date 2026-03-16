@@ -105,17 +105,6 @@ export const registerUser = async (req, res) => {
     }
 
     // Otherwise, create new tenant and tenantAdmin
-    const newTenantId = crypto.randomBytes(4).toString("hex");
-    console.log('📝 [SIGNUP] New tenantId:', newTenantId);
-
-    // Determine subscription based on trial vs regular signup
-    const subscriptionTier = isTrial ? (planId || 'basic') : 'free';
-    const subscriptionStatus = isTrial ? 'trial' : 'active';
-    const trialStartDate = isTrial ? new Date() : null;
-    // Calculate trial end date (14 days from start)
-    const trialEndDate = isTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
-    console.log('📝 [SIGNUP] subscriptionTier:', subscriptionTier, 'status:', subscriptionStatus);
-
     console.log('📝 [SIGNUP] Creating tenant...');
     
     // Auto-generate subdomain for tenant
@@ -130,7 +119,6 @@ export const registerUser = async (req, res) => {
     console.log('📝 [SIGNUP] Generated subdomain:', generatedSubdomain);
     
     const tenant = await Tenant.create({
-      tenantId: newTenantId,
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
@@ -148,7 +136,14 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false, // Store WhatsApp consent
     });
 
-    console.log('✅ [SIGNUP] Tenant created:', tenant._id, 'with subdomain:', generatedSubdomain);
+    // ✅ Use MongoDB's _id as tenantId (not random hex)
+    const tenantId = tenant._id.toString();
+    console.log('✅ [SIGNUP] Tenant created:', tenantId, 'with subdomain:', generatedSubdomain);
+
+    // ✅ Update tenant document to store tenantId field for legacy compatibility
+    tenant.tenantId = tenantId;
+    await tenant.save();
+    console.log('✅ [SIGNUP] Tenant tenantId field updated');
 
     console.log('📝 [SIGNUP] Creating user...');
     const user = await User.create({
@@ -157,7 +152,7 @@ export const registerUser = async (req, res) => {
       password,
       phone: phone || null,
       whatsappOptIn: whatsappOptIn || false,
-      tenantId: newTenantId,
+      tenantId: tenantId, // ✅ Use MongoDB ObjectId as tenantId
       role: "tenantAdmin",
       plan: isTrial ? 'trial' : 'free', // ✅ Set user plan to 'trial' or 'free' based on signup type
     });
@@ -165,7 +160,7 @@ export const registerUser = async (req, res) => {
 
     // Generate token for immediate auth (especially important for trial signup)
     console.log('📝 [SIGNUP] Generating token...');
-    const token = generateToken(user._id, user.email, user.role, newTenantId);
+    const token = generateToken(user._id, user.email, user.role, tenantId);
     console.log('✅ [SIGNUP] Token generated');
 
     // Build institute URL with auto-generated subdomain
