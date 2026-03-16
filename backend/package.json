@@ -1,6 +1,6 @@
 {
   "name": "enromatics-backend",
-  "version": "2.2.0-MVP-Mar16.03.01",
+  "version": "2.2.0-MVP-Mar16.03.02",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
