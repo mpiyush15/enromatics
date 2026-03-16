@@ -137,11 +137,11 @@ export const registerUser = async (req, res) => {
     });
 
     // ✅ Use MongoDB's _id as tenantId (not random hex)
-    const tenantId = tenant._id.toString();
-    console.log('✅ [SIGNUP] Tenant created:', tenantId, 'with subdomain:', generatedSubdomain);
+    const newTenantId = tenant._id.toString();
+    console.log('✅ [SIGNUP] Tenant created:', newTenantId, 'with subdomain:', generatedSubdomain);
 
     // ✅ Update tenant document to store tenantId field for legacy compatibility
-    tenant.tenantId = tenantId;
+    tenant.tenantId = newTenantId;
     await tenant.save();
     console.log('✅ [SIGNUP] Tenant tenantId field updated');
 
@@ -152,7 +152,7 @@ export const registerUser = async (req, res) => {
       password,
       phone: phone || null,
       whatsappOptIn: whatsappOptIn || false,
-      tenantId: tenantId, // ✅ Use MongoDB ObjectId as tenantId
+      tenantId: newTenantId, // ✅ Use MongoDB ObjectId as tenantId
       role: "tenantAdmin",
       plan: isTrial ? 'trial' : 'free', // ✅ Set user plan to 'trial' or 'free' based on signup type
     });
@@ -160,7 +160,7 @@ export const registerUser = async (req, res) => {
 
     // Generate token for immediate auth (especially important for trial signup)
     console.log('📝 [SIGNUP] Generating token...');
-    const token = generateToken(user._id, user.email, user.role, tenantId);
+    const token = generateToken(user._id, user.email, user.role, newTenantId);
     console.log('✅ [SIGNUP] Token generated');
 
     // Build institute URL with auto-generated subdomain
