@@ -57,7 +57,7 @@ export const authService = {
         method: "POST",
         headers,
         credentials: "include", // ✅ BFF handles cookie forwarding
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, subdomain }),
       });
 
       const data = await res.json();
