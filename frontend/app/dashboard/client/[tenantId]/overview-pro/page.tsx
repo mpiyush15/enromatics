@@ -22,9 +22,11 @@ interface Lead {
   email: string;
   phone: string;
   course: string;
-  status: 'pending' | 'contacted' | 'interested' | 'enrolled';
+  status: 'pending' | 'contacted' | 'interested' | 'enrolled' | 'new' | 'follow-up' | 'negotiation' | 'converted' | 'lost';
   date: string;
   amount: number;
+  score?: number;
+  scoreTier?: 'cold' | 'warm' | 'hot';
 }
 
 interface TrendData {
@@ -140,26 +142,35 @@ export default function OverviewProPage() {
 
   const fetchLeadsData = async () => {
     try {
-      // Fetch leads from students API endpoint
+      // Fetch HIGH-POTENTIAL leads only - score > 75 (hot/warm leads ready to convert)
       const [data, err] = await safeApiCall(() =>
-        api.get<any>('/api/students?limit=5&status=prospective')
+        api.get<any>('/api/leads?status=interested,follow-up,negotiation&sort=-score&limit=50')
       );
 
-      if (!err && data?.students) {
-        // Transform student data to leads format
-        const transformedLeads = data.students.map((student: any) => ({
-          id: student._id,
-          name: student.name,
-          email: student.email,
-          phone: student.phone || 'N/A',
-          course: student.course || 'Not specified',
-          status: student.enrollmentStatus || 'pending',
-          date: student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'N/A',
-          amount: student.feeAmount || 0,
-        }));
+      if (!err && data?.leads) {
+        // Filter for score > 75 and take top 5
+        const transformedLeads = data.leads
+          .filter((lead: any) => 
+            lead.status !== 'converted' && 
+            lead.status !== 'lost' && 
+            (lead.score || 0) > 75 // Only show leads with score > 75%
+          )
+          .slice(0, 5) // Top 5
+          .map((lead: any) => ({
+            id: lead._id,
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone || 'N/A',
+            course: lead.interestedCourse || 'Not specified',
+            status: lead.status || 'new',
+            date: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A',
+            amount: 0,
+            score: lead.score || 0,
+            scoreTier: lead.scoreTier || 'cold',
+          }));
         setLeads(transformedLeads);
       } else {
-        console.log("No leads data available yet");
+        console.log("No high-potential leads (score > 75%) available");
       }
     } catch (error: any) {
       console.error("Error fetching leads data:", error);
@@ -383,7 +394,7 @@ export default function OverviewProPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Prospective students and their enrollment status</p>
           </div>
           <button
-            onClick={() => router.push(`/dashboard/client/${tenantId}/students/add`)}
+            onClick={() => router.push(`/dashboard/client/${tenantId}/enquiry-dashboard`)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors text-sm"
           >
             + New Lead
@@ -399,7 +410,7 @@ export default function OverviewProPage() {
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Contact</th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Course</th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Status</th>
-                <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Fee</th>
+                <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Score</th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Date</th>
                 <th className="text-left py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">Action</th>
               </tr>
@@ -425,13 +436,25 @@ export default function OverviewProPage() {
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">₹{lead.amount.toLocaleString()}</p>
+                    {lead.score !== undefined ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{lead.score}/100</span>
+                        <span className="text-xs">
+                          {lead.scoreTier === 'hot' && '🔥🔥'}
+                          {lead.scoreTier === 'warm' && '🔥'}
+                          {lead.scoreTier === 'cold' && '❄️'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400">{lead.date}</p>
                   </td>
                   <td className="py-4 px-4">
                     <button
+                      onClick={() => router.push(`/dashboard/client/${tenantId}/enquiry-dashboard`)}
                       className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-semibold"
                     >
                       View →
@@ -443,17 +466,17 @@ export default function OverviewProPage() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination & Actions */}
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Showing {leads.length} of {leads.length} leads</p>
-          <div className="flex gap-2">
-            <button className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-              ← Previous
-            </button>
-            <button className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-              Next →
-            </button>
-          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            ✨ Showing top {leads.length} high-potential leads (Score &gt; 75%)
+          </p>
+          <button 
+            onClick={() => router.push(`/dashboard/client/${tenantId}/enquiry-dashboard`)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors text-sm"
+          >
+            🔍 View All Leads →
+          </button>
         </div>
       </div>
     </div>

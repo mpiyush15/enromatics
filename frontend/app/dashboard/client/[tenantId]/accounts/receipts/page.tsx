@@ -23,15 +23,32 @@ export default function FeeReceiptsPage() {
   useEffect(() => {
     const fetchTenantInfo = async () => {
       try {
-        const res = await fetch(`/api/tenants/${tenantId}`, {
+        // Fetch from BFF which has tenant profile with contact details
+        const res = await fetch(`/api/tenant/me`, {
           credentials: "include"
         });
         if (res.ok) {
           const data = await res.json();
-          console.log("✅ Tenant info fetched:", data.tenant);
-          setTenantInfo(data.tenant || data);
+          console.log("✅ Tenant info fetched:", data);
+          const tenant = data.data || data.tenant || data;
+          setTenantInfo({
+            instituteName: tenant.instituteName || tenant.name,
+            name: tenant.name,
+            email: tenant.email,
+            phone: tenant.phone,
+            address: tenant.address,
+            contact: tenant.contact,
+          });
         } else {
           console.warn("Failed to fetch tenant info:", res.status);
+          // Fallback to old endpoint
+          const fallbackRes = await fetch(`/api/tenants/${tenantId}`, {
+            credentials: "include"
+          });
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            setTenantInfo(data.tenant || data);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch tenant info:", err);

@@ -16,10 +16,11 @@ export const sidebarLinks = [
     roles: ["tenantAdmin"],
     tenantSpecific: true,
   },
-  // === PRIORITY 2A: CRM / Lead Management (Tenant-specific only) ===
+
+  // === PRIORITY 2B: Enquiry Dashboard (New UI) ===
   {
-    href: "/dashboard/lead",
-    label: "📊 Students Enquiry",
+    href: "/dashboard/enquiry-dashboard",
+    label: "🎨 Students Enquiry",
     roles: ["tenantAdmin", "manager", "counsellor"],
     tenantSpecific: true,
   },
@@ -34,7 +35,7 @@ export const sidebarLinks = [
       { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
       { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager"] },
       { label: "📊 Attendance", href: "/dashboard/client/[tenantId]/students/attendance", roles: ["tenantAdmin", "manager", "student"] },
-      { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] },
+      // { label: "📈 Analytics", href: "/dashboard/client/[tenantId]/students/attendance-overview", roles: ["tenantAdmin", "manager"] }, // HIDDEN - Drafting entire attendance analytics section
       { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
   },
@@ -51,11 +52,10 @@ export const sidebarLinks = [
       {
         label: "📝 Tests",
         href: "#",
-        roles: ["tenantAdmin", "manager", "student"],
+        roles: ["tenantAdmin", "manager"],
         children: [
           { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "manager"] },
           { label: "📊 Results", href: "/dashboard/academics/results", roles: ["tenantAdmin", "manager"] },
-          { label: "📖 My Tests", href: "/dashboard/academics/my-tests", roles: ["student"] },
         ]
       },
     ]

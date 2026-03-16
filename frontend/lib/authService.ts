@@ -43,11 +43,21 @@ export const authService = {
       
       console.log('🌐 Login hostname:', hostname, '→ subdomain:', subdomain || 'NONE (main domain)');
       
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+      
+      // Add subdomain as header if it exists
+      if (subdomain) {
+        headers['X-Tenant-Subdomain'] = subdomain;
+        console.log('🏢 Added X-Tenant-Subdomain header:', subdomain);
+      }
+      
       const res = await fetch(`${BFF_BASE}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include", // ✅ BFF handles cookie forwarding
-        body: JSON.stringify({ email, password, subdomain }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();

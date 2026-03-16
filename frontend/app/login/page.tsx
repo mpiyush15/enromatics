@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { authService } from "@/lib/authService";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import { api } from "@/lib/apiClient";
 
 interface TenantBranding {
   instituteName: string;
@@ -77,18 +78,18 @@ export default function LoginPage() {
             console.log('🍪 Tenant context cookie set:', subdomain);
           }
           
-          // Fetch branding from API
-          const response = await fetch(`/api/tenant/branding-by-subdomain?subdomain=${subdomain}`);
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Tenant branding loaded:', data.instituteName);
+          // Fetch branding from API using apiClient (includes subdomain header)
+          try {
+            const data = await api.get(`/api/tenants/by-subdomain/${subdomain}`);
+            console.log('✅ Tenant branding loaded:', data.name);
             setTenantBranding({
-              instituteName: data.instituteName || data.name,
+              instituteName: data.name || data.instituteName,
               logo: data.branding?.logo,
               primaryColor: data.branding?.primaryColor,
               secondaryColor: data.branding?.secondaryColor,
             });
+          } catch (err) {
+            console.log('⚠️ Could not fetch branding, using defaults');
           }
         }
       } catch (error) {

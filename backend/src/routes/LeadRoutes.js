@@ -12,6 +12,94 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ============================================
+// 🤖 AI LEAD SCORING HELPERS
+// ============================================
+
+/**
+ * Calculate lead score based on engagement metrics
+ * Score Formula:
+ * - Call count: up to 30 points (5 calls = 30 points)
+ * - Avg call rating: up to 25 points (5 stars = 25 points)
+ * - Status value: up to 30 points
+ * - Recency bonus: up to 15 points
+ * Total: 0-100
+ */
+const calculateLeadScore = async (lead, tenantId) => {
+  try {
+    // Get call history
+    const callHistory = await CallLog.find({
+      tenantId,
+      leadId: lead._id,
+    }).lean();
+
+    const callCount = lead.totalCalls || callHistory.length || 0;
+    const avgRating = callHistory.length > 0
+      ? callHistory.reduce((sum, call) => sum + (call.rating || 3), 0) / callHistory.length
+      : 3;
+
+    // Call count score (0-30 points) - 5 calls = max
+    const callCountScore = Math.min(callCount * 6, 30);
+
+    // Rating score (0-25 points) - 5 stars = max
+    const ratingScore = (avgRating / 5) * 25;
+
+    // Status value score (0-30 points)
+    const statusScores = {
+      new: 5,
+      contacted: 10,
+      interested: 20,
+      "follow-up": 15,
+      negotiation: 25,
+      converted: 30,
+      lost: 0,
+    };
+    const statusScore = statusScores[lead.status] || 0;
+
+    // Recency bonus (0-15 points)
+    let recencyBonus = 0;
+    if (lead.lastCallDate) {
+      const daysSinceLastCall = Math.floor(
+        (Date.now() - new Date(lead.lastCallDate).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysSinceLastCall <= 1) recencyBonus = 15;
+      else if (daysSinceLastCall <= 3) recencyBonus = 12;
+      else if (daysSinceLastCall <= 7) recencyBonus = 8;
+      else if (daysSinceLastCall <= 14) recencyBonus = 4;
+    }
+
+    // Total score (0-100)
+    const totalScore = Math.min(
+      Math.round(callCountScore + ratingScore + statusScore + recencyBonus),
+      100
+    );
+
+    // Determine tier
+    let scoreTier = "cold";
+    if (totalScore >= 70) scoreTier = "hot";
+    else if (totalScore >= 40) scoreTier = "warm";
+    else scoreTier = "cold";
+
+    return {
+      score: totalScore,
+      scoreTier,
+      breakdown: {
+        callCountScore,
+        ratingScore,
+        statusScore,
+        recencyBonus,
+      },
+    };
+  } catch (err) {
+    console.error("❌ Error calculating score:", err);
+    return {
+      score: 0,
+      scoreTier: "cold",
+      breakdown: {},
+    };
+  }
+};
+
+// ============================================
 // 📊 DASHBOARD & ANALYTICS
 // ============================================
 
@@ -85,6 +173,118 @@ router.get(
       });
     } catch (err) {
       console.error("❌ Lead Dashboard Error:", err);
+      res.status(500).json({ message: "Server error", error: err.message });
+    }
+  }
+);
+
+/**
+ * @route POST /api/leads/calculate-all-scores
+ * @desc Calculate and update AI scores for all leads (smart - only for changed leads)
+ * @access Private - Any authenticated user
+ * 
+ * Optimization: For 100+ leads, only recalculate for leads whose:
+ * - Status has changed since last scoring, OR
+ * - New calls have been logged, OR
+ * - Never been scored before
+ */
+router.post(
+  "/calculate-all-scores",
+  protect,
+  async (req, res) => {
+    try {
+      const tenantId = req.user.tenantId;
+      console.log("🤖 Starting lead scoring calculation (smart mode)...");
+
+      // Get all leads
+      const allLeads = await Lead.find({ tenantId });
+      console.log(`📊 Checking ${allLeads.length} leads for changes...`);
+
+      // Determine which leads need recalculation
+      // For large lists (100+), only recalculate changed leads
+      let leadsToScore = allLeads;
+      
+      if (allLeads.length > 100) {
+        console.log("📈 Dataset has 100+ leads - using smart recalculation...");
+        
+        // Get all call logs for this tenant (grouped by leadId)
+        const callLogs = await CallLog.find({ tenantId }).lean();
+        const callLogsByLeadId = {};
+        callLogs.forEach(call => {
+          if (!callLogsByLeadId[call.leadId]) {
+            callLogsByLeadId[call.leadId] = [];
+          }
+          callLogsByLeadId[call.leadId].push(call);
+        });
+
+        // Filter: only leads that have changed
+        leadsToScore = allLeads.filter(lead => {
+          const leadIdStr = lead._id.toString();
+          
+          // Always recalculate if never scored
+          if (!lead.scoreUpdatedAt) {
+            return true;
+          }
+
+          const lastScoreTime = new Date(lead.scoreUpdatedAt).getTime();
+          const lastUpdateTime = new Date(lead.updatedAt).getTime();
+          const hasRecentUpdate = lastUpdateTime > lastScoreTime;
+
+          // Recalculate if status/other fields changed
+          if (hasRecentUpdate) {
+            return true;
+          }
+
+          // Recalculate if new calls added since last scoring
+          const leadCalls = callLogsByLeadId[leadIdStr] || [];
+          const hasNewCalls = leadCalls.some(call => {
+            const callTime = new Date(call.createdAt).getTime();
+            return callTime > lastScoreTime;
+          });
+
+          return hasNewCalls;
+        });
+
+        console.log(`✂️  Optimized: Will recalculate ${leadsToScore.length}/${allLeads.length} leads (${Math.round((leadsToScore.length/allLeads.length)*100)}%)`);
+      }
+
+      let updated = 0;
+      const results = [];
+
+      for (const lead of leadsToScore) {
+        const scoreData = await calculateLeadScore(lead, tenantId);
+
+        // Update lead with score
+        await Lead.findByIdAndUpdate(
+          lead._id,
+          {
+            score: scoreData.score,
+            scoreTier: scoreData.scoreTier,
+            scoreUpdatedAt: new Date(),
+          },
+          { new: true }
+        );
+
+        updated++;
+        results.push({
+          leadId: lead._id,
+          name: lead.name,
+          score: scoreData.score,
+          tier: scoreData.scoreTier,
+        });
+      }
+
+      console.log(`✅ Updated ${updated}/${allLeads.length} lead scores`);
+
+      res.json({
+        message: `✅ Calculated scores for ${updated}/${allLeads.length} leads${allLeads.length > 100 ? ' (smart mode)' : ''}`,
+        totalLeads: allLeads.length,
+        updatedLeads: updated,
+        skippedLeads: allLeads.length - updated,
+        sample: results.slice(0, 5),
+      });
+    } catch (err) {
+      console.error("❌ Scoring Error:", err);
       res.status(500).json({ message: "Server error", error: err.message });
     }
   }
@@ -291,8 +491,23 @@ router.get(
         Lead.countDocuments(query),
       ]);
 
+      // Add call history to each lead
+      const leadsWithHistory = await Promise.all(
+        leads.map(async (lead) => {
+          const callHistory = await CallLog.find({
+            tenantId,
+            leadId: lead._id,
+          }).sort({ callDate: -1 }).lean();
+          
+          return {
+            ...lead.toObject(),
+            callHistory,
+          };
+        })
+      );
+
       res.json({
-        leads,
+        leads: leadsWithHistory,
         pagination: {
           total,
           page: parseInt(page),
@@ -430,7 +645,9 @@ router.post(
         outcome,
         notes,
         callDuration,
+        duration,
         callType,
+        rating,
         newStatus,
         nextFollowUpDate,
         nextFollowUpNotes,
@@ -447,7 +664,9 @@ router.post(
 
       const previousStatus = lead.status;
 
-      // Create call log
+      // Create call log - support both callDuration (seconds) and duration (minutes)
+      const callDurationInSeconds = callDuration || (duration ? duration * 60 : 0);
+
       const callLog = await CallLog.create({
         tenantId,
         leadId: id,
@@ -455,8 +674,9 @@ router.post(
         counsellorName: req.user.name,
         outcome,
         notes,
-        callDuration: callDuration || 0,
+        callDuration: callDurationInSeconds,
         callType: callType || "outbound",
+        rating: rating || 3,
         previousStatus,
         newStatus: newStatus || previousStatus,
         nextFollowUpDate,
@@ -483,10 +703,18 @@ router.post(
         new: true,
       }).populate("assignedTo", "name email");
 
+      // Fetch call history for the lead
+      const callHistory = await CallLog.find({ tenantId, leadId: id })
+        .sort({ callDate: -1 })
+        .lean();
+
       res.json({
         message: "Call logged successfully ✅",
         callLog,
-        lead: updatedLead,
+        lead: {
+          ...updatedLead.toObject(),
+          callHistory,
+        },
       });
     } catch (err) {
       console.error("❌ Log Call Error:", err);

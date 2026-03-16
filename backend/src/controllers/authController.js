@@ -309,6 +309,11 @@ export const loginUser = async (req, res) => {
     // ✅ TENANT-BASED ACCESS CONTROL
     const userRole = user.role?.toLowerCase();
     
+    console.log('\n🔐 TENANT VALIDATION:');
+    console.log('   - User role:', userRole);
+    console.log('   - Tenant subdomain header:', tenantSubdomain || 'NONE');
+    console.log('   - User tenantId:', user.tenantId);
+    
     // Check if this is a checkout/upgrade login (allows tenant users on main domain)
     const isCheckoutLogin = purpose === 'checkout' || purpose === 'upgrade';
     
@@ -328,6 +333,8 @@ export const loginUser = async (req, res) => {
     else {
       if (!tenantSubdomain && !isCheckoutLogin) {
         console.log('❌ Access denied: Non-SuperAdmin trying to login on main domain');
+        console.log('   - Has X-Tenant-Subdomain header:', !!tenantSubdomain);
+        console.log('   - Is checkout login:', isCheckoutLogin);
         return res.status(403).json({ 
           message: "Access denied. Please login using your tenant subdomain",
           hint: `Visit ${user.tenantId || 'yourtenant'}.enromatics.com/login`
@@ -339,7 +346,10 @@ export const loginUser = async (req, res) => {
         console.log('✅ Checkout login allowed on main domain for tenant user:', user.email);
       } else if (tenantSubdomain) {
         // Resolve subdomain to tenantId
+        console.log('   - Resolving subdomain to tenantId for:', tenantSubdomain);
         const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
+        
+        console.log('   - Resolved tenantId:', resolvedTenantId || 'NULL');
         
         if (!resolvedTenantId) {
           console.log('❌ Tenant not found for subdomain:', tenantSubdomain);
@@ -350,6 +360,7 @@ export const loginUser = async (req, res) => {
         }
         
         // Validate user belongs to this tenant
+        console.log('   - Comparing: user.tenantId (' + user.tenantId + ') vs resolvedTenantId (' + resolvedTenantId + ')');
         if (user.tenantId !== resolvedTenantId) {
           console.log('❌ Access denied: User does not belong to this tenant');
           console.log('   User tenantId:', user.tenantId, '| Subdomain tenantId:', resolvedTenantId);

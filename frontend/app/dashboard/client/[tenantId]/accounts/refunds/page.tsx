@@ -23,6 +23,7 @@ export default function RefundsPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      params.append("tenantId", tenantId as string);
       if (statusFilter) params.append("status", statusFilter);
 
       // Use BFF route with caching
@@ -64,15 +65,31 @@ export default function RefundsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const params = new URLSearchParams();
+      params.append("tenantId", tenantId as string);
+
+      // Build request body, exclude empty optional fields
+      const payload: any = {
+        studentId: form.studentId,
+        amount: Number(form.amount),
+        reason: form.reason,
+        refundMethod: form.refundMethod
+      };
+      
+      // Only include optional fields if they have values
+      if (form.originalPaymentId?.trim()) {
+        payload.originalPaymentId = form.originalPaymentId;
+      }
+      if (form.remarks?.trim()) {
+        payload.remarks = form.remarks;
+      }
+
       // Use BFF route
-      const res = await fetch(`/api/accounts/refunds`, {
+      const res = await fetch(`/api/accounts/refunds?${params.toString()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          ...form,
-          amount: Number(form.amount)
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -103,8 +120,11 @@ export default function RefundsPage() {
         ? prompt("Enter transaction ID (optional):") 
         : undefined;
 
+      const params = new URLSearchParams();
+      params.append("tenantId", tenantId as string);
+
       // Use BFF route
-      const res = await fetch(`/api/accounts/refunds/${refundId}`, {
+      const res = await fetch(`/api/accounts/refunds/${refundId}?${params.toString()}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

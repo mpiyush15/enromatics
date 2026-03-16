@@ -29,6 +29,31 @@ export interface ApiClientOptions extends RequestInit {
  * - Response normalization
  * - Timeout support
  */
+/**
+ * Get subdomain from current hostname
+ * e.g., "client" from "client.enromatics.com" or "client.localhost:3000"
+ */
+function getSubdomain(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  
+  // Check if it's a subdomain
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // For localhost, subdomain would be in format: client.localhost:3000
+    // so we just need to check the port part separately
+    return null;
+  }
+  
+  // If more than 2 parts (e.g., client.enromatics.com = 3 parts)
+  if (parts.length > 2) {
+    return parts[0]; // Return the subdomain part
+  }
+  
+  return null;
+}
+
 export async function apiClient<T = any>(
   endpoint: string,
   options: ApiClientOptions = {}
@@ -64,6 +89,13 @@ export async function apiClient<T = any>(
       'Content-Type': 'application/json',
       ...(fetchOptions.headers || {}),
     };
+
+    // 🏢 Add subdomain header if accessing from a subdomain
+    const subdomain = getSubdomain();
+    if (subdomain) {
+      headers['X-Tenant-Subdomain'] = subdomain;
+      console.log('🏢 Added subdomain header:', subdomain);
+    }
 
     // Add Authorization header if token exists
     if (token && !skipAuth) {

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { api } from "@/lib/apiClient";
 
-interface FormData {
-  name: string;
+interface TenantData {
   instituteName: string;
   email: string;
   phone: string;
@@ -12,29 +12,21 @@ interface FormData {
   city: string;
   state: string;
   country: string;
-}
-
-interface StaffForm {
-  name: string;
-  email: string;
-  role: string;
-  password: string;
+  website?: string;
+  description?: string;
+  logo?: string;
 }
 
 export default function TenantProfilePage() {
   const params = useParams();
-  const tenantId = params?.tenantId as string;
-  const [tenant, setTenant] = useState<any>(null);
-  const [staff, setStaff] = useState<any[]>([]);
+  const tenantId = (params?.tenantId as string) || '';
+  
   const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showAddStaff, setShowAddStaff] = useState(false);
-  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
-  const [editStaffForm, setEditStaffForm] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [form, setForm] = useState<FormData>({
-    name: "",
+  const [form, setForm] = useState<TenantData>({
     instituteName: "",
     email: "",
     phone: "",
@@ -42,194 +34,82 @@ export default function TenantProfilePage() {
     city: "",
     state: "",
     country: "India",
-  });
-
-  const [staffForm, setStaffForm] = useState<StaffForm>({
-    name: "",
-    email: "",
-    role: "employee",
-    password: "",
+    website: "",
+    description: "",
   });
 
   useEffect(() => {
-    fetchTenantProfile();
-    fetchStaff();
-  }, []);
+    if (tenantId) {
+      fetchTenantProfile();
+    }
+  }, [tenantId]);
 
   const fetchTenantProfile = async () => {
     try {
-      const res = await fetch(`/api/settings/tenant-profile?tenantId=${tenantId}`, {
-        credentials: "include",
-      });
+      setLoading(true);
+      const data = await api.get<any>(`/api/tenants/${tenantId}`);
       
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server returned invalid response. Please check if backend is running.");
+      if (data) {
+        setForm({
+          instituteName: data.instituteName || "",
+          email: data.email || "",
+          phone: data.contact?.phone || "",
+          address: data.contact?.address || "",
+          city: data.contact?.city || "",
+          state: data.contact?.state || "",
+          country: data.contact?.country || "India",
+          website: data.website || "",
+          description: data.description || "",
+          logo: data.branding?.logo || "",
+        });
+        setStatus("");
       }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to fetch");
-      
-      setTenant(data.tenant);
-      setForm({
-        name: data.tenant.name || "",
-        instituteName: data.tenant.instituteName || "",
-        email: data.tenant.email || "",
-        phone: data.tenant.contact?.phone || "",
-        address: data.tenant.contact?.address || "",
-        city: data.tenant.contact?.city || "",
-        state: data.tenant.contact?.state || "",
-        country: data.tenant.contact?.country || "India",
-      });
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-      console.error("Fetch tenant error:", err);
+    } catch (error: any) {
+      setStatus(`Error loading profile: ${error.message}`);
+      console.error("Fetch error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStaff = async () => {
-    try {
-      const res = await fetch(`/api/settings/staff-list?tenantId=${tenantId}`, {
-        credentials: "include",
-      });
-      
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("Received non-JSON response for staff fetch");
-        return;
-      }
-
-      const data = await res.json();
-      if (res.ok) {
-        setStaff(data.users?.filter((u: any) => u.role !== "SuperAdmin" && u.role !== "tenantAdmin") || []);
-      } else {
-        console.error("Failed to fetch staff:", data.message);
-      }
-    } catch (err: any) {
-      console.error("Error fetching staff:", err.message);
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSave = async () => {
-    setStatus("Saving...");
     try {
-      const res = await fetch(`/api/settings/tenant-profile?tenantId=${tenantId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: form.name,
-          instituteName: form.instituteName,
-          email: form.email,
-          contact: {
-            phone: form.phone,
-            address: form.address,
-            city: form.city,
-            state: form.state,
-            country: form.country,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      setIsSaving(true);
+      setStatus("");
 
-      setTenant(data.tenant);
-      setStatus("Updated successfully!");
-      setIsEditing(false);
-      setTimeout(() => setStatus(""), 3000);
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    }
-  };
+      const payload = {
+        instituteName: form.instituteName,
+        email: form.email,
+        website: form.website,
+        description: form.description,
+        contact: {
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+          state: form.state,
+          country: form.country,
+        },
+      };
 
-  const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("Adding staff...");
-    try {
-      const res = await fetch(`/api/settings/staff-list?tenantId=${tenantId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(staffForm),
-      });
-      
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server error. Please check if backend is running.");
+      const response = await api.put(`/api/tenants/${tenantId}`, payload);
+
+      if (response) {
+        setStatus("✅ Institute profile updated successfully!");
+        setIsEditing(false);
+        setTimeout(() => setStatus(""), 3000);
       }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      setStatus("Staff added successfully!");
-      setShowAddStaff(false);
-      setStaffForm({ name: "", email: "", role: "employee", password: "" });
-      fetchStaff();
-      setTimeout(() => setStatus(""), 3000);
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    }
-  };
-
-  const handleDeleteStaff = async (userId: string) => {
-    if (!confirm("Remove this staff member?")) return;
-    try {
-      const res = await fetch(`/api/auth/users/${userId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to remove");
-      setStatus("Staff removed!");
-      fetchStaff();
-      setTimeout(() => setStatus(""), 3000);
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    }
-  };
-
-  const handleEditStaff = (member: any) => {
-    setEditingStaffId(member._id);
-    setEditStaffForm({
-      name: member.name,
-      email: member.email,
-      role: member.role,
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingStaffId(null);
-    setEditStaffForm(null);
-  };
-
-  const handleUpdateStaff = async (userId: string) => {
-    setStatus("Updating...");
-    try {
-      const res = await fetch(`/api/auth/users/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(editStaffForm),
-      });
-
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server error. Please check if backend is running.");
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
-      setStatus("Staff updated successfully!");
-      setEditingStaffId(null);
-      setEditStaffForm(null);
-      fetchStaff();
-      setTimeout(() => setStatus(""), 3000);
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
+    } catch (error: any) {
+      setStatus(`❌ Error saving profile: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -237,100 +117,260 @@ export default function TenantProfilePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading institute profile...</p>
         </div>
       </div>
     );
   }
 
-  if (!tenant) return <div className="p-6"><p className="text-red-600">Failed to load profile</p></div>;
-
-  const getRoleBadge = (role: string) => {
-    const colors: any = {
-      SuperAdmin: "bg-red-100 text-red-800",
-      Admin: "bg-purple-100 text-purple-800",
-      tenantAdmin: "bg-indigo-100 text-indigo-800",
-      employee: "bg-blue-100 text-blue-800",
-      adsManager: "bg-green-100 text-green-800",
-      student: "bg-orange-100 text-orange-800",
-    };
-    return colors[role] || "bg-gray-100 text-gray-800";
-  };
-
   return (
-    <div className="min-h-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 rounded-3xl shadow-2xl p-8 text-white">
-          <h1 className="text-4xl font-bold mb-2">Institute Profile</h1>
-          <p className="text-blue-100">Manage your institute information and staff</p>
+    <div className="px-8 py-6 bg-gray-50 dark:bg-gray-950 min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">🏢 Institute Profile</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Setup and manage your coaching institute details</p>
+      </div>
+
+      {/* Status Message */}
+      {status && (
+        <div className={`mb-6 p-4 rounded-lg ${
+          status.includes('✅') 
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800' 
+            : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+        }`}>
+          {status}
+        </div>
+      )}
+
+      {/* Main Form */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
+        {/* Form Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Basic Information</h2>
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+              isEditing
+                ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }`}
+          >
+            {isEditing ? "Cancel" : "✏️ Edit"}
+          </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold">{tenant.instituteName || tenant.name}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{tenant.email}</p>
-            </div>
-            {!isEditing ? (
-              <button onClick={() => setIsEditing(true)} className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold">
-                Edit
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button onClick={handleSave} className="px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700">Save</button>
-                <button onClick={() => { setIsEditing(false); fetchTenantProfile(); }} className="px-6 py-2 bg-gray-600 text-white rounded-xl hover:bg-gray-700">Cancel</button>
-              </div>
-            )}
+        {/* Form Content */}
+        <div className="p-6 space-y-6">
+          {/* Institute Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Institute Name *
+            </label>
+            <input
+              type="text"
+              name="instituteName"
+              value={form.instituteName}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className={`w-full px-4 py-2 rounded-lg border ${
+                isEditing
+                  ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+              }`}
+              placeholder="e.g., Shree Coaching Classes"
+            />
           </div>
 
+          {/* Email & Phone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+                placeholder="institute@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Phone *
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+                placeholder="+91 9876543210"
+              />
+            </div>
+          </div>
+
+          {/* Website & Country */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Website
+              </label>
+              <input
+                type="url"
+                name="website"
+                value={form.website}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+                placeholder="https://example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Country
+              </label>
+              <select
+                name="country"
+                value={form.country}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                <option value="India">India</option>
+                <option value="USA">USA</option>
+                <option value="UK">UK</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Address
+            </label>
+            <input
+              type="text"
+              name="address"
+              value={form.address}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className={`w-full px-4 py-2 rounded-lg border ${
+                isEditing
+                  ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+              }`}
+              placeholder="123 Main Street"
+            />
+          </div>
+
+          {/* City & State */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                City
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={form.city}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+                placeholder="Mumbai"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                State
+              </label>
+              <input
+                type="text"
+                name="state"
+                value={form.state}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isEditing
+                    ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+                }`}
+                placeholder="Maharashtra"
+              />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              About Your Institute
+            </label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              rows={4}
+              className={`w-full px-4 py-2 rounded-lg border ${
+                isEditing
+                  ? "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  : "border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400"
+              }`}
+              placeholder="Tell us about your coaching institute, specializations, and achievements..."
+            />
+          </div>
+
+          {/* Save Button */}
           {isEditing && (
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold mb-2">Owner/Contact Name</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Institute Name</label>
-                <input type="text" value={form.instituteName} onChange={(e) => setForm({ ...form, instituteName: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Email</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Phone</label>
-                <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">City</label>
-                <input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">State</label>
-                <input type="text" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Country</label>
-                <select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700">
-                  <option value="India">India</option>
-                  <option value="USA">USA</option>
-                  <option value="UK">UK</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold mb-2">Address</label>
-                <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={3} className="w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 dark:bg-gray-700" />
-              </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition-colors"
+              >
+                {isSaving ? "Saving..." : "💾 Save Changes"}
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           )}
         </div>
+      </div>
 
-        {status && (
-          <div className={`p-4 rounded-xl font-semibold ${status.includes("success") ? "bg-green-100 text-green-800" : status.includes("Error") ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800"}`}>
-            {status}
-          </div>
-        )}
+      {/* Info Box */}
+      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
+          💡 <strong>Tip:</strong> Your institute details will appear in student portals and official documents. Keep them accurate and professional.
+        </p>
       </div>
     </div>
   );

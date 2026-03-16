@@ -33,6 +33,13 @@ interface ReceiptProps {
     phone?: string;
     email?: string;
     logo?: string;
+    contact?: {
+      phone?: string;
+      address?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+    };
   };
   onClose?: () => void;
 }
@@ -204,24 +211,37 @@ export default function FeeReceipt({ payment, tenantInfo, onClose }: ReceiptProp
     });
   };
 
+  // Get institute details from tenantInfo
+  const instituteName = tenantInfo?.instituteName || tenantInfo?.name || "Institute Name";
+  const institutePhone = tenantInfo?.contact?.phone || tenantInfo?.phone || "N/A";
+  const instituteEmail = tenantInfo?.contact?.email || tenantInfo?.email || "N/A";
+  const instituteAddress = tenantInfo?.contact?.address || tenantInfo?.address || "Address not provided";
+  const instituteCity = tenantInfo?.contact?.city || "";
+  const instituteState = tenantInfo?.contact?.state || "";
+
+  const fullAddress = [instituteAddress, instituteCity, instituteState].filter(Boolean).join(", ");
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-y-auto">
         
         {/* Modal Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-gray-800 to-gray-900 text-white p-4 flex justify-between items-center rounded-t-lg">
-          <h2 className="text-lg font-semibold">Fee Receipt</h2>
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Fee Receipt</h2>
+            <p className="text-blue-100 text-sm mt-1">Receipt #{payment.receiptNumber}</p>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded font-medium transition"
+              className="px-4 py-2 bg-white text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition flex items-center gap-2"
             >
               🖨️ Print
             </button>
             {onClose && (
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded font-medium transition"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition"
               >
                 ✕ Close
               </button>
@@ -230,99 +250,116 @@ export default function FeeReceipt({ payment, tenantInfo, onClose }: ReceiptProp
         </div>
 
         {/* Receipt Preview */}
-        <div ref={printRef} className="p-8 bg-gray-100">
-          <div className="receipt max-w-2xl mx-auto bg-white border-2 border-black p-6">
+        <div ref={printRef} className="p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="receipt max-w-2xl mx-auto bg-white rounded-lg shadow-lg border border-gray-200 p-8">
             
-            {/* Header */}
-            <div className="header text-center border-b-2 border-black pb-3 mb-4">
-              <div className="institute-name text-2xl font-bold mb-2 uppercase">
-                {tenantInfo?.instituteName || "INSTITUTE NAME"}
+            {/* Header Section */}
+            <div className="border-b-4 border-blue-600 pb-6 mb-6">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{instituteName}</h1>
+                <div className="text-gray-600 text-sm space-y-1">
+                  <p>📍 {fullAddress}</p>
+                  <p>📱 {institutePhone} | 📧 {instituteEmail}</p>
+                </div>
               </div>
-              <div className="contact-info text-sm">
-                {tenantInfo?.address || "Institute Address"}<br />
-                Phone: {tenantInfo?.phone || "N/A"} | Email: {tenantInfo?.email || "N/A"}
+            </div>
+
+            {/* Receipt Title */}
+            <div className="text-center mb-8 pb-6 border-b-2 border-gray-300">
+              <div className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-lg">
+                FEE RECEIPT
+              </div>
+              <p className="text-gray-500 text-sm mt-3">Date: {formatDate(payment.date)}</p>
+            </div>
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              {/* Student Information */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 text-blue-600">Student Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">STUDENT NAME</p>
+                    <p className="text-gray-900 font-semibold">{payment.studentId.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">ROLL NUMBER</p>
+                    <p className="text-gray-900 font-semibold">{payment.studentId.rollNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">COURSE</p>
+                    <p className="text-gray-900 font-semibold">{payment.studentId.course}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">BATCH</p>
+                    <p className="text-gray-900 font-semibold">{payment.studentId.batch}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 text-blue-600">Payment Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">FEE TYPE</p>
+                    <p className="text-gray-900 font-semibold capitalize">{payment.feeType}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold">PAYMENT METHOD</p>
+                    <p className="text-gray-900 font-semibold capitalize">{payment.method}</p>
+                  </div>
+                  {payment.academicYear && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">ACADEMIC YEAR</p>
+                      <p className="text-gray-900 font-semibold">{payment.academicYear}</p>
+                    </div>
+                  )}
+                  {payment.month && (
+                    <div>
+                      <p className="text-xs text-gray-500 font-semibold">MONTH</p>
+                      <p className="text-gray-900 font-semibold">{payment.month}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Title */}
-            <div className="title text-center text-lg font-bold bg-black text-white py-2 mb-4">
-              FEE RECEIPT
+            {/* Amount Paid - Highlighted */}
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-lg p-6 mb-8 text-center">
+              <p className="text-gray-600 text-sm font-semibold uppercase tracking-wide mb-2">Amount Paid</p>
+              <p className="text-4xl font-bold text-blue-600">{formatCurrency(payment.amount)}</p>
             </div>
 
-            {/* Receipt Info */}
-            <div className="receipt-info flex justify-between mb-4 text-sm font-bold">
-              <div>Receipt No: {payment.receiptNumber}</div>
-              <div>Date: {formatDate(payment.date)}</div>
-            </div>
-
-            {/* Details Table */}
-            <table className="w-full mb-4">
-              <tbody>
-                <tr>
-                  <td className="label font-bold">Student Name:</td>
-                  <td className="value">{payment.studentId.name}</td>
-                </tr>
-                <tr>
-                  <td className="label font-bold">Roll Number:</td>
-                  <td className="value">{payment.studentId.rollNumber}</td>
-                </tr>
-                <tr>
-                  <td className="label font-bold">Course:</td>
-                  <td className="value">{payment.studentId.course}</td>
-                </tr>
-                <tr>
-                  <td className="label font-bold">Batch:</td>
-                  <td className="value">{payment.studentId.batch}</td>
-                </tr>
-                <tr>
-                  <td className="label font-bold">Fee Type:</td>
-                  <td className="value uppercase">{payment.feeType}</td>
-                </tr>
-                {payment.month && (
-                  <tr>
-                    <td className="label font-bold">Month:</td>
-                    <td className="value">{payment.month}</td>
-                  </tr>
-                )}
-                {payment.academicYear && (
-                  <tr>
-                    <td className="label font-bold">Academic Year:</td>
-                    <td className="value">{payment.academicYear}</td>
-                  </tr>
-                )}
-                <tr>
-                  <td className="label font-bold">Payment Method:</td>
-                  <td className="value uppercase">{payment.method}</td>
-                </tr>
+            {/* Additional Details */}
+            {(payment.transactionId || payment.remarks) && (
+              <div className="bg-gray-50 rounded-lg p-4 mb-8 border border-gray-200">
                 {payment.transactionId && (
-                  <tr>
-                    <td className="label font-bold">Transaction ID:</td>
-                    <td className="value font-mono text-sm">{payment.transactionId}</td>
-                  </tr>
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-500 font-semibold uppercase">TRANSACTION ID</p>
+                    <p className="text-gray-900 font-mono text-sm">{payment.transactionId}</p>
+                  </div>
                 )}
                 {payment.remarks && (
-                  <tr>
-                    <td className="label font-bold">Remarks:</td>
-                    <td className="value">{payment.remarks}</td>
-                  </tr>
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold uppercase">REMARKS</p>
+                    <p className="text-gray-900 text-sm">{payment.remarks}</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
-
-            {/* Amount Box */}
-            <div className="amount-box text-center border-2 border-black p-4 my-6 bg-gray-100">
-              <div className="amount-label text-sm font-bold mb-2">AMOUNT PAID</div>
-              <div className="amount-value text-3xl font-bold">{formatCurrency(payment.amount)}</div>
-            </div>
+              </div>
+            )}
 
             {/* Footer */}
-            <div className="footer flex justify-between items-end mt-6 pt-3 border-t border-black">
-              <div className="thank-you text-sm italic">
-                Thank you for your payment!
-              </div>
-              <div className="signature-box text-center">
-                <div className="signature-line border-t border-black w-32 mb-2 ml-auto"></div>
-                <div className="signature-label text-xs">Authorized Signature</div>
+            <div className="border-t-2 border-gray-300 pt-6 mt-8">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-gray-600 text-xs italic">Thank you for your payment!</p>
+                  <p className="text-gray-500 text-xs mt-2">Receipt generated on: {formatDate(new Date().toISOString())}</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-t-2 border-gray-400 w-32 mb-2"></div>
+                  <p className="text-xs text-gray-600 font-semibold">Authorized By</p>
+                </div>
               </div>
             </div>
 

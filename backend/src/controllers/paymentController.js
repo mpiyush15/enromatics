@@ -1087,16 +1087,23 @@ export const getReceipt = async (req, res) => {
     const Tenant = await import("../models/Tenant.js");
     const tenant = await Tenant.default.findOne({ tenantId });
 
-    const instituteName = tenant?.name || "Institute";
+    // Use instituteName, fallback to name
+    const instituteName = tenant?.instituteName || tenant?.name || "Institute";
+    const instituteEmail = tenant?.email || "N/A";
+    const institutePhone = tenant?.contact?.phone || tenant?.phone || "N/A";
+    const instituteAddress = tenant?.contact?.address || tenant?.address || "Address";
+    const instituteCity = tenant?.contact?.city || "";
+    const instituteState = tenant?.contact?.state || "";
+    const fullAddress = [instituteAddress, instituteCity, instituteState].filter(Boolean).join(", ");
     
-    // Generate standard receipt number format: YYYYMMDD-SEQUENCE
+    // Generate standard receipt number format
     const paymentDate = new Date(payment.date);
     const year = paymentDate.getFullYear();
     const month = String(paymentDate.getMonth() + 1).padStart(2, "0");
     const day = String(paymentDate.getDate()).padStart(2, "0");
     const datePrefix = `${year}${month}${day}`;
     
-    // Get sequence number for this date (count payments from this date)
+    // Get sequence number for this date
     const paymentCount = await Payment.countDocuments({ 
       tenantId, 
       date: { $gte: new Date(year, paymentDate.getMonth(), paymentDate.getDate()), $lt: new Date(year, paymentDate.getMonth(), paymentDate.getDate() + 1) }
@@ -1116,68 +1123,133 @@ export const getReceipt = async (req, res) => {
     // Pipe to response
     doc.pipe(res);
 
-    // Header
-    doc.fontSize(24).font("Helvetica-Bold").text(instituteName, { align: "center" });
-    doc.fontSize(10).font("Helvetica").text(tenant?.email || "", { align: "center" });
-    doc.fontSize(10).font("Helvetica").text(tenant?.address || "", { align: "center" });
+    // ===== HEADER SECTION =====
+    doc.fillColor("#2563eb")
+       .fontSize(28)
+       .font("Helvetica-Bold")
+       .text(instituteName, { align: "center" });
+    
+    doc.fillColor("#4b5563")
+       .fontSize(10)
+       .font("Helvetica")
+       .text(fullAddress, { align: "center" })
+       .text(`📱 ${institutePhone} | 📧 ${instituteEmail}`, { align: "center" });
     
     doc.moveDown(0.5);
-    doc.moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+    doc.strokeColor("#2563eb")
+       .lineWidth(3)
+       .moveTo(40, doc.y)
+       .lineTo(550, doc.y)
+       .stroke();
+    
     doc.moveDown(0.5);
 
-    // Receipt title and number
-    doc.fontSize(16).font("Helvetica-Bold").text("RECEIPT", { align: "center" });
-    doc.fontSize(11).font("Helvetica").text(`Receipt No: ${receiptNumber}`, { align: "right" });
-    doc.fontSize(11).font("Helvetica").text(`Date: ${paymentDate.toLocaleDateString("en-IN")}`, { align: "right" });
+    // ===== RECEIPT TITLE =====
+    doc.fillColor("white")
+       .backgroundColor("#2563eb")
+       .fontSize(16)
+       .font("Helvetica-Bold")
+       .text("FEE PAYMENT RECEIPT", { align: "center", width: 510, height: 30 })
+       .backgroundColor();
     
-    doc.moveDown(1);
+    doc.moveDown(0.8);
 
-    // Student Details Section
-    doc.fontSize(12).font("Helvetica-Bold").text("Student Details", { underline: true });
-    doc.fontSize(10).font("Helvetica");
-    doc.text(`Name: ${student?.name || "-"}`, { width: 250 });
-    doc.text(`Email: ${student?.email || "-"}`, { width: 250 });
-    doc.text(`Roll Number: ${student?.rollNumber || "-"}`, { width: 250 });
-    doc.text(`Batch: ${student?.batchName || "-"}`, { width: 250 });
+    // ===== RECEIPT INFO & DATE =====
+    doc.fillColor("#4b5563")
+       .fontSize(11)
+       .font("Helvetica");
     
-    doc.moveDown(1);
+    const leftX = 50;
+    const rightX = 350;
+    
+    doc.text(`Receipt No: ${receiptNumber}`, leftX, doc.y);
+    doc.text(`Date: ${paymentDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, rightX, doc.y - 15);
+    
+    doc.moveDown(1.5);
 
-    // Payment Details Section
-    doc.fontSize(12).font("Helvetica-Bold").text("Payment Details", { underline: true });
-    doc.fontSize(10).font("Helvetica");
+    // ===== TWO COLUMN LAYOUT =====
+    const col1X = 50;
+    const col2X = 310;
+    const colWidth = 220;
     
-    // Create table for payment details
-    const tableTop = doc.y;
-    doc.text("Description", 60, tableTop);
-    doc.text("Amount", 400, tableTop, { align: "right" });
+    // Column 1: Student Information
+    doc.fillColor("#2563eb")
+       .fontSize(11)
+       .font("Helvetica-Bold")
+       .text("STUDENT INFORMATION", col1X, doc.y);
     
-    doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+    doc.fillColor("#4b5563")
+       .fontSize(10)
+       .font("Helvetica");
     
-    doc.fontSize(10).font("Helvetica");
-    const itemY = tableTop + 25;
-    doc.text("Payment Amount", 60, itemY);
-    doc.text(`₹${payment.amount.toLocaleString()}`, 400, itemY, { align: "right" });
+    const studentY = doc.y + 8;
+    doc.text(`Name: ${student?.name || "-"}`, col1X, studentY, { width: colWidth });
+    doc.text(`Email: ${student?.email || "-"}`, col1X, doc.y, { width: colWidth });
+    doc.text(`Phone: ${student?.phone || "-"}`, col1X, doc.y, { width: colWidth });
+    doc.text(`Roll No: ${student?.rollNumber || "-"}`, col1X, doc.y, { width: colWidth });
+    doc.text(`Course: ${student?.course || "-"}`, col1X, doc.y, { width: colWidth });
+    doc.text(`Batch: ${student?.batchName || "-"}`, col1X, doc.y, { width: colWidth });
+
+    // Column 2: Payment Information
+    const paymentStartY = studentY;
+    doc.fillColor("#2563eb")
+       .fontSize(11)
+       .font("Helvetica-Bold")
+       .text("PAYMENT INFORMATION", col2X, paymentStartY);
     
+    doc.fillColor("#4b5563")
+       .fontSize(10)
+       .font("Helvetica");
+    
+    doc.text(`Fee Type: ${payment.feeType || "-"}`, col2X, paymentStartY + 20, { width: colWidth });
+    doc.text(`Payment Method: ${payment.method || "-"}`, col2X, doc.y, { width: colWidth });
+    doc.text(`Status: ${payment.status || "-"}`, col2X, doc.y, { width: colWidth });
+    if (payment.academicYear) {
+      doc.text(`Academic Year: ${payment.academicYear}`, col2X, doc.y, { width: colWidth });
+    }
+    if (payment.transactionId) {
+      doc.text(`Transaction ID: ${payment.transactionId}`, col2X, doc.y, { width: colWidth });
+    }
+
     doc.moveDown(2);
-    
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-    const totalY = doc.y + 10;
-    doc.fontSize(11).font("Helvetica-Bold");
-    doc.text("Total Amount:", 60, totalY);
-    doc.text(`₹${payment.amount.toLocaleString()}`, 400, totalY, { align: "right" });
-    
-    doc.moveDown(2);
 
-    // Payment method and status
-    doc.fontSize(10).font("Helvetica");
-    doc.text(`Payment Method: ${payment.method}`);
-    doc.text(`Payment Status: ${payment.status}`);
+    // ===== AMOUNT SECTION =====
+    doc.strokeColor("#2563eb")
+       .lineWidth(2)
+       .rect(col1X, doc.y, 460, 70)
+       .stroke();
     
-    doc.moveDown(2);
+    const amountBoxY = doc.y + 10;
+    doc.fillColor("#4b5563")
+       .fontSize(11)
+       .font("Helvetica")
+       .text("AMOUNT PAID", col1X + 15, amountBoxY);
+    
+    doc.fillColor("#2563eb")
+       .fontSize(32)
+       .font("Helvetica-Bold")
+       .text(`₹${payment.amount.toLocaleString('en-IN')}`, col1X + 15, amountBoxY + 20);
+    
+    doc.moveDown(4.5);
 
-    // Footer
-    doc.fontSize(9).font("Helvetica").text("This is a computer-generated receipt. No signature is required.", { align: "center", color: "#666" });
-    doc.fontSize(8).font("Helvetica").text(`Generated on ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`, { align: "center", color: "#999" });
+    // ===== FOOTER =====
+    doc.strokeColor("#cccccc")
+       .lineWidth(1)
+       .moveTo(40, doc.y)
+       .lineTo(550, doc.y)
+       .stroke();
+    
+    doc.moveDown(0.5);
+    doc.fillColor("#999999")
+       .fontSize(9)
+       .font("Helvetica")
+       .text("Thank you for your payment!", { align: "center" });
+    
+    doc.fontSize(8)
+       .text(`Generated: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST`, { align: "center" });
+    
+    doc.fontSize(7)
+       .text("This is a computer-generated receipt. No signature is required.", { align: "center", color: "#cccccc" });
 
     // Finalize PDF
     doc.end();

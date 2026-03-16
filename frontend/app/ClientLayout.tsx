@@ -6,11 +6,11 @@ import { usePathname } from "next/navigation";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 function SessionTimeoutWrapper({ children }: { children: React.ReactNode }) {
-  // Session timeout is handled silently without blocking modal
+  // Session timeout is handled with warning before logout
   // Activity tracking prevents logout during active use
   useSessionTimeout({
-    timeout: 3 * 60 * 1000, // 3 minutes idle
-    warningTime: 1 * 60 * 1000, // 1 minute warning before logout
+    timeout: 3 * 60 * 1000, // 3 minutes idle before logout
+    warningTime: 2 * 60 * 1000, // Show warning at 1 minute (3 - 2 = 1 min before logout)
     onTimeout: () => {
       console.log("Session expired due to 3 minutes of inactivity");
     },

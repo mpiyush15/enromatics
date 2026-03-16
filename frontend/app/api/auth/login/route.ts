@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
     const { email, password, subdomain, purpose } = body;
 
     console.log('🔓 [BFF LOGIN] Request received');
+    console.log('🔓 [BFF LOGIN] Raw body:', JSON.stringify(body));
+    console.log('🔓 [BFF LOGIN] Subdomain from body:', subdomain, 'Type:', typeof subdomain);
     console.log('  - Email:', email);
     console.log('  - Password length:', password?.length);
     console.log('  - Subdomain:', subdomain || 'NONE (main domain)');
@@ -55,7 +57,13 @@ export async function POST(request: NextRequest) {
 
     // Non-tenant subdomains that should NOT be sent to backend
     const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
-    const isValidTenantSubdomain = subdomain && !nonTenantSubdomains.includes(subdomain.toLowerCase());
+    
+    // ⚠️ FIX: Ensure subdomain is a non-empty string before validation
+    const normalizedSubdomain = (typeof subdomain === 'string' && subdomain.trim()) ? subdomain.trim().toLowerCase() : '';
+    const isValidTenantSubdomain = normalizedSubdomain && normalizedSubdomain.length > 0 && !nonTenantSubdomains.includes(normalizedSubdomain);
+
+    console.log('🔍 [DEBUG] normalizedSubdomain:', normalizedSubdomain);
+    console.log('🔍 [DEBUG] isValidTenantSubdomain:', isValidTenantSubdomain);
 
     // Build headers - but we'll handle subdomain separately to avoid duplicates
     const headers = await buildBFFHeaders();
@@ -66,11 +74,20 @@ export async function POST(request: NextRequest) {
     
     // Add subdomain header ONLY if it's a valid tenant subdomain
     if (isValidTenantSubdomain) {
-      (headers as Record<string, string>)['X-Tenant-Subdomain'] = subdomain;
-      console.log('🌐 Added X-Tenant-Subdomain header:', subdomain);
+      (headers as Record<string, string>)['X-Tenant-Subdomain'] = normalizedSubdomain;
+      console.log('🌐 ✅ Added X-Tenant-Subdomain header:', normalizedSubdomain);
     } else {
-      console.log('🌐 No tenant subdomain (main domain login)');
+      console.log('🌐 No tenant subdomain (main domain login). normalizedSubdomain:', normalizedSubdomain, 'length:', normalizedSubdomain?.length);
     }
+
+    // Final check before sending
+    const finalHeaders = {
+      'Content-Type': 'application/json',
+      ...(extractCookies(request) && { 'Cookie': extractCookies(request) }),
+      ...headers,
+    };
+    console.log('🔍 [DEBUG] Final headers being sent:', JSON.stringify(finalHeaders));
+    console.log('🔍 [DEBUG] X-Tenant-Subdomain in final headers?', 'X-Tenant-Subdomain' in finalHeaders, '→', finalHeaders['X-Tenant-Subdomain']);
 
     // Create abort controller with 30 second timeout
     const controller = new AbortController();
@@ -82,11 +99,7 @@ export async function POST(request: NextRequest) {
         `${expressUrl}/api/auth/login`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(extractCookies(request) && { 'Cookie': extractCookies(request) }), // Forward existing cookies
-            ...headers, // Include X-Tenant-Subdomain if present
-          },
+          headers: finalHeaders,
           credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
           body: JSON.stringify({ email, password, purpose }), // ✅ Pass purpose to backend
           signal: controller.signal,

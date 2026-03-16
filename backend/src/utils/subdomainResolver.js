@@ -24,11 +24,13 @@ const CACHE_TTL = 3600; // 1 hour in seconds
  */
 export async function resolveTenantFromSubdomain(subdomain) {
   if (!subdomain || typeof subdomain !== "string") {
+    console.log('   [SubdomainResolver] Invalid subdomain input:', subdomain);
     return null;
   }
 
   // Normalize subdomain (lowercase, trim)
   const normalizedSubdomain = subdomain.toLowerCase().trim();
+  console.log('   [SubdomainResolver] Looking up normalized subdomain:', normalizedSubdomain);
 
   // Try cache first
   const cacheKey = `${CACHE_PREFIX}${normalizedSubdomain}`;
@@ -37,29 +39,36 @@ export async function resolveTenantFromSubdomain(subdomain) {
     const cachedTenantId = await redisClient.get(cacheKey);
     
     if (cachedTenantId) {
+      console.log('   [SubdomainResolver] ✅ Cache hit! tenantId:', cachedTenantId);
       return cachedTenantId;
     }
+    console.log('   [SubdomainResolver] Cache miss, querying database...');
   } catch (redisError) {
-    // Silent fallback to DB
+    console.log('   [SubdomainResolver] Redis error (fallback to DB):', redisError.message);
   }
 
   // Cache miss - query MongoDB
   
   try {
+    console.log('   [SubdomainResolver] Querying Tenant collection with subdomain=' + normalizedSubdomain);
     const tenant = await Tenant.findOne({ 
       subdomain: normalizedSubdomain,
       active: true // Only active tenants (field is 'active', not 'isActive')
-    }).select("tenantId subdomain");
+    }).select("tenantId subdomain active");
 
     if (!tenant) {
+      console.log('   [SubdomainResolver] ❌ Tenant NOT FOUND for subdomain:', normalizedSubdomain);
       return null;
     }
+
+    console.log('   [SubdomainResolver] ✅ Tenant found! tenantId:', tenant.tenantId, 'active:', tenant.active);
 
     // Cache the result
     try {
       await redisClient.setex(cacheKey, CACHE_TTL, tenant.tenantId);
+      console.log('   [SubdomainResolver] Cached result');
     } catch (redisError) {
-      // Silent cache failure
+      console.log('   [SubdomainResolver] Cache write failed (non-critical):', redisError.message);
     }
 
     return tenant.tenantId;

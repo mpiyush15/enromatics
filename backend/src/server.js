@@ -54,6 +54,7 @@ import whatsappWebhookRoutes from './routes/whatsappWebhookRoutes.js';
 import replysysWebhookRoutes from './routes/webhooks/replysys.js';
 import subscriptionNotificationRoutes from './routes/subscriptionNotificationRoutes.js';
 import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
+import Tenant from './models/Tenant.js';
 
 console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
 import { autoCancelStalePendingPayments } from './controllers/paymentController.js';
@@ -134,6 +135,53 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+
+// 🔧 DEBUG ENDPOINT: Check all headers received by backend
+app.post('/api/debug/check-headers', (req, res) => {
+  const allHeaders = req.headers;
+  console.log('\n🔍 [DEBUG] All headers received:');
+  Object.entries(allHeaders).forEach(([key, value]) => {
+    if (key.toLowerCase().includes('subdomain') || key.toLowerCase().includes('tenant')) {
+      console.log(`   🎯 ${key}: "${value}"`);
+    } else {
+      console.log(`   ${key}: ${typeof value === 'string' && value.length > 50 ? value.substring(0, 50) + '...' : value}`);
+    }
+  });
+  
+  res.json({
+    receivedHeaders: {
+      'x-tenant-subdomain': allHeaders['x-tenant-subdomain'] || 'NOT PRESENT',
+      'X-Tenant-Subdomain': allHeaders['X-Tenant-Subdomain'] || 'NOT PRESENT',
+      'content-type': allHeaders['content-type'],
+      'host': allHeaders['host'],
+    },
+    allHeadersLowercase: Object.keys(allHeaders).reduce((acc, key) => {
+      acc[key.toLowerCase()] = allHeaders[key];
+      return acc;
+    }, {})
+  });
+});
+
+// 🔧 DEBUG ENDPOINT: Update subdomain for testing
+app.post('/api/debug/update-subdomain', async (req, res) => {
+  try {
+    const result = await Tenant.updateOne(
+      { tenantId: '4b778ad5' },
+      { $set: { subdomain: req.body.subdomain || 'shreecoaching' } }
+    );
+    
+    const updated = await Tenant.findOne({ tenantId: '4b778ad5' });
+    res.json({
+      success: result.modifiedCount > 0,
+      subdomain: updated.subdomain,
+      tenantId: updated.tenantId,
+      instituteName: updated.instituteName
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/tenants", tenantRoutes);  // Allow all tenant routes (includes settings)
 

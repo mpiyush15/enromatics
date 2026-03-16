@@ -21,7 +21,6 @@ export const useSessionTimeout = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const alertShownRef = useRef(false);
-  const activityTrackedRef = useRef(false);
   const [showWarning, setShowWarning] = useState(false);
   const [remainingTime, setRemainingTime] = useState(0);
 
@@ -61,7 +60,6 @@ export const useSessionTimeout = ({
 
   const handleWarning = useCallback(() => {
     setShowWarning(true);
-    activityTrackedRef.current = false; // Reset activity tracking for warning phase
     setRemainingTime(warningTime / 1000);
     if (onWarning) {
       onWarning();
@@ -96,7 +94,6 @@ export const useSessionTimeout = ({
     // Hide warning if showing
     setShowWarning(false);
     alertShownRef.current = false;
-    activityTrackedRef.current = true;
 
     // Set warning timeout (3 min idle - 1 min warning = show warning at 2 min)
     warningTimeoutRef.current = setTimeout(() => {
@@ -124,14 +121,11 @@ export const useSessionTimeout = ({
       "click",
     ];
 
-    // Reset timer on any user activity (debounced to avoid excessive resets)
+    // Reset timer on any user activity
     const handleActivity = () => {
-      // Only reset if we're actively using (not in warning state)
-      if (!showWarning && activityTrackedRef.current) {
+      // Only reset if we're NOT in warning state
+      if (!showWarning) {
         resetTimer();
-        activityTrackedRef.current = false; // Prevent rapid resets
-      } else if (!showWarning && !activityTrackedRef.current) {
-        activityTrackedRef.current = true;
       }
     };
 
@@ -148,12 +142,8 @@ export const useSessionTimeout = ({
       events.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (warningTimeoutRef.current) {
-        clearTimeout(warningTimeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     };
   }, [resetTimer, showWarning]);
 

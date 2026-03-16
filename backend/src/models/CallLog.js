@@ -50,6 +50,14 @@ const callLogSchema = new mongoose.Schema(
     // Notes
     notes: { type: String },
     
+    // Call Quality Rating (1-5 stars)
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: 3,
+    },
+    
     // Status change (if status was updated during this call)
     previousStatus: { type: String },
     newStatus: { type: String },

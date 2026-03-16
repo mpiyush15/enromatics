@@ -96,6 +96,20 @@ const leadSchema = new mongoose.Schema(
     dateOfBirth: { type: Date },
     parentName: { type: String },
     parentPhone: { type: String },
+
+    // AI Scoring System
+    score: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    scoreTier: {
+      type: String,
+      enum: ["cold", "warm", "hot"],
+      default: "cold",
+    },
+    scoreUpdatedAt: { type: Date },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically
@@ -108,6 +122,8 @@ leadSchema.index({ tenantId: 1, assignedTo: 1 });
 leadSchema.index({ tenantId: 1, nextFollowUpDate: 1 });
 leadSchema.index({ tenantId: 1, source: 1 });
 leadSchema.index({ tenantId: 1, createdAt: -1 });
+leadSchema.index({ tenantId: 1, score: -1 }); // For lead scoring queries
+leadSchema.index({ tenantId: 1, scoreTier: 1 }); // For tier filtering
 
 const Lead = mongoose.models.Lead || mongoose.model("Lead", leadSchema);
 export default Lead;

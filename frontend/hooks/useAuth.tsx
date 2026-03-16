@@ -1,15 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { authService } from "@/lib/authService";
 
 export default function useAuth() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isCancelled = false;
+
+    // Don't redirect if already on login pages
+    const isLoginPage = pathname?.includes("/login") || pathname?.includes("/tenant/login");
 
     const checkAuth = async () => {
       try {
@@ -22,17 +26,26 @@ export default function useAuth() {
           setUser(currentUser);
           setLoading(false);
         } else {
-          console.log("❌ useAuth: No user found, redirecting to login");
+          console.log("❌ useAuth: No user found");
           setUser(null);
           setLoading(false);
-          router.push("/login");
+          
+          // Only redirect to login if NOT already on a login page
+          if (!isLoginPage) {
+            console.log("Redirecting to login...");
+            router.push("/login");
+          }
         }
       } catch (error) {
         console.error("❌ Auth check error:", error);
         if (!isCancelled) {
           setUser(null);
           setLoading(false);
-          router.push("/login");
+          
+          // Only redirect to login if NOT already on a login page
+          if (!isLoginPage) {
+            router.push("/login");
+          }
         }
       }
     };
@@ -42,7 +55,7 @@ export default function useAuth() {
     return () => {
       isCancelled = true;
     };
-  }, []); // Empty dependency array - only run once
+  }, [pathname, router]); // Include pathname in dependency array
 
   return { user, loading };
 }
