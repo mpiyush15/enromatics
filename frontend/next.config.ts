@@ -23,18 +23,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion', 'react-icons'],
   },
 
-  // API proxy rewrites
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:5050/api/:path*',
-        },
-      ],
-    };
-  },
-
   // Build settings
   eslint: {
     ignoreDuringBuilds: true,
