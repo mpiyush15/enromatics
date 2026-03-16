@@ -1,216 +1,151 @@
 /**
- * BFF Auth Login Route
- * 
- * This route:
- * 1. Receives login request from frontend (normalized)
- * 2. Forwards to Express backend with tenant subdomain for validation
- * 3. Express validates user belongs to tenant
- * 4. Express sets httpOnly cookie on response
- * 5. We forward the Set-Cookie header to browser
- * 6. Returns cleaned user data and JWT token
+ * FRESH LOGIN ROUTE - Clean implementation from scratch
+ * Simple proxy to Express backend with minimal processing
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { callExpressBackend, extractCookies } from '@/lib/bff-client';
-import { buildBFFHeaders } from '@/lib/bffHelpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, password, subdomain, purpose } = body;
+    console.log('\n' + '='.repeat(80));
+    console.log('🔓 [LOGIN-V2] Fresh route started');
+    console.log('='.repeat(80));
 
-    console.log('🔓 [BFF LOGIN] Request received');
-    console.log('🔓 [BFF LOGIN] Raw body:', JSON.stringify(body));
-    console.log('🔓 [BFF LOGIN] Subdomain from body:', subdomain, 'Type:', typeof subdomain);
-    console.log('  - Email:', email);
-    console.log('  - Password length:', password?.length);
-    console.log('  - Subdomain:', subdomain || 'NONE (main domain)');
-    console.log('  - Purpose:', purpose || 'default');
-
-    if (!email || !password) {
+    // 1️⃣ Parse request body
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.error('❌ Invalid JSON:', e);
       return NextResponse.json(
-        { message: 'Email and password are required' },
+        { message: 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    // Check if EXPRESS_BACKEND_URL is configured
-    const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL;
-    console.log('  - EXPRESS_BACKEND_URL:', expressUrl);
-    
-    if (!expressUrl) {
-      console.error('❌ EXPRESS_BACKEND_URL not configured in environment');
+    const { email, password } = body;
+    console.log('📧 Email:', email);
+    console.log('🔑 Password:', password ? '✅ Provided' : '❌ Missing');
+
+    // 2️⃣ Validate inputs
+    if (!email || !password) {
+      console.error('❌ Missing email or password');
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Backend configuration error. Please contact support.',
-          error: 'EXPRESS_BACKEND_URL not set' 
-        },
-        { status: 500 }
+        { message: 'Email and password required' },
+        { status: 400 }
       );
     }
 
-    console.log('📤 Calling Express backend:', `${expressUrl}/api/auth/login`);
-    console.log('🌐 Subdomain from request:', subdomain || 'NONE (main domain)');
-    console.log('🎯 Login purpose:', purpose || 'default');
-
-    // Non-tenant subdomains that should NOT be sent to backend
-    const nonTenantSubdomains = ['www', 'app', 'api', 'admin', 'staging', 'dev', 'test'];
+    // 3️⃣ Get subdomain from hostname
+    const hostname = request.headers.get('host') || '';
+    console.log('🌐 Hostname:', hostname);
     
-    // ⚠️ FIX: Ensure subdomain is a non-empty string before validation
-    const normalizedSubdomain = (typeof subdomain === 'string' && subdomain.trim()) ? subdomain.trim().toLowerCase() : '';
-    const isValidTenantSubdomain = normalizedSubdomain && normalizedSubdomain.length > 0 && !nonTenantSubdomains.includes(normalizedSubdomain);
-
-    console.log('🔍 [DEBUG] normalizedSubdomain:', normalizedSubdomain);
-    console.log('🔍 [DEBUG] isValidTenantSubdomain:', isValidTenantSubdomain);
-
-    // Build headers - but we'll handle subdomain separately to avoid duplicates
-    const headers = await buildBFFHeaders();
-    // Remove any existing X-Tenant-Subdomain from buildBFFHeaders (we'll set it explicitly)
-    delete (headers as Record<string, string>)['X-Tenant-Subdomain'];
+    let subdomain = '';
+    const parts = hostname.split('.');
     
-    console.log('🌐 Base headers for login:', headers);
-    
-    // Add subdomain header ONLY if it's a valid tenant subdomain
-    if (isValidTenantSubdomain) {
-      (headers as Record<string, string>)['X-Tenant-Subdomain'] = normalizedSubdomain;
-      console.log('🌐 ✅ Added X-Tenant-Subdomain header:', normalizedSubdomain);
+    // If we have enromatics.com domain
+    if (hostname.includes('enromatics.com')) {
+      // Extract everything before .enromatics.com
+      const subdomainMatch = hostname.match(/^([^.]+)\.enromatics\.com/);
+      subdomain = subdomainMatch ? subdomainMatch[1].toLowerCase() : '';
+      console.log('✅ Extracted subdomain:', subdomain || '(main domain)');
+    } else if (hostname.includes('lvh.me')) {
+      // Local development with lvh.me
+      const subdomainMatch = hostname.match(/^([^.]+)\.lvh\.me/);
+      subdomain = subdomainMatch ? subdomainMatch[1].toLowerCase() : '';
+      console.log('✅ [Local] Extracted subdomain from lvh.me:', subdomain || '(main domain)');
     } else {
-      console.log('🌐 No tenant subdomain (main domain login). normalizedSubdomain:', normalizedSubdomain, 'length:', normalizedSubdomain?.length);
+      console.log('⚠️ Not an enromatics.com or lvh.me domain, main domain login');
     }
 
-    // Final check before sending
-    const finalHeaders = {
-      'Content-Type': 'application/json',
-      ...(extractCookies(request) && { 'Cookie': extractCookies(request) }),
-      ...headers,
-    };
-    console.log('🔍 [DEBUG] Final headers being sent:', JSON.stringify(finalHeaders));
-    console.log('🔍 [DEBUG] X-Tenant-Subdomain in final headers?', 'X-Tenant-Subdomain' in finalHeaders, '→', finalHeaders['X-Tenant-Subdomain']);
+    // 4️⃣ Get backend URL
+    const expressUrl = process.env.EXPRESS_BACKEND_URL;
+    if (!expressUrl) {
+      console.error('❌ EXPRESS_BACKEND_URL not configured');
+      return NextResponse.json(
+        { message: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    console.log('🔗 Backend URL:', expressUrl);
 
-    // Create abort controller with 30 second timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // 5️⃣ Call Express backend - SIMPLE & DIRECT
+    console.log('📤 Calling backend...');
+    const loginUrl = `${expressUrl}/api/auth/login`;
+    console.log('   Target:', loginUrl);
+
+    const fetchResponse = await fetch(loginUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(subdomain && { 'X-Tenant-Subdomain': subdomain }),
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        subdomain,
+      }),
+    });
+
+    console.log('📥 Backend response status:', fetchResponse.status);
+
+    // 6️⃣ Parse backend response
+    let backendData;
+    const responseText = await fetchResponse.text();
+    console.log('📄 Backend response length:', responseText.length, 'bytes');
 
     try {
-      // Call Express backend with tenant subdomain header
-      const expressResponse = await fetch(
-        `${expressUrl}/api/auth/login`,
-        {
-          method: 'POST',
-          headers: finalHeaders,
-          credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
-          body: JSON.stringify({ email, password, purpose, subdomain: normalizedSubdomain }), // ✅ Pass subdomain to backend
-          signal: controller.signal,
-        }
-      );
-
-      clearTimeout(timeoutId);
-
-      // Parse response safely
-      let data;
-      try {
-        data = await expressResponse.json();
-      } catch (parseError) {
-        console.error('❌ Failed to parse Express response:', parseError);
-        console.error('Response status:', expressResponse.status);
-        console.error('Response text:', await expressResponse.text());
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: 'Backend error - invalid response',
-            error: 'Failed to parse backend response'
-          },
-          { status: 502 }
-        );
-      }
-
-      if (!expressResponse.ok) {
-        console.error('❌ [BFF] Express returned error:', expressResponse.status);
-        console.error('   - Data:', data);
-        return NextResponse.json(
-          { success: false, message: data.message || 'Login failed' },
-          { status: expressResponse.status }
-        );
-      }
-
-      console.log('✅ [BFF] Express login successful');
-
-      // ✅ CRITICAL: Set cookie on Vercel domain using Next.js cookies() API
-      // This ensures the cookie is stored for subsequent requests to the BFF
-      const cookieStore = await cookies();
-      if (data.token) {
-        console.log('🍪 Setting JWT cookie on Vercel domain (httpOnly, secure, sameSite=none)');
-        cookieStore.set('jwt', data.token, {
-          httpOnly: true,
-          secure: true, // Always secure on production
-          sameSite: 'none', // Allow cross-domain
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-          path: '/',
-        });
-      }
-
-      // Create BFF response with cleaned user data
-      const bffResponse = NextResponse.json({
-        success: true,
-        token: data.token, // ✅ Include JWT token in response for client storage
-        user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          name: data.user?.name,
-          role: data.user?.role,
-          tenantId: data.user?.tenantId,
-          plan: data.user?.plan || 'trial', // ✅ Default to 'trial' if missing (for existing users)
-          tenant: data.user?.tenant, // Include tenant info
-        },
-        message: data.message || 'Login successful',
-      });
-
-      // Also forward Set-Cookie header from Express as backup
-      const setCookieHeader = expressResponse.headers.get('set-cookie');
-      if (setCookieHeader) {
-        console.log('🍪 Also forwarding Set-Cookie header from Express');
-        bffResponse.headers.set('set-cookie', setCookieHeader);
-      }
-
-      console.log('📤 Returning login response with token and user:', data.user?.email);
-      return bffResponse;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      // Handle timeout error
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error('⏱️ Login request timeout (30s)');
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: 'Request timeout. Please try again.',
-            error: 'Request timed out after 30 seconds'
-          },
-          { status: 504 }
-        );
-      }
-
-      // Handle other errors
-      console.error('❌ BFF Login error:', error);
+      backendData = JSON.parse(responseText);
+      console.log('✅ Parsed JSON successfully');
+    } catch (parseErr) {
+      console.error('❌ Failed to parse backend response');
+      console.error('   Response:', responseText.substring(0, 200));
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Internal server error',
-          error: (error as Error).message 
-        },
-        { status: 500 }
+        { message: 'Invalid backend response' },
+        { status: 502 }
       );
     }
-  } catch (outerError) {
-    console.error('❌ Outer error in login:', outerError);
+
+    // 7️⃣ Check if login succeeded
+    if (!fetchResponse.ok) {
+      console.error('❌ Backend login failed:', fetchResponse.status);
+      console.error('   Message:', backendData.message);
+      return NextResponse.json(
+        backendData,
+        { status: fetchResponse.status }
+      );
+    }
+
+    console.log('✅ Backend login successful!');
+    console.log('   Token:', backendData.token ? '✅ Present' : '❌ Missing');
+    console.log('   User:', backendData.user?.email);
+
+    // 8️⃣ Return success response directly
+    const response = NextResponse.json(backendData, { status: 200 });
+
+    // 9️⃣ Set cookie if token exists
+    if (backendData.token) {
+      console.log('🍪 Setting JWT cookie');
+      response.cookies.set('jwt', backendData.token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/',
+      });
+    }
+
+    console.log('✅ [LOGIN-V2] Returning success response');
+    console.log('='.repeat(80) + '\n');
+    return response;
+
+  } catch (error: any) {
+    console.error('\n❌ [LOGIN-V2] ERROR:', error.message);
+    console.error('Stack:', error.stack);
+    console.log('='.repeat(80) + '\n');
+    
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Internal server error',
-        error: (outerError as Error).message 
-      },
+      { message: error.message || 'Login error' },
       { status: 500 }
     );
   }
