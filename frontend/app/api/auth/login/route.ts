@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
           method: 'POST',
           headers: finalHeaders,
           credentials: 'include', // ✅ CRITICAL: Ensure cookies are sent
-          body: JSON.stringify({ email, password, purpose }), // ✅ Pass purpose to backend
+          body: JSON.stringify({ email, password, purpose, subdomain: normalizedSubdomain }), // ✅ Pass subdomain to backend
           signal: controller.signal,
         }
       );
