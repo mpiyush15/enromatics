@@ -2,12 +2,12 @@
  * BFF Auth Login Route
  * 
  * This route:
- * 1. Receives login request from frontend
+ * 1. Receives login request from frontend (normalized)
  * 2. Forwards to Express backend with tenant subdomain for validation
  * 3. Express validates user belongs to tenant
  * 4. Express sets httpOnly cookie on response
  * 5. We forward the Set-Cookie header to browser
- * 6. Returns cleaned user data
+ * 6. Returns cleaned user data and JWT token
  */
 
 import { NextRequest, NextResponse } from 'next/server';
