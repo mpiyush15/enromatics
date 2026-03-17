@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { redisCache, CACHE_TTL } from '@/lib/redis';
 import { getApiUrl } from '@/lib/apiConfig';
+
+// Simple memory cache for sidebar
+const sidebarCache = new Map<string, { data: any; expires: number }>();
 
 function getCacheKey(role: string, tenantId?: string): string {
   return `sidebar:${role}:${tenantId || 'global'}`;
@@ -8,40 +10,61 @@ function getCacheKey(role: string, tenantId?: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const cookies = request.headers.get('cookie') || '';
-    let authorization = request.headers.get('authorization') || '';
+    const cookies = request.cookies;
+    const authorization = request.headers.get('authorization') || '';
 
     console.log('🔍 Sidebar BFF - Received request');
-    console.log('   Has cookie:', !!cookies);
-    console.log('   Has auth:', !!authorization);
+    console.log('   Has auth header:', !!authorization);
+    console.log('   Cookies available:', cookies.getAll().map(c => c.name).join(', '));
 
-    // Fetch from backend with cookies to get authenticated user's role
-    // 🔥 FIX: Use getApiUrl() so it respects environment (localhost vs production)
+    // Fetch from backend with token
     const backendUrl = getApiUrl('/api/ui/sidebar');
     console.log('   Backend URL:', backendUrl);
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Cookie': cookies,
     };
 
-    // Pass Authorization header if it exists
-    if (authorization) {
+    // Get JWT from cookies - IMPORTANT: Must send as Cookie header
+    const jwtCookie = cookies.get('jwt');
+    const tokenCookie = cookies.get('token'); // Fallback for old cookie name
+    let hasToken = false;
+    
+    if (jwtCookie?.value) {
+      // Build cookie string with jwt token
+      headers['Cookie'] = `jwt=${jwtCookie.value}`;
+      console.log('   ✅ Found JWT cookie, forwarding as Cookie header');
+      hasToken = true;
+    } else if (tokenCookie?.value) {
+      // Fallback for old token cookie name
+      headers['Cookie'] = `token=${tokenCookie.value}`;
+      console.log('   ✅ Found token cookie (legacy), forwarding as Cookie header');
+      hasToken = true;
+    } else if (authorization) {
+      // Or use Authorization header if provided
       headers['Authorization'] = authorization;
-    } else if (process.env.NODE_ENV === 'development') {
-      // 🟡 DEV MODE: If no auth header, pass a dev token for testing
-      console.warn('⚠️  DEV MODE: No Authorization header, using dev token');
-      headers['X-User-Id'] = 'dev-user';
+      console.log('   ✅ Using Authorization header');
+      hasToken = true;
+    } else {
+      console.warn('⚠️  No token found in cookies or auth header');
     }
 
-    console.log('   Sending headers:', Object.keys(headers));
+    // Add any other cookies that might be needed
+    const cookieHeader = cookies.getAll()
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+      console.log('   📦 Forwarding all cookies:', cookies.getAll().map(c => c.name).join(', '));
+    }
 
     const backendResponse = await fetch(
       backendUrl,
       {
         method: 'GET',
         headers,
-        credentials: 'include',
+        // Don't use credentials: 'include' in server-to-server fetch
+        // We're manually forwarding cookies via headers instead
       }
     );
 
@@ -59,33 +82,20 @@ export async function GET(request: NextRequest) {
 
     console.log('   ✅ Got sidebar data, items:', data.sidebar?.length || 0);
 
-    // Cache the response based on role and tenantId (30 minutes - sidebar rarely changes)
+    // Cache the response (30 minutes)
     const cacheKey = getCacheKey(data.role, data.tenantId);
-    
-    // Check if we already have this cached
-    const cached = await redisCache.get<any>(cacheKey);
-    if (cached) {
-      console.log('   📦 Returning from cache');
-      return NextResponse.json(cached, {
-        headers: { 
-          'X-Cache': 'HIT',
-          'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
-        },
-      });
-    }
-
-    // Cache for 30 minutes
-    await redisCache.set(cacheKey, data, CACHE_TTL.VERY_LONG);
+    sidebarCache.set(cacheKey, {
+      data,
+      expires: Date.now() + 30 * 60 * 1000,
+    });
 
     return NextResponse.json(data, {
       headers: { 
-        'X-Cache': 'MISS',
-        'X-Cache-Type': redisCache.isConnected() ? 'REDIS' : 'MEMORY',
+        'Cache-Control': 'public, max-age=1800, stale-while-revalidate=3600',
       },
     });
   } catch (error: any) {
     console.error('❌ Sidebar error:', error.message);
-    console.error('   Stack:', error.stack);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch sidebar', status: 'error' },
       { status: 500 }

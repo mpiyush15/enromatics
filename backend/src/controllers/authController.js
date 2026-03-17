@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Student from "../models/Student.js";
 import Tenant from "../models/Tenant.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -234,88 +235,75 @@ export const registerUser = async (req, res) => {
 
 /**
  * Login User & set cookie
- * ✅ NEW: Route-based role separation with tenant ownership validation
+ * ✅ NEW: Unified login for ALL roles (admin, staff, teachers, students)
+ * Checks both User and Student collections for authentication
  */
 export const loginUser = async (req, res) => {
   try {
     const { email, password, purpose } = req.body;
 
     console.log('\n' + '='.repeat(80));
-    console.log('🔐 LOGIN ATTEMPT');
+    console.log('🔐 UNIFIED LOGIN ATTEMPT (Admin, Staff, Teachers, Students)');
     console.log('='.repeat(80));
     console.log('📧 Email:', email);
-    console.log('🔑 Password received:');
-    console.log('   - Type:', typeof password);
-    console.log('   - Length:', password ? password.length : 'NULL/UNDEFINED');
-    console.log('   - Value:', JSON.stringify(password));
-    console.log('   - First 20 chars:', password ? password.substring(0, 20) : 'NONE');
     console.log('🎯 Purpose:', purpose || 'default');
     
-    // Extract tenant subdomain from request (set by frontend middleware via BFF)
+    // Extract tenant subdomain from request
     const tenantSubdomain = req.headers['x-tenant-subdomain'];
     console.log('🌐 Subdomain header:', tenantSubdomain || 'NONE (main domain)');
     
-    console.log('\n📊 Database check:');
-    console.log('   - Connected:', !!mongoose.connection);
-    console.log('   - Database name:', mongoose.connection.name);
+    // Try to find user in User collection first (admin, staff, teachers)
+    let user = await User.findOne({ email });
+    let isStudent = false;
+    let authObject = user;
     
-    const user = await User.findOne({ email });
-    
-    console.log('\n👤 User lookup:');
-    console.log('   - User found:', !!user);
-    
+    // If not found in User collection, try Student collection
     if (!user) {
-      console.log('   ❌ User NOT found in database');
-      return res.status(404).json({ message: "User not found" });
+      console.log('   ℹ️ Not found in User collection, checking Student collection...');
+      const student = await Student.findOne({ 
+        email: { $regex: `^${email}$`, $options: "i" },
+        tenantId: tenantSubdomain ? await resolveTenantFromSubdomain(tenantSubdomain) : undefined
+      }).select('+password');
+      
+      if (student) {
+        isStudent = true;
+        authObject = student;
+        console.log('   ✅ Student found in Student collection');
+      }
+    }
+    
+    if (!authObject) {
+      console.log('   ❌ User/Student NOT found in database');
+      return res.status(404).json({ message: "Email not found in this organization" });
     }
 
-    console.log('   - Name:', user.name);
-    console.log('   - Email:', user.email);
-    console.log('   - Role:', user.role);
-    console.log('   - TenantId:', user.tenantId || '❌ MISSING');
-    console.log('   - Password field:', user.password ? 'EXISTS' : 'MISSING');
+    console.log('   ✅ User found:', authObject.email);
+    console.log('   - Role:', authObject.role || 'student');
+    console.log('   - TenantId:', authObject.tenantId);
     
-    console.log('\n🔐 PASSWORD DEBUG:');
-    console.log('LOGIN DEBUG');
-    console.log('Email:', email);
-    console.log('User found:', !!user);
-    console.log('Stored password:', user?.password);
-    console.log(
-      'Password match:',
-      user ? await bcrypt.compare(password, user.password) : 'no user'
-    );
-    
-    console.log('\n🔐 Password verification:');
-    console.log('   - Stored hash (first 30):', user.password ? user.password.substring(0, 30) + '...' : 'NO HASH');
-    console.log('   - Calling matchPassword()...');
-    
-    const isMatch = await user.matchPassword(password);
-    console.log('   - Result:', isMatch ? '✅ PASSWORD MATCHES' : '❌ PASSWORD DOES NOT MATCH');
+    // Verify password
+    const isMatch = await authObject.matchPassword(password);
     
     if (!isMatch) {
       console.log('❌ LOGIN FAILED: Invalid password');
-      console.log('='.repeat(80));
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     console.log('✅ Password verified successfully');
-    console.log('='.repeat(80) + '\n');
     
     // ✅ TENANT-BASED ACCESS CONTROL
-    const userRole = user.role?.toLowerCase();
+    const userRole = isStudent ? 'student' : (authObject.role?.toLowerCase());
     
     console.log('\n🔐 TENANT VALIDATION:');
     console.log('   - User role:', userRole);
-    console.log('   - Tenant subdomain header:', tenantSubdomain || 'NONE');
-    console.log('   - User tenantId:', user.tenantId);
+    console.log('   - Is student:', isStudent);
+    console.log('   - Tenant subdomain:', tenantSubdomain || 'NONE');
     
-    // Check if this is a checkout/upgrade login (allows tenant users on main domain)
     const isCheckoutLogin = purpose === 'checkout' || purpose === 'upgrade';
     
     // 1. SuperAdmin → ONLY main domain (no subdomain)
     if (userRole === 'superadmin') {
       if (tenantSubdomain) {
-        console.log('❌ Access denied: SuperAdmin trying to login on tenant subdomain');
         return res.status(403).json({ 
           message: "Access denied. SuperAdmin can only login on the main domain",
           hint: "Please visit enromatics.com/login"
@@ -327,27 +315,18 @@ export const loginUser = async (req, res) => {
     // 2. All other roles → MUST use tenant subdomain (UNLESS checkout/upgrade purpose)
     else {
       if (!tenantSubdomain && !isCheckoutLogin) {
-        console.log('❌ Access denied: Non-SuperAdmin trying to login on main domain');
-        console.log('   - Has X-Tenant-Subdomain header:', !!tenantSubdomain);
-        console.log('   - Is checkout login:', isCheckoutLogin);
         return res.status(403).json({ 
           message: "Access denied. Please login using your tenant subdomain",
-          hint: `Visit ${user.tenantId || 'yourtenant'}.enromatics.com/login`
+          hint: `Visit ${authObject.tenantId || 'yourtenant'}.enromatics.com/login`
         });
       }
       
-      // For checkout login on main domain, skip subdomain validation
       if (isCheckoutLogin && !tenantSubdomain) {
-        console.log('✅ Checkout login allowed on main domain for tenant user:', user.email);
+        console.log('✅ Checkout login allowed on main domain');
       } else if (tenantSubdomain) {
-        // Resolve subdomain to tenantId
-        console.log('   - Resolving subdomain to tenantId for:', tenantSubdomain);
         const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
         
-        console.log('   - Resolved tenantId:', resolvedTenantId || 'NULL');
-        
         if (!resolvedTenantId) {
-          console.log('❌ Tenant not found for subdomain:', tenantSubdomain);
           return res.status(404).json({ 
             message: "Tenant not found",
             hint: "Please check your subdomain URL"
@@ -355,13 +334,10 @@ export const loginUser = async (req, res) => {
         }
         
         // Validate user belongs to this tenant
-        console.log('   - Comparing: user.tenantId (' + user.tenantId + ') vs resolvedTenantId (' + resolvedTenantId + ')');
-        if (user.tenantId !== resolvedTenantId) {
-          console.log('❌ Access denied: User does not belong to this tenant');
-          console.log('   User tenantId:', user.tenantId, '| Subdomain tenantId:', resolvedTenantId);
+        if (authObject.tenantId !== resolvedTenantId) {
           return res.status(403).json({ 
             message: "Access denied. You don't belong to this tenant",
-            hint: `Please visit ${user.tenantId}.enromatics.com/login`
+            hint: `Please visit ${authObject.tenantId}.enromatics.com/login`
           });
         }
         
@@ -369,66 +345,71 @@ export const loginUser = async (req, res) => {
       }
     }
 
-    console.log('✅ Login successful for:', email);
+    console.log('✅ Login validation passed');
 
-    // ✅ Generate unique session ID for concurrent login prevention
+    // ✅ Generate session ID
     const sessionId = crypto.randomBytes(32).toString('hex');
     
-    // ✅ Update user's active session (invalidates previous sessions)
-    user.activeSessionId = sessionId;
-    user.lastLoginAt = new Date();
+    if (isStudent) {
+      authObject.activeSessionId = sessionId;
+      authObject.lastLoginAt = new Date();
+    } else {
+      authObject.activeSessionId = sessionId;
+      authObject.lastLoginAt = new Date();
+    }
     
-    // Save with timeout to prevent hanging
     try {
       await Promise.race([
-        user.save(),
+        authObject.save(),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("User save timeout")), 5000)
+          setTimeout(() => reject(new Error("Save timeout")), 5000)
         )
       ]);
     } catch (saveErr) {
-      console.error('⚠️  User save failed, continuing anyway:', saveErr.message);
-      // Don't block login if save fails
+      console.error('⚠️ Save failed, continuing anyway:', saveErr.message);
     }
 
-    // ✅ Include sessionId in JWT token
-    console.log('\n🔐 Creating JWT with payload:');
-    console.log('   - id:', user._id);
-    console.log('   - email:', user.email);
-    console.log('   - role:', user.role);
-    console.log('   - tenantId:', user.tenantId || '❌ MISSING!');
-    
+    // ✅ Create JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role, tenantId: user.tenantId, sessionId },
+      { 
+        id: authObject._id, 
+        email: authObject.email, 
+        role: userRole,
+        tenantId: authObject.tenantId,
+        isStudent: isStudent
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    
-    console.log('✅ JWT created successfully');
 
-    // ✅ Set cookie after successful login (cross-domain compatible)
+    // Set cookie
     res.cookie("jwt", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true only in production
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 30 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
+    console.log('✅ Login successful for:', email, `(${userRole})`);
+    console.log('='.repeat(80) + '\n');
+
     res.status(200).json({
-      message: "Login successful ✅",
-      token, // Include token for mobile apps
+      success: true,
+      token,
       user: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        tenantId: user.tenantId,
-        plan: user.plan, // ✅ Include plan from user object (set during signup)
+        _id: authObject._id,
+        name: authObject.name,
+        email: authObject.email,
+        role: userRole,
+        tenantId: authObject.tenantId,
+        isStudent: isStudent,
       },
+      isStudent: isStudent,
     });
   } catch (err) {
-    console.error('❌ Login error:', err);
-    res.status(500).json({ message: err.message });
+    console.error("❌ Login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

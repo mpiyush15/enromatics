@@ -171,6 +171,41 @@ export const sidebarLinks = [
     ],
   },
   {
+    label: "🎓 LMS - Test Management",
+    href: "#",
+    roles: ["tenantAdmin", "teacher"],
+    children: [
+      {
+        label: "📖 Overview",
+        href: "/dashboard/client/[tenantId]/lms",
+      },
+      {
+        label: "📚 Subjects",
+        href: "/dashboard/client/[tenantId]/lms/subjects",
+      },
+      {
+        label: "📖 Chapters",
+        href: "/dashboard/client/[tenantId]/lms/chapters",
+      },
+      {
+        label: "❓ Questions (AI)",
+        href: "/dashboard/client/[tenantId]/lms/questions",
+      },
+      {
+        label: "📝 Tests",
+        href: "/dashboard/client/[tenantId]/lms/tests",
+      },
+      {
+        label: "🎬 Videos & Lessons",
+        href: "/dashboard/client/[tenantId]/lms/videos",
+      },
+      {
+        label: "📊 Student Progress",
+        href: "/dashboard/client/[tenantId]/lms/progress",
+      },
+    ],
+  },
+  {
     label: "🎓 Scholarship Tests",
     href: "#",
     roles: ["tenantAdmin", "teacher", "staff"],

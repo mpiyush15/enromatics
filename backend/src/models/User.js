@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { ROLE_GROUPS } from "../config/rbacConfig.js";
 
 // User schema definition
 const userSchema = new mongoose.Schema(
@@ -24,7 +25,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["SuperAdmin", "Admin", "tenantAdmin", "employee", "student", "adsManager", "teacher", "staff", "manager", "counsellor", "accountant", "marketing"],
+      enum: ROLE_GROUPS.USER_ROLES,
       default: "tenantAdmin", // every new signup = tenant admin by default
     },
 

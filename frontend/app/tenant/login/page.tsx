@@ -151,21 +151,29 @@ export default function TenantLoginPage() {
       
       setErrors({ success: "✅ Welcome back! Redirecting..." });
 
-      // ✅ Route based on user role/type
+      // ✅ Route based on user role/type (unified for all roles)
       setTimeout(() => {
-        // Check if it's a student (could come from Student collection)
-        if (response.isStudent || response.user.role === "student") {
+        const userRole = response.user.role?.toLowerCase();
+        
+        // Student role → Student dashboard
+        if (userRole === "student" || response.isStudent) {
           router.push("/student/dashboard");
-        } else if (response.user.role === "admin" || response.user.role === "tenantAdmin") {
+        } 
+        // Admin/TenantAdmin → Admin dashboard
+        else if (userRole === "admin" || userRole === "tenantadmin") {
           router.push("/dashboard/home");
-        } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsManager', 'accountant', 'marketing'].includes(response.user.role)) {
+        } 
+        // Staff roles (teachers, managers, counsellors, etc.) → Dashboard
+        else if (["staff", "employee", "teacher", "manager", "counsellor", "adsmanager", "accountant", "marketing"].includes(userRole)) {
           router.push("/dashboard/home");
-        } else if (response.user.role === "SuperAdmin") {
-          // Redirect SuperAdmin to main login
+        } 
+        // SuperAdmin should NOT be here (should login on main domain)
+        else if (userRole === "superadmin") {
           setErrors({ submit: "Please use the main Enromatics login page" });
           setIsLoading(false);
-        } else {
-          // Fallback to root dashboard
+        } 
+        // Fallback
+        else {
           router.push("/dashboard");
         }
       }, 800);

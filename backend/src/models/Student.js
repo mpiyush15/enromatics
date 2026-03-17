@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { RBAC } from "../config/rbacConfig.js";
 
 const studentSchema = new mongoose.Schema({
   tenantId: {
@@ -50,7 +51,7 @@ const studentSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    default: "student",
+    default: RBAC.STUDENT,
   },
   address:
   {

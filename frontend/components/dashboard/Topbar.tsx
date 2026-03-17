@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DarkModeToggle from "../DarkModeToggle";
 import Link from "next/link";
 import NotificationCenter from "./NotificationCenter";
 import { useParams, usePathname } from "next/navigation";
@@ -42,7 +41,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
   }, []);
 
   return (
-    <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-black dark:text-white shadow-md px-6 py-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+    <div className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 text-black dark:text-white shadow-md px-6 py-3 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
       {/* Left Section */}
       <div className="flex items-center gap-4">
         {/* Hamburger - Mobile Only */}
@@ -82,11 +81,6 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
         
         {/* Notification Bell - Only show for tenant dashboards (not superadmin) */}
         {tenantId && <NotificationCenter tenantId={tenantId} />}
-        
-        {/* Dark Mode Toggle */}
-        <div className="px-2 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition">
-          <DarkModeToggle />
-        </div>
       </div>
     </div>
   );

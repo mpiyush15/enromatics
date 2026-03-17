@@ -1,59 +1,40 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import useAuth from "@/hooks/useAuth";
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    facebookPage: "",
-    instagramHandle: "",
-    whatsappNumber: "",
-    plan: "",
-    planExpiry: "",
-  });
-
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [editing, setEditing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "",
+    tenantId: "",
+  });
 
   useEffect(() => {
-    if (status === "authenticated") {
-      const fetchData = async () => {
-        const res = await fetch("/api/user/profile");
-        const data = await res.json();
-        setForm(data.user);
-        setLoading(false);
-      };
-      fetchData();
+    if (user) {
+      setForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        role: user.role || "",
+        tenantId: user.tenantId || "",
+      });
     }
-  }, [status]);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSave = async () => {
-    // Basic social link validation
-    const fbRegex = /^https:\/\/(www\.)?facebook\.com\/(profile\.php\?id=\d+|[A-Za-z0-9_.-]+)$/;
-    //const instaRegex = /^https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9_.-]+$/;
-    const instaRegex = /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9_.-]+\/?$/;
-  if (form.facebookPage && !fbRegex.test(form.facebookPage)) {
-    setStatusMessage("❌ Invalid Facebook page URL");
-    return;
-  }
-
-  if (form.instagramHandle && !instaRegex.test(form.instagramHandle)) {
-    setStatusMessage("❌ Invalid Instagram profile URL");
-    return;
-  }
-
-
     setStatusMessage("Saving...");
-    const res = await fetch("/api/user/update-profile", {
+    const res = await fetch("/api/auth/update-profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -69,99 +50,110 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     setEditing(false);
-    // Optionally re-fetch data to reset form
+    if (user) {
+      setForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        role: user.role || "",
+        tenantId: user.tenantId || "",
+      });
+    }
   };
 
-  if (status === "loading" || loading) return <p>Loading profile...</p>;
-  if (!session) return <p className="text-red-600">You are not logged in.</p>;
-
-  // Check if user is tenantAdmin
-  const isTenantAdmin = (session?.user as any)?.role === "tenantAdmin";
+  if (authLoading) return <p className="p-6">Loading profile...</p>;
+  if (!user) return <p className="p-6 text-red-600">You are not logged in.</p>;
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white dark:bg-gray-900 rounded shadow space-y-6">
-      <h1 className="text-2xl font-bold">👤 My Profile</h1>
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">👤 My Profile</h1>
 
-      {/* View Mode or Edit Mode */}
-      <div className="space-y-4">
-        <ProfileField label="Username" value={form.username} />
-        <ProfileField label="Email" value={form.email} />
-        <ProfileField label="Plan" value={form.plan} />
-        <ProfileField label="Plan Expiry" value={form.planExpiry ? new Date(form.planExpiry).toLocaleDateString() : "N/A"} />
+      {statusMessage && (
+        <div className="mb-4 p-3 bg-gray-800 rounded border border-gray-700">
+          {statusMessage}
+        </div>
+      )}
 
-        {editing ? (
-          <>
-            <EditableField label="Facebook Page" name="facebookPage" value={form.facebookPage} onChange={handleChange} />
-            <EditableField label="Instagram Handle" name="instagramHandle" value={form.instagramHandle} onChange={handleChange} />
-            <EditableField label="WhatsApp Number" name="whatsappNumber" value={form.whatsappNumber} onChange={handleChange} />
+      <div className="space-y-4 bg-gray-900 p-6 rounded border border-gray-700">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Name</label>
+          {editing ? (
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white"
+            />
+          ) : (
+            <p className="text-gray-100">{form.name || "N/A"}</p>
+          )}
+        </div>
 
-            <div className="flex gap-4 pt-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+          <p className="text-gray-100">{form.email || "N/A"}</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
+          {editing ? (
+            <input
+              type="text"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white"
+            />
+          ) : (
+            <p className="text-gray-100">{form.phone || "N/A"}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+          <p className="text-gray-100 capitalize">{form.role || "N/A"}</p>
+        </div>
+
+        {form.tenantId && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Tenant ID</label>
+            <p className="text-gray-100">{form.tenantId}</p>
+          </div>
+        )}
+
+        <div className="flex gap-4 pt-4 border-t border-gray-700">
+          {!editing ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium"
+            >
+              ✏️ Edit Profile
+            </button>
+          ) : (
+            <>
               <button
                 onClick={handleSave}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium"
               >
-                Save Changes
+                💾 Save
               </button>
               <button
                 onClick={handleCancel}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium"
               >
-                Cancel
+                ❌ Cancel
               </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <ProfileField label="Facebook Page" value={form.facebookPage} />
-            <ProfileField label="Instagram Handle" value={form.instagramHandle} />
-            <ProfileField label="WhatsApp Number" value={form.whatsappNumber} />
-
-            <button
-              onClick={() => setEditing(true)}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Edit Profile
-            </button>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
-      {statusMessage && <p className="text-sm text-gray-500">{statusMessage}</p>}
-    </div>
-  );
-}
-
-// Reusable components
-function ProfileField({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-base font-medium text-gray-800 dark:text-gray-200">{value || "-"}</p>
-    </div>
-  );
-}
-
-function EditableField({
-  label,
-  name,
-  value,
-  onChange,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
-  return (
-    <div>
-      <label className="block mb-1 text-sm text-gray-500">{label}</label>
-      <input
-        type="text"
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        className="w-full p-2 border border-gray-300 rounded dark:bg-gray-800 dark:text-white"
-      />
+      <div className="mt-6">
+        <Link href="/dashboard/home" className="text-blue-400 hover:text-blue-300">
+          ← Back to Home
+        </Link>
+      </div>
     </div>
   );
 }

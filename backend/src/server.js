@@ -54,6 +54,7 @@ import whatsappWebhookRoutes from './routes/whatsappWebhookRoutes.js';
 import replysysWebhookRoutes from './routes/webhooks/replysys.js';
 import subscriptionNotificationRoutes from './routes/subscriptionNotificationRoutes.js';
 import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
+import questionsRoutes from './routes/questions.routes.js';
 import Tenant from './models/Tenant.js';
 
 console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
@@ -237,6 +238,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/questions', questionsRoutes);
 
 // Scholarship rewards - add trial lock
 app.use('/api/scholarship-rewards', trialLock, scholarshipRewardRoutes);
