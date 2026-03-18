@@ -12,7 +12,8 @@ import {
   getUserTypes,
   getTimeOnPage,
   getEntryExitPages,
-  trackInteraction
+  trackInteraction,
+  trackBatch
 } from "../controllers/phase1AnalyticsController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -95,6 +96,17 @@ router.get(
 router.post(
   "/track-interaction",
   trackInteraction
+);
+
+/**
+ * @route   POST /api/analytics/phase1/track-batch
+ * @desc    Track batched user interactions (OPTIMIZED)
+ * @body    { events: [...], batchSize, sessionId, page, source, timestamp }
+ * @access  Public – called by frontend tracking script (batched mode)
+ */
+router.post(
+  "/track-batch",
+  trackBatch
 );
 
 export default router;

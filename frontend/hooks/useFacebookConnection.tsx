@@ -65,7 +65,7 @@ export function useFacebookConnection() {
       return;
     }
 
-    if (!user.tenantId && user.role !== 'SuperAdmin') {
+    if (!user.tenantId && user.role?.toLowerCase() !== 'superadmin') {
       console.log('❌ User has no tenantId and is not SuperAdmin:', user);
       setConnectionState(prev => ({ ...prev, isLoading: false }));
       return;
@@ -244,7 +244,7 @@ export function useFacebookConnection() {
   };
 
   const disconnect = async () => {
-    if (!user?.tenantId && user?.role !== 'SuperAdmin') return false;
+    if (!user?.tenantId && user?.role?.toLowerCase() !== 'superadmin') return false;
 
     try {
       // Use BFF route for disconnect
@@ -277,13 +277,13 @@ export function useFacebookConnection() {
   };
 
   const connect = () => {
-    if (!user?.tenantId && user?.role !== 'SuperAdmin') {
+    if (!user?.tenantId && user?.role?.toLowerCase() !== 'superadmin') {
       console.error('❌ No user or tenantId found');
       return;
     }
     
     // Use BFF route for OAuth connection
-    const connectUrl = `/api/social/connect${user?.role === 'SuperAdmin' ? '' : `?tenantId=${user.tenantId}`}`;
+    const connectUrl = `/api/social/connect${user?.role?.toLowerCase() === 'superadmin' ? '' : `?tenantId=${user.tenantId}`}`;
     console.log('🔵 Initiating Facebook connect to:', connectUrl);
     
     // Fetch the auth URL from BFF and redirect
@@ -317,7 +317,7 @@ export function useFacebookConnection() {
   };
 
   useEffect(() => {
-    if (user?.tenantId || user?.role === 'SuperAdmin') {
+    if (user?.tenantId || user?.role?.toLowerCase() === 'superadmin') {
       checkConnection();
     }
   }, [user?.tenantId, user?.role]);

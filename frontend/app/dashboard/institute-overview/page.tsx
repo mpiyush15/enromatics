@@ -54,7 +54,7 @@ export default function InstituteOverviewRedirect() {
       setHasRedirected(true);
       clearTimeout(timeout);
       router.replace(`/dashboard/client/${user.tenantId}/institute-overview`);
-    } else if (user.role === "SuperAdmin") {
+    } else if (user.role?.toLowerCase() === "superadmin") {
       // SuperAdmin should go to main dashboard
       console.log("👑 SuperAdmin, redirecting to home");
       setHasRedirected(true);

@@ -473,7 +473,118 @@ export const trackInteraction = async (req, res) => {
     console.error("❌ Track interaction error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
-};;
+};
+
+/**
+ * POST /api/analytics/phase1/track-batch (OPTIMIZED)
+ * @desc Track batched user interactions
+ * Used by frontend JS with optimized batching to reduce network requests
+ * 
+ * OPTIMIZATION: Process 10 interactions in 1 request instead of 10 separate requests
+ * Expected reduction: 1000+/min → ~50/min requests
+ */
+export const trackBatch = async (req, res) => {
+  try {
+    const { events = [], batchSize = 0, sessionId, page, source, timestamp } = req.body;
+
+    if (!sessionId || !page) {
+      return res.status(400).json({ success: false, message: "sessionId and page required" });
+    }
+
+    if (!Array.isArray(events) || events.length === 0) {
+      return res.status(200).json({ success: true, processed: 0, message: "Empty batch" });
+    }
+
+    console.log(`📦 Processing batch: ${events.length} events for session ${sessionId} on page ${page}`);
+
+    // Skip PageView tracking for WhatsApp inbox
+    if (page.includes('/whatsapp/inbox')) {
+      console.log(`⏭️ Skipping PageView batch for WhatsApp inbox: ${page}`);
+      return res.status(200).json({ success: true, processed: events.length, skipped: true });
+    }
+
+    // Calculate stats from batch
+    const scrollDepths = events
+      .map(e => e.scrollDepth)
+      .filter(sd => typeof sd === 'number');
+    const avgScrollDepth = scrollDepths.length > 0
+      ? Math.round(scrollDepths.reduce((a, b) => a + b, 0) / scrollDepths.length)
+      : 0;
+    
+    const lastEvent = events[events.length - 1] || {};
+    const totalInteractions = lastEvent.interactions || events.length;
+    const isSessionEnd = lastEvent.type === 'session_end';
+
+    // Find or create PageView
+    let pageView = await PageView.findOne({
+      sessionId,
+      page,
+      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
+    });
+
+    if (!pageView) {
+      console.log(`📝 Creating PageView for batch: ${sessionId}/${page}`);
+      try {
+        pageView = await PageView.create({
+          sessionId,
+          page,
+          source: source || 'direct',
+          referrer: '',
+          device: 'unknown',
+          interactions: totalInteractions,
+          scrollDepth: avgScrollDepth,
+          bounced: !isSessionEnd,
+          entryPage: true,
+          exitPage: isSessionEnd,
+          batchProcessed: true,
+          eventCount: events.length,
+        });
+      } catch (createError) {
+        console.error("❌ Failed to create PageView from batch:", createError.message);
+        return res.status(200).json({ 
+          success: true, 
+          processed: events.length,
+          created: false,
+          error: "PageView creation failed" 
+        });
+      }
+    } else {
+      // Update existing PageView with batch data
+      pageView = await PageView.findOneAndUpdate(
+        { sessionId, page, createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } },
+        {
+          $inc: { 
+            interactions: events.length,
+            eventCount: events.length
+          },
+          $set: { 
+            bounced: !isSessionEnd,
+            scrollDepth: avgScrollDepth,
+            source: source || pageView.source,
+            exitPage: isSessionEnd,
+            batchProcessed: true,
+            lastBatchTime: new Date(),
+          }
+        },
+        { new: true }
+      );
+    }
+
+    console.log(`✅ Batch processed: ${events.length} events → 1 DB operation (reduction: ${Math.round((events.length / 1) * 100)}%)`);
+
+    res.status(200).json({
+      success: true,
+      processed: events.length,
+      batchSize: events.length,
+      avgScrollDepth,
+      isSessionEnd,
+      message: `Batch processed: ${events.length} events aggregated into single PageView`
+    });
+  } catch (error) {
+    console.error("❌ Track batch error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 /**
  * Helper: Calculate median
@@ -491,5 +602,6 @@ export default {
   getUserTypes,
   getTimeOnPage,
   getEntryExitPages,
-  trackInteraction
+  trackInteraction,
+  trackBatch
 };

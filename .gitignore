@@ -161,4 +161,4 @@ EMAIL_PREVIEW.html
 # Misc
 *.tgz
 *.tar.gz
-.eslintcache
+.eslintcachedoc/

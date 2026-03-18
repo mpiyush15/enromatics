@@ -34,7 +34,7 @@ export default function OnboardingPage() {
       const user = await res.json();
       
       // Check if user has tenantId (is a tenant user) and is tenantAdmin
-      if (!user.tenantId || (user.role !== 'tenantAdmin' && user.role !== 'SuperAdmin')) {
+      if (!user.tenantId || (user.role?.toLowerCase() !== 'tenantadmin' && user.role?.toLowerCase() !== 'superadmin')) {
         setError('Access Denied: TenantAdmin privileges required');
         setLoading(false);
         return;

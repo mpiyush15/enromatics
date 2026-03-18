@@ -47,7 +47,7 @@ export default function StaffManagementPage() {
 
   // Redirect if not tenantAdmin
   useEffect(() => {
-    if (status === "authenticated" && (session?.user as any)?.role !== "tenantAdmin") {
+    if (status === "authenticated" && (session?.user as any)?.role?.toLowerCase() !== "tenantadmin") {
       router.push("/dashboard");
     }
   }, [status, session, router]);
@@ -195,7 +195,7 @@ export default function StaffManagementPage() {
   };
 
   if (status === "loading" || loading) return <p>Loading...</p>;
-  if (!session || (session?.user as any)?.role !== "tenantAdmin") {
+  if (!session || (session?.user as any)?.role?.toLowerCase() !== "tenantadmin") {
     return <p className="text-red-600">Access denied. Only tenant admins can manage staff.</p>;
   }
 

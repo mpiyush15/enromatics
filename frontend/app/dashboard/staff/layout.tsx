@@ -20,8 +20,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && user) {
-      const allowedRoles = ['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsManager', 'accountant', 'marketing'];
-      if (!allowedRoles.includes(user.role)) {
+      const allowedRoles = ['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager', 'accountant', 'marketing'];
+      if (!allowedRoles.includes(user.role?.toLowerCase())) {
         console.log('❌ Access denied to /dashboard/staff for role:', user.role);
         router.push('/dashboard');
       } else {

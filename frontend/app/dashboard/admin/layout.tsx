@@ -17,8 +17,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && user) {
-      const allowedRoles = ['admin', 'tenantAdmin', 'SuperAdmin'];
-      if (!allowedRoles.includes(user.role)) {
+      const allowedRoles = ['admin', 'tenantadmin', 'superadmin'];
+      if (!allowedRoles.includes(user.role?.toLowerCase())) {
         console.log('❌ Access denied to /dashboard/admin for role:', user.role);
         router.push('/dashboard');
       } else {

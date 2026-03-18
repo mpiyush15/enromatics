@@ -23,7 +23,7 @@ export default function SuperAdminOverview() {
 
   // Fetch admin stats using SWR for real-time updates
   const { data: statsData, error: statsError, isLoading: statsLoading, mutate: refreshStats } = useSWR(
-    user?.role === 'SuperAdmin' ? '/api/admin/stats' : null,
+    user?.role?.toLowerCase() === 'superadmin' ? '/api/admin/stats' : null,
     fetcher,
     {
       revalidateOnFocus: true,
@@ -35,7 +35,7 @@ export default function SuperAdminOverview() {
 
   // Fetch tenants count
   const { data: tenantsData } = useSWR(
-    user?.role === 'SuperAdmin' ? '/api/tenants' : null,
+    user?.role?.toLowerCase() === 'superadmin' ? '/api/tenants' : null,
     fetcher,
     {
       revalidateOnFocus: true,
@@ -45,7 +45,7 @@ export default function SuperAdminOverview() {
 
   // Fetch offers
   const { data: offersData } = useSWR(
-    user?.role === 'SuperAdmin' ? '/api/offers?page=1&limit=100' : null,
+    user?.role?.toLowerCase() === 'superadmin' ? '/api/offers?page=1&limit=100' : null,
     fetcher,
     {
       revalidateOnFocus: true,
@@ -56,7 +56,7 @@ export default function SuperAdminOverview() {
   // Redirect non-superadmins immediately
   React.useEffect(() => {
     if (!loading) {
-      if (!user || user.role !== 'SuperAdmin') {
+      if (!user || user.role?.toLowerCase() !== 'superadmin') {
         console.warn('Access denied: User is not SuperAdmin');
         router.push('/dashboard/home');
       }

@@ -25,7 +25,7 @@ export default function DashboardLayout({
   return (
     <>
       {/* Trial Banner - Shows at top of dashboard (hidden for SuperAdmin) */}
-      {user?.trialEndDate && user?.role !== "SuperAdmin" && (
+      {user?.trialEndDate && user?.role?.toLowerCase() !== "superadmin" && (
         <TrialBanner 
           trialEndDate={user.trialEndDate}
           plan={user.plan}
@@ -36,7 +36,7 @@ export default function DashboardLayout({
       <ClientDashboard 
         userName={user?.tenant?.instituteName || user?.name || "User"}
         userRole={user?.role}
-        isAdmin={user?.role === "SuperAdmin"}
+        isAdmin={user?.role?.toLowerCase() === "superadmin"}
         user={user}
       >
         {children}

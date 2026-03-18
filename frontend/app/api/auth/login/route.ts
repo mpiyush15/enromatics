@@ -120,6 +120,12 @@ export async function POST(request: NextRequest) {
     console.log('   Token:', backendData.token ? '✅ Present' : '❌ Missing');
     console.log('   User:', backendData.user?.email);
 
+    // ✅ NEW: Normalize role to lowercase for consistency
+    if (backendData.user && backendData.user.role) {
+      backendData.user.role = backendData.user.role.toLowerCase();
+      console.log('✅ Role normalized to lowercase:', backendData.user.role);
+    }
+
     // 8️⃣ Return success response directly
     const response = NextResponse.json(backendData, { status: 200 });
 

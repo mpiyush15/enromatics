@@ -19,7 +19,7 @@ const router = express.Router();
 router.get(
   "/stats",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   async (req, res) => {
     try {
       const today = new Date();
@@ -117,7 +117,7 @@ router.get(
 router.get(
   "/all-leads",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   async (req, res) => {
     try {
       const { page = 1, limit = 50, type, status } = req.query;

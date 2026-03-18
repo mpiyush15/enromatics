@@ -58,13 +58,13 @@ export default function AdminTenantsPage() {
 
   // 🔒 Role-based access control - Only SuperAdmin can see this page
   useEffect(() => {
-    if (!authLoading && user && user.role !== "SuperAdmin") {
+    if (!authLoading && user && user.role?.toLowerCase() !== "superadmin") {
       router.push("/dashboard");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && user.role === "SuperAdmin") {
+    if (user && user.role?.toLowerCase() === "superadmin") {
       fetchTenants();
     }
   }, [user]);
@@ -247,7 +247,7 @@ export default function AdminTenantsPage() {
   };
 
   if (authLoading || loading) return <p className="p-6 text-gray-500">Loading tenants...</p>;
-  if (!user || user.role !== "SuperAdmin") {
+  if (!user || user.role?.toLowerCase() !== "superadmin") {
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">

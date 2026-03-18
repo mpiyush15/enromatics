@@ -11,7 +11,7 @@ const router = express.Router();
  * GET /api/storage/report
  * SuperAdmin only: Get S3 usage report for all tenants (for billing)
  */
-router.get('/report', protect, authorizeRoles('SuperAdmin'), getStorageUsageReport);
+router.get('/report', protect, authorizeRoles('superadmin'), getStorageUsageReport);
 
 /**
  * GET /api/storage/status

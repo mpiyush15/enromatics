@@ -10,20 +10,20 @@ const router = express.Router();
  * @desc    Fetch institute overview stats
  * @access  Private (tenantAdmin, superadmin)
  */
-router.get("/overview", protect, authorizeRoles("tenantAdmin", "SuperAdmin"), getInstituteOverview);
+router.get("/overview", protect, authorizeRoles("tenantadmin", "superadmin"), getInstituteOverview);
 
 /**
  * @route   GET /api/dashboard/monthly-fees
  * @desc    Fetch monthly fees collection data
  * @access  Private (tenantAdmin, superadmin)
  */
-router.get("/monthly-fees", protect, authorizeRoles("tenantAdmin", "SuperAdmin"), getMonthlyFeesCollection);
+router.get("/monthly-fees", protect, authorizeRoles("tenantadmin", "superadmin"), getMonthlyFeesCollection);
 
 /**
  * @route   GET /api/dashboard/revenue
  * @desc    Fetch revenue data (quarterly/annual)
  * @access  Private (tenantAdmin, superadmin)
  */
-router.get("/revenue", protect, authorizeRoles("tenantAdmin", "SuperAdmin"), getRevenueData);
+router.get("/revenue", protect, authorizeRoles("tenantadmin", "superadmin"), getRevenueData);
 
 export default router;

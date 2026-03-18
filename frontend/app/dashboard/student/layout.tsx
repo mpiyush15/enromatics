@@ -16,7 +16,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user?.role !== 'student') {
+    if (!loading && user?.role?.toLowerCase() !== 'student') {
       console.log('❌ Access denied to /dashboard/student for role:', user?.role);
       router.push('/dashboard');
     } else if (!loading && user) {
@@ -37,7 +37,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   }
 
   // Block unauthorized users
-  if (!user || user.role !== 'student') {
+  if (!user || user.role?.toLowerCase() !== 'student') {
     return null;
   }
 

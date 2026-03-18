@@ -62,7 +62,7 @@ export default function InvoicesPage() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== 'SuperAdmin') {
+    if (!authLoading && user?.role?.toLowerCase() !== 'superadmin') {
       router.push('/dashboard');
       return;
     }

@@ -8,7 +8,7 @@ const router = express.Router();
 // ============================================
 // GET ALL PLANS (SuperAdmin)
 // ============================================
-router.get("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.get("/", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const { status, isVisible, page = 1, limit = 10 } = req.query;
 
@@ -47,7 +47,7 @@ router.get("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // GET SINGLE PLAN (SuperAdmin)
 // ============================================
-router.get("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.get("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const plan = await SubscriptionPlan.findById(req.params.id)
       .populate("createdBy", "name email")
@@ -76,7 +76,7 @@ router.get("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // CREATE NEW PLAN (SuperAdmin)
 // ============================================
-router.post("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.post("/", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const {
       name,
@@ -154,7 +154,7 @@ router.post("/", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // ============================================
 // UPDATE PLAN (SuperAdmin)
 // ============================================
-router.put("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.put("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -227,7 +227,7 @@ router.put("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
 // PATCH PLAN (Partial Update - SuperAdmin)
 // For quick updates like price, visibility, features
 // ============================================
-router.patch("/:id", protect, authorizeRoles("SuperAdmin"), async (req, res) => {
+router.patch("/:id", protect, authorizeRoles("superadmin"), async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;

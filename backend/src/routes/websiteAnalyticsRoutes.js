@@ -128,7 +128,7 @@ router.post("/track", async (req, res) => {
 router.get(
   "/live",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   async (req, res) => {
     try {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -166,7 +166,7 @@ router.get(
 router.get(
   "/stats",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   async (req, res) => {
     try {
       const now = new Date();

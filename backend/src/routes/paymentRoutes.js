@@ -37,17 +37,17 @@ router.post('/dev/mark-paid', devMarkOrderPaid);
 
 // ============== SUPERADMIN SUBSCRIPTION MANAGEMENT ==============
 // Get all subscription payments (invoices) - SuperAdmin only
-router.get("/admin/subscriptions", protect, authorizeRoles("SuperAdmin"), getAllSubscriptionPayments);
+router.get("/admin/subscriptions", protect, authorizeRoles("superadmin"), getAllSubscriptionPayments);
 // Get all active subscribers - SuperAdmin only
-router.get("/admin/subscribers", protect, authorizeRoles("SuperAdmin"), getAllSubscribers);
+router.get("/admin/subscribers", protect, authorizeRoles("superadmin"), getAllSubscribers);
 // Get subscription stats - SuperAdmin only
-router.get("/admin/stats", protect, authorizeRoles("SuperAdmin"), getSubscriptionStats);
+router.get("/admin/stats", protect, authorizeRoles("superadmin"), getSubscriptionStats);
 // Download invoice PDF - SuperAdmin only
-router.get("/admin/invoices/:tenantId/download", protect, authorizeRoles("SuperAdmin"), downloadInvoice);
+router.get("/admin/invoices/:tenantId/download", protect, authorizeRoles("superadmin"), downloadInvoice);
 // Send invoice via email - SuperAdmin only
-router.post("/admin/invoices/:tenantId/send", protect, authorizeRoles("SuperAdmin"), sendInvoiceEmail);
+router.post("/admin/invoices/:tenantId/send", protect, authorizeRoles("superadmin"), sendInvoiceEmail);
 // Auto-cancel stale pending payments - SuperAdmin only
-router.post("/admin/auto-cancel-pending", protect, authorizeRoles("SuperAdmin"), triggerAutoCancelPendingPayments);
+router.post("/admin/auto-cancel-pending", protect, authorizeRoles("superadmin"), triggerAutoCancelPendingPayments);
 // Log manual payment (cash/bank transfer) and activate account - SuperAdmin only
 router.post("/admin/manual-payment", protect, authorizeRoles("SuperAdmin"), logManualPayment);
 

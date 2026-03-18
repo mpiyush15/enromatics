@@ -21,17 +21,17 @@ export default function DashboardRoot() {
     if (!loading && user) {
       console.log('🔄 Redirecting user based on role:', user.role);
       
-      if (user.role === 'SuperAdmin') {
+      if (user.role?.toLowerCase() === 'superadmin') {
         // SuperAdmin can stay at /dashboard or go to /dashboard/tenants
         console.log('✅ SuperAdmin - redirecting to /dashboard/home');
         router.push('/dashboard/home');
-      } else if (user.role === 'admin' || user.role === 'tenantAdmin') {
+      } else if (user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'tenantadmin') {
         console.log('✅ Admin - redirecting to /dashboard/home');
         router.push('/dashboard/home'); // Admin uses main dashboard with sidebar
-      } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsManager', 'accountant', 'marketing'].includes(user.role)) {
+      } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager', 'accountant', 'marketing'].includes(user.role?.toLowerCase())) {
         console.log('✅ Staff - redirecting to /dashboard/home');
         router.push('/dashboard/home'); // Staff uses same dashboard with sidebar (role-based menu)
-      } else if (user.role === 'student') {
+      } else if (user.role?.toLowerCase() === 'student') {
         console.log('✅ Student - redirecting to /dashboard/student');
         router.push('/dashboard/student'); // Only students get separate portal
       } else {

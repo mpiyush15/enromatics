@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         id: data.user?.id || data.id,
         email: data.user?.email || data.email,
         name: data.user?.name || data.name,
-        role: data.user?.role || data.role,
+        role: (data.user?.role || data.role)?.toLowerCase(), // ✅ NEW: Normalize to lowercase
         tenantId: data.user?.tenantId || data.tenantId,
         plan: data.user?.plan || data.plan || 'trial', // ✅ Default to 'trial' if missing (for existing users)
         profilePicture: data.user?.profilePicture || data.profilePicture,
