@@ -162,3 +162,4 @@ EMAIL_PREVIEW.html
 *.tgz
 *.tar.gz
 .eslintcachedoc/
+doc/
