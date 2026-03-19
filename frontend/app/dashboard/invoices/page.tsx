@@ -66,7 +66,7 @@ export default function InvoicesPage() {
       router.push('/dashboard');
       return;
     }
-    if (!authLoading && user?.role === 'SuperAdmin') {
+    if (!authLoading && user?.role?.toLowerCase() === 'superadmin') {
       fetchInvoices();
     }
   }, [user, authLoading, router]);

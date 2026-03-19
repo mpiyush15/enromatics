@@ -1,4 +1,5 @@
 import axios from 'axios';
+import TenantSubscription from '../models/TenantSubscription.js';
 import { PLANS } from '../config/plans.js';
 import Tenant from '../models/Tenant.js';
 import { sendEmail } from '../services/emailService.js';
@@ -183,8 +184,6 @@ export const checkoutInitiate = async (req, res) => {
     } else {
       // Update existing tenant with selected plan
       tenant.plan = planId;
-      tenant.subscription.billingCycle = 'monthly';
-      tenant.subscription.status = 'pending';
       await tenant.save();
       console.log('Updated tenant plan:', tenant.tenantId, 'Plan:', planId);
     }
@@ -222,9 +221,14 @@ export const checkoutInitiate = async (req, res) => {
       }
     );
 
-    // Store the order ID in tenant for tracking
-    tenant.subscription.paymentId = response.data.order_id;
-    await tenant.save();
+    // Store order ID in TenantSubscription for tracking
+    let tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
+    if (!tenantSub) {
+      tenantSub = new TenantSubscription({ tenantId: tenant.tenantId });
+    }
+    tenantSub.subscription = tenantSub.subscription || {};
+    tenantSub.subscription.status = 'pending';
+    await tenantSub.save();
 
     // Send email to tenant for payment initiation
     await sendEmail({

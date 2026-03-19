@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { ROLE_GROUPS } from "../config/rbacConfig.js";
 
 const staffSchema = new mongoose.Schema(
   {
@@ -57,7 +56,7 @@ const staffSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ROLE_GROUPS.STAFF_ROLES,
+      enum: ["superadmin", "tenantadmin", "student"],
       required: true,
     },
 

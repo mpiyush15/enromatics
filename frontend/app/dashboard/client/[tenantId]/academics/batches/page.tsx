@@ -82,7 +82,7 @@ export default function CoursesAndBatchesPage() {
 
   // Fetch batches
   const { data: batchesData, isLoading: loadingBatches, mutate: refreshBatches, error: batchesError } = useSWR(
-    `/api/batches?tenantId=${tenantId}`,
+    `/api/academics/batches?tenantId=${tenantId}`,
     fetcher,
     {
       revalidateOnFocus: false, // Disable auto-refetch on focus to prevent clearing data
@@ -255,8 +255,8 @@ export default function CoursesAndBatchesPage() {
 
     try {
       const url = editingBatch
-        ? `/api/batches/${editingBatch._id}`
-        : `/api/batches`;
+        ? `/api/academics/batches/${editingBatch._id}`
+        : `/api/academics/batches`;
       const method = editingBatch ? "PUT" : "POST";
 
       const payload = {
@@ -273,7 +273,32 @@ export default function CoursesAndBatchesPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      console.log('[FRONTEND] Batch response status:', res.status, res.statusText);
+
+      // Check if response is ok before parsing
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('❌ Backend error response:', errorText);
+        setMessage("❌ Server returned error: " + res.statusText);
+        return;
+      }
+
+      // Get response text first to handle empty responses
+      const responseText = await res.text();
+      if (!responseText) {
+        console.error('❌ Empty response from server');
+        setMessage("❌ Server returned empty response");
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON:', parseError, 'Response:', responseText);
+        setMessage("❌ Invalid JSON response from server");
+        return;
+      }
 
       console.log('[FRONTEND] Batch response:', data);
 
@@ -287,7 +312,7 @@ export default function CoursesAndBatchesPage() {
       }
     } catch (error) {
       console.error("Error saving batch:", error);
-      setMessage("❌ Server error");
+      setMessage("❌ Server error: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 

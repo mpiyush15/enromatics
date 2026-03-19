@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
     const cookies = extractCookies(request);
     const body = await request.json();
 
+    console.log('[BFF] Batch POST request:', { body });
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/batches`, {
       method: 'POST',
       headers: {
@@ -68,9 +70,33 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    console.log('[BFF] Backend response status:', res.status, res.statusText);
+
+    // Get response as text first to handle empty responses
+    const responseText = await res.text();
+    console.log('[BFF] Backend response text:', responseText);
+
+    if (!responseText) {
+      console.error('❌ Empty response from backend');
+      return NextResponse.json(
+        { success: false, message: 'Empty response from backend' },
+        { status: 500 }
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ Failed to parse backend response:', parseError);
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON from backend' },
+        { status: 500 }
+      );
+    }
 
     if (!data.success) {
+      console.log('[BFF] Backend returned error:', data.message);
       return NextResponse.json(
         { success: false, message: data.message || 'Failed to create batch' },
         { status: res.status }
@@ -84,6 +110,7 @@ export async function POST(request: NextRequest) {
       console.log('[BFF] Invalidated batches cache after creation for tenant:', data.batch.tenantId);
     }
 
+    console.log('[BFF] Batch created successfully:', data.batch?._id);
     return NextResponse.json({
       success: true,
       batch: data.batch,
@@ -92,7 +119,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ BFF Batches POST error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Internal server error: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     );
   }

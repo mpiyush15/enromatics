@@ -5,30 +5,14 @@
  */
 
 export const RBAC = {
-  // ============ SUPER ADMIN ROLES ============
-  SUPER_ADMIN: "SuperAdmin",
-  ADMIN: "Admin",
-
-  // ============ TENANT ADMIN ROLES ============
-  TENANT_ADMIN: "tenantAdmin",
-
-  // ============ STAFF ROLES ============
-  TEACHER: "teacher",
-  STAFF: "staff",
-  ACCOUNTANT: "accountant",
-  MANAGER: "manager",
-  COUNSELLOR: "counsellor",
-  ADMISSION_INCHARGE: "admissionIncharge",
-  RECEPTIONIST: "receptionist",
-  LIBRARIAN: "librarian",
-  LAB_ASSISTANT: "labAssistant",
-
-  // ============ GENERAL ROLES ============
-  MARKETING: "marketing",
-  ADS_MANAGER: "adsManager",
-
-  // ============ STUDENT ROLES ============
+  // ============ SYSTEM ROLES (Fixed - all lowercase) ============
+  SUPER_ADMIN: "superadmin",
+  TENANT_ADMIN: "tenantadmin",
   STUDENT: "student",
+  
+  // ============ TENANT CUSTOM ROLES (Deprecated - now created dynamically) ============
+  // These are kept for backward compatibility but should be created via TenantRole model
+  // Each tenant can now define their own roles: teacher, counsellor, staff, accountant, etc.
 };
 
 // ============ ROLE GROUPS ============

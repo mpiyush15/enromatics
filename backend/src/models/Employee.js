@@ -39,4 +39,23 @@ const employeeSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+// Foreign key validation: Ensure tenantId exists in Tenant collection
+employeeSchema.pre("save", async function (next) {
+  if (!this.tenantId) {
+    return next(new Error("tenantId is required"));
+  }
+
+  // Check if tenant exists (only on insert or if tenantId is modified)
+  if (this.isNew || this.isModified("tenantId")) {
+    const { default: Tenant } = await import('./Tenant.js');
+    const tenant = await Tenant.findOne({ tenantId: this.tenantId });
+    
+    if (!tenant) {
+      return next(new Error(`Invalid tenantId: Tenant "${this.tenantId}" does not exist`));
+    }
+  }
+
+  next();
+});
+
 export default mongoose.model("Employee", employeeSchema);

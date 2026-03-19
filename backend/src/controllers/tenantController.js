@@ -6,6 +6,7 @@
 import Tenant from "../models/Tenant.js";
 import User from "../models/User.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
+import TenantSubscription from "../models/TenantSubscription.js";
 import crypto from "crypto";
 import axios from "axios";
 import { PLANS } from "../config/plans.js";
@@ -123,14 +124,27 @@ export const upgradeTenantPlan = async (req, res) => {
         endDate.setDate(endDate.getDate() + duration);
 
         tenant.plan = planId.toLowerCase();
-        tenant.subscription = {
-          status: "active",
-          paymentId: `free_${crypto.randomBytes(4).toString("hex")}`,
-          startDate: now,
-          endDate,
-          billingCycle,
-        };
         await tenant.save();
+
+        // Create/update TenantSubscription with free plan details
+        let tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
+        if (!tenantSub) {
+          tenantSub = new TenantSubscription({ tenantId: tenant.tenantId });
+        }
+        tenantSub.subscription = {
+          status: "active",
+          startDate: now,
+          endDate
+        };
+        tenantSub.paymentHistory = tenantSub.paymentHistory || [];
+        tenantSub.paymentHistory.push({
+          date: now,
+          amount: 0,
+          planType: planId,
+          status: 'completed',
+          transactionId: `free_${crypto.randomBytes(4).toString("hex")}`
+        });
+        await tenantSub.save();
 
         return res.status(200).json({
           success: true,
@@ -149,12 +163,14 @@ export const upgradeTenantPlan = async (req, res) => {
       const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
       const orderAmount = cycle === 'annual' ? plan.priceAnnual : plan.priceMonthly;
 
-      // Store pending upgrade info
-      tenant.subscription = tenant.subscription || {};
-      tenant.subscription.pendingPlan = planId.toLowerCase();
-      tenant.subscription.billingCycle = cycle;
-      tenant.subscription.status = tenant.subscription.status === 'active' ? 'active' : 'pending';
-      await tenant.save();
+      // Store pending upgrade info in TenantSubscription
+      let tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
+      if (!tenantSub) {
+        tenantSub = new TenantSubscription({ tenantId: tenant.tenantId });
+      }
+      tenantSub.subscription = tenantSub.subscription || {};
+      tenantSub.subscription.status = tenantSub.subscription.status === 'active' ? 'active' : 'pending';
+      await tenantSub.save();
 
       // Create Cashfree order
       const orderPayload = {
@@ -189,9 +205,8 @@ export const upgradeTenantPlan = async (req, res) => {
         }
       );
 
-      // Store order ID in tenant
-      tenant.subscription.paymentId = cashfreeResponse.data.order_id;
-      await tenant.save();
+      // Update TenantSubscription with order ID (already fetched/created above)
+      await tenantSub.save();
 
       // Log pending payment
       try {
@@ -262,24 +277,37 @@ export const upgradeTenantPlan = async (req, res) => {
       endDate.setMonth(endDate.getMonth() + 1);
 
       tenant.plan = planToUpgrade;
-      tenant.subscription = {
-        status: "active",
-        paymentId: paymentId || `manual_${crypto.randomBytes(4).toString("hex")}`,
-        startDate: now,
-        endDate,
-      };
-
       await tenant.save();
+
+      // Update TenantSubscription
+      let tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
+      if (!tenantSub) {
+        tenantSub = new TenantSubscription({ tenantId: tenant.tenantId });
+      }
+      tenantSub.subscription = {
+        status: "active",
+        startDate: now,
+        endDate
+      };
+      tenantSub.paymentHistory = tenantSub.paymentHistory || [];
+      tenantSub.paymentHistory.push({
+        date: now,
+        amount: 0,
+        planType: planToUpgrade,
+        status: 'completed',
+        transactionId: paymentId || `manual_${crypto.randomBytes(4).toString("hex")}`
+      });
+      await tenantSub.save();
 
       // Send confirmation emails
       sendSubscriptionConfirmationEmail({
         to: tenant.email,
         subscriptionDetails: {
           planName: tenant.plan,
-          amount: tenant.subscription?.amount || 'N/A',
+          amount: tenantSub?.paymentHistory?.[tenantSub.paymentHistory.length - 1]?.amount || 'N/A',
           billingCycle: 'monthly',
-          startDate: tenant.subscription?.startDate,
-          endDate: tenant.subscription?.endDate,
+          startDate: tenantSub?.subscription?.startDate,
+          endDate: tenantSub?.subscription?.endDate,
           instituteName: tenant.instituteName || tenant.name
         },
         tenantId: tenant.tenantId
@@ -295,8 +323,7 @@ export const upgradeTenantPlan = async (req, res) => {
 
       return res.status(200).json({
         message: `Plan upgraded to ${planToUpgrade} successfully`,
-        plan: tenant.plan,
-        subscription: tenant.subscription,
+        plan: tenant.plan
       });
     }
 
@@ -321,19 +348,23 @@ export const downgradeExpiredPlans = async (req, res) => {
   try {
     const today = new Date();
 
-    const expiredTenants = await Tenant.find({
+    const expiredSubs = await TenantSubscription.find({
       "subscription.status": "active",
       "subscription.endDate": { $lte: today },
     });
 
-    for (const tenant of expiredTenants) {
-      tenant.plan = "free";
-      tenant.subscription.status = "inactive";
-      await tenant.save();
+    for (const sub of expiredSubs) {
+      const tenant = await Tenant.findOne({ tenantId: sub.tenantId });
+      if (tenant) {
+        tenant.plan = "free";
+        await tenant.save();
+      }
+      sub.subscription.status = "inactive";
+      await sub.save();
     }
 
     res.status(200).json({
-      message: `${expiredTenants.length} tenants downgraded to free tier.`,
+      message: `${expiredSubs.length} tenants downgraded to free tier.`,
     });
   } catch (err) {
     console.error("Downgrade Error:", err);
@@ -351,6 +382,7 @@ export const getTenantInfo = async (req, res) => {
 
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
+    const tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
     res.status(200).json({
       success: true,
       tenant: {
@@ -359,7 +391,7 @@ export const getTenantInfo = async (req, res) => {
         instituteName: tenant.instituteName,
         email: tenant.email,
         plan: tenant.plan,
-        subscription: tenant.subscription,
+        subscription: tenantSub?.subscription || {},
         active: tenant.active,
         contact: tenant.contact,
         usage: tenant.usage,
@@ -383,6 +415,7 @@ export const getSuperAdminTenantDetail = async (req, res) => {
 
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
 
+    const tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
     res.status(200).json({
       success: true,
       tenant: {
@@ -393,7 +426,7 @@ export const getSuperAdminTenantDetail = async (req, res) => {
         instituteName: tenant.instituteName,
         subdomain: tenant.subdomain,
         plan: tenant.plan,
-        subscription: tenant.subscription,
+        subscription: tenantSub?.subscription || {},
         active: tenant.active,
         contact: tenant.contact,
         usage: tenant.usage,
@@ -459,6 +492,7 @@ export const updateTenantProfile = async (req, res) => {
 
     console.log("✅ Tenant profile updated:", tenant.instituteName || tenant.name);
 
+    const tenantSub = await TenantSubscription.findOne({ tenantId: tenant.tenantId });
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
@@ -468,7 +502,7 @@ export const updateTenantProfile = async (req, res) => {
         instituteName: tenant.instituteName,
         email: tenant.email,
         plan: tenant.plan,
-        subscription: tenant.subscription,
+        subscription: tenantSub?.subscription || {},
         active: tenant.active,
         contact: tenant.contact,
         usage: tenant.usage,
@@ -487,6 +521,13 @@ export const getAllTenants = async (req, res) => {
   try {
     const tenants = await Tenant.find().sort({ createdAt: -1 });
 
+    // Fetch all subscriptions for tenants
+    const subscriptions = await TenantSubscription.find();
+    const subMap = {};
+    subscriptions.forEach(sub => {
+      subMap[sub.tenantId] = sub;
+    });
+
     res.status(200).json(
       tenants.map((tenant) => ({
         tenantId: tenant.tenantId,
@@ -494,7 +535,7 @@ export const getAllTenants = async (req, res) => {
         email: tenant.email,
         plan: tenant.plan,
         active: tenant.active,
-        subscription: tenant.subscription,
+        subscription: subMap[tenant.tenantId]?.subscription || {},
         createdAt: tenant.createdAt,
       }))
     );

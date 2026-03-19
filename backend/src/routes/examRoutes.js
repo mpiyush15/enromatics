@@ -7,7 +7,6 @@ import Chapter from '../models/Chapter.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { tenantProtect } from '../middleware/tenantProtect.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
-import { RBAC } from '../config/rbacConfig.js';
 
 const router = express.Router();
 
@@ -77,7 +76,7 @@ router.get('/:testId', protect, tenantProtect, async (req, res) => {
 });
 
 // POST: Create new test (initial setup - without questions) (TEACHER, ADMIN)
-router.post('/', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.post('/', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { title, description, subjectId, totalMarks, duration, passingMarks, status } = req.body;
     const tenantId = req.tenantId;
@@ -122,7 +121,7 @@ router.post('/', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.
 });
 
 // PATCH: Update test details (TEACHER, ADMIN)
-router.patch('/:testId', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.patch('/:testId', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId } = req.params;
     const { title, description, totalMarks, duration, passingMarks, status } = req.body;
@@ -149,7 +148,7 @@ router.patch('/:testId', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMI
 });
 
 // DELETE: Remove test (TEACHER, ADMIN)
-router.delete('/:testId', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.delete('/:testId', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId } = req.params;
     const tenantId = req.tenantId;
@@ -220,7 +219,7 @@ router.get('/:testId/available-questions', protect, tenantProtect, async (req, r
 });
 
 // POST: Add single question to test (TEACHER, ADMIN)
-router.post('/:testId/add-question', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.post('/:testId/add-question', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId } = req.params;
     const { questionId, marks, order } = req.body;
@@ -281,7 +280,7 @@ router.post('/:testId/add-question', protect, tenantProtect, authorizeRoles(RBAC
 });
 
 // POST: Add multiple questions to test (TEACHER, ADMIN)
-router.post('/:testId/add-questions-bulk', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.post('/:testId/add-questions-bulk', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId } = req.params;
     const { questionIds } = req.body; // Array of question IDs
@@ -333,7 +332,7 @@ router.post('/:testId/add-questions-bulk', protect, tenantProtect, authorizeRole
 });
 
 // DELETE: Remove question from test (TEACHER, ADMIN)
-router.delete('/:testId/question/:questionId', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.delete('/:testId/question/:questionId', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId, questionId } = req.params;
     const tenantId = req.tenantId;
@@ -367,7 +366,7 @@ router.delete('/:testId/question/:questionId', protect, tenantProtect, authorize
 // ============= AUTO-SELECT QUESTIONS =============
 
 // POST: Auto-select questions by difficulty (TEACHER, ADMIN)
-router.post('/:testId/auto-select', protect, tenantProtect, authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN), async (req, res) => {
+router.post('/:testId/auto-select', protect, tenantProtect, authorizeRoles('tenantadmin', 'superadmin'), async (req, res) => {
   try {
     const { testId } = req.params;
     const { chapterId, difficulty, count } = req.body;

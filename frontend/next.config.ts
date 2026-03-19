@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // Skip static export for API routes and missing pages
+  staticPageGenerationTimeout: 120,
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000,
+    pagesBufferLength: 5,
+  },
+
+  // Skip export for these routes
+  skipTrailingSlashRedirect: true,
 }
 
 export default nextConfig;

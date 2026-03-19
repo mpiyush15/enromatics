@@ -41,67 +41,62 @@ const tenantSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
 
-    // Plan type: free, pro, enterprise
+    // Plan type: free, basic, pro, enterprise
+    // NOTE: Subscription data moved to TenantSubscription model for single source of truth
     plan: {
       type: String,
-      enum: ["free", "trial", "test", "basic", "starter", "professional", "pro", "enterprise"],
+      enum: ["free", "basic", "pro", "enterprise"],
       default: "free",
     },
 
-    // Subscription details for the plan
-    subscription: {
-      status: {
-        type: String,
-        enum: ["active", "trial", "inactive", "cancelled", "pending"],
-        default: "inactive",
-      },
-      paymentId: {
-        type: String,
-        default: null,
-      },
-      startDate: {
-        type: Date,
-        default: null,
-      },
-      endDate: {
-        type: Date,
-        default: null,
-      },
-      trialStartDate: {
-        type: Date,
-        default: null,
-      },
-      // Billing cycle - monthly or annual
+    // Subscription metadata (mirrored from TenantSubscription for quick access)
+    subscriptionMetadata: {
       billingCycle: {
         type: String,
-        enum: ["monthly", "annual", "yearly"],
+        enum: ["monthly", "annual"],
         default: "monthly",
+        description: "How often subscription renews"
       },
-      // Actual amount paid in INR
-      amount: {
+      autoRenew: {
+        type: Boolean,
+        default: true,
+        description: "Whether subscription auto-renews at end date"
+      },
+      nextBillingDate: {
+        type: Date,
+        default: null,
+        description: "Calculated date of next billing cycle"
+      },
+      renewalReminderSent: {
+        type: Boolean,
+        default: false,
+        description: "Whether renewal reminder notification was sent"
+      },
+      lastRenewalDate: {
+        type: Date,
+        default: null,
+        description: "When subscription was last renewed"
+      }
+    },
+
+    // Invoice data (quick access to latest invoices)
+    invoiceData: {
+      lastInvoiceNumber: {
+        type: String,
+        default: null
+      },
+      lastInvoicePdfUrl: {
+        type: String,
+        default: null
+      },
+      lastInvoiceDate: {
+        type: Date,
+        default: null
+      },
+      totalInvoices: {
         type: Number,
-        default: 0,
-      },
-      // Currency (defaults to INR)
-      currency: {
-        type: String,
-        default: "INR",
-      },
-      // Invoice number (auto-generated sequential)
-      invoiceNumber: {
-        type: Number,
-        default: null,
-      },
-      // S3 URL for the invoice PDF
-      invoicePdfUrl: {
-        type: String,
-        default: null,
-      },
-      // Pending plan for upgrade (set during payment initiation, cleared on success/failure)
-      pendingPlan: {
-        type: String,
-        default: null,
-      },
+        default: 0
+      }
     },
 
     // Whether tenant account is active or suspended
@@ -204,9 +199,181 @@ tenantSchema.virtual("users", {
   foreignField: "tenantId",
 });
 
+// Instance method: Check if subscription is due for renewal
+tenantSchema.methods.isRenewalDue = function() {
+  if (!this.subscriptionMetadata?.nextBillingDate) {
+    return false;
+  }
+  return new Date() >= this.subscriptionMetadata.nextBillingDate;
+};
+
+// Instance method: Get days until renewal
+tenantSchema.methods.getDaysUntilRenewal = function() {
+  if (!this.subscriptionMetadata?.nextBillingDate) {
+    return null;
+  }
+  const now = new Date();
+  const nextDate = new Date(this.subscriptionMetadata.nextBillingDate);
+  const daysMs = nextDate - now;
+  return Math.ceil(daysMs / (1000 * 60 * 60 * 24));
+};
+
+// Instance method: Check if renewal reminder should be sent
+tenantSchema.methods.shouldSendRenewalReminder = function(daysBeforeExpiry = 7) {
+  const daysUntil = this.getDaysUntilRenewal();
+  return (
+    daysUntil !== null && 
+    daysUntil > 0 && 
+    daysUntil <= daysBeforeExpiry &&
+    !this.subscriptionMetadata?.renewalReminderSent
+  );
+};
+
+// Instance method: Mark renewal reminder as sent
+tenantSchema.methods.markRenewalReminderSent = async function() {
+  this.subscriptionMetadata.renewalReminderSent = true;
+  return this.save();
+};
+
+// Instance method: Reset renewal reminder flag
+tenantSchema.methods.resetRenewalReminder = async function() {
+  this.subscriptionMetadata.renewalReminderSent = false;
+  return this.save();
+};
+
+// Instance method: Get invoice summary
+tenantSchema.methods.getInvoiceSummary = function() {
+  return {
+    lastInvoiceNumber: this.invoiceData?.lastInvoiceNumber,
+    lastInvoicePdfUrl: this.invoiceData?.lastInvoicePdfUrl,
+    lastInvoiceDate: this.invoiceData?.lastInvoiceDate,
+    totalInvoices: this.invoiceData?.totalInvoices || 0
+  };
+};
+
+// Static method: Find tenants due for renewal
+tenantSchema.statics.findDueForRenewal = function() {
+  return this.find({
+    'subscriptionMetadata.nextBillingDate': { $lte: new Date() },
+    'subscriptionMetadata.autoRenew': true
+  });
+};
+
+// Static method: Find tenants needing renewal reminders
+tenantSchema.statics.findNeedingRenewalReminder = function(daysBeforeExpiry = 7) {
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + daysBeforeExpiry);
+  
+  return this.find({
+    'subscriptionMetadata.nextBillingDate': {
+      $gt: new Date(),
+      $lte: targetDate
+    },
+    'subscriptionMetadata.renewalReminderSent': false
+  });
+};
+
 // Ensure virtuals are included in JSON responses
 tenantSchema.set("toJSON", { virtuals: true });
 tenantSchema.set("toObject", { virtuals: true });
+
+/**
+ * CASCADE DELETE: When a tenant is deleted, remove all dependent records
+ * This prevents orphaned records and maintains referential integrity
+ */
+tenantSchema.pre('deleteOne', { document: true, query: false }, async function() {
+  const tenantId = this.tenantId;
+  console.log(`🗑️  Cascade deleting records for tenant: ${tenantId}`);
+  
+  try {
+    // Import models dynamically to avoid circular dependencies
+    const { default: User } = await import('./User.js');
+    const { default: Student } = await import('./Student.js');
+    const { default: Batch } = await import('./Batch.js');
+    const { default: Test } = await import('./Test.js');
+    const { default: TestAttendance } = await import('./TestAttendance.js');
+    const { default: Attendance } = await import('./Attendance.js');
+    const { default: TestMarks } = await import('./TestMarks.js');
+    const { default: TenantSubscription } = await import('./TenantSubscription.js');
+    const { default: TenantRole } = await import('./TenantRole.js');
+    const { default: Lead } = await import('./Lead.js');
+    const { default: CallLog } = await import('./CallLog.js');
+    const { default: Employee } = await import('./Employee.js');
+    const { default: Counter } = await import('./Counter.js');
+    const { default: NotificationTemplate } = await import('./NotificationTemplate.js');
+    const { default: WhatsAppEventLog } = await import('./WhatsAppEventLog.js');
+    const { default: PaymentSession } = await import('./PaymentSession.js');
+    const { default: Chapter } = await import('./Chapter.js');
+    const { default: Subject } = await import('./Subject.js');
+    const { default: Lesson } = await import('./Lesson.js');
+    const { default: TestQuestion } = await import('./TestQuestion.js');
+    const { default: StudentTestAnswer } = await import('./StudentTestAnswer.js');
+    const { default: StudentMaterialProgress } = await import('./StudentMaterialProgress.js');
+    const { default: StudyMaterial } = await import('./StudyMaterial.js');
+    const { default: VideoLesson } = await import('./VideoLesson.js');
+    const { default: SMSTemplate } = await import('./SMSTemplate.js');
+    const { default: WhatsAppMessage } = await import('./WhatsAppMessage.js');
+    const { default: AutomationWorkflow } = await import('./AutomationWorkflow.js');
+    const { default: WorkflowTemplate } = await import('./WorkflowTemplate.js');
+    const { default: WorkflowConversation } = await import('./WorkflowConversation.js');
+    const { default: BatchStudent } = await import('./BatchStudent.js');
+
+    // Delete operations for all collections with this tenantId
+    const deleteResults = [];
+
+    const collections = [
+      { name: 'User', model: User },
+      { name: 'Student', model: Student },
+      { name: 'Batch', model: Batch },
+      { name: 'Test', model: Test },
+      { name: 'TestAttendance', model: TestAttendance },
+      { name: 'Attendance', model: Attendance },
+      { name: 'TestMarks', model: TestMarks },
+      { name: 'TenantSubscription', model: TenantSubscription },
+      { name: 'TenantRole', model: TenantRole },
+      { name: 'Lead', model: Lead },
+      { name: 'CallLog', model: CallLog },
+      { name: 'Employee', model: Employee },
+      { name: 'Counter', model: Counter },
+      { name: 'NotificationTemplate', model: NotificationTemplate },
+      { name: 'WhatsAppEventLog', model: WhatsAppEventLog },
+      { name: 'PaymentSession', model: PaymentSession },
+      { name: 'Chapter', model: Chapter },
+      { name: 'Subject', model: Subject },
+      { name: 'Lesson', model: Lesson },
+      { name: 'TestQuestion', model: TestQuestion },
+      { name: 'StudentTestAnswer', model: StudentTestAnswer },
+      { name: 'StudentMaterialProgress', model: StudentMaterialProgress },
+      { name: 'StudyMaterial', model: StudyMaterial },
+      { name: 'VideoLesson', model: VideoLesson },
+      { name: 'SMSTemplate', model: SMSTemplate },
+      { name: 'WhatsAppMessage', model: WhatsAppMessage },
+      { name: 'AutomationWorkflow', model: AutomationWorkflow },
+      { name: 'WorkflowTemplate', model: WorkflowTemplate },
+      { name: 'WorkflowConversation', model: WorkflowConversation },
+      { name: 'BatchStudent', model: BatchStudent },
+    ];
+
+    for (const { name, model } of collections) {
+      try {
+        const result = await model.deleteMany({ tenantId });
+        if (result.deletedCount > 0) {
+          deleteResults.push(`  ✅ ${name}: ${result.deletedCount} deleted`);
+        }
+      } catch (error) {
+        deleteResults.push(`  ⚠️  ${name}: Failed - ${error.message}`);
+      }
+    }
+
+    if (deleteResults.length > 0) {
+      console.log('Cascade delete results:');
+      deleteResults.forEach(r => console.log(r));
+    }
+  } catch (error) {
+    console.error(`❌ Cascade delete error for tenant ${tenantId}:`, error.message);
+    throw error;
+  }
+});
 
 // Model creation
 const Tenant = mongoose.models.Tenant || mongoose.model("Tenant", tenantSchema);

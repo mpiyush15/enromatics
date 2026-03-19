@@ -25,8 +25,8 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ROLE_GROUPS.USER_ROLES,
-      default: "tenantAdmin", // every new signup = tenant admin by default
+      enum: ["superadmin", "tenantadmin", "student"],
+      default: "tenantadmin", // every new signup = tenant admin by default
     },
 
     status: {
@@ -101,6 +101,23 @@ const userSchema = new mongoose.Schema(
 
 // Indexes for performance (email unique index already exists, tenantId added below)
 userSchema.index({ tenantId: 1 });
+
+// Foreign key validation: Ensure tenantId exists in Tenant collection
+userSchema.pre("save", async function (next) {
+  if (!this.tenantId) {
+    return next(new Error("tenantId is required"));
+  }
+
+  // Check if tenant exists
+  const { default: Tenant } = await import('./Tenant.js');
+  const tenant = await Tenant.findOne({ tenantId: this.tenantId });
+  
+  if (!tenant) {
+    return next(new Error(`Invalid tenantId: Tenant "${this.tenantId}" does not exist`));
+  }
+
+  next();
+});
 
 // Password hashing middleware
 userSchema.pre("save", async function (next) {

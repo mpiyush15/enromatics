@@ -572,7 +572,7 @@ export const trackBatch = async (req, res) => {
 
     console.log(`✅ Batch processed: ${events.length} events → 1 DB operation (reduction: ${Math.round((events.length / 1) * 100)}%)`);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       processed: events.length,
       batchSize: events.length,

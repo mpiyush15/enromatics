@@ -5,7 +5,6 @@ import Subject from '../models/Subject.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { tenantProtect } from '../middleware/tenantProtect.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
-import { RBAC } from '../config/rbacConfig.js';
 
 const router = express.Router();
 
@@ -119,7 +118,7 @@ router.post(
   '/',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { chapterId, subjectId, title, description, videoUrl, duration, notes, order } = req.body;
@@ -183,7 +182,7 @@ router.patch(
   '/:videoLessonId',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { videoLessonId } = req.params;
@@ -226,7 +225,7 @@ router.delete(
   '/:videoLessonId',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { videoLessonId } = req.params;
@@ -258,7 +257,7 @@ router.post(
   '/:chapterId/bulk',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { chapterId } = req.params;

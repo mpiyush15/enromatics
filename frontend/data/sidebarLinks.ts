@@ -2,59 +2,55 @@ export const sidebarLinks = [
   {
     href: "/dashboard/home",
     label: "🏠 Home",
-    roles: ["SuperAdmin","admin", "user", "subscriber"],
+    roles: ["superadmin", "tenantadmin"],
   },
   {
-    href: "/dashboard/analytics",
+    href: "/dashboard/client/[tenantId]/analytics",
     label: "📊 Analytics",
-    roles: ["tenantAdmin", "SuperAdmin", "admin"],
+    roles: ["tenantadmin", "superadmin"],
   },
   {
     href: "/dashboard/lead",
     label: "📋 Leads",
-    roles: ["SuperAdmin","admin"],
+    roles: ["superadmin"],
   },
   {
     href: "/dashboard/tenants",
     label: "👤 Tenants",
-    roles: ["SuperAdmin","admin"],
+    roles: ["superadmin"],
   },
   {
     href: "/dashboard/client/[tenantId]/overview-pro",
     label: "💳 Institute Overview",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
   },
   {
     href: "/dashboard/client/[tenantId]/ui-test-lab",
     label: "🎨 UI Test Lab",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
   },
   {
     href: "/dashboard/client/[tenantId]/enroll-student",
     label: "➕ Enroll Student",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
   },
   {
     href: "/dashboard/client/[tenantId]/test-dashboard",
     label: "🧪 Test Dashboard",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
   },
   {
     label: "📦 Subscription",
     href: "#",
-    roles: ["user", "subscriber", "tenantAdmin"],
+    roles: ["tenantadmin"],
     children: [
       {
         label: "🔁 My Subscription",
-        href: "/dashboard/my-subscription",
+        href: "/dashboard/client/[tenantId]/my-subscription",
       },
       {
-        label: "❌ Cancel Subscription",
-        href: "/dashboard/subscription/cancel",
-      },
-      {
-        label: "📄 View Plan",
-        href: "/dashboard/subscription/view",
+        label: "💳 Payment History",
+        href: "/dashboard/client/[tenantId]/payments",
       },
     ],
   },
@@ -62,7 +58,7 @@ export const sidebarLinks = [
     label: "📱 Social Media",
     href: "#",
     // 🔒 HIDDEN FROM TENANTS - Still in development. Only SuperAdmin can access.
-    roles: ["SuperAdmin"],
+    roles: ["superadmin"],
     children: [
       {
         label: "📊 Dashboard",
@@ -104,44 +100,67 @@ export const sidebarLinks = [
   {
     label: "💬 WhatsApp",
     href: "#",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
     children: [
       {
         label: "📧 Inbox",
         href: "/dashboard/client/[tenantId]/whatsapp/inbox",
-        roles: ["tenantAdmin"],
+        roles: ["tenantadmin"],
       },
       {
         label: "📋 Templates",
         href: "/dashboard/client/[tenantId]/whatsapp/templates",
-        roles: ["tenantAdmin"],
+        roles: ["tenantadmin"],
       },
       {
         label: "🤖 Chatbots",
         href: "/dashboard/client/[tenantId]/whatsapp/chatbots",
-        roles: ["tenantAdmin"],
+        roles: ["tenantadmin"],
       },
       {
         label: "⚙️ Settings",
         href: "/dashboard/client/[tenantId]/whatsapp/settings",
-        roles: ["tenantAdmin"],
+        roles: ["tenantadmin"],
       },
     ],
   },
   {
-    href: "/dashboard/profile",
+    href: "/dashboard/client/[tenantId]/profile",
     label: "🧑‍💻 Profile",
-    roles: ["admin", "user", "subscriber"],
+    roles: ["tenantadmin", "student"],
   },
   {
-    href: "/dashboard/subscription",
+    href: "/dashboard/client/[tenantId]/my-subscription",
     label: "💰 Subscription & Mobile App",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
+  },
+  {
+    label: "⚙️ Institute Settings",
+    href: "#",
+    roles: ["tenantadmin"],
+    children: [
+      {
+        label: "🧑‍💼 Profile",
+        href: "/dashboard/client/[tenantId]/profile",
+      },
+      {
+        label: "👥 Staff Management",
+        href: "/dashboard/client/[tenantId]/settings/staff",
+      },
+      {
+        label: "🔐 Role Manager",
+        href: "/dashboard/client/[tenantId]/settings/roles",
+      },
+      {
+        label: "💳 Payment History",
+        href: "/dashboard/client/[tenantId]/payments",
+      },
+    ],
   },
   {
     label: "📚 Academics",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "staff", "student"],
+    roles: ["tenantadmin"],
     children: [
       {
         label: "� Lessons Planning",
@@ -160,20 +179,19 @@ export const sidebarLinks = [
         href: "/dashboard/client/[tenantId]/academics/results",
       },
       {
-
-        label: "�📊 Test Reports",
-        href: "/dashboard/academics/reports",
+        label: "📊 Test Reports",
+        href: "/dashboard/client/[tenantId]/academics/reports",
       },
       {
         label: "📖 My Tests",
-        href: "/dashboard/academics/my-tests",
+        href: "/dashboard/client/[tenantId]/academics/my-tests",
       },
     ],
   },
   {
     label: "🎓 LMS - Test Management",
     href: "#",
-    roles: ["tenantAdmin", "teacher"],
+    roles: ["tenantadmin"],
     children: [
       {
         label: "📖 Overview",
@@ -208,7 +226,7 @@ export const sidebarLinks = [
   {
     label: "🎓 Scholarship Tests",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "staff"],
+    roles: ["tenantadmin"],
     children: [
       {
         label: "📋 All Tests",

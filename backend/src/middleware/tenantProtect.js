@@ -14,34 +14,39 @@ export const tenantProtect = async (req, res, next) => {
   const userTenantId = req.user?.tenantId;
   let requestTenantId = null;
 
-  // Priority 1: X-Tenant-Subdomain header (from BFF)
-  let subdomainHeader = req.headers["x-tenant-subdomain"];
+  // Priority 1: X-Tenant-ID header (from frontend directly)
+  requestTenantId = req.headers["x-tenant-id"];
   
-  // Priority 2: Extract subdomain from Host header if not in headers
-  // e.g., "prasamagar.lvh.me:3000" → "prasamagar" or "prasamagar.enromatics.com" → "prasamagar"
-  if (!subdomainHeader) {
-    const host = req.headers.host || '';
-    const hostParts = host.split(':')[0].split('.');
+  // Priority 2: X-Tenant-Subdomain header (from BFF)
+  if (!requestTenantId) {
+    let subdomainHeader = req.headers["x-tenant-subdomain"];
     
-    // Check if this is a subdomain-based request (more than 1 part and not localhost)
-    if (hostParts.length > 2 || (hostParts.length === 2 && hostParts[0] !== 'localhost')) {
-      subdomainHeader = hostParts[0];
+    // Priority 3: Extract subdomain from Host header if not in headers
+    // e.g., "prasamagar.lvh.me:3000" → "prasamagar" or "prasamagar.enromatics.com" → "prasamagar"
+    if (!subdomainHeader) {
+      const host = req.headers.host || '';
+      const hostParts = host.split(':')[0].split('.');
+      
+      // Check if this is a subdomain-based request (more than 1 part and not localhost)
+      if (hostParts.length > 2 || (hostParts.length === 2 && hostParts[0] !== 'localhost')) {
+        subdomainHeader = hostParts[0];
+      }
     }
-  }
 
-  // Try to resolve subdomain to tenantId
-  if (subdomainHeader) {
-    requestTenantId = await resolveTenantFromSubdomain(subdomainHeader);
-    
-    if (!requestTenantId) {
-      return res.status(404).json({ 
-        message: "Invalid subdomain or tenant not found",
-        subdomain: subdomainHeader 
-      });
+    // Try to resolve subdomain to tenantId
+    if (subdomainHeader) {
+      requestTenantId = await resolveTenantFromSubdomain(subdomainHeader);
+      
+      if (!requestTenantId) {
+        return res.status(404).json({ 
+          message: "Invalid subdomain or tenant not found",
+          subdomain: subdomainHeader 
+        });
+      }
     }
   }
   
-  // Priority 3: Legacy path-based routing (fallback for backward compatibility)
+  // Priority 4: Legacy path-based routing (fallback for backward compatibility)
   if (!requestTenantId) {
     requestTenantId = req.params.tenantId || req.body.tenantId || req.query.tenantId;
   }

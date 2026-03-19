@@ -55,6 +55,8 @@ import replysysWebhookRoutes from './routes/webhooks/replysys.js';
 import subscriptionNotificationRoutes from './routes/subscriptionNotificationRoutes.js';
 import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
 import questionsRoutes from './routes/questions.routes.js';
+import tenantRoleRoutes from './routes/tenantRoleRoutes.js';
+import userRoleRoutes from './routes/userRoleRoutes.js';
 import Tenant from './models/Tenant.js';
 
 console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
@@ -208,6 +210,8 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/subscription', subscriptionCheckoutRoutes);
 app.use('/api/subscription-plans', subscriptionPlansRoutes);
 app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
+app.use('/api/roles', tenantRoleRoutes);
+app.use('/api/user-roles', userRoleRoutes);
 
 // Other routes
 app.use('/api/form', formRoutes);

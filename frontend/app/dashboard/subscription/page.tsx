@@ -21,7 +21,8 @@ interface SubscriptionDetails {
     monthlyPrice: number;
     currency: string;
   };
-  status: string;
+  status: 'active' | 'expired' | 'cancelled' | 'pending';
+  startDate?: string;
   endDate: string;
   hasCustomApp: boolean;
   canAccessMobileApp: boolean;
@@ -37,22 +38,32 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     if (user?.tenantId) {
+      console.log('[SUBSCRIPTION PAGE] Fetching subscription for tenant:', user.tenantId);
       fetchSubscription();
     }
   }, [user]);
 
   const fetchSubscription = async () => {
     try {
+      console.log('[SUBSCRIPTION PAGE] Calling /api/subscriptions/', user?.tenantId);
       const response = await fetch(`/api/subscriptions/${user?.tenantId}`, {
         credentials: 'include'
       });
+      
+      console.log('[SUBSCRIPTION PAGE] Response status:', response.status);
+      
       const data = await response.json();
+      console.log('[SUBSCRIPTION PAGE] Response data:', data);
       
       if (data.success) {
+        console.log('[SUBSCRIPTION PAGE] Setting subscription:', data.subscription);
         setSubscription(data.subscription);
+      } else {
+        console.error('[SUBSCRIPTION PAGE] Error from API:', data.message);
+        toast.error(data.message || 'Failed to load subscription details');
       }
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('[SUBSCRIPTION PAGE] Fetch error:', error);
       toast.error('Failed to load subscription details');
     } finally {
       setLoading(false);
@@ -198,35 +209,72 @@ export default function SubscriptionPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Current Plan */}
-        <Card className={subscription?.planType === 'premium' ? 'border-green-500 bg-green-50' : ''}>
+        <Card className={subscription?.planType === 'premium' ? 'border-green-500 bg-green-50' : 'border-blue-500 bg-blue-50'}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 Current Plan
                 <Badge variant={subscription?.planType === 'premium' ? 'default' : 'secondary'}>
-                  {subscription?.planType?.toUpperCase()}
+                  {subscription?.planType?.toUpperCase() || 'BASIC'}
                 </Badge>
               </CardTitle>
               <div className="text-right">
-                <div className="text-2xl font-bold">
-                  ${subscription?.pricing.monthlyPrice}
+                <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                  subscription?.status === 'active' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {subscription?.status?.toUpperCase() || 'ACTIVE'}
                 </div>
-                <div className="text-sm text-gray-600">per month</div>
               </div>
             </div>
             <CardDescription>
               {subscription?.planType === 'premium' 
-                ? 'You have access to all premium features including mobile app!'
-                : 'Basic plan with web dashboard access'
+                ? '✅ Premium plan - Full access to all features'
+                : '✅ Basic plan - Web dashboard access'
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Subscription Status */}
+            <div className="bg-white rounded-lg p-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Subscription Period:</span>
+                <span className="font-semibold">
+                  {subscription?.startDate 
+                    ? new Date(subscription.startDate).toLocaleDateString() 
+                    : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Expires:</span>
+                <span className={`font-semibold ${
+                  subscription?.endDate && new Date(subscription.endDate) < new Date()
+                    ? 'text-red-600'
+                    : 'text-green-600'
+                }`}>
+                  {subscription?.endDate 
+                    ? new Date(subscription.endDate).toLocaleDateString() 
+                    : 'N/A'}
+                </span>
+              </div>
+              {subscription?.endDate && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-medium">Days Remaining:</span>
+                  <span className="font-semibold">
+                    {Math.max(0, Math.ceil((new Date(subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Features */}
             <div className="space-y-3">
+              <h4 className="font-semibold text-gray-900">Features:</h4>
               {planFeatures[subscription?.planType || 'basic'].map((feature, index) => (
                 <div key={index} className="flex items-center gap-3">
                   <feature.icon className={`w-5 h-5 ${feature.included ? 'text-green-500' : 'text-gray-400'}`} />
-                  <span className={feature.included ? '' : 'text-gray-400 line-through'}>
+                  <span className={feature.included ? 'text-gray-900' : 'text-gray-400 line-through'}>
                     {feature.text}
                   </span>
                   {feature.included && <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />}

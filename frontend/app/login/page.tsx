@@ -147,16 +147,14 @@ export default function LoginPage() {
       
       setErrors({ success: "✅ Welcome back! Redirecting..." });
 
-      // ✅ NEW: Route-based role separation
+      // ✅ NEW: Route-based role separation (3 system roles only)
       setTimeout(() => {
         if (response.user.role?.toLowerCase() === "superadmin") {
-          router.push("/dashboard/home");
-        } else if (response.user.role?.toLowerCase() === "admin" || response.user.role?.toLowerCase() === "tenantadmin") {
-          router.push("/dashboard/home"); // Admin goes to main dashboard
-        } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager', 'accountant', 'marketing'].includes(response.user.role?.toLowerCase())) {
-          router.push("/dashboard/home"); // Staff also goes to main dashboard (sidebar shows role-based items)
+          router.push("/dashboard/home"); // SuperAdmin portal
+        } else if (response.user.role?.toLowerCase() === "tenantadmin") {
+          router.push("/dashboard/home"); // TenantAdmin goes to main dashboard
         } else if (response.user.role?.toLowerCase() === "student") {
-          router.push("/dashboard/student"); // Only students get separate portal
+          router.push("/dashboard/student"); // Students get separate portal
         } else {
           // Fallback to root dashboard (will redirect based on role)
           router.push("/dashboard");

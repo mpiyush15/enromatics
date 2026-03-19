@@ -6,7 +6,6 @@ import Question from '../models/Question.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { tenantProtect } from '../middleware/tenantProtect.js';
 import { authorizeRoles } from '../middleware/roleMiddleware.js';
-import { RBAC } from '../config/rbacConfig.js';
 
 const router = express.Router();
 
@@ -99,12 +98,12 @@ router.get('/:chapterId', protect, tenantProtect, async (req, res) => {
   }
 });
 
-// POST: Create new chapter (TENANT ADMIN & TEACHER)
+// POST: Create new chapter (TENANT ADMIN)
 router.post(
   '/',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { subjectId, name, description, order } = req.body;
@@ -156,12 +155,12 @@ router.post(
   }
 );
 
-// PATCH: Update chapter (TENANT ADMIN & TEACHER)
+// PATCH: Update chapter (TENANT ADMIN)
 router.patch(
   '/:chapterId',
   protect,
   tenantProtect,
-  authorizeRoles(RBAC.TENANT_ADMIN, RBAC.TEACHER, RBAC.SUPER_ADMIN),
+  authorizeRoles('tenantadmin', 'superadmin'),
   async (req, res) => {
     try {
       const { chapterId } = req.params;

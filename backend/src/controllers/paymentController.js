@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import { PLANS } from '../config/plans.js';
 import axios from 'axios';
 import Tenant from '../models/Tenant.js';
+import TenantSubscription from '../models/TenantSubscription.js';
 import { sendEmail, sendCredentialsEmail, sendSubscriptionConfirmationEmail } from '../services/emailService.js';
 import { notifyNewSubscription } from '../services/superadminNotificationService.js';
 import { generateInvoicePdf } from '../services/pdfService.js';
@@ -829,34 +830,35 @@ export const getAllSubscriptionPayments = async (req, res) => {
     
     // Get ALL tenants for billing/invoices
     const tenants = await Tenant.find({}).sort({ createdAt: -1 });
+    
+    // Fetch all TenantSubscriptions
+    const subscriptions = await TenantSubscription.find({});
+    const subscriptionMap = subscriptions.reduce((acc, sub) => {
+      acc[sub.tenantId] = sub;
+      return acc;
+    }, {});
 
     console.log(`✅ Found ${tenants.length} tenants for invoices`);
 
-    if (tenants.length > 0) {
-      console.log('📊 Sample tenant data:', {
-        tenantId: tenants[0].tenantId,
-        name: tenants[0].name,
-        plan: tenants[0].plan,
-        subscription: tenants[0].subscription
-      });
-    }
-
-    const payments = tenants.map(tenant => ({
-      id: tenant.subscription?.paymentId || `tenant_${tenant.tenantId}`,
-      tenantId: tenant.tenantId,
-      tenantName: tenant.name,
-      instituteName: tenant.instituteName || tenant.name,
-      email: tenant.email,
-      plan: tenant.plan || 'free',
-      status: tenant.subscription?.status || (tenant.active ? 'active' : 'inactive'),
-      billingCycle: tenant.subscription?.billingCycle || 'monthly',
-      amount: tenant.subscription?.amount || 0,
-      currency: tenant.subscription?.currency || 'INR',
-      invoiceNumber: tenant.subscription?.invoiceNumber || null,
-      startDate: tenant.subscription?.startDate || tenant.createdAt,
-      endDate: tenant.subscription?.endDate || null,
-      createdAt: tenant.subscription?.startDate || tenant.createdAt
-    }));
+    const payments = tenants.map(tenant => {
+      const tenantSub = subscriptionMap[tenant.tenantId] || {};
+      return {
+        id: tenantSub.paymentHistory?.[0]?.paymentId || `tenant_${tenant.tenantId}`,
+        tenantId: tenant.tenantId,
+        tenantName: tenant.name,
+        instituteName: tenant.instituteName || tenant.name,
+        email: tenant.email,
+        plan: tenant.plan || 'free',
+        status: tenantSub.subscription?.status || (tenant.active ? 'active' : 'inactive'),
+        billingCycle: tenantSub.subscription?.billingCycle || 'monthly',
+        amount: tenantSub.pricing?.monthlyPrice || 0,
+        currency: tenantSub.pricing?.currency || 'INR',
+        invoiceNumber: tenantSub.paymentHistory?.[0]?.invoiceNumber || null,
+        startDate: tenantSub.subscription?.startDate || tenant.createdAt,
+        endDate: tenantSub.subscription?.endDate || null,
+        createdAt: tenantSub.subscription?.startDate || tenant.createdAt
+      };
+    });
 
     console.log(`✅ Returning ${payments.length} formatted payments`);
     res.status(200).json({ success: true, payments });
@@ -875,40 +877,40 @@ export const getAllSubscribers = async (req, res) => {
     
     // Get ALL tenants for billing module
     const subscribers = await Tenant.find({}).sort({ createdAt: -1 });
+    
+    // Fetch all TenantSubscriptions
+    const subscriptions = await TenantSubscription.find({});
+    const subscriptionMap = subscriptions.reduce((acc, sub) => {
+      acc[sub.tenantId] = sub;
+      return acc;
+    }, {});
 
     console.log(`✅ Found ${subscribers.length} tenants for billing`);
 
-    if (subscribers.length > 0) {
-      console.log('📊 Sample subscriber data:', {
-        tenantId: subscribers[0].tenantId,
-        name: subscribers[0].name,
-        plan: subscribers[0].plan,
-        email: subscribers[0].email,
-        createdAt: subscribers[0].createdAt
-      });
-    }
-
     // Transform to ensure consistent structure
-    const transformedSubscribers = subscribers.map(sub => ({
-      _id: sub._id,
-      tenantId: sub.tenantId,
-      name: sub.name,
-      instituteName: sub.instituteName || sub.name,
-      email: sub.email,
-      plan: sub.plan || 'free',
-      active: sub.active,
-      contact: sub.contact || {},
-      subscription: {
-        status: sub.subscription?.status || (sub.active ? 'active' : 'inactive'),
-        paymentId: sub.subscription?.paymentId || null,
-        startDate: sub.subscription?.startDate || sub.createdAt,
-        endDate: sub.subscription?.endDate || null,
-        billingCycle: sub.subscription?.billingCycle || 'monthly',
-        amount: sub.subscription?.amount || 0,
-        currency: sub.subscription?.currency || 'INR'
-      },
-      createdAt: sub.createdAt
-    }));
+    const transformedSubscribers = subscribers.map(sub => {
+      const tenantSub = subscriptionMap[sub.tenantId] || {};
+      return {
+        _id: sub._id,
+        tenantId: sub.tenantId,
+        name: sub.name,
+        instituteName: sub.instituteName || sub.name,
+        email: sub.email,
+        plan: sub.plan || 'free',
+        active: sub.active,
+        contact: sub.contact || {},
+        subscription: {
+          status: tenantSub.subscription?.status || (sub.active ? 'active' : 'inactive'),
+          paymentId: tenantSub.paymentHistory?.[0]?.paymentId || null,
+          startDate: tenantSub.subscription?.startDate || sub.createdAt,
+          endDate: tenantSub.subscription?.endDate || null,
+          billingCycle: tenantSub.subscription?.billingCycle || 'monthly',
+          amount: tenantSub.pricing?.monthlyPrice || 0,
+          currency: tenantSub.pricing?.currency || 'INR'
+        },
+        createdAt: sub.createdAt
+      };
+    });
 
     console.log(`✅ Returning ${transformedSubscribers.length} formatted subscribers`);
     res.status(200).json({ success: true, subscribers: transformedSubscribers });

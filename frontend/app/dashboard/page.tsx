@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 /**
- * Dashboard Root - Redirects to role-specific dashboard
+ * Dashboard Root - Redirects to role-specific dashboard (3 system roles)
  * 
  * Routes:
- * - SuperAdmin → /dashboard/tenants (or stays for now)
- * - Admin/TenantAdmin → /dashboard/admin
- * - Staff roles → /dashboard/staff
+ * - SuperAdmin → /dashboard/home
+ * - TenantAdmin → /dashboard/home
  * - Student → /dashboard/student
  */
 export default function DashboardRoot() {
@@ -22,18 +21,14 @@ export default function DashboardRoot() {
       console.log('🔄 Redirecting user based on role:', user.role);
       
       if (user.role?.toLowerCase() === 'superadmin') {
-        // SuperAdmin can stay at /dashboard or go to /dashboard/tenants
         console.log('✅ SuperAdmin - redirecting to /dashboard/home');
         router.push('/dashboard/home');
-      } else if (user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'tenantadmin') {
-        console.log('✅ Admin - redirecting to /dashboard/home');
-        router.push('/dashboard/home'); // Admin uses main dashboard with sidebar
-      } else if (['staff', 'employee', 'teacher', 'manager', 'counsellor', 'adsmanager', 'accountant', 'marketing'].includes(user.role?.toLowerCase())) {
-        console.log('✅ Staff - redirecting to /dashboard/home');
-        router.push('/dashboard/home'); // Staff uses same dashboard with sidebar (role-based menu)
+      } else if (user.role?.toLowerCase() === 'tenantadmin') {
+        console.log('✅ TenantAdmin - redirecting to /dashboard/home');
+        router.push('/dashboard/home');
       } else if (user.role?.toLowerCase() === 'student') {
         console.log('✅ Student - redirecting to /dashboard/student');
-        router.push('/dashboard/student'); // Only students get separate portal
+        router.push('/dashboard/student');
       } else {
         console.log('❌ Unknown role:', user.role);
       }
