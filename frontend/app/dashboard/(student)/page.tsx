@@ -1,10 +1,19 @@
 'use client';
 
-import StudentDashboard from '@/components/StudentDashboard';
+import { useRouter } from 'next/navigation';
 import useAuth from '@/hooks/useAuth';
+import { useEffect } from 'react';
 
 export default function StudentPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user?.role?.toLowerCase() === 'student') {
+      // Redirect to student home or dashboard
+      router.push('/app/student/dashboard');
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -14,5 +23,9 @@ export default function StudentPage() {
     );
   }
 
-  return <StudentDashboard />;
+  return (
+    <div className="flex justify-center items-center h-screen">
+      <p className="text-gray-500">Redirecting to student dashboard...</p>
+    </div>
+  );
 }
