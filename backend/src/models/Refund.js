@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const refundSchema = new mongoose.Schema({
   tenantId: {
@@ -35,13 +36,13 @@ const refundSchema = new mongoose.Schema({
 
   refundMethod: {
     type: String,
-    enum: ["cash", "bank", "upi", "cheque", "online"],
+    enum: ENUMS.REFUND_METHOD,
     default: "cash"
   },
 
   status: {
     type: String,
-    enum: ["approved", "pending", "rejected", "completed"],
+    enum: ENUMS.REFUND_STATUS,
     default: "pending"
   },
 

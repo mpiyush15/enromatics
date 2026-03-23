@@ -252,23 +252,43 @@ export const loginUser = async (req, res) => {
     const tenantSubdomain = req.headers['x-tenant-subdomain'];
     console.log('🌐 Subdomain header:', tenantSubdomain || 'NONE (main domain)');
     
-    // Try to find user in User collection first (admin, staff, teachers)
-    let user = await User.findOne({ email });
+    // ✅ PRIORITY: Check Student collection FIRST (when on tenant subdomain)
+    // This allows students to login even if same email exists as admin user
     let isStudent = false;
-    let authObject = user;
+    let authObject = null;
     
-    // If not found in User collection, try Student collection
-    if (!user) {
-      console.log('   ℹ️ Not found in User collection, checking Student collection...');
+    if (tenantSubdomain) {
+      console.log('   ℹ️ Tenant subdomain detected, checking Student collection first...');
+      const resolvedTenantId = tenantSubdomain ? await resolveTenantFromSubdomain(tenantSubdomain) : undefined;
+      console.log('   [DEBUG] Resolved tenantId from subdomain:', resolvedTenantId);
+      
       const student = await Student.findOne({ 
         email: { $regex: `^${email}$`, $options: "i" },
-        tenantId: tenantSubdomain ? await resolveTenantFromSubdomain(tenantSubdomain) : undefined
+        tenantId: resolvedTenantId
       }).select('+password');
       
       if (student) {
         isStudent = true;
         authObject = student;
         console.log('   ✅ Student found in Student collection');
+        console.log('   [DEBUG] Student email:', student.email, 'tenantId:', student.tenantId);
+      } else {
+        console.log('   ❌ Student NOT found with email:', email, 'and tenantId:', resolvedTenantId);
+        // Try to find any student with this email to debug
+        const allStudentsWithEmail = await Student.find({ 
+          email: { $regex: `^${email}$`, $options: "i" }
+        }).select('email tenantId _id');
+        console.log('   [DEBUG] Students found with this email:', allStudentsWithEmail.map(s => ({ email: s.email, tenantId: s.tenantId })));
+      }
+    }
+    
+    // If not found as student, try User collection (admin, staff, teachers)
+    if (!authObject) {
+      console.log('   ℹ️ Not found as student, checking User collection...');
+      const user = await User.findOne({ email });
+      if (user) {
+        authObject = user;
+        console.log('   ✅ User found in User collection');
       }
     }
     
@@ -391,6 +411,12 @@ export const loginUser = async (req, res) => {
       path: "/",
     });
 
+    // Fetch tenant info if user has tenantId
+    let tenant = null;
+    if (authObject.tenantId) {
+      tenant = await Tenant.findOne({ tenantId: authObject.tenantId }).select("name instituteName tenantId");
+    }
+
     console.log('✅ Login successful for:', email, `(${userRole})`);
     console.log('='.repeat(80) + '\n');
 
@@ -404,6 +430,11 @@ export const loginUser = async (req, res) => {
         role: userRole,
         tenantId: authObject.tenantId,
         isStudent: isStudent,
+        tenant: tenant ? {
+          name: tenant.name,
+          instituteName: tenant.instituteName,
+          tenantId: tenant.tenantId
+        } : null
       },
       isStudent: isStudent,
     });

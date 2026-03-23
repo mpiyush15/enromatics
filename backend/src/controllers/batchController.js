@@ -6,17 +6,26 @@ import BatchStudent from "../models/BatchStudent.js";
  */
 export const getBatches = async (req, res) => {
   try {
-    const tenantId = req.user?.tenantId;
+    // Get tenantId from user context first, then fallback to query param
+    let tenantId = req.user?.tenantId;
+    
+    // If no tenantId from user, check query params (for BFF requests)
+    if (!tenantId && req.query?.tenantId) {
+      tenantId = req.query.tenantId;
+      console.log("✅ Using tenantId from query params:", tenantId);
+    }
     
     if (!tenantId) {
-      console.error("❌ TenantId missing - User object:", {
-        userId: req.user?._id,
-        email: req.user?.email,
-        role: req.user?.role,
-        tenantId: req.user?.tenantId,
-        userKeys: req.user ? Object.keys(req.user) : 'no user'
+      return res.status(400).json({
+        success: false,
+        message: "Tenant ID is required",
+        debug: {
+          userId: req.user?._id,
+          email: req.user?.email,
+          role: req.user?.role,
+          tenantId: req.user?.tenantId,
+        }
       });
-      // Still try to return batches, it might work
     }
 
     console.log(`🔍 Fetching batches for tenantId: ${tenantId}`);

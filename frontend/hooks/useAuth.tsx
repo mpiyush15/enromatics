@@ -26,13 +26,13 @@ export default function useAuth() {
           setUser(currentUser);
           setLoading(false);
         } else {
-          console.log("❌ useAuth: No user found");
+          console.log("❌ useAuth: No user found (null returned)");
           setUser(null);
           setLoading(false);
           
           // Only redirect to login if NOT already on a login page
           if (!isLoginPage) {
-            console.log("Redirecting to login...");
+            console.log("🔄 useAuth: Redirecting to login");
             router.push("/login");
           }
         }
@@ -55,7 +55,7 @@ export default function useAuth() {
     return () => {
       isCancelled = true;
     };
-  }, [pathname, router]); // Include pathname in dependency array
+  }, [pathname, router]);
 
   return { user, loading };
 }

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { ROLE_GROUPS } from "../config/rbacConfig.js";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 // User schema definition
 const userSchema = new mongoose.Schema(
@@ -31,14 +32,14 @@ const userSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "suspended"],
+      enum: ENUMS.ACTIVE_INACTIVE_SUSPENDED,
       default: "active",
     },
 
     // Subscription/Trial fields
     plan: {
       type: String,
-      enum: ["trial", "free", "starter", "professional", "enterprise"],
+      enum: ENUMS.SUBSCRIPTION_PLANS,
       default: "trial",
     },
 
@@ -54,7 +55,7 @@ const userSchema = new mongoose.Schema(
 
     subscriptionStatus: {
       type: String,
-      enum: ["trial", "active", "expired", "cancelled"],
+      enum: ENUMS.SUBSCRIPTION_STATUS,
       default: "trial",
     },
 

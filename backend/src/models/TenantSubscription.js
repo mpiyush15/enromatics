@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const tenantSubscriptionSchema = new mongoose.Schema({
   tenantId: {
@@ -86,7 +87,7 @@ const tenantSubscriptionSchema = new mongoose.Schema({
     },
     lastBuildStatus: {
       type: String,
-      enum: ['pending', 'building', 'completed', 'failed'],
+      enum: ENUMS.TENANT_SUBSCRIPTION_STATUS,
       default: 'pending'
     }
   },

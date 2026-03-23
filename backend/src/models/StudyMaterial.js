@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const studyMaterialSchema = new mongoose.Schema(
   {
@@ -14,7 +15,7 @@ const studyMaterialSchema = new mongoose.Schema(
     description: String,
     contentType: {
       type: String,
-      enum: ['video', 'pdf', 'document', 'notes', 'presentation'],
+      enum: ENUMS.STUDY_MATERIAL_TYPE,
       required: true,
       index: true,
     },
@@ -22,7 +23,7 @@ const studyMaterialSchema = new mongoose.Schema(
       type: String,
       required: true,
       index: true,
-      enum: ['mathematics', 'science', 'english', 'hindi', 'social-studies', 'general'],
+      enum: ENUMS.STUDY_MATERIAL_SUBJECT,
     },
     chapter: String,
     // File/Content details
@@ -35,7 +36,7 @@ const studyMaterialSchema = new mongoose.Schema(
     thumbnailUrl: String,
     videoQuality: {
       type: String,
-      enum: ['360p', '480p', '720p', '1080p'],
+      enum: ENUMS.VIDEO_QUALITY,
       default: '720p',
     },
     // Sharing configuration
@@ -51,7 +52,7 @@ const studyMaterialSchema = new mongoose.Schema(
     ],
     visibility: {
       type: String,
-      enum: ['private', 'class-only', 'batch-wise', 'public'],
+      enum: ENUMS.MATERIAL_VISIBILITY,
       default: 'batch-wise',
     },
     // Access control

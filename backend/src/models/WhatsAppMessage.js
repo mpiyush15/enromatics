@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const whatsappMessageSchema = new mongoose.Schema(
   {
@@ -23,13 +24,13 @@ const whatsappMessageSchema = new mongoose.Schema(
     messageText: String,
     messageType: {
       type: String,
-      enum: ['text', 'image', 'document', 'audio', 'video', 'location', 'contact'],
+      enum: ENUMS.WHATSAPP_MESSAGE_TYPE,
       default: 'text',
     },
     // Direction: 'inbound' (from customer) or 'outbound' (from business)
     direction: {
       type: String,
-      enum: ['inbound', 'outbound'],
+      enum: ENUMS.WHATSAPP_MESSAGE_DIRECTION,
       required: true,
       index: true,
     },
@@ -42,7 +43,7 @@ const whatsappMessageSchema = new mongoose.Schema(
     // Message status
     status: {
       type: String,
-      enum: ['sent', 'delivered', 'read', 'failed'],
+      enum: ENUMS.WHATSAPP_MESSAGE_STATUS,
       default: 'sent',
       index: true,
     },

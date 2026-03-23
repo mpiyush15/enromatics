@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const CourseSchema = new mongoose.Schema(
   {
@@ -26,7 +27,7 @@ const CourseSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
+      enum: ENUMS.COURSE_STATUS,
       default: "active",
     },
   },

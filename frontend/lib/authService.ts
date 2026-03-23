@@ -137,18 +137,23 @@ export const authService = {
   // Logout user - through BFF
   async logout() {
     try {
+      // Clear all cache FIRST before calling API
+      cache.clearPattern('auth:');
+      cache.clearPattern('dashboard:');
+      cache.clear();
+
       const res = await fetch(`${BFF_BASE}/logout`, {
         method: "POST",
         credentials: "include", // ✅ Send cookies (BFF handles forwarding)
       });
 
-      // Clear all auth-related cache
-      cache.clearPattern('auth:');
-      cache.clearPattern('dashboard:');
-      
       return res.ok;
     } catch (error) {
       console.error("❌ Logout error:", error);
+      // Still clear cache even if API call fails
+      cache.clearPattern('auth:');
+      cache.clearPattern('dashboard:');
+      cache.clear();
       return false;
     }
   },

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 /**
  * WhatsApp Template Schema
@@ -37,7 +38,7 @@ const whatsappTemplateSchema = new mongoose.Schema(
     // Template category (MARKETING, UTILITY, AUTHENTICATION, etc.)
     category: {
       type: String,
-      enum: ["MARKETING", "UTILITY", "AUTHENTICATION"],
+      enum: ENUMS.WHATSAPP_TEMPLATE_CATEGORY,
       default: "MARKETING",
     },
 
@@ -50,7 +51,7 @@ const whatsappTemplateSchema = new mongoose.Schema(
     // Approval status from WhatsApp Platform
     status: {
       type: String,
-      enum: ["approved", "pending", "rejected"],
+      enum: ENUMS.WHATSAPP_TEMPLATE_STATUS,
       default: "pending",
     },
 

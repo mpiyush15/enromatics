@@ -1,5 +1,6 @@
 // models/Tenant.js
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const subscriptionSchema = new mongoose.Schema({
   status: { type: String, enum: ["active", "inactive"], default: "inactive" },
@@ -12,9 +13,19 @@ const tenantSchema = new mongoose.Schema(
   {
     tenantId: { type: String, required: true, unique: true },
     name: { type: String, required: true },
+    instituteName: { type: String },
     email: { type: String, required: true },
-    plan: { type: String, enum: ["free", "pro", "enterprise"], default: "free" },
+    website: { type: String },
+    description: { type: String },
+    plan: { type: String, enum: ENUMS.SUBSCRIPTION_PLANS, default: "free" },
     active: { type: Boolean, default: true },
+    contact: {
+      phone: { type: String },
+      address: { type: String },
+      city: { type: String },
+      state: { type: String },
+      country: { type: String, default: "India" },
+    },
     subscription: subscriptionSchema,
   },
   { timestamps: true }

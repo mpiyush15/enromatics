@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const notificationTemplateSchema = new mongoose.Schema(
   {
@@ -67,13 +68,13 @@ const notificationTemplateSchema = new mongoose.Schema(
     // When to trigger (auto/manual)
     triggerType: {
       type: String,
-      enum: ['automatic', 'manual', 'both'],
+      enum: ENUMS.NOTIFICATION_TRIGGER_TYPE,
       default: 'both',
     },
     // Priority
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high'],
+      enum: ENUMS.NOTIFICATION_PRIORITY,
       default: 'medium',
     },
     // Is active

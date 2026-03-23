@@ -1,5 +1,6 @@
 // models/Lead.js
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const leadSchema = new mongoose.Schema(
   {
@@ -37,7 +38,7 @@ const leadSchema = new mongoose.Schema(
     // Pipeline Status
     status: {
       type: String,
-      enum: ["new", "contacted", "interested", "follow-up", "negotiation", "converted", "lost"],
+      enum: ENUMS.LEAD_STATUS,
       default: "new",
       index: true,
     },
@@ -60,7 +61,7 @@ const leadSchema = new mongoose.Schema(
     totalCalls: { type: Number, default: 0 },
     lastCallOutcome: {
       type: String,
-      enum: ["interested", "callback", "not-interested", "no-answer", "busy", "wrong-number", null],
+      enum: [...ENUMS.CALL_OUTCOME, null],
     },
 
     // Follow-up
@@ -71,7 +72,7 @@ const leadSchema = new mongoose.Schema(
     // Priority
     priority: {
       type: String,
-      enum: ["low", "medium", "high", "urgent"],
+      enum: ENUMS.LEAD_PRIORITY,
       default: "medium",
     },
 
@@ -106,7 +107,7 @@ const leadSchema = new mongoose.Schema(
     },
     scoreTier: {
       type: String,
-      enum: ["cold", "warm", "hot"],
+      enum: ENUMS.LEAD_TEMPERATURE,
       default: "cold",
     },
     scoreUpdatedAt: { type: Date },

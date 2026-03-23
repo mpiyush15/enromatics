@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { RBAC } from "../config/rbacConfig.js";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const studentSchema = new mongoose.Schema({
   tenantId: {
@@ -31,7 +32,7 @@ const studentSchema = new mongoose.Schema({
   }, // Consent for WhatsApp messages
   gender: {
     type: String,
-    enum: ["male", "female", "other", "Male", "Female", "Other"],
+    enum: ENUMS.GENDERS,
   },
   course: {
     type: String,
@@ -83,7 +84,7 @@ const studentSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["active", "inactive"],
+    enum: ENUMS.STUDENT_STATUS,
     default: "active",
   },
   password: {

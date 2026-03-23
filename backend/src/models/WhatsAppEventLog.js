@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 /**
  * WhatsApp Event Log Schema
@@ -30,7 +31,7 @@ const whatsappEventLogSchema = new mongoose.Schema(
 
     eventType: {
       type: String,
-      enum: ["absence", "payment", "result", "enrollment"],
+      enum: ENUMS.WHATSAPP_EVENT_TYPE,
       required: true,
     },
 
@@ -41,7 +42,7 @@ const whatsappEventLogSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["sent", "failed", "pending"],
+      enum: ENUMS.WHATSAPP_EVENT_STATUS,
       default: "pending",
     },
 

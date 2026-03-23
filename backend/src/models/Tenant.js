@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 /**
  * Tenant Schema
@@ -45,7 +46,7 @@ const tenantSchema = new mongoose.Schema(
     // NOTE: Subscription data moved to TenantSubscription model for single source of truth
     plan: {
       type: String,
-      enum: ["free", "basic", "pro", "enterprise"],
+      enum: ENUMS.SUBSCRIPTION_PLANS,
       default: "free",
     },
 

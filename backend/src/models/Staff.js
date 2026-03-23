@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const staffSchema = new mongoose.Schema(
   {
@@ -36,7 +37,7 @@ const staffSchema = new mongoose.Schema(
 
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
+      enum: ENUMS.GENDERS,
     },
 
     address: {
@@ -56,7 +57,7 @@ const staffSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["superadmin", "tenantadmin", "student"],
+      enum: ENUMS.STAFF_ROLES,
       required: true,
     },
 
@@ -87,13 +88,13 @@ const staffSchema = new mongoose.Schema(
 
     employmentType: {
       type: String,
-      enum: ["fullTime", "partTime", "contract", "temporary"],
+      enum: ENUMS.EMPLOYMENT_TYPE,
       default: "fullTime",
     },
 
     status: {
       type: String,
-      enum: ["active", "inactive", "onLeave", "terminated"],
+      enum: ENUMS.EMPLOYEE_STATUS,
       default: "active",
     },
 
@@ -113,7 +114,7 @@ const staffSchema = new mongoose.Schema(
       },
       paymentMode: {
         type: String,
-        enum: ["monthly", "weekly", "daily", "hourly"],
+        enum: ENUMS.SALARY_FREQUENCY,
         default: "monthly",
       },
     },

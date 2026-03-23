@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Counter from "./Counter.js";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const paymentSchema = new mongoose.Schema({
 
@@ -21,7 +22,7 @@ const paymentSchema = new mongoose.Schema({
 
   method: { 
     type: String, 
-    enum: ["cash", "upi", "bank", "card", "cheque", "online"], 
+    enum: ENUMS.PAYMENT_METHODS, 
     default: "cash" 
   },
 
@@ -32,7 +33,7 @@ const paymentSchema = new mongoose.Schema({
 
   status: { 
     type: String, 
-    enum: ["success", "failed", "pending"], 
+    enum: ENUMS.PAYMENT_STATUS, 
     default: "success" 
   },
 
@@ -68,7 +69,7 @@ const paymentSchema = new mongoose.Schema({
 
   receiptDeliveryMethod: {
     type: String,
-    enum: ["hand", "email", "whatsapp", "none"],
+    enum: ENUMS.PAYMENT_RECEIPT_MODE,
     default: "none"
   },
 
@@ -88,7 +89,7 @@ const paymentSchema = new mongoose.Schema({
   // For partial payments
   feeType: {
     type: String,
-    enum: ["admission", "tuition", "exam", "library", "transport", "other"],
+    enum: ENUMS.PAYMENT_PURPOSE,
     default: "tuition"
   },
 

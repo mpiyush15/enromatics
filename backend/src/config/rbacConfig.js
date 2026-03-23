@@ -10,9 +10,21 @@ export const RBAC = {
   TENANT_ADMIN: "tenantadmin",
   STUDENT: "student",
   
-  // ============ TENANT CUSTOM ROLES (Deprecated - now created dynamically) ============
-  // These are kept for backward compatibility but should be created via TenantRole model
-  // Each tenant can now define their own roles: teacher, counsellor, staff, accountant, etc.
+  // ============ TENANT CUSTOM ROLES (System-wide standard values) ============
+  // These can be created per-tenant via TenantRole model
+  // Standard role names used across institutions
+  TEACHER: "teacher",
+  STAFF: "staff",
+  ACCOUNTANT: "accountant",
+  MANAGER: "manager",
+  COUNSELLOR: "counsellor",
+  ADMIN: "admin",
+  MARKETING: "marketing",
+  ADS_MANAGER: "ads_manager",
+  ADMISSION_INCHARGE: "admission_incharge",
+  RECEPTIONIST: "receptionist",
+  LIBRARIAN: "librarian",
+  LAB_ASSISTANT: "lab_assistant",
 };
 
 // ============ ROLE GROUPS ============

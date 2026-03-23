@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const scholarshipRewardSchema = new mongoose.Schema(
   {
@@ -34,7 +35,7 @@ const scholarshipRewardSchema = new mongoose.Schema(
     rank: Number,
     rewardType: {
       type: String,
-      enum: ['Merit Scholarship', 'Excellence Award', 'Participation Certificate', 'Other'],
+      enum: ENUMS.SCHOLARSHIP_REWARD_TYPE,
       required: true,
     },
     rewardAmount: {
@@ -44,7 +45,7 @@ const scholarshipRewardSchema = new mongoose.Schema(
     rewardDescription: String,
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'disbursed'],
+      enum: ENUMS.SCHOLARSHIP_APPROVAL_STATUS,
       default: 'pending',
       index: true,
     },
@@ -54,7 +55,7 @@ const scholarshipRewardSchema = new mongoose.Schema(
     disbursedAt: Date,
     disbursedVia: {
       type: String,
-      enum: ['bank_transfer', 'check', 'cash', 'other'],
+      enum: ENUMS.SCHOLARSHIP_DISBURSAL_METHOD,
     },
     notes: String,
   },

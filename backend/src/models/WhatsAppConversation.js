@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const whatsappConversationSchema = new mongoose.Schema(
   {
@@ -34,7 +35,7 @@ const whatsappConversationSchema = new mongoose.Schema(
     // Conversation state
     status: {
       type: String,
-      enum: ['active', 'closed', 'archived'],
+      enum: ENUMS.WHATSAPP_CONVERSATION_STATUS,
       default: 'active',
     },
     // Message count

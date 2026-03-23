@@ -447,7 +447,7 @@ export const getSuperAdminTenantDetail = async (req, res) => {
 export const updateTenantProfile = async (req, res) => {
   try {
     const { tenantId } = req.params;
-    const { name, instituteName, email, contact, active } = req.body;
+    const { name, instituteName, email, contact, active, website, description } = req.body;
 
     const tenant = await Tenant.findOne({ tenantId });
     if (!tenant) return res.status(404).json({ message: "Tenant not found" });
@@ -456,6 +456,8 @@ export const updateTenantProfile = async (req, res) => {
     if (name) tenant.name = name;
     if (instituteName) tenant.instituteName = instituteName;
     if (email) tenant.email = email;
+    if (website !== undefined) tenant.website = website;
+    if (description !== undefined) tenant.description = description;
     if (contact) {
       tenant.contact = {
         phone: contact.phone || tenant.contact?.phone,
@@ -472,22 +474,24 @@ export const updateTenantProfile = async (req, res) => {
 
     await tenant.save();
 
-    // Send profile update email to tenant
-    sendEmail({
-      to: tenant.email,
-      subject: 'Your Institute Profile Was Updated',
-      html: `<p>Hi ${tenant.name},<br>Your institute profile was updated. If you did not request this change, please contact support.</p>`,
-      tenantId: tenant.tenantId,
-      type: 'general'
-    }).catch(err => console.error('❌ Failed to send profile update email:', err.message));
-
-    // Notify superadmin
-    if (process.env.SUPER_ADMIN_EMAIL) {
+    // Send profile update email to tenant (if email service is configured)
+    if (process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN) {
       sendEmail({
-        to: process.env.SUPER_ADMIN_EMAIL,
-        subject: `Tenant Profile Updated: ${tenant.instituteName || tenant.name}`,
-        html: `<p>Tenant <strong>${tenant.instituteName || tenant.name}</strong> updated their profile.</p>`
-      }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+        to: tenant.email,
+        subject: 'Your Institute Profile Was Updated',
+        html: `<p>Hi ${tenant.name},<br>Your institute profile was updated. If you did not request this change, please contact support.</p>`,
+        tenantId: tenant.tenantId,
+        type: 'general'
+      }).catch(err => console.error('❌ Failed to send profile update email:', err.message));
+
+      // Notify superadmin
+      if (process.env.SUPER_ADMIN_EMAIL) {
+        sendEmail({
+          to: process.env.SUPER_ADMIN_EMAIL,
+          subject: `Tenant Profile Updated: ${tenant.instituteName || tenant.name}`,
+          html: `<p>Tenant <strong>${tenant.instituteName || tenant.name}</strong> updated their profile.</p>`
+        }).catch(err => console.error('❌ Failed to notify superadmin:', err.message));
+      }
     }
 
     console.log("✅ Tenant profile updated:", tenant.instituteName || tenant.name);
@@ -501,6 +505,8 @@ export const updateTenantProfile = async (req, res) => {
         name: tenant.name,
         instituteName: tenant.instituteName,
         email: tenant.email,
+        website: tenant.website,
+        description: tenant.description,
         plan: tenant.plan,
         subscription: tenantSub?.subscription || {},
         active: tenant.active,

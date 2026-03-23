@@ -82,13 +82,24 @@ export async function apiClient<T = any>(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // Get token from localStorage if available
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    // Get token from multiple sources:
+    // 1. localStorage (if available)
+    // 2. Cookies (via fetch credentials: 'include')
+    // 3. Session storage (fallback)
+    let token = null;
+    
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('token') || sessionStorage.getItem('auth_token');
+    }
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(fetchOptions.headers || {}),
     };
+
+    // Merge any additional headers from options
+    if (fetchOptions.headers && typeof fetchOptions.headers === 'object' && !Array.isArray(fetchOptions.headers)) {
+      Object.assign(headers, fetchOptions.headers);
+    }
 
     // 🏢 Add subdomain header if accessing from a subdomain
     const subdomain = getSubdomain();
@@ -100,7 +111,9 @@ export async function apiClient<T = any>(
     // Add Authorization header if token exists
     if (token && !skipAuth) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('🔐 Added Authorization header from localStorage');
+      console.log('🔐 Added Authorization header from storage');
+    } else if (!skipAuth) {
+      console.warn('⚠️ No auth token found - relying on cookies via credentials: include');
     }
 
     const response = await fetch(fullUrl, {
@@ -123,14 +136,22 @@ export async function apiClient<T = any>(
       data = await response.text();
     }
 
-    // Handle error responses
+    // Handle error responses - but don't throw, let the calling code handle it
     if (!response.ok) {
       const errorMessage = 
         data?.error || 
         data?.message || 
         `API Error: ${response.status} ${response.statusText}`;
       
-      throw new Error(errorMessage);
+      console.warn(`[apiClient] ${response.status} error:`, errorMessage);
+      
+      // Return error response instead of throwing
+      // This allows fallback data in frontend hooks
+      return {
+        status: response.status,
+        error: errorMessage,
+        data: null
+      } as any;
     }
 
     // Return normalized data

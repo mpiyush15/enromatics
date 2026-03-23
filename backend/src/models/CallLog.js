@@ -1,5 +1,6 @@
 // models/CallLog.js
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const callLogSchema = new mongoose.Schema(
   {
@@ -36,14 +37,14 @@ const callLogSchema = new mongoose.Schema(
     },
     callType: {
       type: String,
-      enum: ["outbound", "inbound", "missed"],
+      enum: ENUMS.CALL_TYPE,
       default: "outbound",
     },
 
     // Outcome
     outcome: {
       type: String,
-      enum: ["interested", "callback", "not-interested", "no-answer", "busy", "wrong-number", "converted"],
+      enum: ENUMS.CALL_OUTCOME,
       required: true,
     },
 

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const studentTestAnswerSchema = new mongoose.Schema(
   {
@@ -38,7 +39,7 @@ const studentTestAnswerSchema = new mongoose.Schema(
     // For subjective/manual evaluation
     evaluationStatus: {
       type: String,
-      enum: ['auto-evaluated', 'pending-review', 'manually-evaluated'],
+      enum: ENUMS.STUDENT_TEST_ANSWER_STATUS,
       default: 'auto-evaluated',
     },
     evaluatedBy: mongoose.Schema.Types.ObjectId, // Teacher/Evaluator ID

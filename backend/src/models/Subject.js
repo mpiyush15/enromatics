@@ -17,7 +17,7 @@ const subjectSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
+      enum: ENUMS.SUBJECT_STATUS,
       default: "active",
     },
   },

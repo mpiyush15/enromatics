@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const scholarshipResultSchema = new mongoose.Schema(
   {
@@ -43,7 +44,7 @@ const scholarshipResultSchema = new mongoose.Schema(
     rank: Number,
     result: {
       type: String,
-      enum: ['pass', 'fail'],
+      enum: ENUMS.SCHOLARSHIP_RESULT_TYPE,
       required: true,
     },
     // Reward eligibility based on percentage or rank

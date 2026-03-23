@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const questionSchema = new mongoose.Schema(
   {
@@ -23,7 +24,7 @@ const questionSchema = new mongoose.Schema(
     },
     questionType: {
       type: String,
-      enum: ['mcq', 'short-answer', 'essay'],
+      enum: ENUMS.QUESTION_TYPE,
       default: 'mcq',
     },
     options: [
@@ -40,7 +41,7 @@ const questionSchema = new mongoose.Schema(
     },
     difficulty: {
       type: String,
-      enum: ['easy', 'medium', 'hard'],
+      enum: ENUMS.QUESTION_DIFFICULTY,
       default: 'medium',
     },
     marks: {
@@ -50,7 +51,7 @@ const questionSchema = new mongoose.Schema(
     imageUrl: String, // For image-based questions
     source: {
       type: String,
-      enum: ['manual', 'ai-generated'],
+      enum: ENUMS.QUESTION_SOURCE,
       default: 'manual',
     },
     generatedBy: {
@@ -60,7 +61,7 @@ const questionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'published'],
+      enum: ENUMS.QUESTION_STATUS,
       default: 'published',
     },
   },

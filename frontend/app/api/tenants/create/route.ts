@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     // Get cookies for authentication
     const cookieStore = await cookies();
-    const authCookie = cookieStore.get("token")?.value;
+    const authCookie = cookieStore.get("jwt")?.value;
 
     if (!authCookie) {
       return NextResponse.json(
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Cookie: `token=${authCookie}`,
+        Cookie: `jwt=${authCookie}`,
       },
       body: JSON.stringify(body),
     });

@@ -1,9 +1,8 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
-const automationWorkflowSchema = new mongoose.Schema(
-  {
-    // Tenant - Use String to match Tenant.tenantId (e.g., "global", "inst_123")
-    tenantId: {
+const automationWorkflowSchema = new mongoose.Schema({
+  tenantId: {
       type: String,
       required: true,
       index: true,
@@ -21,7 +20,7 @@ const automationWorkflowSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["admission", "demo", "inquiry", "lead", "custom"],
+      enum: ENUMS.AUTOMATION_WORKFLOW_TYPE,
       default: "custom",
     },
 
@@ -44,7 +43,7 @@ const automationWorkflowSchema = new mongoose.Schema(
         description: String,
         type: {
           type: String,
-          enum: ["text", "choice", "multiselect"],
+          enum: ENUMS.WORKFLOW_FIELD_TYPE,
           default: "text",
         },
         options: [String], // For choice/multiselect
@@ -112,7 +111,7 @@ const automationWorkflowSchema = new mongoose.Schema(
     // Status
     status: {
       type: String,
-      enum: ["active", "inactive", "draft"],
+      enum: ENUMS.AUTOMATION_WORKFLOW_STATUS,
       default: "draft",
       index: true,
     },

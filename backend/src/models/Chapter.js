@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const chapterSchema = new mongoose.Schema(
   {
@@ -27,7 +28,7 @@ const chapterSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'inactive'],
+      enum: ENUMS.CHAPTER_STATUS,
       default: 'active',
     },
     createdBy: {

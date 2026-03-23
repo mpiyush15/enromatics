@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const counterSchema = new mongoose.Schema({
   tenantId: {
@@ -9,7 +10,7 @@ const counterSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['receipt', 'refund', 'invoice']
+    enum: ENUMS.COUNTER_TYPE
   },
   prefix: {
     type: String,

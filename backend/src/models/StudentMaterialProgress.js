@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const studentMaterialProgressSchema = new mongoose.Schema(
   {
@@ -22,7 +23,7 @@ const studentMaterialProgressSchema = new mongoose.Schema(
     // Progress tracking
     status: {
       type: String,
-      enum: ['not-started', 'in-progress', 'completed'],
+      enum: ENUMS.MATERIAL_PROGRESS_STATUS,
       default: 'not-started',
     },
     viewCount: {

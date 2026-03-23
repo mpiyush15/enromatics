@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const paymentSessionSchema = new mongoose.Schema({
   // Payment session details
@@ -28,7 +29,7 @@ const paymentSessionSchema = new mongoose.Schema({
   
   billingCycle: {
     type: String,
-    enum: ['monthly', 'annual'],
+    enum: ENUMS.PAYMENT_SESSION_CYCLE,
     required: true
   },
   
@@ -53,7 +54,7 @@ const paymentSessionSchema = new mongoose.Schema({
   // Session status
   status: {
     type: String,
-    enum: ['pending', 'completed', 'expired', 'failed'],
+    enum: ENUMS.PAYMENT_SESSION_STATUS,
     default: 'pending',
     index: true
   },

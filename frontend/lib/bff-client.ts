@@ -74,5 +74,32 @@ export async function callExpressBackend(
  * Used to forward cookies to Express backend
  */
 export function extractCookies(req: Request): string {
-  return req.headers.get('cookie') || '';
+  // Try multiple methods to get cookies in Next.js
+  
+  // Method 1: From headers
+  const cookieHeader = req.headers.get('cookie');
+  if (cookieHeader) {
+    console.log('✅ Cookies from request headers:', cookieHeader.substring(0, 50));
+    return cookieHeader;
+  }
+  
+  // Method 2: From req object directly (Next.js Request object)
+  try {
+    const cookies = req.cookies;
+    if (cookies && typeof cookies.getAll === 'function') {
+      const allCookies = cookies.getAll();
+      if (allCookies.length > 0) {
+        const cookieString = allCookies
+          .map(c => `${c.name}=${c.value}`)
+          .join('; ');
+        console.log('✅ Cookies from request.cookies:', cookieString.substring(0, 50));
+        return cookieString;
+      }
+    }
+  } catch (e) {
+    // cookies might not be available on all request types
+  }
+  
+  console.warn('⚠️ No cookies found in request');
+  return '';
 }

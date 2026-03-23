@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const videoLessonSchema = new mongoose.Schema(
   {
@@ -49,7 +50,7 @@ const videoLessonSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'draft'],
+      enum: ENUMS.VIDEO_LESSON_STATUS,
       default: 'active',
     },
     createdBy: {

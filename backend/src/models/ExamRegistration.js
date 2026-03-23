@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 const examRegistrationSchema = new mongoose.Schema(
   {
@@ -44,7 +45,7 @@ const examRegistrationSchema = new mongoose.Schema(
 
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
+      enum: ENUMS.GENDERS,
     },
 
     fatherName: String,
@@ -137,7 +138,7 @@ const examRegistrationSchema = new mongoose.Schema(
 
     result: {
       type: String,
-      enum: ["pass", "fail", "absent", "pending"],
+      enum: ENUMS.EXAM_STATUS,
       default: "pending",
     },
 
@@ -184,7 +185,7 @@ const examRegistrationSchema = new mongoose.Schema(
     // Payment
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "waived"],
+      enum: ENUMS.EXAM_FEE_STATUS,
       default: "pending",
     },
 
@@ -195,7 +196,7 @@ const examRegistrationSchema = new mongoose.Schema(
     // Status
     status: {
       type: String,
-      enum: ["registered", "approved", "rejected", "appeared", "resultPublished", "enrolled"],
+      enum: ENUMS.EXAM_REGISTRATION_STATUS,
       default: "registered",
     },
 

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import ENUMS from '../config/ENUMS_CONSTANTS.js';
 
 /**
  * BatchStudent Schema
@@ -38,7 +39,7 @@ const batchStudentSchema = new mongoose.Schema(
     // Status of the student in this batch
     status: {
       type: String,
-      enum: ["active", "inactive", "completed", "removed"],
+      enum: ENUMS.BATCH_STUDENT_STATUS,
       default: "active",
       index: true,
     },
