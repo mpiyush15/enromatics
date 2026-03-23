@@ -1,0 +1,781 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams } from "next/navigation";
+import useSWR from "swr";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  CheckCircle, 
+  Clock, 
+  AlertTriangle, 
+  CreditCard, 
+  Calendar,
+  Loader2,
+  XCircle,
+  Sparkles,
+  ArrowUpCircle,
+  Zap,
+  Star,
+  RefreshCw
+} from "lucide-react";
+import { toast } from "sonner";
+import useAuth from "@/hooks/useAuth";
+import { useSubscription } from "@/lib/hooks/use-subscription";
+// Import unified types - SINGLE SOURCE OF TRUTH for plans
+import { 
+  SubscriptionPlan, 
+  PlansApiResponse,
+  getFeatureText, 
+  isFeatureEnabled,
+} from "@/types/subscription-plan";
+
+// Plan hierarchy for filtering
+const PLAN_HIERARCHY = ["trial", "free", "basic", "pro", "enterprise"];
+
+// SWR fetcher - no cache, always fresh data
+const plansFetcher = async (url: string) => {
+  const res = await fetch(url, { 
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' }
+  });
+  if (!res.ok) throw new Error('Failed to fetch plans');
+  return res.json();
+};
+
+interface UpgradePlan {
+  _id: string;
+  planId: string;
+  name: string;
+  description: string;
+  price: number;
+  annualPrice?: number;
+  features: string[];
+  popular?: boolean;
+  isContactSales?: boolean;
+}
+
+export default function MySubscriptionPage() {
+  const { user } = useAuth();
+  const params = useParams();
+  const tenantId = user?.tenantId as string;
+  
+  // Use SWR for caching - data persists across navigation
+  const { tenant, isLoading: loading, refresh: refreshSubscription } = useSubscription(tenantId);
+  
+  // Fetch dynamic plans from API (same as /plans page)
+  const { data: plansData, error: plansError, isLoading: plansLoading, mutate: refreshPlans } = useSWR<PlansApiResponse>(
+    '/api/subscription-plans/public',
+    plansFetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 60000, // Refresh every 60 seconds
+      dedupingInterval: 10000,
+    }
+  );
+  
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+
+  // Get available plans from API
+  const availablePlans = useMemo(() => {
+    return plansData?.plans?.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)) || [];
+  }, [plansData]);
+
+  // Get upgrade plans based on current plan (using dynamic API data)
+  const upgradePlans = useMemo((): UpgradePlan[] => {
+    const subscriptionStatus = tenant?.subscription?.status;
+    
+    // If subscription status is pending, treat as previous active plan (trial)
+    let planLower = (tenant?.plan || "trial").toLowerCase();
+    
+    // If status is pending or inactive, user is still on trial
+    if (subscriptionStatus === "pending" || subscriptionStatus === "inactive") {
+      planLower = "trial";
+    }
+    
+    const currentPlanIndex = PLAN_HIERARCHY.indexOf(planLower);
+    
+    return availablePlans
+      .filter((plan: SubscriptionPlan) => {
+        const planIndex = PLAN_HIERARCHY.indexOf(plan.id.toLowerCase());
+        // Show plans that are higher in hierarchy and are not trial/free
+        // Also exclude enterprise (Custom pricing - Contact Sales)
+        return planIndex > currentPlanIndex && plan.id !== "trial" && plan.id !== "enterprise";
+      })
+      .map((plan: SubscriptionPlan) => ({
+        _id: plan._id || plan.id,
+        planId: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: typeof plan.monthlyPrice === "number" ? plan.monthlyPrice : 0,
+        annualPrice: typeof plan.annualPrice === "number" ? plan.annualPrice : 0,
+        // Convert features to string array (handle both string and object format)
+        features: plan.features
+          .filter(isFeatureEnabled)
+          .map(getFeatureText),
+        popular: plan.popular || false,
+        isContactSales: plan.monthlyPrice === "Custom",
+      }));
+  }, [tenant?.plan, tenant?.subscription?.status, availablePlans]);
+
+  const handleCancelSubscription = async () => {
+    setCancelling(true);
+    try {
+      const response = await fetch(`/api/tenants/${tenantId}/subscription/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Subscription cancelled successfully");
+        setShowCancelConfirm(false);
+        refreshSubscription(); // Refresh via SWR
+      } else {
+        toast.error(data.message || "Failed to cancel subscription");
+      }
+    } catch (error) {
+      console.error("Error cancelling subscription:", error);
+      toast.error("Failed to cancel subscription");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // Handle plan upgrade - direct to Cashfree payment modal
+  const handleUpgrade = async (planId: string) => {
+    console.log("🚀 handleUpgrade START - planId:", planId);
+    console.log("   loading:", loading);
+    console.log("   tenant:", tenant);
+    
+    // Wait for tenant data to load
+    if (loading) {
+      console.log("⏳ Tenant data still loading...");
+      toast.error("Loading your profile. Please wait and try again.");
+      return;
+    }
+
+    if (!tenant) {
+      console.error("❌ tenant object is null");
+      toast.error("Could not load your account information. Please refresh the page.");
+      return;
+    }
+
+    console.log("   tenant.email:", tenant.email);
+    console.log("   tenant.name:", tenant.name);
+    console.log("   tenant.instituteName:", tenant.instituteName);
+    
+    if (!tenant?.email) {
+      console.error("❌ Missing tenant email");
+      toast.error("Email not found. Please refresh the page.");
+      return;
+    }
+
+    // Use name or instituteName as fallback
+    const tenantName = tenant.name || tenant.instituteName;
+    if (!tenantName) {
+      console.error("❌ Missing tenant name and instituteName");
+      toast.error("Institution name not found. Please update your profile.");
+      return;
+    }
+
+    setUpgradingPlan(planId);
+    try {
+      // Find the plan from available plans
+      console.log("   availablePlans:", availablePlans.map(p => p.id));
+      const selectedPlan = availablePlans.find(p => p.id === planId);
+      console.log("   selectedPlan:", selectedPlan);
+      
+      if (!selectedPlan) {
+        console.error("❌ Plan not found in availablePlans");
+        toast.error("Plan not found");
+        return;
+      }
+
+      // Get price based on billing cycle
+      const amount = billingCycle === "yearly" 
+        ? (selectedPlan.annualPrice || selectedPlan.monthlyPrice || 0)
+        : (selectedPlan.monthlyPrice || 0);
+
+      console.log("   amount:", amount, "billingCycle:", billingCycle);
+
+      if (amount === 0) {
+        console.error("❌ Free plan selected");
+        toast.error("Free plans cannot be upgraded");
+        return;
+      }
+
+      const payloadData = {
+        tenantId,
+        planId,
+        email: tenant.email,
+        phone: tenant.contact?.phone || "9999999999",
+        name: tenantName,
+        instituteName: tenant.instituteName || tenantName,
+        billingCycle: billingCycle === "yearly" ? "annual" : "monthly",
+        amount: Number(amount),
+      };
+
+      console.log("💳 Initiating upgrade payment with payload:", payloadData);
+
+      // Call Cashfree payment initiation endpoint directly
+      const response = await fetch("/api/payment/initiate-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payloadData),
+      });
+
+      console.log("   Response status:", response.status);
+      console.log("   Response ok:", response.ok);
+
+      const data = await response.json();
+      console.log("✅ Payment response:", data);
+
+      if (!response.ok) {
+        console.error("❌ Payment initiation failed:", data);
+        throw new Error(data.message || data.error || "Failed to initiate payment");
+      }
+
+      if (!data.paymentSessionId) {
+        console.error("❌ No paymentSessionId in response");
+        throw new Error("No payment session created");
+      }
+
+      console.log("   paymentSessionId:", data.paymentSessionId);
+
+      // Initialize Cashfree and open modal
+      console.log("   Initializing Cashfree SDK...");
+      const cashfree = await (window as any).Cashfree({
+        mode: "production",
+      });
+
+      console.log("   Cashfree SDK ready, opening checkout modal...");
+      await cashfree.checkout({
+        paymentSessionId: data.paymentSessionId,
+        redirectTarget: "_modal",
+        onSuccess: (paymentData: any) => {
+          console.log("✅ Payment successful:", paymentData);
+          toast.success("Payment successful! Your plan is now upgraded.");
+          setTimeout(() => {
+            refreshSubscription();
+          }, 1000);
+        },
+        onFailure: (error: any) => {
+          console.log("❌ Payment failed:", error);
+          toast.error("Payment failed. Please try again.");
+        },
+        onClose: () => {
+          console.log("Modal closed - refreshing subscription status");
+          refreshSubscription();
+        },
+      });
+    } catch (error: any) {
+      console.error("❌ Upgrade error:", error);
+      toast.error(error.message || "Failed to upgrade plan");
+    } finally {
+      setUpgradingPlan(null);
+    }
+  };
+
+  // Load Cashfree SDK
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const getPlanBadgeColor = (plan: string) => {
+    switch (plan) {
+      case "trial":
+      case "free":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "starter":
+      case "basic":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+      case "professional":
+      case "pro":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+      case "enterprise":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-500">Active</Badge>;
+      case "trial":
+        return <Badge className="bg-blue-500">Trial</Badge>;
+      case "cancelled":
+        return <Badge className="bg-red-500">Cancelled</Badge>;
+      case "inactive":
+        return <Badge className="bg-gray-500">Inactive</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  const subscription = tenant?.subscription;
+  const isTrialOrFree = tenant?.plan === "trial" || tenant?.plan === "free";
+  const daysRemaining = subscription?.daysRemaining || 0;
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Subscription</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Manage your subscription plan and billing
+        </p>
+      </div>
+
+      {/* Current Plan Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-yellow-500" />
+                Current Plan
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {tenant?.instituteName}
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <Badge className={`text-sm px-3 py-1 ${getPlanBadgeColor(tenant?.plan || "free")}`}>
+                {(tenant?.plan || "free").toUpperCase()}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Status and Trial Info */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <CheckCircle className="h-4 w-4" />
+                Status
+              </div>
+              <div className="font-semibold">
+                {getStatusBadge(subscription?.status || "inactive")}
+              </div>
+            </div>
+
+            {isTrialOrFree && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mb-1">
+                  <Clock className="h-4 w-4" />
+                  Trial Days Remaining
+                </div>
+                <div className={`font-bold text-2xl ${daysRemaining <= 3 ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400"}`}>
+                  {daysRemaining > 0 ? daysRemaining : 0} days
+                </div>
+              </div>
+            )}
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <Calendar className="h-4 w-4" />
+                {isTrialOrFree ? "Trial Started" : "Start Date"}
+              </div>
+              <div className="font-semibold text-gray-900 dark:text-white">
+                {formatDate(subscription?.trialStartDate ?? subscription?.startDate ?? null)}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <Calendar className="h-4 w-4" />
+                {isTrialOrFree ? "Trial Ends" : "Renewal Date"}
+              </div>
+              <div className="font-semibold text-gray-900 dark:text-white">
+                {formatDate(subscription?.endDate ?? null)}
+              </div>
+            </div>
+          </div>
+
+          {/* Trial Warning */}
+          {isTrialOrFree && daysRemaining <= 5 && daysRemaining > 0 && (
+            <div className="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-yellow-800 dark:text-yellow-300">
+                  Your trial ends in {daysRemaining} days
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  Upgrade now to continue using all features without interruption.
+                </p>
+              </div>
+              <Button 
+                className="ml-auto bg-yellow-600 hover:bg-yellow-700"
+                onClick={() => document.getElementById("upgrade-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          )}
+
+          {/* Trial Expired Warning */}
+          {isTrialOrFree && daysRemaining <= 0 && (
+            <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-red-800 dark:text-red-300">
+                  Your trial has expired
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Upgrade to a paid plan to regain full access.
+                </p>
+              </div>
+              <Button 
+                className="ml-auto bg-red-600 hover:bg-red-700"
+                onClick={() => document.getElementById("upgrade-section")?.scrollIntoView({ behavior: "smooth" })}
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          )}
+
+          {/* Billing Info for Paid Plans */}
+          {!isTrialOrFree && subscription?.amount && subscription.amount > 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-white">
+                <CreditCard className="h-4 w-4" />
+                Billing Information
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Amount</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    ₹{subscription.amount.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Billing Cycle</p>
+                  <p className="font-semibold capitalize text-gray-900 dark:text-white">
+                    {subscription.billingCycle || "Monthly"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Next Billing</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {formatDate(subscription.endDate)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between">
+          {subscription?.status !== "cancelled" && !isTrialOrFree && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowCancelConfirm(true)}
+            >
+              Cancel Subscription
+            </Button>
+          )}
+          {(isTrialOrFree || subscription?.status === "cancelled") && <div />}
+        </CardFooter>
+      </Card>
+
+      {/* Upgrade Plans Section */}
+      {upgradePlans.length > 0 && (
+        <div id="upgrade-section" className="space-y-6 scroll-mt-6">
+          {/* Annual Discount Banner */}
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl border-2 border-green-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">🎉 Save 50% with Annual Billing</h2>
+                <p className="text-green-100">Switch to annual billing and get half off your subscription</p>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-bold">50% OFF</div>
+                <div className="text-sm text-green-100">Annual Plan</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <ArrowUpCircle className="h-6 w-6 text-blue-600" />
+                Upgrade Your Plan
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Unlock more features by upgrading to a higher plan
+              </p>
+            </div>
+            {/* Billing Cycle Toggle */}
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setBillingCycle("monthly")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle("yearly")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                  billingCycle === "yearly"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                Annual
+                <span className="text-xs bg-red-500 px-2 py-1 rounded-full">50% SAVE</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upgradePlans.map((plan) => {
+              const planId = plan.planId || plan._id;
+              const price = billingCycle === "yearly" && plan.annualPrice 
+                ? plan.annualPrice 
+                : plan.price;
+              const isUpgrading = upgradingPlan === planId;
+
+              return (
+                <Card 
+                  key={planId} 
+                  className={`relative overflow-hidden transition-all hover:shadow-lg ${
+                    plan.popular 
+                      ? "border-2 border-blue-500 dark:border-blue-400" 
+                      : "border border-gray-200 dark:border-gray-700"
+                  }`}
+                >
+                  {plan.popular && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                      <Star className="h-3 w-3 inline mr-1" />
+                      POPULAR
+                    </div>
+                  )}
+                  
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                      <Zap className={`h-5 w-5 ${plan.popular ? "text-blue-500" : "text-gray-400"}`} />
+                      {plan.name}
+                    </CardTitle>
+                    <CardDescription className="dark:text-gray-400">
+                      {plan.description}
+                    </CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                        {typeof price === "number" ? `₹${price.toLocaleString("en-IN")}` : price}
+                      </span>
+                      {typeof price === "number" && (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          /{billingCycle === "yearly" ? "year" : "month"}
+                        </span>
+                      )}
+                    </div>
+
+                    <ul className="space-y-2">
+                      {plan.features?.slice(0, 5).map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                      {plan.features && plan.features.length > 5 && (
+                        <li className="text-sm text-gray-500 dark:text-gray-400 pl-6">
+                          +{plan.features.length - 5} more features
+                        </li>
+                      )}
+                    </ul>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button 
+                      className={`w-full ${
+                        plan.popular 
+                          ? "bg-blue-600 hover:bg-blue-700" 
+                          : "bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+                      }`}
+                      onClick={() => handleUpgrade(planId)}
+                      disabled={isUpgrading || loading}
+                      title={loading ? "Loading your profile..." : ""}
+                    >
+                      {isUpgrading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpCircle className="h-4 w-4 mr-2" />
+                          Upgrade to {plan.name}
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Enterprise Contact Sales Card */}
+          {tenant?.plan !== "enterprise" && (
+            <div className="mt-8">
+              <Card className="border-2 border-purple-500 dark:border-purple-400 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  <Sparkles className="h-3 w-3 inline mr-1" />
+                  ENTERPRISE
+                </div>
+                
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Zap className="h-5 w-5 text-purple-500" />
+                    Enterprise Plan
+                  </CardTitle>
+                  <CardDescription className="dark:text-gray-400">
+                    For large-scale operations with advanced needs
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="flex items-baseline gap-1 mb-4">
+                    <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      Custom Pricing
+                    </span>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Unlimited students & staff</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Unlimited storage</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>White-label APK</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Multi-branch support</span>
+                      </li>
+                    </ul>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>All AI features</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>YouTube Live streaming</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>24/7 priority support</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span>Custom integrations</span>
+                      </li>
+                    </ul>
+                  </div>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    onClick={() => {
+                      window.open("mailto:support@enromatics.com?subject=Enterprise Plan Inquiry&body=Hi, I'm interested in the Enterprise plan for my institution.", "_blank");
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Contact Sales
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 bg-white dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Cancel Subscription?
+              </CardTitle>
+              <CardDescription className="dark:text-gray-400">
+                Are you sure you want to cancel your subscription? You will lose access to all features at the end of your billing period.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="flex gap-3 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Keep Subscription
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleCancelSubscription}
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
+                ) : (
+                  "Yes, Cancel"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
