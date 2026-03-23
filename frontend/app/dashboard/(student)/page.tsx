@@ -1,33 +1,14 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-import useAuth from '@/hooks/useAuth';
-import { useEffect } from 'react';
-
-export const dynamic = 'force-dynamic';
-
-export default function StudentPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && user?.role?.toLowerCase() === 'student') {
-      // Redirect to student home or dashboard
-      router.push('/app/student/dashboard');
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
+/**
+ * Student Dashboard - Main entry point for student users
+ * Stays in student folder (no redirect)
+ */
+export default function StudentDashboard() {
   return (
-    <div className="flex justify-center items-center h-screen">
-      <p className="text-gray-500">Redirecting to student dashboard...</p>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-primary">Welcome to Student Dashboard</h1>
+        <p className="mt-4 text-gray-600">Your Learning Portal</p>
+      </div>
     </div>
   );
 }
