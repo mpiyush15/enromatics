@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import useAuth from '@/hooks/useAuth';
 import { useEffect } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 export default function StudentPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
