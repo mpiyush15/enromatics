@@ -1,18 +1,14 @@
-import nodemailer from 'nodemailer';
 import Student from '../models/Student.js';
 import NotificationTemplate from '../models/NotificationTemplate.js';
 import WhatsAppEventLog from '../models/WhatsAppEventLog.js';
+import { sendEmail } from './emailService.js';
 
 class EmailAutomationService {
   constructor() {
-    // Initialize email transporter
-    this.transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE || 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    // Initialize with Zepto API configuration
+    this.apiToken = process.env.ZEPTO_API_TOKEN;
+    this.apiUrl = process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email';
+    this.from = process.env.ZEPTO_FROM || 'no-reply@enromatics.com';
   }
 
   /**
@@ -45,22 +41,15 @@ class EmailAutomationService {
 
       const emailBody = this.buildEmailBody(template.emailTemplate, variables);
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      const result = await sendEmail({
         to: student.email,
         subject: `Absence Notification - ${new Date(classDate).toLocaleDateString('en-IN')}`,
         html: emailBody,
-      };
-
-      // Also send to parents if available
-      if (student.parentEmail) {
-        mailOptions.cc = student.parentEmail;
-      }
-
-      const result = await this.transporter.sendMail(mailOptions);
+        from: this.from,
+      });
       
       // Log the event
-      await this.logEmailEvent(tenantId, studentId, 'absence', 'sent', result.messageId);
+      await this.logEmailEvent(tenantId, studentId, 'absence', 'sent', result?.messageId || 'sent');
       
       return true;
     } catch (error) {
@@ -103,15 +92,13 @@ class EmailAutomationService {
 
       const emailBody = this.buildEmailBody(template.emailTemplate, variables);
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      const result = await sendEmail({
         to: student.email,
         subject,
         html: emailBody,
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      await this.logEmailEvent(tenantId, studentId, 'payment', 'sent', result.messageId);
+        from: this.from,
+      });
+      await this.logEmailEvent(tenantId, studentId, 'payment', 'sent', result?.messageId || 'sent');
       
       return true;
     } catch (error) {
@@ -153,15 +140,13 @@ class EmailAutomationService {
 
       const emailBody = this.buildEmailBody(template.emailTemplate, variables);
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      const result = await sendEmail({
         to: student.email,
-        subject: `Test Results: ${testData.testName} - ${testData.percentage.toFixed(2)}%`,
+        subject: `Score Released - ${test.name}`,
         html: emailBody,
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      await this.logEmailEvent(tenantId, studentId, 'test-result', 'sent', result.messageId);
+        from: this.from,
+      });
+      await this.logEmailEvent(tenantId, studentId, 'test-result', 'sent', result?.messageId || 'sent');
       
       return true;
     } catch (error) {
@@ -200,15 +185,13 @@ class EmailAutomationService {
 
       const emailBody = this.buildEmailBody(template.emailTemplate, variables);
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      const result = await sendEmail({
         to: student.email,
         subject: `Congratulations! Scholarship Awarded - ₹${scholarshipData.amount}`,
         html: emailBody,
-      };
-
-      const result = await this.transporter.sendMail(mailOptions);
-      await this.logEmailEvent(tenantId, studentId, 'scholarship', 'sent', result.messageId);
+        from: this.from,
+      });
+      await this.logEmailEvent(tenantId, studentId, 'scholarship', 'sent', result?.messageId || 'sent');
       
       return true;
     } catch (error) {

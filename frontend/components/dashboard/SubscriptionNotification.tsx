@@ -205,7 +205,7 @@ export default function SubscriptionNotification({ tenantId, accountType }: Subs
         {/* Action Button */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
-            href={tenantId ? `/dashboard/client/${tenantId}/my-subscription` : '/dashboard/pricing'}
+            href={`/dashboard/(tenantadmin)/settings/subscriptions`}
             className={`text-white px-4 py-2 rounded text-sm font-medium whitespace-nowrap ${buttonColor[notificationType]} transition-colors`}
           >
             {notification.level === 'critical' ? 'Upgrade Now' : 'Upgrade'}

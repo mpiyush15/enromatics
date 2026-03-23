@@ -21,23 +21,54 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract cookies from incoming request
-    const cookies = extractCookies(request);
-    console.log('🔍 Auth Me - Extracted cookies:', cookies ? '✅ Present' : '❌ Missing');
+    // Extract cookies from incoming request - try both methods
+    let cookies = '';
+    
+    // Method 1: Try headers
+    const cookieHeader = request.headers.get('cookie');
+    if (cookieHeader) {
+      cookies = cookieHeader;
+      console.log('✅ Auth Me - Got cookies from headers:', cookies.substring(0, 50));
+    } else {
+      // Method 2: Try request.cookies (Next.js native)
+      try {
+        const cookieList = request.cookies.getAll();
+        if (cookieList.length > 0) {
+          cookies = cookieList.map(c => `${c.name}=${c.value}`).join('; ');
+          console.log('✅ Auth Me - Got cookies from request.cookies:', cookies.substring(0, 50));
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to access request.cookies');
+      }
+    }
+    
+    if (!cookies) {
+      console.warn('⚠️ AUTH ME: No cookies found in request!');
+    }
+
+    // Build headers with cookie
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (cookies) {
+      headers['Cookie'] = cookies;
+      console.log('✅ Auth Me - Added Cookie header to backend request');
+    }
 
     // Call Express backend with cookies for authentication
+    console.log('📤 Auth Me - Calling backend /api/auth/me...');
     const expressResponse = await fetch(
       `${expressUrl}/api/auth/me`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(cookies && { 'Cookie': cookies }), // Only add if cookies exist
-        },
+        headers,
         // CRITICAL: This ensures cookies are sent by the browser to the backend
         credentials: 'include',
       }
     );
+    
+    console.log('📥 Auth Me - Backend response status:', expressResponse.status);
 
     const data = await expressResponse.json();
 

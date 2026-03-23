@@ -15,9 +15,10 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
   const [dateTime, setDateTime] = useState("");
   const pathname = usePathname();
   const params = useParams();
-  
-  // Get tenantId from params if in client dashboard route
-  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
+
+  useEffect(() => {
+    console.log('📱 Topbar rendered with userName:', userName);
+  }, [userName]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -58,7 +59,7 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Welcome back</p>
           <p className="text-lg font-semibold text-gray-900 dark:text-white">{userName}</p>
         </div>
-        <p className="sm:hidden text-sm font-semibold">👋 {userName.split("@")[0]}</p>
+        <p className="sm:hidden text-sm font-semibold">👋 {userName.split(" ")[0]}</p>
       </div>
 
       {/* Right Section */}
@@ -78,9 +79,6 @@ export default function Topbar({ userName, onToggleSidebar, isAdmin }: TopbarPro
             <span className="hidden sm:inline">Social</span>
           </Link>
         )}
-        
-        {/* Notification Bell - Only show for tenant dashboards (not superadmin) */}
-        {tenantId && <NotificationCenter tenantId={tenantId} />}
       </div>
     </div>
   );

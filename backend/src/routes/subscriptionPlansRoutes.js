@@ -283,7 +283,7 @@ router.patch("/:id", protect, authorizeRoles("superadmin"), async (req, res) => 
 router.delete(
   "/:id",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   async (req, res) => {
     try {
       const plan = await SubscriptionPlan.findByIdAndDelete(req.params.id);

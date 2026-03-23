@@ -1,26 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, Filter, Plus, BarChart3 } from 'lucide-react';
 import { EnquiryCard } from './EnquiryCard';
 import { StatsCard } from './StatsCard';
 import { FilterPanel } from './FilterPanel';
+import { useAllEnquiries, useEnquiryStats } from '@/hooks/useEnquiry';
 
 interface Enquiry {
-  id: string;
-  studentName: string;
+  _id?: string;
+  id?: string;
+  name?: string;
+  studentName?: string;
   email: string;
   phone: string;
-  course: string;
+  courseInterest?: string;
+  course?: string;
   status: 'new' | 'contacted' | 'interested' | 'enrolled' | 'rejected';
-  enquiryDate: string;
-  message: string;
+  enquiryDate?: string;
+  createdAt?: string;
+  notes?: string;
+  message?: string;
   location?: string;
 }
 
 const mockEnquiries: Enquiry[] = [
   {
-    id: '1',
+    _id: '1',
     studentName: 'Arjun Sharma',
     email: 'arjun@example.com',
     phone: '+91 98765 43210',
@@ -31,7 +37,7 @@ const mockEnquiries: Enquiry[] = [
     location: 'Mumbai',
   },
   {
-    id: '2',
+    _id: '2',
     studentName: 'Priya Patel',
     email: 'priya@example.com',
     phone: '+91 87654 32109',
@@ -42,7 +48,7 @@ const mockEnquiries: Enquiry[] = [
     location: 'Bangalore',
   },
   {
-    id: '3',
+    _id: '3',
     studentName: 'Rajesh Kumar',
     email: 'rajesh@example.com',
     phone: '+91 76543 21098',
@@ -53,7 +59,7 @@ const mockEnquiries: Enquiry[] = [
     location: 'Delhi',
   },
   {
-    id: '4',
+    _id: '4',
     studentName: 'Sneha Gupta',
     email: 'sneha@example.com',
     phone: '+91 65432 10987',
@@ -64,7 +70,7 @@ const mockEnquiries: Enquiry[] = [
     location: 'Pune',
   },
   {
-    id: '5',
+    _id: '5',
     studentName: 'Vikram Singh',
     email: 'vikram@example.com',
     phone: '+91 54321 09876',
@@ -81,25 +87,57 @@ export const StudentEnquiryDashboard: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filter enquiries
-  const filteredEnquiries = mockEnquiries.filter((enquiry) => {
-    const matchesSearch =
-      enquiry.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      enquiry.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      enquiry.course.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch real enquiry data from backend
+  const { data: apiEnquiries, loading } = useAllEnquiries(selectedStatus);
+  const { data: statsData } = useEnquiryStats();
 
-    const matchesStatus = !selectedStatus || enquiry.status === selectedStatus;
+  // Normalize enquiry data from API
+  const enquiries = useMemo(() => {
+    return (apiEnquiries || mockEnquiries).map((e: any) => ({
+      ...e,
+      _id: e._id || e.id,
+      studentName: e.name || e.studentName,
+      course: e.courseInterest || e.course,
+      enquiryDate: e.createdAt || e.enquiryDate,
+      message: e.notes || e.message,
+    }));
+  }, [apiEnquiries]);
 
-    return matchesSearch && matchesStatus;
-  });
+  // Filter enquiries by search
+  const filteredEnquiries = useMemo(() => {
+    return enquiries.filter((enquiry: Enquiry) => {
+      const name = enquiry.studentName || '';
+      const email = enquiry.email || '';
+      const course = enquiry.course || '';
+      
+      const matchesSearch =
+        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.toLowerCase().includes(searchQuery.toLowerCase());
 
-  // Calculate stats
-  const stats = {
-    total: mockEnquiries.length,
-    new: mockEnquiries.filter((e) => e.status === 'new').length,
-    enrolled: mockEnquiries.filter((e) => e.status === 'enrolled').length,
-    conversion: Math.round((mockEnquiries.filter((e) => e.status === 'enrolled').length / mockEnquiries.length) * 100),
-  };
+      return matchesSearch;
+    });
+  }, [enquiries, searchQuery]);
+
+  // Use real stats from API or fallback to mock data
+  const stats = useMemo(() => {
+    if (statsData?.byStatus) {
+      return {
+        total: statsData.total || 0,
+        new: statsData.byStatus.new || 0,
+        enrolled: statsData.byStatus.enrolled || 0,
+        conversion: statsData.conversionRate || 0,
+      };
+    }
+    return {
+      total: enquiries.length,
+      new: enquiries.filter((e: Enquiry) => e.status === 'new').length,
+      enrolled: enquiries.filter((e: Enquiry) => e.status === 'enrolled').length,
+      conversion: enquiries.length > 0 
+        ? Math.round((enquiries.filter((e: Enquiry) => e.status === 'enrolled').length / enquiries.length) * 100)
+        : 0,
+    };
+  }, [statsData, enquiries]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
@@ -147,9 +185,17 @@ export const StudentEnquiryDashboard: React.FC = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="space-y-8">
-          {/* Stats Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading enquiries...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Stats Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
               label="Total Enquiries"
               value={stats.total}
@@ -201,6 +247,7 @@ export const StudentEnquiryDashboard: React.FC = () => {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

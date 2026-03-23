@@ -30,32 +30,27 @@ export async function GET(request: NextRequest) {
     const tokenCookie = cookies.get('token'); // Fallback for old cookie name
     let hasToken = false;
     
-    if (jwtCookie?.value) {
-      // Build cookie string with jwt token
-      headers['Cookie'] = `jwt=${jwtCookie.value}`;
-      console.log('   ✅ Found JWT cookie, forwarding as Cookie header');
-      hasToken = true;
-    } else if (tokenCookie?.value) {
-      // Fallback for old token cookie name
-      headers['Cookie'] = `token=${tokenCookie.value}`;
-      console.log('   ✅ Found token cookie (legacy), forwarding as Cookie header');
-      hasToken = true;
+    // Build cookie header from ALL cookies properly
+    const allCookies = cookies.getAll()
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+    
+    if (allCookies) {
+      headers['Cookie'] = allCookies;
+      console.log('   ✅ Forwarding cookies:', cookies.getAll().map(c => c.name).join(', '));
+      
+      if (jwtCookie?.value) {
+        console.log('   ✅ JWT token found in cookies');
+        hasToken = true;
+      } else {
+        console.log('   ⚠️  No JWT token in cookies');
+      }
     } else if (authorization) {
-      // Or use Authorization header if provided
       headers['Authorization'] = authorization;
       console.log('   ✅ Using Authorization header');
       hasToken = true;
     } else {
       console.warn('⚠️  No token found in cookies or auth header');
-    }
-
-    // Add any other cookies that might be needed
-    const cookieHeader = cookies.getAll()
-      .map(c => `${c.name}=${c.value}`)
-      .join('; ');
-    if (cookieHeader) {
-      headers['Cookie'] = cookieHeader;
-      console.log('   📦 Forwarding all cookies:', cookies.getAll().map(c => c.name).join(', '));
     }
 
     const backendResponse = await fetch(

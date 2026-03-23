@@ -98,6 +98,19 @@ const sidebarFetcher = async (url: string) => {
   
   if (!res.ok) {
     const error = await res.json();
+    
+    // 401 Unauthorized - Session expired or invalid token
+    if (res.status === 401) {
+      console.error('❌ SIDEBAR 401: Session expired or invalid token');
+      throw new Error(`Sidebar: Session expired (401)`);
+    }
+    
+    // 403 Forbidden - Permission denied
+    if (res.status === 403) {
+      console.error('❌ SIDEBAR 403: Permission denied');
+      throw new Error(`Sidebar: Access denied (403)`);
+    }
+    
     console.error('❌ Sidebar fetch failed:', res.status, error);
     throw new Error(`Sidebar fetch failed: ${res.status}`);
   }
@@ -140,7 +153,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
   }, [expanded, hasInitialized]);
 
   /* ------------------------ SWR ------------------------ */
-  const { data: fetchedLinks = [], isLoading } = useSWR<SidebarLink[]>(
+  const { data: fetchedLinks = [], isLoading, error: sidebarError } = useSWR<SidebarLink[]>(
     isExternal ? null : `/api/ui/sidebar?role=${user?.role || 'guest'}&t=${user?.tenantId || 'global'}`,
     sidebarFetcher,
     {
@@ -148,6 +161,27 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       revalidateOnReconnect: false,
       dedupingInterval: 30 * 60 * 1000, // 30 minutes
       keepPreviousData: true,
+      onError: (error) => {
+        console.error('❌ SWR Sidebar Error:', error.message);
+        
+        // Handle 401 Unauthorized - show alert and redirect
+        if (error.message.includes('401')) {
+          console.error('🔴 SIDEBAR 401 DETECTED - Session likely expired');
+          // Wait a bit before showing alert so user can see error in console
+          setTimeout(() => {
+            alert('⚠️ SESSION EXPIRED\n\nYour session has expired. Please log in again.');
+            // Force logout and redirect
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/login';
+          }, 500);
+        }
+        // Handle 403 Forbidden
+        else if (error.message.includes('403')) {
+          console.error('🔴 SIDEBAR 403 DETECTED - Permission denied');
+          alert('⚠️ ACCESS DENIED\n\nYou do not have permission to access this page.');
+        }
+      }
     }
   );
 
@@ -176,7 +210,10 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
       TENANT_ROLES.includes(user.role) &&
       href.startsWith("/dashboard")
     ) {
-      return `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+    // If href is simple /dashboard/xxx, add (tenantadmin) route group
+    if (href.startsWith('/dashboard/') && !href.includes('(')) {
+      return href.replace('/dashboard/', '/dashboard/(tenantadmin)/');
+    }
     }
     return href;
   };
@@ -248,12 +285,14 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     
     if (href.includes("/client/")) return href;
     
+    // For tenant users, transform /dashboard/* to /dashboard/(tenantadmin)/*
     if (
       user?.tenantId &&
       TENANT_ROLES.includes(user.role) &&
-      href.startsWith("/dashboard")
+      href.startsWith("/dashboard") &&
+      !href.includes("(")
     ) {
-      const built = `/dashboard/client/${user.tenantId}${href.replace("/dashboard", "")}`;
+      const built = href.replace('/dashboard/', '/dashboard/(tenantadmin)/');
       return built;
     }
     return href;
@@ -516,13 +555,13 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                   </button>
 
                   {expanded.has(section.label) && !sidebarCollapsed && (
-                    <ul className={`ml-2 mt-1 space-y-0.5 border-l ${isDark ? 'border-gray-700/30' : 'border-stone-200/30'} pl-2`}>
+                    <ul className={`ml-2 mt-2 space-y-1 border-l ${isDark ? 'border-gray-700/30' : 'border-stone-200/30'} pl-3`}>
                       {section.children.map(child =>
                         child.children ? (
                           <li key={child.label}>
                             <button
                               onClick={() => toggle(child.label)}
-                              className={`w-full flex items-center justify-between transition-all duration-150 px-2 py-1.5 text-xs rounded-md ${
+                              className={`w-full flex items-center justify-between transition-all duration-150 px-3 py-2 text-sm rounded-md ${
                                 expanded.has(child.label)
                                   ? isDark 
                                     ? 'bg-white/10 text-white' 
@@ -547,13 +586,13 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                             </button>
 
                             {expanded.has(child.label) && (
-                              <ul className={`ml-2 mt-0.5 space-y-0.5 border-l ${isDark ? 'border-gray-700/30' : 'border-stone-200/30'} pl-2`}>
+                              <ul className={`ml-2 mt-1 space-y-1 border-l ${isDark ? 'border-gray-700/30' : 'border-stone-200/30'} pl-3`}>
                                 {child.children.map(grand => (
                                   <li key={grand.label}>
                                     <Link
                                       href={buildHref(grand.href!)}
                                       onClick={handleClick}
-                                      className={`block px-2 py-1 text-xs rounded-md transition-all duration-150 ${
+                                      className={`block px-3 py-2 text-sm rounded-md transition-all duration-150 ${
                                         isActive(grand.href)
                                           ? isDark
                                             ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium shadow-lg shadow-blue-500/30"
@@ -575,7 +614,7 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
                             <Link
                               href={buildHref(child.href!)}
                               onClick={handleClick}
-                              className={`block px-2 py-1 text-xs rounded-md transition-all duration-150 ${
+                              className={`block px-3 py-2 text-sm rounded-md transition-all duration-150 ${
                                 isActive(child.href)
                                   ? isDark
                                     ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium shadow-lg shadow-blue-500/30"

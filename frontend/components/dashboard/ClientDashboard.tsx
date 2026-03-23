@@ -24,8 +24,8 @@ export default function ClientDashboard({
   const pathname = usePathname();
   const params = useParams();
   
-  // Get tenantId for subscription notification
-  const tenantId = pathname?.includes('/client/') ? (params?.tenantId as string) : undefined;
+  // Get tenantId from user context (no longer in URL params for new route groups)
+  const tenantId = undefined; // tenantId is now in user context, not URL
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {

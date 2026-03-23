@@ -150,7 +150,7 @@ export default function LoginPage() {
       // ✅ NEW: Route-based role separation (3 system roles only)
       setTimeout(() => {
         if (response.user.role?.toLowerCase() === "superadmin") {
-          router.push("/dashboard/home"); // SuperAdmin portal
+          router.push("/dashboard/admin"); // SuperAdmin portal (admin folder)
         } else if (response.user.role?.toLowerCase() === "tenantadmin") {
           router.push("/dashboard/home"); // TenantAdmin goes to main dashboard
         } else if (response.user.role?.toLowerCase() === "student") {

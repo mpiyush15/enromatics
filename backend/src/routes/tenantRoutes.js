@@ -47,7 +47,7 @@ router.get("/by-subdomain/:subdomain", getTenantBySubdomain);
 router.get(
   "/",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   getAllTenants
 );
 
@@ -59,7 +59,7 @@ router.get(
 router.post(
   "/create",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   createNewTenant
 );
 
@@ -71,7 +71,7 @@ router.post(
 router.get(
   "/admin/:tenantId",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   getSuperAdminTenantDetail
 );
 
@@ -83,7 +83,7 @@ router.get(
 router.put(
   "/admin/:tenantId",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   updateTenantProfile
 );
 
@@ -95,7 +95,7 @@ router.put(
 router.patch(
   "/admin/:tenantId/subdomain",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   updateTenantSubdomain
 );
 
@@ -107,7 +107,7 @@ router.patch(
 router.post(
   "/:tenantId/send-credentials",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   sendTenantCredentials
 );
 
@@ -119,7 +119,7 @@ router.post(
 router.get(
   "/:tenantId",
   protect,
-  authorizeRoles("tenantAdmin", "SuperAdmin"),
+  authorizeRoles("tenantAdmin", "superadmin"),
   tenantProtect,
   getTenantInfo
 );

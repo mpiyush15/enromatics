@@ -341,7 +341,7 @@ export default function WhatsAppEventsSettings({ tenantId }: Props) {
           
           {!whatsappConfig.isConfigured && (
             <p className="text-yellow-700 dark:text-yellow-200 text-sm">
-              ⚠️ WhatsApp connection is not configured. Please set it up in <a href={`/dashboard/client/${tenantId}/whatsapp/settings`} className="underline font-medium hover:no-underline">WhatsApp Settings</a> first.
+              ⚠️ WhatsApp connection is not configured. Please set it up in <a href={`/dashboard/whatsapp/settings`} className="underline font-medium hover:no-underline">WhatsApp Settings</a> first.
             </p>
           )}
         </div>

@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     console.log('   Token:', backendData.token ? '✅ Present' : '❌ Missing');
     console.log('   User:', backendData.user?.email);
 
-    // ✅ NEW: Normalize role to lowercase for consistency
+    // ✅ Normalize role to lowercase for consistency
     if (backendData.user && backendData.user.role) {
       backendData.user.role = backendData.user.role.toLowerCase();
       console.log('✅ Role normalized to lowercase:', backendData.user.role);
@@ -131,14 +131,17 @@ export async function POST(request: NextRequest) {
 
     // 9️⃣ Set cookie if token exists
     if (backendData.token) {
-      console.log('🍪 Setting JWT cookie');
+      console.log('🍪 Setting JWT cookie on response');
       response.cookies.set('jwt', backendData.token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production', // Only secure in production
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60,
+        maxAge: 30 * 24 * 60 * 60, // 30 days
         path: '/',
       });
+      console.log('✅ Cookie set successfully');
+    } else {
+      console.warn('⚠️ No token in response, cookie not set');
     }
 
     console.log('✅ [LOGIN-V2] Returning success response');

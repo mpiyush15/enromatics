@@ -31,7 +31,7 @@ const router = express.Router();
 router.post(
   "/goals",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   createGoal
 );
 
@@ -43,7 +43,7 @@ router.post(
 router.get(
   "/goals",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   getGoals
 );
 
@@ -67,7 +67,7 @@ router.post(
 router.get(
   "/goals/:id/analytics",
   protect,
-  authorizeRoles("SuperAdmin"),
+  authorizeRoles("superadmin"),
   getGoalAnalytics
 );
 

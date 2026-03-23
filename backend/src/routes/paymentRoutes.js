@@ -48,8 +48,8 @@ router.get("/admin/invoices/:tenantId/download", protect, authorizeRoles("supera
 router.post("/admin/invoices/:tenantId/send", protect, authorizeRoles("superadmin"), sendInvoiceEmail);
 // Auto-cancel stale pending payments - SuperAdmin only
 router.post("/admin/auto-cancel-pending", protect, authorizeRoles("superadmin"), triggerAutoCancelPendingPayments);
-// Log manual payment (cash/bank transfer) and activate account - SuperAdmin only
-router.post("/admin/manual-payment", protect, authorizeRoles("SuperAdmin"), logManualPayment);
+// Log manual payment (cash/bank transfer) and activate account - superadmin only
+router.post("/admin/manual-payment", protect, authorizeRoles("superadmin"), logManualPayment);
 
 // ============== STUDENT FEE PAYMENT ROUTES ==============
 // Employees can create fees if they have canCreateFees permission

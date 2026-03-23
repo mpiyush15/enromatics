@@ -46,6 +46,7 @@ import supercrmRoutes from './routes/supercrmRoutes.js';
 import websiteAnalyticsRoutes from './routes/websiteAnalyticsRoutes.js';
 import phase1AnalyticsRoutes from './routes/phase1AnalyticsRoutes.js';
 import phase2AnalyticsRoutes from './routes/phase2AnalyticsRoutes.js';
+import dailyTaskRoutes from './routes/dailyTaskRoutes.js';
 import whatsappRoutes from './routes/whatsappRoutes.js';
 import whatsappTemplateRoutes from './routes/whatsappTemplateRoutes.js';
 import whatsappChatbotRoutes from './routes/whatsappChatbotRoutes.js';
@@ -57,6 +58,9 @@ import paymentLinkRoutes from './routes/paymentLinkRoutes.js';
 import questionsRoutes from './routes/questions.routes.js';
 import tenantRoleRoutes from './routes/tenantRoleRoutes.js';
 import userRoleRoutes from './routes/userRoleRoutes.js';
+import aiDashboardRoutes from './ai/routes/dashboardRoutes.js';
+import instituteOverviewRoutes from './routes/instituteOverviewRoutes.js';
+import enquiryRoutes from './routes/enquiryRoutes.js';
 import Tenant from './models/Tenant.js';
 
 console.log('🔵 subscriptionNotificationRoutes imported:', typeof subscriptionNotificationRoutes, subscriptionNotificationRoutes?.constructor?.name);
@@ -212,6 +216,9 @@ app.use('/api/subscription-plans', subscriptionPlansRoutes);
 app.use('/api/subscription-notifications', subscriptionNotificationRoutes);
 app.use('/api/roles', tenantRoleRoutes);
 app.use('/api/user-roles', userRoleRoutes);
+app.use('/api/ai', aiDashboardRoutes); // AI Dashboard insights
+app.use('/api/institute', instituteOverviewRoutes); // Institute Overview APIs
+app.use('/api/enquiries', enquiryRoutes); // Student Enquiry Management APIs
 
 // Other routes
 app.use('/api/form', formRoutes);
@@ -232,6 +239,7 @@ app.use('/api/supercrm', supercrmRoutes);
 app.use('/api/website-analytics', websiteAnalyticsRoutes);
 app.use('/api/analytics/phase1', phase1AnalyticsRoutes);
 app.use('/api/analytics/phase2', phase2AnalyticsRoutes);
+app.use('/api/daily-tasks', dailyTaskRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/whatsapp', whatsappTemplateRoutes);
 app.use('/api/whatsapp', whatsappChatbotRoutes);

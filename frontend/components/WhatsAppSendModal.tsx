@@ -123,7 +123,7 @@ export default function WhatsAppSendModal({
               <Button
                 onClick={() => {
                   onClose();
-                  window.location.href = `/dashboard/client/${tenantId}/whatsapp/settings`;
+                  window.location.href = `/dashboard/whatsapp/settings`;
                 }}
                 className="w-full bg-red-600 hover:bg-red-700"
               >

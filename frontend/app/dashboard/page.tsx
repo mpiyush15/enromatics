@@ -8,7 +8,7 @@ import { useEffect } from 'react';
  * Dashboard Root - Redirects to role-specific dashboard (3 system roles)
  * 
  * Routes:
- * - SuperAdmin → /dashboard/home
+ * - SuperAdmin → /dashboard/admin
  * - TenantAdmin → /dashboard/home
  * - Student → /dashboard/student
  */
@@ -21,8 +21,8 @@ export default function DashboardRoot() {
       console.log('🔄 Redirecting user based on role:', user.role);
       
       if (user.role?.toLowerCase() === 'superadmin') {
-        console.log('✅ SuperAdmin - redirecting to /dashboard/home');
-        router.push('/dashboard/home');
+        console.log('✅ SuperAdmin - redirecting to /dashboard/admin');
+        router.push('/dashboard/admin');
       } else if (user.role?.toLowerCase() === 'tenantadmin') {
         console.log('✅ TenantAdmin - redirecting to /dashboard/home');
         router.push('/dashboard/home');

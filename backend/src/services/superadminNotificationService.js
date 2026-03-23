@@ -8,7 +8,7 @@
 
 import { sendEmail } from "./emailService.js";
 
-const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'mpiyush2727@gmail.com';
+const SUPERADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'mpiyush2727@gmail.com';
 
 /**
  * Notify superadmin about new user signup
