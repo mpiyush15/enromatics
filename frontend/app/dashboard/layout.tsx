@@ -2,7 +2,6 @@
 import useAuth from "@/hooks/useAuth";
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import TrialBanner from "@/components/dashboard/TrialBanner";
-import { AuthDiagnosticPanel } from "@/components/auth-diagnostic-panel";
 
 export default function DashboardLayout({
   children,
@@ -25,9 +24,6 @@ export default function DashboardLayout({
 
   return (
     <>
-      {/* Auth Diagnostic Panel - For debugging */}
-      <AuthDiagnosticPanel />
-
       {/* Trial Banner - Shows at top of dashboard (hidden for SuperAdmin) */}
       {user?.trialEndDate && user?.role?.toLowerCase() !== "superadmin" && (
         <TrialBanner 
