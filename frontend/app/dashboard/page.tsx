@@ -22,14 +22,14 @@ export default function DashboardRoot() {
       console.log('🔄 Redirecting user based on role:', user.role);
       
       if (user.role?.toLowerCase() === 'superadmin') {
-        console.log('✅ SuperAdmin - redirecting to /dashboard/(superadmin)/admin');
-        router.push('/dashboard/(superadmin)/admin');
+        console.log('✅ SuperAdmin - redirecting to /dashboard/admin');
+        router.push('/dashboard/admin');
       } else if (user.role?.toLowerCase() === 'tenantadmin') {
-        console.log('✅ TenantAdmin - redirecting to /dashboard/(tenantadmin)/home');
-        router.push('/dashboard/(tenantadmin)/home');
+        console.log('✅ TenantAdmin - redirecting to /dashboard/home');
+        router.push('/dashboard/home');
       } else if (user.role?.toLowerCase() === 'student') {
-        console.log('✅ Student - redirecting to /dashboard/(student)');
-        router.push('/dashboard/(student)');
+        console.log('✅ Student - redirecting to /dashboard/student');
+        router.push('/dashboard/student');
       } else {
         console.log('❌ Unknown role:', user.role);
       }
