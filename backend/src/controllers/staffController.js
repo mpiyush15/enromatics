@@ -17,7 +17,7 @@ export const createStaff = async (req, res) => {
       return res.status(404).json({ message: "Tenant not found" });
     }
     
-    const tierKey = tenant.plan || 'trial';
+    const tierKey = tenant?.plan || ENUMS?.SUBSCRIPTION_PLANS?.[0] || 'trial';
     const currentCount = await Staff.countDocuments({ tenantId });
     const capCheck = planGuard.checkStaffCap({ tierKey, currentStaff: currentCount });
     

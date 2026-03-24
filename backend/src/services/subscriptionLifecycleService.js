@@ -179,7 +179,7 @@ export const autoExpireSubscriptions = async () => {
           if (update.next === 'inactive') {
             await Tenant.updateOne(
               { tenantId: subscription.tenantId },
-              { plan: 'free' }
+              { plan: 'trial' }
             );
             results.inactive.push({
               tenantId: subscription.tenantId,

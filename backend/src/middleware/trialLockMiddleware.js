@@ -33,7 +33,7 @@ export const trialLock = async (req, res, next) => {
     }
 
     // ============= FREE TRIAL USERS - CHECK EXPIRY =============
-    const isFreeTrial = tenant.plan === 'free' || tenant.plan === 'trial';
+    const isFreeTrial = tenant.plan === 'trial';
     
     if (!isFreeTrial) {
       console.log(`⚠️  [TRIAL LOCK] Unknown plan allowed: ${tenantId} (plan: ${tenant.plan})`);

@@ -723,10 +723,10 @@ export const sendTenantCredentials = async (req, res) => {
         password: generatedPassword,
         phone: tenant.contact?.phone || null,
         tenantId: tenant.tenantId,
-        role: 'tenantAdmin',
+        role: 'tenantadmin',
         status: 'active',
-        plan: tenant.plan || 'free',
-        subscriptionStatus: tenant.subscription?.status || 'inactive',
+        plan: tenant.plan || 'trial',
+        subscriptionStatus: tenant.subscription?.status || 'active',
         subscriptionEndDate: tenant.subscription?.endDate || null,
         requirePasswordReset: true,
       });

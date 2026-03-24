@@ -258,7 +258,7 @@ export const createEmployeeLogin = async (req, res) => {
       tenantId: tenantId,
       role: newUserRole,
       status: "active",
-      plan: "free",
+      plan: "trial",
       subscriptionStatus: "active",
     });
 

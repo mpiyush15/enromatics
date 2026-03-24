@@ -77,7 +77,7 @@ export const sidebarLinks = [
   {
     href: "/dashboard/institute-overview",
     label: "💳 Institute Overview",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
     tenantSpecific: true,
   },
 
@@ -85,7 +85,7 @@ export const sidebarLinks = [
   {
     href: "/dashboard/enquiry-dashboard",
     label: "🎨 Students Enquiry",
-    roles: ["tenantAdmin", "manager", "counsellor"],
+    roles: ["tenantadmin", "manager", "counsellor"],
     tenantSpecific: true,
   },
 
@@ -93,12 +93,12 @@ export const sidebarLinks = [
   {
     label: "🎓 Students",
     href: "#",
-    roles: ["tenantAdmin", "manager", "accountant", "student"],
+    roles: ["tenantadmin", "manager", "accountant", "student"],
     tenantSpecific: true,
     children: [
-      { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantAdmin", "manager", "accountant"] },
-      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantAdmin", "manager"] },
-      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["tenantAdmin", "manager", "student"] },
+      { label: "📋 All Students", href: "/dashboard/students", roles: ["tenantadmin", "manager", "accountant"] },
+      { label: "➕ Add Student", href: "/dashboard/students/add", roles: ["tenantadmin", "manager"] },
+      { label: "📊 Attendance", href: "/dashboard/students/attendance", roles: ["tenantadmin", "manager", "student"] },
       { label: "👤 My Profile", href: "/student/dashboard", roles: ["student"] },
     ]
   },
@@ -107,18 +107,18 @@ export const sidebarLinks = [
   {
     label: "📚 Academics",
     href: "#",
-    roles: ["tenantAdmin", "manager", "student"],
+    roles: ["tenantadmin", "manager", "student"],
     tenantSpecific: true,
     children: [
-      { label: "🎓 Lessons Planning", href: "/dashboard/academics/lessons-planning", roles: ["tenantAdmin", "manager"] },
-      { label: "📦 Batches", href: "/dashboard/academics/batches", roles: ["tenantAdmin", "manager"] },
+      { label: "🎓 Lessons Planning", href: "/dashboard/academics/lessons-planning", roles: ["tenantadmin", "manager"] },
+      { label: "📦 Batches", href: "/dashboard/academics/batches", roles: ["tenantadmin", "manager"] },
       {
         label: "📝 Tests",
         href: "#",
-        roles: ["tenantAdmin", "manager"],
+        roles: ["tenantadmin", "manager"],
         children: [
-          { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantAdmin", "manager"] },
-          { label: "📊 Results", href: "/dashboard/academics/results", roles: ["tenantAdmin", "manager"] },
+          { label: "📅 Test Schedules", href: "/dashboard/academics/schedules", roles: ["tenantadmin", "manager"] },
+          { label: "📊 Results", href: "/dashboard/academics/results", roles: ["tenantadmin", "manager"] },
         ]
       },
     ]
@@ -128,16 +128,16 @@ export const sidebarLinks = [
   {
     label: "🎓 LMS",
     href: "#",
-    roles: ["tenantAdmin", "teacher", "manager", "student"],
+    roles: ["tenantadmin", "teacher", "manager", "student"],
     tenantSpecific: true,
     children: [
-      { label: "📖 Overview", href: "/dashboard/lms", roles: ["tenantAdmin", "teacher", "manager", "student"] },
-      { label: "📚 Subjects", href: "/dashboard/lms/subjects", roles: ["tenantAdmin", "teacher", "manager"] },
-      { label: "📖 Chapters", href: "/dashboard/lms/chapters", roles: ["tenantAdmin", "teacher", "manager"] },
-      { label: "❓ Questions (AI)", href: "/dashboard/lms/questions", roles: ["tenantAdmin", "teacher", "manager"] },
-      { label: "📝 Tests", href: "/dashboard/lms/tests", roles: ["tenantAdmin", "teacher", "manager", "student"] },
-      { label: "🎬 Videos & Lessons", href: "/dashboard/lms/lessons", roles: ["tenantAdmin", "teacher", "manager", "student"] },
-      { label: "📊 Student Progress", href: "/dashboard/lms/student-progress", roles: ["tenantAdmin", "teacher", "manager"] },
+      { label: "📖 Overview", href: "/dashboard/lms", roles: ["tenantadmin", "teacher", "manager", "student"] },
+      { label: "📚 Subjects", href: "/dashboard/lms/subjects", roles: ["tenantadmin", "teacher", "manager"] },
+      { label: "📖 Chapters", href: "/dashboard/lms/chapters", roles: ["tenantadmin", "teacher", "manager"] },
+      { label: "❓ Questions (AI)", href: "/dashboard/lms/questions", roles: ["tenantadmin", "teacher", "manager"] },
+      { label: "📝 Tests", href: "/dashboard/lms/tests", roles: ["tenantadmin", "teacher", "manager", "student"] },
+      { label: "🎬 Videos & Lessons", href: "/dashboard/lms/lessons", roles: ["tenantadmin", "teacher", "manager", "student"] },
+      { label: "📊 Student Progress", href: "/dashboard/lms/student-progress", roles: ["tenantadmin", "teacher", "manager"] },
     ]
   },
 
@@ -145,15 +145,15 @@ export const sidebarLinks = [
   {
     label: "💰 Accounts",
     href: "#",
-    roles: ["tenantAdmin", "accountant"],
+    roles: ["tenantadmin", "accountant"],
     tenantSpecific: true,
     children: [
-      { label: "📊 Overview", href: "/dashboard/accounts/overview", roles: ["tenantAdmin", "accountant"] },
-      { label: "💳 All Transactions", href: "/dashboard/accounts/transactions", roles: ["tenantAdmin", "accountant"] },
-      { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantAdmin", "accountant"] },
-      { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantAdmin", "accountant"] },
-      { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantAdmin", "accountant"] },
-      { label: "💼 Student Details", href: "/dashboard/accounts/overview", roles: ["tenantAdmin", "accountant"] },
+      { label: "📊 Overview", href: "/dashboard/accounts/overview", roles: ["tenantadmin", "accountant"] },
+      { label: "💳 All Transactions", href: "/dashboard/accounts/transactions", roles: ["tenantadmin", "accountant"] },
+      { label: "🧾 Fee Receipts", href: "/dashboard/accounts/receipts", roles: ["tenantadmin", "accountant"] },
+      { label: "💸 Expenses", href: "/dashboard/accounts/expenses", roles: ["tenantadmin", "accountant"] },
+      { label: "↩️ Refunds", href: "/dashboard/accounts/refunds", roles: ["tenantadmin", "accountant"] },
+      { label: "💼 Student Details", href: "/dashboard/accounts/overview", roles: ["tenantadmin", "accountant"] },
     ]
   },
 
@@ -161,14 +161,14 @@ export const sidebarLinks = [
   {
     label: "🎓 Exams & Scholarships",
     href: "#",
-    roles: ["tenantAdmin", "counsellor", "staff"],
+    roles: ["tenantadmin", "counsellor", "staff"],
     tenantSpecific: true,
     children: [
-      { label: "📋 All Exams", href: "/dashboard/scholarship-exams", roles: ["tenantAdmin", "counsellor", "staff"] },
-      { label: "➕ Create Exam", href: "/dashboard/scholarship-exams/create", roles: ["tenantAdmin"] },
-      { label: "👥 Test Management", href: "/dashboard/scholarship-tests", roles: ["tenantAdmin", "staff"] },
-      { label: "📊 Results Management", href: "/dashboard/scholarship-results", roles: ["tenantAdmin"] },
-      { label: "🏆 Rewards Overview", href: "/dashboard/scholarship-rewards", roles: ["tenantAdmin"] },
+      { label: "📋 All Exams", href: "/dashboard/scholarship-exams", roles: ["tenantadmin", "counsellor", "staff"] },
+      { label: "➕ Create Exam", href: "/dashboard/scholarship-exams/create", roles: ["tenantadmin"] },
+      { label: "👥 Test Management", href: "/dashboard/scholarship-tests", roles: ["tenantadmin", "staff"] },
+      { label: "📊 Results Management", href: "/dashboard/scholarship-results", roles: ["tenantadmin"] },
+      { label: "🏆 Rewards Overview", href: "/dashboard/scholarship-rewards", roles: ["tenantadmin"] },
     ]
   },
 
@@ -176,13 +176,13 @@ export const sidebarLinks = [
   {
     label: "⚙️ Institute Settings",
     href: "#",
-    roles: ["tenantAdmin"],
+    roles: ["tenantadmin"],
     children: [
-      { label: "👤 Profile", href: "/dashboard/settings/profile", roles: ["tenantAdmin"] },
-      { label: "👥 Staff Management", href: "/dashboard/settings/staff", roles: ["tenantAdmin"] },
-      { label: "🔐 Role Manager", href: "/dashboard/settings/roles", roles: ["tenantAdmin"] },
-      { label: "💰 My Subscription", href: "/dashboard/settings/subscriptions", roles: ["tenantAdmin"] },
-      { label: "💳 Payment History", href: "/dashboard/accounts/add-payment", roles: ["tenantAdmin"] },
+      { label: "👤 Profile", href: "/dashboard/settings/profile", roles: ["tenantadmin"] },
+      { label: "👥 Staff Management", href: "/dashboard/settings/staff", roles: ["tenantadmin"] },
+      { label: "🔐 Role Manager", href: "/dashboard/settings/roles", roles: ["tenantadmin"] },
+      { label: "💰 My Subscription", href: "/dashboard/settings/subscriptions", roles: ["tenantadmin"] },
+      { label: "💳 Payment History", href: "/dashboard/accounts/add-payment", roles: ["tenantadmin"] },
     ],
   },
 ];

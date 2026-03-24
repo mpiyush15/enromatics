@@ -17,7 +17,7 @@ const tenantSchema = new mongoose.Schema(
     email: { type: String, required: true },
     website: { type: String },
     description: { type: String },
-    plan: { type: String, enum: ENUMS.SUBSCRIPTION_PLANS, default: "free" },
+    plan: { type: String, enum: ENUMS.SUBSCRIPTION_PLANS, default: "trial" },
     active: { type: Boolean, default: true },
     contact: {
       phone: { type: String },

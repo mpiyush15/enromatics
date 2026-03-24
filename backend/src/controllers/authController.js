@@ -123,7 +123,7 @@ export const registerUser = async (req, res) => {
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
-      plan: isTrial ? 'trial' : 'free', // ✅ Set plan to 'trial' for trial users, 'free' otherwise
+      plan: isTrial ? ENUMS.SUBSCRIPTION_PLANS[0] : ENUMS.SUBSCRIPTION_PLANS[0], // trial
       subdomain: generatedSubdomain, // ✅ AUTO-GENERATED SUBDOMAIN
       subscription: { 
         status: subscriptionStatus, // 'trial', 'active', or 'inactive'
