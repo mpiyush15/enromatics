@@ -80,14 +80,14 @@ export function extractCookies(req: Request): string {
     return cookieHeader;
   }
   
-  // Method 2: From req object directly (Next.js Request object)
+  // Method 2: From req object directly (Next.js NextRequest object)
   try {
-    const cookies = req.cookies;
+    const cookies = (req as any).cookies;
     if (cookies && typeof cookies.getAll === 'function') {
       const allCookies = cookies.getAll();
       if (allCookies.length > 0) {
         const cookieString = allCookies
-          .map(c => `${c.name}=${c.value}`)
+          .map((c: any) => `${c.name}=${c.value}`)
           .join('; ');
         console.log('✅ Cookies from request.cookies:', cookieString.substring(0, 50));
         return cookieString;
