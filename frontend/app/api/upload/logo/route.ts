@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
 
     // Forward the multipart form data to backend
-  const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+  const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'http://127.0.0.1:5055';
   // Backend's upload route is mounted under /api/tenants (see backend/src/server.js -> app.use('/api/tenants', tenantRoutes))
   // So the full backend path for logo upload is /api/tenants/upload/logo
   const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/upload/logo`;

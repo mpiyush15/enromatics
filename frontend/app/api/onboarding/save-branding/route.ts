@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Call backend to save branding
-    const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+    const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'http://127.0.0.1:5055';
     const backendUrl = `${EXPRESS_BACKEND_URL}/api/tenants/${tenantId}/branding`;
     const options = buildBackendFetchOptions(req, 'POST', {
       branding: {

@@ -61,7 +61,7 @@ export default function TopTenantsTable({ limit = 10 }: TopTenantsTableProps) {
         return;
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5055';
       const response = await fetch(
         `${apiUrl}/api/analytics/top-tenants?limit=${limit}`,
         {

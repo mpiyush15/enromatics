@@ -26,10 +26,7 @@ export async function callExpressBackend(
     cookies = ''
   } = options;
 
-  const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL;
-  if (!expressUrl) {
-    throw new Error('EXPRESS_BACKEND_URL not configured');
-  }
+  const expressUrl = (process as any).env?.EXPRESS_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5055';
 
   const url = `${expressUrl}${endpoint}`;
 

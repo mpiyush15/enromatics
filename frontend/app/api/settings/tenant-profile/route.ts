@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { redisCache, CACHE_KEYS, CACHE_TTL, invalidateSettingsCache } from '@/lib/redis';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5055';
 
 function getCacheKey(tenantId: string): string {
   return CACHE_KEYS.TENANT_PROFILE(tenantId);

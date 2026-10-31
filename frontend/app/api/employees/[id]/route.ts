@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'http://127.0.0.1:5055';
 
 // Extract token from request
 function extractToken(request: NextRequest): string | null {

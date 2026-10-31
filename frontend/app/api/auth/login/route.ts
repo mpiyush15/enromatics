@@ -59,14 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4️⃣ Get backend URL
-    const expressUrl = process.env.EXPRESS_BACKEND_URL;
-    if (!expressUrl) {
-      console.error('❌ EXPRESS_BACKEND_URL not configured');
-      return NextResponse.json(
-        { message: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    const expressUrl = process.env.EXPRESS_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5055';
     console.log('🔗 Backend URL:', expressUrl);
 
     // 5️⃣ Call Express backend - SIMPLE & DIRECT

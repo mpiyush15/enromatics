@@ -22,7 +22,7 @@ import { buildBFFHeaders } from "@/lib/bffHelpers";
 export async function GET(request: NextRequest) {
   try {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
-      "https://endearing-blessing-production-c61f.up.railway.app";
+      "http://127.0.0.1:5055";
     
     if (!BACKEND_URL) {
       return NextResponse.json(

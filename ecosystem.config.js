@@ -11,6 +11,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 5055,
+        MONGODB_URI: 'mongodb://127.0.0.1:27017/enromatics',
       },
     },
     {
@@ -25,6 +26,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3005,
+        EXPRESS_BACKEND_URL: 'http://127.0.0.1:5055',
+        NEXT_PUBLIC_API_URL: 'https://enromatics.com',
       },
     },
   ],

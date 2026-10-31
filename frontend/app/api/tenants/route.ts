@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const cache = new Map<string, { data: any; timestamp: number }>();
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes - tenants list changes infrequently
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5055';
 
 export async function GET(req: NextRequest) {
   try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'https://endearing-blessing-production-c61f.up.railway.app';
+const EXPRESS_BACKEND_URL = process.env.EXPRESS_BACKEND_URL || 'http://127.0.0.1:5055';
 
 export async function GET(
   request: NextRequest,
