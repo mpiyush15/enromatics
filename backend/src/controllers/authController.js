@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
+import ENUMS from "../config/ENUMS_CONSTANTS.js";
 import { resolveTenantFromSubdomain } from "../utils/subdomainResolver.js";
 import { sendCredentialsEmail } from "../services/emailService.js";
 import { notifyNewSignup } from "../services/superadminNotificationService.js";
@@ -108,6 +109,15 @@ export const registerUser = async (req, res) => {
     // Otherwise, create new tenant and tenantAdmin
     console.log('📝 [SIGNUP] Creating tenant...');
     
+    // Determine subscription based on trial vs regular signup
+    const isTrialSignup = isTrial !== false;
+    const defaultPlan = (ENUMS?.SUBSCRIPTION_PLANS && ENUMS.SUBSCRIPTION_PLANS[0]) || 'trial';
+    const subscriptionTier = isTrialSignup ? (planId || defaultPlan) : defaultPlan;
+    const subscriptionStatus = isTrialSignup ? 'trial' : 'active';
+    const trialStartDate = isTrialSignup ? new Date() : null;
+    const trialEndDate = isTrialSignup ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null;
+    console.log('📝 [SIGNUP] subscriptionTier:', subscriptionTier, 'status:', subscriptionStatus);
+
     // Auto-generate subdomain for tenant
     const baseName = instituteName || userName || email.split('@')[0];
     const cleanSubdomain = baseName
@@ -123,7 +133,7 @@ export const registerUser = async (req, res) => {
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
-      plan: isTrial ? ENUMS.SUBSCRIPTION_PLANS[0] : ENUMS.SUBSCRIPTION_PLANS[0], // trial
+      plan: subscriptionTier,
       subdomain: generatedSubdomain, // ✅ AUTO-GENERATED SUBDOMAIN
       subscription: { 
         status: subscriptionStatus, // 'trial', 'active', or 'inactive'
@@ -155,7 +165,10 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false,
       tenantId: newTenantId, // ✅ Use MongoDB ObjectId as tenantId
       role: "tenantAdmin",
-      plan: isTrial ? 'trial' : 'free', // ✅ Set user plan to 'trial' or 'free' based on signup type
+      plan: isTrialSignup ? 'trial' : 'trial', // ✅ Set user plan to 'trial'
+      trialStartDate: trialStartDate || new Date(),
+      trialEndDate: trialEndDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      subscriptionStatus: subscriptionStatus,
     });
     console.log('✅ [SIGNUP] User created:', user._id);
 
