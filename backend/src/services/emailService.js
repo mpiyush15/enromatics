@@ -4,8 +4,8 @@ dotenv.config();
 
 // Debug: Log email configuration
 console.log('📧 Email Configuration:');
-console.log('- API URL:', process.env.ZEPTO_API_URL || process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
-console.log('- API Token:', process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN ? 'SET' : 'NOT SET');
+console.log('- API URL:', process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email (default)');
+console.log('- API Token:', (process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN) ? 'SET' : 'NOT SET');
 console.log('- From:', process.env.ZEPTO_FROM || process.env.EMAIL_FROM || 'NOT SET');
 console.log('- Agent:', process.env.ZEPTO_AGENT || 'NOT SET');
 
@@ -13,22 +13,20 @@ console.log('- Agent:', process.env.ZEPTO_AGENT || 'NOT SET');
  * Send email using ZeptoMail API (works on serverless platforms)
  * Railway/Vercel block SMTP ports, so we use HTTP API instead
  */
-const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FROM || process.env.EMAIL_FROM, attachments = [] }) => {
+const sendEmailViaAPI = async ({ to, subject, html, from, attachments = [] }) => {
     try {
         console.log(`📤 Attempting to send email to: ${to}`);
         console.log(`📧 Subject: ${subject}`);
         
         // Get API token (support both variable names)
-        const apiToken = process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN;
-        const apiUrl = process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email';
-        
-        if (!apiToken) {
+        const rawToken = process.env.ZEPTO_API_TOKEN || process.env.ZEPTOMAIL_API_TOKEN;
+        if (!rawToken) {
             throw new Error('ZEPTO_API_TOKEN or ZEPTOMAIL_API_TOKEN not configured in environment variables');
         }
         
-        if (!from) {
-            throw new Error('ZEPTO_FROM or EMAIL_FROM not configured in environment variables');
-        }
+        const apiToken = rawToken.replace(/^["']|["']$/g, '').trim();
+        const apiUrl = (process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email').replace(/^["']|["']$/g, '').trim();
+        const fromAddress = (from || process.env.ZEPTO_FROM || process.env.EMAIL_FROM || 'no-reply@enromatics.com').replace(/^["']|["']$/g, '').trim();
 
         // Prepare authorization header - add "Zoho-enczapikey" prefix if not present
         const authHeader = apiToken.startsWith('Zoho-enczapikey') 
@@ -37,13 +35,13 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FRO
 
         const payload = {
             from: {
-                address: from,
+                address: fromAddress,
                 name: 'Enromatics'
             },
             to: [
                 {
                     email_address: {
-                        address: to,
+                        address: to.trim(),
                         name: to.split('@')[0]
                     }
                 }
@@ -75,17 +73,22 @@ const sendEmailViaAPI = async ({ to, subject, html, from = process.env.ZEPTO_FRO
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             console.error('❌ ZeptoMail API Error Response:', data);
-            throw new Error(data.message || `API Error: ${response.status}`);
+            const detailMsg = data?.error?.details?.[0]?.message 
+                || data?.error?.message 
+                || data?.message 
+                || (typeof data === 'object' ? JSON.stringify(data) : '')
+                || `HTTP ${response.status}: ${response.statusText}`;
+            throw new Error(`ZeptoMail failed: ${detailMsg}`);
         }
 
         console.log('✅ Email sent successfully to:', to);
         return {
             success: true,
-            messageId: data.request_id || data.message,
+            messageId: data.request_id || data?.data?.[0]?.message_id || data.message || 'sent',
             message: 'Email sent successfully'
         };
 
@@ -106,9 +109,18 @@ export const sendEmail = async ({ to, subject, html, text, tenantId = null, user
             to,
             subject,
             html,
-            from: process.env.EMAIL_FROM,
+            from: process.env.ZEPTO_FROM || process.env.EMAIL_FROM || 'no-reply@enromatics.com',
             attachments
         });
+
+        const allowedTypes = [
+            'otp', 'welcome', 'password-reset', 'tenant-registration', 
+            'student-registration', 'payment-confirmation', 'subscription', 
+            'demo-request', 'demo-status', 'admin-notification', 
+            'superadmin-notification', 'enrollment', 'student_enrollment', 
+            'absence', 'payment', 'test', 'general'
+        ];
+        const safeType = allowedTypes.includes(type) ? type : 'general';
 
         // Log email
         const emailLog = {
@@ -116,7 +128,7 @@ export const sendEmail = async ({ to, subject, html, text, tenantId = null, user
             userId,
             recipient: to,
             subject,
-            type,
+            type: safeType,
             status: 'sent',
             messageId: result.messageId,
             sentAt: new Date()
@@ -138,12 +150,20 @@ export const sendEmail = async ({ to, subject, html, text, tenantId = null, user
         // Log failed email
         try {
             const EmailLog = (await import('../models/EmailLog.js')).default;
+            const allowedTypes = [
+                'otp', 'welcome', 'password-reset', 'tenant-registration', 
+                'student-registration', 'payment-confirmation', 'subscription', 
+                'demo-request', 'demo-status', 'admin-notification', 
+                'superadmin-notification', 'enrollment', 'student_enrollment', 
+                'absence', 'payment', 'test', 'general'
+            ];
+            const safeType = allowedTypes.includes(type) ? type : 'general';
             await EmailLog.create({
                 tenantId,
                 userId,
                 recipient: to,
                 subject,
-                type,
+                type: safeType,
                 status: 'failed',
                 error: error.message,
                 sentAt: new Date()

@@ -36,6 +36,12 @@ const emailLogSchema = new mongoose.Schema({
             'demo-request',
             'demo-status',
             'admin-notification',
+            'superadmin-notification',
+            'enrollment',
+            'student_enrollment',
+            'absence',
+            'payment',
+            'test',
             'general'
         ],
         default: 'general',
