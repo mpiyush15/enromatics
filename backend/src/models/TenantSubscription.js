@@ -10,8 +10,8 @@ const tenantSubscriptionSchema = new mongoose.Schema({
   },
   planType: {
     type: String,
-    enum: ['free', 'basic', 'pro', 'enterprise'],
-    default: 'basic'
+    enum: ['trial', 'free', 'basic', 'pro', 'enterprise', 'Trial', 'Basic', 'Pro', 'Enterprise', 'Free'],
+    default: 'trial'
   },
   features: {
     webDashboard: {

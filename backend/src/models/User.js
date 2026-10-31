@@ -26,8 +26,25 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["superadmin", "tenantadmin", "student"],
-      default: "tenantadmin", // every new signup = tenant admin by default
+      enum: [
+        "superadmin", "SuperAdmin",
+        "tenantadmin", "tenantAdmin",
+        "admin", "Admin",
+        "student", "Student",
+        "teacher", "Teacher",
+        "staff", "Staff",
+        "employee", "Employee",
+        "accountant", "Accountant",
+        "manager", "Manager",
+        "counsellor", "Counsellor",
+        "marketing", "Marketing",
+        "ads_manager", "adsManager",
+        "admission_incharge",
+        "receptionist",
+        "librarian",
+        "lab_assistant",
+      ],
+      default: "tenantAdmin",
     },
 
     status: {

@@ -546,12 +546,13 @@ export const getSession = async (req, res) => {
     };
 
     // Add role-specific quick stats
-    if (user.role === 'SuperAdmin') {
+    const normalizedRole = user.role?.toLowerCase();
+    if (normalizedRole === 'superadmin') {
       // For SuperAdmin: tenant count
       const Tenant = (await import('../models/Tenant.js')).default;
       const tenantCount = await Tenant.countDocuments();
       response.stats = { tenantCount };
-    } else if (user.role === 'tenantAdmin' && user.tenantId) {
+    } else if (normalizedRole === 'tenantadmin' && user.tenantId) {
       // For TenantAdmin: student count, today's attendance
       const Student = (await import('../models/Student.js')).default;
       const Attendance = (await import('../models/Attendance.js')).default;

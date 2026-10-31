@@ -63,8 +63,9 @@ router.put("/users/:userId", protect, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Prevent updating SuperAdmin or tenantAdmin role
-    if (user.role === "SuperAdmin" || user.role === "tenantAdmin") {
+    // Prevent updating/deleting SuperAdmin or tenantAdmin role
+    const normalizedRole = user.role?.toLowerCase();
+    if (normalizedRole === "superadmin" || normalizedRole === "tenantadmin") {
       return res.status(403).json({ message: "Cannot edit admin users" });
     }
 
@@ -93,7 +94,8 @@ router.delete("/users/:userId", protect, async (req, res) => {
     }
 
     // Prevent deleting SuperAdmin or tenantAdmin
-    if (user.role === "SuperAdmin" || user.role === "tenantAdmin") {
+    const normalizedRole = user.role?.toLowerCase();
+    if (normalizedRole === "superadmin" || normalizedRole === "tenantadmin") {
       return res.status(403).json({ message: "Cannot delete admin users" });
     }
 

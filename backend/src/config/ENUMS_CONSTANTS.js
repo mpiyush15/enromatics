@@ -15,20 +15,47 @@
 
 export default {
   // ============ PEOPLE ============
-  GENDERS: ["male", "female", "other"],
+  GENDERS: ["male", "female", "other", "Male", "Female", "Other"],
 
   // ============ ROLES (System & Tenant) ============
-  SYSTEM_ROLES: ["superadmin", "tenantadmin", "student"],
+  SYSTEM_ROLES: ["superadmin", "SuperAdmin", "tenantadmin", "tenantAdmin", "student", "Student"],
   
+  ALL_ROLES: [
+    "superadmin", "SuperAdmin",
+    "tenantadmin", "tenantAdmin",
+    "admin", "Admin",
+    "student", "Student",
+    "teacher", "Teacher",
+    "staff", "Staff",
+    "employee", "Employee",
+    "accountant", "Accountant",
+    "manager", "Manager",
+    "counsellor", "Counsellor",
+    "marketing", "Marketing",
+    "ads_manager", "adsManager",
+    "admission_incharge",
+    "receptionist",
+    "librarian",
+    "lab_assistant",
+  ],
+
   STAFF_ROLES: [
     "teacher",
+    "Teacher",
     "staff",
+    "Staff",
     "counsellor",
+    "Counsellor",
     "manager",
+    "Manager",
     "accountant",
+    "Accountant",
     "marketing",
+    "Marketing",
     "admin",
+    "Admin",
     "ads_manager",
+    "adsManager",
     "admission_incharge",
     "receptionist",
     "librarian",
@@ -36,10 +63,16 @@ export default {
   ],
 
   // ============ SUBSCRIPTION & PLANS ============
-  SUBSCRIPTION_PLANS: ["trial", "basic", "pro", "enterprise"],
-  SUBSCRIPTION_TIERS: ["trial", "basic", "pro", "enterprise"],
-  SUBSCRIPTION_STATUS: ["trial", "active", "expired", "cancelled"],
-  BILLING_CYCLES: ["monthly", "annual"],
+  SUBSCRIPTION_PLANS: [
+    "trial", "basic", "pro", "enterprise", "free",
+    "Trial", "Basic", "Pro", "Enterprise", "Free"
+  ],
+  SUBSCRIPTION_TIERS: [
+    "trial", "basic", "pro", "enterprise", "free",
+    "Trial", "Basic", "Pro", "Enterprise", "Free"
+  ],
+  SUBSCRIPTION_STATUS: ["trial", "active", "expired", "cancelled", "Trial", "Active", "Expired", "Cancelled", "pending", "inactive"],
+  BILLING_CYCLES: ["monthly", "annual", "Monthly", "Annual"],
 
   // ============ PAYMENTS ============
   PAYMENT_METHODS: ["cash", "upi", "bank", "card", "cheque", "online"],
@@ -119,7 +152,7 @@ export default {
     "enrolled",
   ],
   EXAM_FEE_STATUS: ["pending", "paid", "waived"],
-  EXAM_TYPES: ["neet", "jee", "mht-cet"],
+  EXAM_TYPES: ["neet", "jee", "mht-cet", "NEET", "JEE", "MHT-CET"],
 
   BATCH_STUDENT_STATUS: ["active", "inactive", "completed", "removed"],
   STUDENT_STATUS: ["active", "inactive"],

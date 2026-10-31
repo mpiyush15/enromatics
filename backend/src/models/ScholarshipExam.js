@@ -28,7 +28,7 @@ const scholarshipExamSchema = new mongoose.Schema(
 
     goal: {
       type: String,
-      enum: ["NEET", "JEE", "MHT-CET"],
+      enum: ["NEET", "JEE", "MHT-CET", "neet", "jee", "mht-cet"],
     },
 
     registrationCount: {
