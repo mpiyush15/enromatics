@@ -128,7 +128,7 @@
       })
         .then((res) => {
           if (res.ok) {
-            console.log('📤 Batch sent successfully, events:', batchData.batchSize);
+            // Batch sent successfully
             analyticsQueue.length = 0;
           } else {
             console.warn('⚠️ Batch send failed:', res.status);
@@ -147,7 +147,7 @@
     }
     batchTimer = setTimeout(() => {
       if (analyticsQueue.length > 0) {
-        console.log('⏱️ Batch timer triggered, sending', analyticsQueue.length, 'events');
+        // Send pending events on timer trigger
         sendBatch(false);
       }
       // Restart timer
@@ -181,7 +181,6 @@
 
     // Send if queue is full
     if (analyticsQueue.length >= BATCH_SIZE) {
-      console.log('📦 Queue full, sending batch of', BATCH_SIZE, 'events');
       sendBatch(false);
     }
   };

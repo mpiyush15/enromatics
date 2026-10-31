@@ -27,6 +27,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3005,
         EXPRESS_BACKEND_URL: 'http://127.0.0.1:5055',
+        NEXT_PUBLIC_BACKEND_URL: 'http://127.0.0.1:5055',
         NEXT_PUBLIC_API_URL: 'https://enromatics.com',
       },
     },
