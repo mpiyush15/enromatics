@@ -1,8 +1,14 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient = null;
+const getOpenAIClient = () => {
+  if (!openaiClient && process.env.OPENAI_API_KEY) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiClient;
+};
 
 /**
  * Generate MCQ questions using OpenAI GPT-4o-mini
@@ -14,6 +20,10 @@ const openai = new OpenAI({
  */
 export const generateQuestionsAI = async (subject, chapter, difficulty = 'medium', count = 5) => {
   try {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
     console.log(`🤖 Generating ${count} ${difficulty} questions for ${subject} - ${chapter}`);
 
     const prompt = `You are an expert teacher creating multiple choice questions (MCQs).
@@ -87,6 +97,10 @@ Only return the JSON array, no additional text.`;
  */
 export const generateLessonExplanation = async (subject, chapter, topic) => {
   try {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
     const prompt = `Write a clear, concise explanation for teaching the following:
 - Subject: ${subject}
 - Chapter: ${chapter}
@@ -124,6 +138,10 @@ Keep it suitable for high school level students.`;
  */
 export const solveDoubt = async (doubt, subject, chapter, context = '') => {
   try {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
     const prompt = `You are a helpful math and science tutor.
 
 Student's doubt: "${doubt}"
