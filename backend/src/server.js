@@ -107,6 +107,11 @@ app.use(
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
+        'http://localhost:3005',
+        'http://127.0.0.1:3005',
+        'http://187.127.147.166:3005',
+        'http://187.127.147.166',
+        process.env.FRONTEND_URL,
         // Vercel deployment domains
         /^https:\/\/[\w-]+\.vercel\.app$/,               // All vercel.app subdomains
         // Subdomain patterns for production
