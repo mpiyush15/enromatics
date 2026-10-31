@@ -306,7 +306,10 @@ export const loginUser = async (req, res) => {
     // If not found as student, try User collection (admin, staff, teachers)
     if (!authObject) {
       console.log('   ℹ️ Not found as student, checking User collection...');
-      const user = await User.findOne({ email });
+      const cleanEmail = email ? email.trim() : '';
+      const user = await User.findOne({ 
+        email: { $regex: `^${cleanEmail}$`, $options: "i" } 
+      });
       if (user) {
         authObject = user;
         console.log('   ✅ User found in User collection');
@@ -341,6 +344,7 @@ export const loginUser = async (req, res) => {
     console.log('   - Tenant subdomain:', tenantSubdomain || 'NONE');
     
     const isCheckoutLogin = purpose === 'checkout' || purpose === 'upgrade';
+    const allowMainDomain = process.env.ENABLE_WILDCARD_SUBDOMAINS !== 'true' || isCheckoutLogin;
     
     // 1. SuperAdmin → ONLY main domain (no subdomain)
     if (userRole === 'superadmin') {
@@ -353,17 +357,17 @@ export const loginUser = async (req, res) => {
       console.log('✅ SuperAdmin login on main domain');
     }
     
-    // 2. All other roles → MUST use tenant subdomain (UNLESS checkout/upgrade purpose)
+    // 2. All other roles → allowed on main domain when wildcard subdomains are disabled
     else {
-      if (!tenantSubdomain && !isCheckoutLogin) {
+      if (!tenantSubdomain && !allowMainDomain) {
         return res.status(403).json({ 
           message: "Access denied. Please login using your tenant subdomain",
           hint: `Visit ${authObject.tenantId || 'yourtenant'}.enromatics.com/login`
         });
       }
       
-      if (isCheckoutLogin && !tenantSubdomain) {
-        console.log('✅ Checkout login allowed on main domain');
+      if (!tenantSubdomain) {
+        console.log(`✅ Main domain login allowed for ${userRole}`);
       } else if (tenantSubdomain) {
         const resolvedTenantId = await resolveTenantFromSubdomain(tenantSubdomain);
         
