@@ -630,10 +630,16 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
           console.log('Webhook: Created new user account:', user.email);
           
           // Send credentials email
-          // ✅ Build institute URL from subdomain
-          const baseDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'enromatics.com';
-          const instituteUrl = `https://${tenant.subdomain}.${baseDomain}`;
-          const loginUrl = `${instituteUrl}/login`;
+          const frontendBase = (process.env.FRONTEND_URL || 'https://enromatics.com').replace(/\/$/, '');
+          const isWildcardEnabled = process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true';
+          const baseDomain = frontendBase.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+
+          const instituteUrl = isWildcardEnabled 
+            ? `https://${tenant.subdomain}.${baseDomain}`
+            : `${frontendBase}/dashboard/home`;
+          const loginUrl = isWildcardEnabled 
+            ? `https://${tenant.subdomain}.${baseDomain}/login`
+            : `${frontendBase}/login`;
           
           await sendCredentialsEmail({
             to: tenant.email,
@@ -641,7 +647,7 @@ export const cashfreeSubscriptionWebhook = async (req, res) => {
             instituteName: tenant.instituteName || tenant.name,
             email: tenant.email,
             password: generatedPassword,
-            instituteUrl: instituteUrl, // ✅ Include institute URL in green box
+            instituteUrl: instituteUrl,
             loginUrl: loginUrl,
             tenantId: tenant.tenantId,
             userId: user._id

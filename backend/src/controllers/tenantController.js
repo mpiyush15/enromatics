@@ -669,7 +669,9 @@ export const createNewTenant = async (req, res) => {
         instituteName: newTenant.instituteName,
         plan: newTenant.plan,
         subdomain: newTenant.subdomain,
-        instituteUrl: `https://${newTenant.subdomain}.enromatics.com`,
+        instituteUrl: process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true' 
+          ? `https://${newTenant.subdomain}.enromatics.com` 
+          : `${process.env.FRONTEND_URL || 'https://enromatics.com'}/dashboard/home`,
         contact: newTenant.contact,
         createdAt: newTenant.createdAt,
       },
@@ -746,14 +748,18 @@ export const sendTenantCredentials = async (req, res) => {
       });
     }
 
-    // Build login URL with tenant subdomain
-    const baseUrl = process.env.FRONTEND_URL || 'https://enromatics.com';
-    // Extract base domain (e.g., enromatics.com from https://www.enromatics.com)
-    const baseDomain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
-    // Use subdomain field if set, otherwise fallback to tenantId
+    // Build login URL pointing to main working domain
+    const frontendBase = (process.env.FRONTEND_URL || 'https://enromatics.com').replace(/\/$/, '');
+    const isWildcardEnabled = process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true';
+    const baseDomain = frontendBase.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
     const subdomainForUrl = tenant.subdomain || tenant.tenantId;
-    const loginUrl = `https://${subdomainForUrl}.${baseDomain}/login`;
-    const instituteUrl = `https://${subdomainForUrl}.${baseDomain}`;
+
+    const loginUrl = isWildcardEnabled 
+      ? `https://${subdomainForUrl}.${baseDomain}/login`
+      : `${frontendBase}/login`;
+    const instituteUrl = isWildcardEnabled 
+      ? `https://${subdomainForUrl}.${baseDomain}`
+      : `${frontendBase}/dashboard/home`;
 
     // Send credentials email
     await sendCredentialsEmail({

@@ -177,9 +177,17 @@ export const registerUser = async (req, res) => {
     const token = generateToken(user._id, user.email, user.role, newTenantId);
     console.log('✅ [SIGNUP] Token generated');
 
-    // Build institute URL with auto-generated subdomain
-    const instituteUrl = `https://${generatedSubdomain}.enromatics.com`;
-    const loginUrl = `${instituteUrl}/login`;
+    // Build login URL pointing to main working domain
+    const frontendBase = (process.env.FRONTEND_URL || 'https://enromatics.com').replace(/\/$/, '');
+    const isWildcardEnabled = process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true';
+    const baseDomain = frontendBase.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+
+    const instituteUrl = isWildcardEnabled 
+      ? `https://${generatedSubdomain}.${baseDomain}`
+      : `${frontendBase}/dashboard/home`;
+    const loginUrl = isWildcardEnabled 
+      ? `https://${generatedSubdomain}.${baseDomain}/login`
+      : `${frontendBase}/login`;
 
     console.log('📧 [SIGNUP] Sending credentials email...');
     // Send credentials email to tenant (non-blocking)

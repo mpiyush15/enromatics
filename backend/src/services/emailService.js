@@ -618,6 +618,22 @@ export const sendCredentialsEmail = async ({
     tenantId, 
     userId = null 
 }) => {
+    const frontendBase = (process.env.FRONTEND_URL || 'https://enromatics.com').replace(/\/$/, '');
+    const isWildcardEnabled = process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true';
+
+    // Ensure loginUrl points to a resolvable and working login endpoint
+    let effectiveLoginUrl = loginUrl || `${frontendBase}/login`;
+    if (!isWildcardEnabled && effectiveLoginUrl.includes('.enromatics.com') && !effectiveLoginUrl.includes('//enromatics.com') && !effectiveLoginUrl.includes('//www.enromatics.com')) {
+        console.log(`🔄 [EMAIL] Sanitized unresolvable subdomain URL: ${effectiveLoginUrl} -> ${frontendBase}/login`);
+        effectiveLoginUrl = `${frontendBase}/login`;
+    }
+
+    // Ensure instituteUrl is not showing an unresolvable NXDOMAIN link
+    let effectiveInstituteUrl = instituteUrl;
+    if (!isWildcardEnabled && effectiveInstituteUrl && effectiveInstituteUrl.includes('.enromatics.com') && !effectiveInstituteUrl.includes('//enromatics.com') && !effectiveInstituteUrl.includes('//www.enromatics.com')) {
+        effectiveInstituteUrl = null;
+    }
+
     const subject = `Your Enromatics Login Credentials`;
     
     const html = `
@@ -657,11 +673,11 @@ export const sendCredentialsEmail = async ({
                         </div>
                     </div>
 
-                    ${instituteUrl ? `
+                    ${effectiveInstituteUrl ? `
                     <div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 15px 0;">
                         <h3 style="margin-top: 0; color: #10b981;">🌐 Your Institute Portal URL:</h3>
                         <p style="margin: 5px 0; font-size: 14px;">Access your exclusive institute dashboard here:</p>
-                        <a href="${instituteUrl}" style="font-size: 16px; color: #10b981; font-weight: bold; word-break: break-all;">${instituteUrl}</a>
+                        <a href="${effectiveInstituteUrl}" style="font-size: 16px; color: #10b981; font-weight: bold; word-break: break-all;">${effectiveInstituteUrl}</a>
                     </div>
                     ` : ''}
 
@@ -670,7 +686,7 @@ export const sendCredentialsEmail = async ({
                     </div>
 
                     <center>
-                        <a href="${loginUrl}" class="cta-button">Login to Your Dashboard →</a>
+                        <a href="${effectiveLoginUrl}" class="cta-button">Login to Your Dashboard →</a>
                     </center>
 
                     <h3>🚀 What's Next?</h3>
@@ -682,7 +698,7 @@ export const sendCredentialsEmail = async ({
                     </ol>
 
                     <p style="background: #eff6ff; padding: 15px; border-radius: 5px; border-left: 4px solid #3b82f6;">
-                        💡 <strong>Tip:</strong> Save your login URL: <a href="${loginUrl}">${loginUrl}</a>
+                        💡 <strong>Tip:</strong> Save your login URL: <a href="${effectiveLoginUrl}">${effectiveLoginUrl}</a>
                     </p>
                 </div>
                 <div class="footer">
