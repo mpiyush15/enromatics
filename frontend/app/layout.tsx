@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./ClientLayout";
 import WhatsAppWidget from "@/components/WhatsAppWidget";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ClientLayout>{children}</ClientLayout>
         <WhatsAppWidget />
+        <Toaster richColors position="top-right" />
         <script src="/analytics-phase1-tracking.js" async></script>
       </body>
     </html>

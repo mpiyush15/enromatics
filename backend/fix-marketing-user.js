@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Define minimal User schema with pre-save middleware
 const userSchema = new mongoose.Schema({

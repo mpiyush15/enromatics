@@ -3,11 +3,7 @@ import { buildBFFHeaders } from "@/lib/bffHelpers";
 import { redisCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { extractCookies } from '@/lib/bff-client';
 
-const BACKEND_URL = process.env.EXPRESS_BACKEND_URL;
-
-if (!BACKEND_URL) {
-  throw new Error('EXPRESS_BACKEND_URL not configured');
-}
+const BACKEND_URL = process.env.EXPRESS_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
 
 export async function GET(request: NextRequest) {
   try {
