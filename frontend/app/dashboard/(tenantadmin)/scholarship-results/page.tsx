@@ -575,7 +575,7 @@ export default function ScholarshipResultsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${result.examId}/registrations`)}
+                        onClick={() => router.push(`/dashboard/scholarship-exams/${result.examId}/registrations`)}
                         className="p-2 text-gray-400 hover:text-purple-600"
                       >
                         <Eye size={16} />

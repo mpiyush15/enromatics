@@ -147,35 +147,35 @@ export default function ExamDashboard() {
       description: "View all registered students with enroll buttons",
       icon: Users,
       color: "bg-blue-500 hover:bg-blue-600",
-      route: `/dashboard/(tenantadmin)/scholarship-exams/${examId}/students`,
+      route: `/dashboard/scholarship-exams/${examId}/students`,
     },
     {
       title: "Test Management",
       description: "Select exam date and manage attendance",
       icon: Clock,
       color: "bg-indigo-500 hover:bg-indigo-600",
-      route: `/dashboard/(tenantadmin)/scholarship-exams/${examId}/test-management`,
+      route: `/dashboard/scholarship-exams/${examId}/test-management`,
     },
     {
       title: "View Registrations",
       description: "Detailed view of all registrations",
       icon: FileText,
       color: "bg-green-500 hover:bg-green-600",
-      route: `/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations`,
+      route: `/dashboard/scholarship-exams/${examId}/registrations`,
     },
     {
       title: "Manage Results",
       description: "Upload and manage exam results",
       icon: BarChart3,
       color: "bg-purple-500 hover:bg-purple-600",
-      route: `/dashboard/(tenantadmin)/scholarship-exams/${examId}/results`,
+      route: `/dashboard/scholarship-exams/${examId}/results`,
     },
     {
       title: "Edit Exam",
       description: "Update exam details and settings",
       icon: Settings,
       color: "bg-orange-500 hover:bg-orange-600",
-      route: `/dashboard/(tenantadmin)/scholarship-exams/${examId}/edit`,
+      route: `/dashboard/scholarship-exams/${examId}/edit`,
     },
   ];
 
@@ -194,7 +194,7 @@ export default function ExamDashboard() {
           <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Exam Not Found</h2>
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams`)}
+            onClick={() => router.push(`/dashboard/scholarship-exams`)}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Exams
@@ -212,7 +212,7 @@ export default function ExamDashboard() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams`)}
+          onClick={() => router.push(`/dashboard/scholarship-exams`)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
@@ -359,7 +359,7 @@ export default function ExamDashboard() {
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">Recent Registrations</h3>
               <button
-                onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations`)}
+                onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations`)}
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium"
               >
                 View All

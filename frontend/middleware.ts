@@ -116,8 +116,8 @@ function handleTenantSubdomain(request: NextRequest, subdomain: string) {
   
   console.log(`🌐 Tenant subdomain: ${subdomain}, pathname: ${pathname}`);
   
-  // Check if user is authenticated (has token in cookies)
-  const token = request.cookies.get('token')?.value;
+  // Check if user is authenticated (has token or jwt in cookies)
+  const token = request.cookies.get('token')?.value || request.cookies.get('jwt')?.value;
   const isAuthenticated = !!token;
   
   console.log(`🔐 Authentication status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`);

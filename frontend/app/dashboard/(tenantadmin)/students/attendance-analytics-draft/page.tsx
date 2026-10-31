@@ -134,7 +134,7 @@ export default function AttendanceAnalyticsDraftPage() {
               <h1 className="text-3xl font-bold text-gray-900">Attendance Analytics</h1>
               <p className="text-gray-600 mt-2">📊 Comprehensive attendance insights and trends</p>
             </div>
-            <Link href={`/dashboard/(tenantadmin)/students/attendance`}>
+            <Link href={`/dashboard/students/attendance`}>
               <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                 ← Back to Attendance
               </button>

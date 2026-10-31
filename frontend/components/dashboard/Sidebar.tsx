@@ -185,7 +185,51 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     }
   );
 
-  const links = isExternal ? externalLinks! : fetchedLinks;
+const SUPERADMIN_FALLBACK_LINKS: SidebarLink[] = [
+  { href: "/dashboard/admin", label: "🏠 Admin Dashboard" },
+  { href: "/dashboard/overview", label: "📊 Overview" },
+  { href: "/dashboard/tenants", label: "🏢 Tenants" },
+  { href: "/dashboard/plans", label: "💰 Plans" },
+  {
+    label: "💳 Billing",
+    href: "#",
+    children: [
+      { label: "📄 Invoices", href: "/dashboard/invoices" },
+      { label: "💰 Payments", href: "/dashboard/payments" },
+      { label: "📊 Subscribers", href: "/dashboard/subscribers" },
+      { label: "💾 Storage Usage", href: "/dashboard/storage" },
+    ],
+  },
+  {
+    label: "🚀 SuperCRM",
+    href: "#",
+    children: [
+      { label: "📊 CRM Dashboard", href: "/dashboard/supercrm" },
+      { label: "📧 Form Leads", href: "/dashboard/supercrm/form-leads" },
+      { label: "📅 Demo Requests", href: "/dashboard/supercrm/demo-requests" },
+      { label: "📋 All Leads", href: "/dashboard/supercrm/all-leads" },
+    ],
+  },
+  {
+    label: "📱 Social Media",
+    href: "#",
+    children: [
+      { label: "📊 Dashboard", href: "/dashboard/social" },
+      { label: "📊 Campaigns", href: "/dashboard/social/campaigns" },
+      { label: "📊 Analytics", href: "/dashboard/social/reports" },
+      { label: "✨ Create Ads", href: "/dashboard/social/ads" },
+      { label: "⚙️ Settings", href: "/dashboard/social/settings" },
+    ],
+  },
+  { href: "/dashboard/website-analytics", label: "📈 Website Analytics" },
+];
+
+  const isSuperAdmin = user?.role?.toLowerCase() === 'superadmin';
+  const links = isExternal 
+    ? externalLinks! 
+    : (fetchedLinks && fetchedLinks.length > 0 
+        ? fetchedLinks 
+        : (isSuperAdmin ? SUPERADMIN_FALLBACK_LINKS : []));
 
   // All tenant roles including all staff role types
   const TENANT_ROLES = ["tenantAdmin", "admin", "staff", "employee", "teacher", "manager", "counsellor", "adsManager", "accountant", "marketing"];
@@ -205,16 +249,6 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     
     if (href.includes("/client/")) return href;
     
-    if (
-      user?.tenantId &&
-      TENANT_ROLES.includes(user.role) &&
-      href.startsWith("/dashboard")
-    ) {
-    // If href is simple /dashboard/xxx, add (tenantadmin) route group
-    if (href.startsWith('/dashboard/') && !href.includes('(')) {
-      return href.replace('/dashboard/', '/dashboard/(tenantadmin)/');
-    }
-    }
     return href;
   };
 
@@ -285,16 +319,6 @@ export default function Sidebar({ isOpen, onClose, links: externalLinks }: Sideb
     
     if (href.includes("/client/")) return href;
     
-    // For tenant users, transform /dashboard/* to /dashboard/(tenantadmin)/*
-    if (
-      user?.tenantId &&
-      TENANT_ROLES.includes(user.role) &&
-      href.startsWith("/dashboard") &&
-      !href.includes("(")
-    ) {
-      const built = href.replace('/dashboard/', '/dashboard/(tenantadmin)/');
-      return built;
-    }
     return href;
   }
 

@@ -419,7 +419,7 @@ export default function TestManagementPage() {
           <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Exam Not Found</h2>
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams`)}
+            onClick={() => router.push(`/dashboard/scholarship-exams`)}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Exams
@@ -438,7 +438,7 @@ export default function TestManagementPage() {
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}`)}
+            onClick={() => router.push(`/dashboard/scholarship-exams/${examId}`)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={24} />

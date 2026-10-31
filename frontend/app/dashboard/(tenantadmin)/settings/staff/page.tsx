@@ -330,7 +330,7 @@ export default function StaffManagementPage() {
               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
                 Staff limit reached ({quota.current}/{quota.cap}).
                 <button
-                  onClick={() => router.push(`/dashboard/(tenantadmin)/settings/subscriptions`)}
+                  onClick={() => router.push(`/dashboard/settings/subscriptions`)}
                   className="ml-2 text-blue-400 hover:text-blue-300 underline"
                 >
                   Upgrade Plan

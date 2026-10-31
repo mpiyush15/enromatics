@@ -637,7 +637,7 @@ export default function ScholarshipTestsPage() {
                             {reg.hasAttended ? 'Mark Absent' : 'Mark Present'}
                           </button>
                           <button
-                            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${selectedExam._id}/registrations/${reg._id}`)}
+                            onClick={() => router.push(`/dashboard/scholarship-exams/${selectedExam._id}/registrations/${reg._id}`)}
                             className="p-1 text-gray-400 hover:text-purple-600"
                           >
                             <Eye size={16} />
@@ -679,7 +679,7 @@ export default function ScholarshipTestsPage() {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Tests Found</h3>
             <p className="text-gray-600 mb-6">Create your first scholarship test to get started</p>
             <button
-              onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/create`)}
+              onClick={() => router.push(`/dashboard/scholarship-exams/create`)}
               className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
             >
               Create Test
@@ -736,7 +736,7 @@ export default function ScholarshipTestsPage() {
                     View Details
                   </button>
                   <button
-                    onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${exam._id}/registrations`)}
+                    onClick={() => router.push(`/dashboard/scholarship-exams/${exam._id}/registrations`)}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
                   >
                     Registrations

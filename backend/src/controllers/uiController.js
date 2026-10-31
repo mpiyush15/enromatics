@@ -7,13 +7,16 @@ export const getSidebar = async (req, res) => {
     const principal = req.user || req.student;
     if (!principal) return res.status(401).json({ message: "Unauthorized" });
 
-    const { role, tenantId } = principal;
+    const rawRole = principal.role || "";
+    const role = rawRole.toLowerCase().trim();
+    const tenantId = principal.tenantId;
+    const isSuperAdmin = role === 'superadmin';
     let tenantModules = [];
 
-    console.log("🔍 getSidebar DEBUG - User:", { role, tenantId, email: principal.email });
+    console.log("🔍 getSidebar DEBUG - User:", { role, rawRole, tenantId, email: principal.email });
 
-    // 🏢 If tenant user, fetch their allowed modules
-    if (tenantId) {
+    // 🏢 If tenant user (and NOT superadmin), fetch their allowed modules
+    if (tenantId && !isSuperAdmin) {
       const tenant = await Tenant.findOne({ tenantId });
       if (tenant) tenantModules = tenant.modules || [];
     }
@@ -23,15 +26,15 @@ export const getSidebar = async (req, res) => {
 
     // 🧠 Filter top-level links
     const filteredLinks = sidebarLinks.filter(link => {
-      // Skip if user's role not allowed
-      const roleMatches = link.roles.includes(role);
+      // Case-insensitive role check
+      const roleMatches = link.roles && link.roles.some(r => r.toLowerCase() === role);
       if (!roleMatches) {
         console.log(`❌ Link filtered (role mismatch): "${link.label}" - User role: ${role}, Link roles: ${JSON.stringify(link.roles)}`);
         return false;
       }
 
-      // Optional: limit modules for tenants (but don't filter if no modules set)
-      if (tenantId && link.href && tenantModules.length > 0) {
+      // Optional: limit modules for tenants (never for superadmin)
+      if (!isSuperAdmin && tenantId && link.href && tenantModules.length > 0) {
         const moduleKey = link.href.split("/dashboard/")[1]?.split("/")[0];
         if (!tenantModules.includes(moduleKey)) {
           console.log(`❌ Link filtered (module mismatch): "${link.label}" - Module: ${moduleKey}, User modules: ${JSON.stringify(tenantModules)}`);
@@ -46,25 +49,25 @@ export const getSidebar = async (req, res) => {
     const processed = filteredLinks.map(link => {
       // Replace [tenantId] in parent link href for non-superadmin
       const processedLink = { ...link };
-      if (processedLink.href && tenantId && role !== 'superadmin') {
+      if (processedLink.href && tenantId && !isSuperAdmin) {
         processedLink.href = processedLink.href.replace('[tenantId]', tenantId);
       }
 
       if (link.children) {
         // For tenant users with modules, filter children; otherwise include all
         const allowedChildren = link.children.filter(child => {
-          // If a child has a roles property, ensure current user role is allowed
-          if (child.roles && !child.roles.includes(role)) return false;
+          // If a child has a roles property, ensure current user role is allowed (case-insensitive)
+          if (child.roles && !child.roles.some(r => r.toLowerCase() === role)) return false;
 
           if (!child.href) return true;
-          if (tenantId && tenantModules.length > 0 && role !== 'superadmin') {
+          if (!isSuperAdmin && tenantId && tenantModules.length > 0) {
             const moduleKey = child.href.split("/dashboard/")[1]?.split("/")[0];
             return tenantModules.includes(moduleKey);
           }
           return true; // Include all children if no module restrictions or superadmin
         }).map(child => {
           // Handle superadmin vs tenant routing
-          if (role === 'superadmin') {
+          if (isSuperAdmin) {
             // Use superAdminHref if available, otherwise use regular href
             return { 
               ...child, 

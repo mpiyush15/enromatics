@@ -568,7 +568,7 @@ ${exam?.examName || 'Exam Team'}
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams`)}
+          onClick={() => router.push(`/dashboard/scholarship-exams`)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
@@ -583,7 +583,7 @@ ${exam?.examName || 'Exam Team'}
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/add`)}
+              onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/add`)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <User size={20} />
@@ -798,7 +798,7 @@ ${exam?.examName || 'Exam Team'}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${reg._id}`)}
+                          onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/${reg._id}`)}
                           className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                           title="View Details"
                         >
@@ -816,7 +816,7 @@ ${exam?.examName || 'Exam Team'}
                         </button>
                         {!reg.convertedToStudent && (
                           <button
-                            onClick={() => router.push(`/dashboard/(tenantadmin)/students/add?regId=${reg._id}&examId=${examId}&from=scholarship`)}
+                            onClick={() => router.push(`/dashboard/students/add?regId=${reg._id}&examId=${examId}&from=scholarship`)}
                             className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
                             title="Enroll Student"
                           >

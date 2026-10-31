@@ -181,7 +181,7 @@ export default function ScholarshipExamsPage() {
             <p className="text-gray-600 mt-1">Manage scholarship tests, registrations, and admissions</p>
           </div>
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/create`)}
+            onClick={() => router.push(`/dashboard/scholarship-exams/create`)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={20} />
@@ -282,7 +282,7 @@ export default function ScholarshipExamsPage() {
           </p>
           {exams.length === 0 && (
             <button
-              onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/create`)}
+              onClick={() => router.push(`/dashboard/scholarship-exams/create`)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus size={20} />
@@ -412,7 +412,7 @@ export default function ScholarshipExamsPage() {
                 <div className="flex gap-2 ml-4">
                   <button
                     onClick={() =>
-                      router.push(`/dashboard/(tenantadmin)/scholarship-exams/${exam._id}/registrations`)
+                      router.push(`/dashboard/scholarship-exams/${exam._id}/registrations`)
                     }
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="View Registrations"
@@ -430,7 +430,7 @@ export default function ScholarshipExamsPage() {
 
                   <button
                     onClick={() =>
-                      router.push(`/dashboard/(tenantadmin)/scholarship-exams/${exam._id}/edit`)
+                      router.push(`/dashboard/scholarship-exams/${exam._id}/edit`)
                     }
                     className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                     title="Edit Exam"

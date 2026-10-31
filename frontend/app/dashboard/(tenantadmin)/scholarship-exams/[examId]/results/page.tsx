@@ -692,7 +692,7 @@ export default function ResultManagementPage() {
                         </button>
                       )}
                       <button
-                        onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${registration._id}`)}
+                        onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/${registration._id}`)}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="View Details"
                       >

@@ -585,7 +585,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                     setShowUpsellModal(true);
                     return;
                   }
-                  router.push(`/dashboard/(tenantadmin)/students/add`);
+                  router.push(`/dashboard/students/add`);
                 }}
                 disabled={quota !== null && !quota.canAdd}
                 className={`px-3 py-2 text-sm rounded-lg transition flex items-center gap-1.5 ${
@@ -602,7 +602,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
                   Student limit reached ({quota.current}/{quota.cap}).
                   <button
-                    onClick={() => router.push(`/dashboard/(tenantadmin)/settings/subscriptions`)}
+                    onClick={() => router.push(`/dashboard/settings/subscriptions`)}
                     className="ml-2 text-blue-400 hover:text-blue-300 underline"
                   >
                     Upgrade Plan
@@ -827,7 +827,7 @@ Jane Smith,jane@example.com,9876543210,Female,Science,2024B,,456 Oak Ave,6000`;
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button
-                            onClick={() => router.push(`/dashboard/(tenantadmin)/students/${student._id}?openNotification=true`)}
+                            onClick={() => router.push(`/dashboard/students/${student._id}?openNotification=true`)}
                             className="inline-flex items-center justify-center p-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
                             title="Send Notification"
                           >

@@ -276,7 +276,7 @@ export default function EditExamPage() {
 
       const data = await response.json();
       alert(`Exam updated successfully!`);
-      router.push(`/dashboard/(tenantadmin)/scholarship-exams`);
+      router.push(`/dashboard/scholarship-exams`);
     } catch (error: any) {
       console.error("Error updating exam:", error);
       alert(error.message || "Failed to update exam");

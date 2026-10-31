@@ -417,7 +417,7 @@ export default function StudentsManagementPage() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}`)}
+          onClick={() => router.push(`/dashboard/scholarship-exams/${examId}`)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
@@ -628,7 +628,7 @@ export default function StudentsManagementPage() {
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
-                      onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${registration._id}`)}
+                      onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/${registration._id}`)}
                       className="text-blue-600 hover:text-blue-900 transition-colors"
                       title="View Details"
                     >

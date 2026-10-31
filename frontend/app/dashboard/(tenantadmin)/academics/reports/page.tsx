@@ -331,7 +331,7 @@ export default function TestReportsPage() {
                   <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <button 
-                      onClick={() => router.push(`/dashboard/(tenantadmin)/academics/schedules`)}
+                      onClick={() => router.push(`/dashboard/academics/schedules`)}
                       className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all"
                     >
                       <span className="text-2xl">📅</span>
@@ -341,7 +341,7 @@ export default function TestReportsPage() {
                       </div>
                     </button>
                     <button 
-                      onClick={() => router.push(`/dashboard/(tenantadmin)/academics/attendance`)}
+                      onClick={() => router.push(`/dashboard/academics/attendance`)}
                       className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all"
                     >
                       <span className="text-2xl">✅</span>
@@ -351,7 +351,7 @@ export default function TestReportsPage() {
                       </div>
                     </button>
                     <button 
-                      onClick={() => router.push(`/dashboard/(tenantadmin)/academics/marks`)}
+                      onClick={() => router.push(`/dashboard/academics/marks`)}
                       className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all"
                     >
                       <span className="text-2xl">📝</span>

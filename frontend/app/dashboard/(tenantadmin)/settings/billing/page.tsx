@@ -132,7 +132,7 @@ export default function PaymentHistoryPage() {
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
-            <Link href={`/dashboard/(tenantadmin)`} className="hover:text-blue-600">
+            <Link href="/dashboard/home" className="hover:text-blue-600">
               Dashboard
             </Link>
             <span>/</span>

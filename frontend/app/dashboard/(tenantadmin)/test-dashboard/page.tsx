@@ -124,7 +124,7 @@ export default function TestDashboardPage() {
       {/* QUICK ACTIONS - 3 BUTTONS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/students/add`)}
+          onClick={() => router.push(`/dashboard/students/add`)}
           className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md rounded-lg p-5 transition-all"
         >
           <span className="text-2xl">➕</span>
@@ -135,7 +135,7 @@ export default function TestDashboardPage() {
         </button>
 
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/accounts/transactions`)}
+          onClick={() => router.push(`/dashboard/accounts/transactions`)}
           className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md rounded-lg p-5 transition-all"
         >
           <span className="text-2xl">💰</span>
@@ -146,7 +146,7 @@ export default function TestDashboardPage() {
         </button>
 
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/students/attendance`)}
+          onClick={() => router.push(`/dashboard/students/attendance`)}
           className="flex items-center justify-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md rounded-lg p-5 transition-all"
         >
           <span className="text-2xl">✅</span>

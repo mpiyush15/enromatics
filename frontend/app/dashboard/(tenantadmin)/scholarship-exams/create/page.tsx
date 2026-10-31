@@ -189,7 +189,7 @@ export default function CreateExamPage() {
 
       const data = await response.json();
       alert(`Exam created successfully! Exam Code: ${data.exam.examCode}`);
-      router.push(`/dashboard/(tenantadmin)/scholarship-exams`);
+      router.push(`/dashboard/scholarship-exams`);
     } catch (error: any) {
       console.error("Error creating exam:", error);
       alert(error.message || "Failed to create exam");

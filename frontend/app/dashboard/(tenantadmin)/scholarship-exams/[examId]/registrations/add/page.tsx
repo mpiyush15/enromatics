@@ -92,7 +92,7 @@ export default function AddManualRegistrationPage() {
 
       if (data.success) {
         alert(`✅ Registration successful!\n\nRegistration Number: ${data.registration.registrationNumber}\nUsername: ${data.registration.username}${data.registration.temporaryPassword ? `\nTemporary Password: ${data.registration.temporaryPassword}` : ''}`);
-        router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations`);
+        router.push(`/dashboard/scholarship-exams/${examId}/registrations`);
       } else {
         setError(data.message || data.error || "Failed to create registration");
       }

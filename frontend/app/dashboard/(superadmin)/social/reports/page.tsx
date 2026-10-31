@@ -154,7 +154,7 @@ export default function SocialReportsPage() {
             Please connect your Facebook account to view detailed reports.
           </p>
           <a
-            href={`/dashboard/(superadmin)/social`}
+            href={`/dashboard/social`}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
           >
             Go to Social Dashboard

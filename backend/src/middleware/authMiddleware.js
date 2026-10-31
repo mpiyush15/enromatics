@@ -72,7 +72,8 @@ export const checkSuperAdmin = (req, res, next) => {
     return res.status(401).json({ message: 'Not authorized' });
   }
 
-  if (req.user.role !== 'superadmin') {
+  const role = req.user.role ? String(req.user.role).toLowerCase() : '';
+  if (role !== 'superadmin') {
     return res.status(403).json({ 
       message: 'Access denied. Super admin privileges required.' 
     });
@@ -89,7 +90,8 @@ export const checkAdmin = (req, res, next) => {
     return res.status(401).json({ message: 'Not authorized' });
   }
 
-  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+  const role = req.user.role ? String(req.user.role).toLowerCase() : '';
+  if (role !== 'admin' && role !== 'superadmin') {
     return res.status(403).json({ 
       message: 'Access denied. Admin privileges required.' 
     });

@@ -246,7 +246,7 @@ export default function EnrollmentFormPage() {
       if (!response.ok) throw new Error("Failed to submit enrollment");
 
       alert("Enrollment submitted successfully! You will be contacted soon for payment and further details.");
-      router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${regId}`);
+      router.push(`/dashboard/scholarship-exams/${examId}/registrations/${regId}`);
     } catch (error) {
       console.error("Error submitting enrollment:", error);
       alert("Failed to submit enrollment. Please try again.");
@@ -294,7 +294,7 @@ export default function EnrollmentFormPage() {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${regId}`)}
+            onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/${regId}`)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft size={20} />

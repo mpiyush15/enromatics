@@ -156,7 +156,7 @@ export default function SocialPostsPage() {
             Please connect your Facebook account to view and manage your posts.
           </p>
           <a
-            href={`/dashboard/(superadmin)/social`}
+            href={`/dashboard/social`}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
           >
             Go to Social Dashboard

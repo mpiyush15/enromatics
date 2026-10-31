@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     console.log('   Cookies available:', cookies.getAll().map(c => c.name).join(', '));
 
     // Fetch from backend with token
-    const backendUrl = getApiUrl('/api/ui/sidebar');
+    const expressUrl = process.env.EXPRESS_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5055';
+    const search = request.nextUrl.search || '';
+    const backendUrl = `${expressUrl}/api/ui/sidebar${search}`;
     console.log('   Backend URL:', backendUrl);
     
     const headers: Record<string, string> = {

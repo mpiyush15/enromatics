@@ -502,7 +502,7 @@ export default function ScholarshipRewardsPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${reward.examId}/registrations`)}
+                          onClick={() => router.push(`/dashboard/scholarship-exams/${reward.examId}/registrations`)}
                           className="p-1 text-gray-400 hover:text-purple-600"
                         >
                           <Eye size={16} />

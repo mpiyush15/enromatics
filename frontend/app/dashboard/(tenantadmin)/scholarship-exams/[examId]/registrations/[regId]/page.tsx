@@ -339,7 +339,7 @@ export default function StudentResultPage() {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations`)}
+          onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations`)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft size={20} />
@@ -366,7 +366,7 @@ export default function StudentResultPage() {
               {!registration.convertedToStudent && (
                 <>
                   <button
-                    onClick={() => router.push(`/dashboard/(tenantadmin)/scholarship-exams/${examId}/registrations/${regId}/enroll`)}
+                    onClick={() => router.push(`/dashboard/scholarship-exams/${examId}/registrations/${regId}/enroll`)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <UserCheck size={20} />

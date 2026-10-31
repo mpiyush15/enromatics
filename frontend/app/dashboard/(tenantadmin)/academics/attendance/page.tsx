@@ -205,7 +205,7 @@ export default function TestAttendanceIndexPage() {
             {filteredTests.map((test) => (
               <div
                 key={test._id}
-                onClick={() => router.push(`/dashboard/(tenantadmin)/academics/attendance/${test._id}`)}
+                onClick={() => router.push(`/dashboard/academics/attendance/${test._id}`)}
                 className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group overflow-hidden"
               >
                 {/* Card Header */}

@@ -4,9 +4,9 @@ import Tenant from "../models/Tenant.js";
 
 const router = express.Router();
 
-// Middleware to check if user is SuperAdmin
+// Middleware to check if user is SuperAdmin (case-insensitive)
 const isSuperAdmin = (req, res, next) => {
-  if (req.user?.role !== "SuperAdmin") {
+  if (req.user?.role?.toLowerCase() !== "superadmin") {
     return res.status(403).json({ message: "Access denied. SuperAdmin role required." });
   }
   next();

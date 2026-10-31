@@ -476,7 +476,7 @@ export default function TestResultsPage() {
                             </td>
                             <td className="px-3 py-2 text-center">
                               <button
-                                onClick={() => router.push(`/dashboard/(tenantadmin)/academics/student-progress/${result.studentId}`)}
+                                onClick={() => router.push(`/dashboard/academics/student-progress/${result.studentId}`)}
                                 className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                               >
                                 📈

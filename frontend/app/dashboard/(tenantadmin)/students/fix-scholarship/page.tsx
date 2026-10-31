@@ -51,7 +51,7 @@ export default function FixScholarshipStudentsPage() {
         {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => router.push(`/dashboard/(tenantadmin)/students`)}
+            onClick={() => router.push(`/dashboard/students`)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft size={20} />
@@ -200,7 +200,7 @@ export default function FixScholarshipStudentsPage() {
             {/* Action Buttons */}
             <div className="bg-gray-50 p-4 flex gap-3">
               <button
-                onClick={() => router.push(`/dashboard/(tenantadmin)/students`)}
+                onClick={() => router.push(`/dashboard/students`)}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 View Students

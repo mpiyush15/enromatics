@@ -484,7 +484,7 @@ export default function CoursesAndBatchesPage() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => router.push(`/dashboard/(tenantadmin)/academics/courses/${course._id}`)}
+                    onClick={() => router.push(`/dashboard/academics/courses/${course._id}`)}
                     className="p-2 text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                     title="View Course & Lessons"
                   >

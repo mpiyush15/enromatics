@@ -213,7 +213,7 @@ export default function AddPaymentPage() {
               {step === "select" ? "Select batch and student" : "Record payment details"}
             </p>
           </div>
-          <Link href={`/dashboard/(tenantadmin)/accounts/overview`}>
+          <Link href={`/dashboard/accounts/overview`}>
             <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition">
               ← Back to Overview
             </button>
