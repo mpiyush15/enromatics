@@ -129,7 +129,14 @@ export const registerUser = async (req, res) => {
     
     console.log('📝 [SIGNUP] Generated subdomain:', generatedSubdomain);
     
+    // ✅ Pre-generate MongoDB ObjectId and tenantId so Mongoose required validation passes
+    const newTenantObjectId = new mongoose.Types.ObjectId();
+    const newTenantId = newTenantObjectId.toString();
+    console.log('📝 [SIGNUP] Pre-generated tenantId:', newTenantId);
+
     const tenant = await Tenant.create({
+      _id: newTenantObjectId,
+      tenantId: newTenantId,
       name: userName, // Person's name
       instituteName: instituteName || null, // Institute name
       email,
@@ -147,14 +154,7 @@ export const registerUser = async (req, res) => {
       whatsappOptIn: whatsappOptIn || false, // Store WhatsApp consent
     });
 
-    // ✅ Use MongoDB's _id as tenantId (not random hex)
-    const newTenantId = tenant._id.toString();
     console.log('✅ [SIGNUP] Tenant created:', newTenantId, 'with subdomain:', generatedSubdomain);
-
-    // ✅ Update tenant document to store tenantId field for legacy compatibility
-    tenant.tenantId = newTenantId;
-    await tenant.save();
-    console.log('✅ [SIGNUP] Tenant tenantId field updated');
 
     console.log('📝 [SIGNUP] Creating user...');
     const user = await User.create({

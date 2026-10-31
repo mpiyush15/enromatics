@@ -8,7 +8,7 @@
  * Delete this file after updating all imports.
  */
 
-export default null;
+// export default null;
 import Tenant from "../models/Tenants.js";
 import Student from "../models/Student.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
